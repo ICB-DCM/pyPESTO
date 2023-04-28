@@ -5,6 +5,7 @@ import numpy as np
 
 from ...C import (
     AMICI_SIGMAY,
+    AMICI_SSIGMAY,
     AMICI_SY,
     AMICI_Y,
     FVAL,
@@ -107,7 +108,7 @@ class SplineAmiciCalculator(AmiciCalculator):
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
-        inner_rdatas:
+        rdatas:
             AMICI simulation return data. In case the calculator is part of
             the :class:`pypesto.objective.amici.InnerCalculatorCollector`,
             it will already simulate the model and pass the results here.
@@ -140,10 +141,15 @@ class SplineAmiciCalculator(AmiciCalculator):
             sensi_order = max(sensi_orders)
 
         # If AMICI ReturnData is not provided, we need to simulate the model
+
         if rdatas is None:
             amici_solver.setSensitivityOrder(sensi_order)
 
             x_dct = copy.deepcopy(x_dct)
+            x_dct.update(
+                self.inner_problem.get_noise_dummy_values(scaled=True)
+            )
+            breakpoint()
 
             # fill in parameters
             amici.parameter_mapping.fill_in_parameters(
@@ -202,12 +208,14 @@ class SplineAmiciCalculator(AmiciCalculator):
         # Calculate analytical gradients if requested
         if sensi_order > 0:
             sy = [rdata[AMICI_SY] for rdata in rdatas]
+            ssigma = [rdata[AMICI_SSIGMAY] for rdata in rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
-                sigma=sigma,
+                amici_sigma=sigma,
                 sy=sy,
+                amici_ssigma=ssigma,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),

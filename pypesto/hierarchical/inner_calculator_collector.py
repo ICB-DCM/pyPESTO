@@ -119,6 +119,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         inner_options: Dict,
     ):
         """Construct inner calculators for each data type."""
+        self.noise_dummy_values = {}
         if ORDINAL in self.data_types or CENSORED in self.data_types:
             optimal_scaling_inner_options = {
                 key: value
@@ -154,6 +155,9 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
             spline_calculator = SplineAmiciCalculator(
                 spline_inner_problem, spline_inner_solver
+            )
+            self.noise_dummy_values = (
+                spline_inner_problem.get_noise_dummy_values(scaled=True)
             )
             self.inner_calculators.append(spline_calculator)
         # TODO relative data
@@ -287,7 +291,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         amici_solver.setSensitivityOrder(sensi_order)
 
         x_dct = copy.deepcopy(x_dct)
-
+        x_dct.update(self.noise_dummy_values)
         # fill in parameters
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,

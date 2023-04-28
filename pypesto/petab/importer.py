@@ -461,6 +461,12 @@ class PetabImporter(AmiciObjectBuilder):
                 inner_options,
             )
             amici_reporting = amici.RDataReporting.residuals
+            for inner_calculator in calculator.inner_calculators:
+                par_ids = [
+                    x
+                    for x in par_ids
+                    if x not in inner_calculator.inner_problem.get_x_ids()
+                ]
 
         elif self._hierarchical:
             inner_problem = InnerProblem.from_petab_amici(
@@ -700,10 +706,17 @@ class PetabImporter(AmiciObjectBuilder):
                 )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
-        if not self._non_quantitative_data_types and self._hierarchical:
-            inner_parameter_ids = (
-                objective.calculator.inner_problem.get_x_ids()
-            )
+        if self._hierarchical:
+            if self._non_quantitative_data_types:
+                inner_parameter_ids = [
+                    x_id
+                    for inner_calculator in objective.calculator.inner_calculators
+                    for x_id in inner_calculator.inner_problem.get_x_ids()
+                ]
+            else:
+                inner_parameter_ids = (
+                    objective.calculator.inner_problem.get_x_ids()
+                )
             lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
             ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]
             x_ids = [x for x in x_ids if x not in inner_parameter_ids]

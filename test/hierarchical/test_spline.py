@@ -169,7 +169,10 @@ def test_spline_calculator_and_objective():
 
     # Since the nominal parameters are close to true ones, the
     # the fval and grad should both be low.
-    assert np.all(calculator_results['minimal_diff_on']['fval'] < atol)
+    expected_fval = np.log(2 * np.pi) * 18 / 2
+    assert np.isclose(
+        calculator_results['minimal_diff_on']['fval'], expected_fval, atol=atol
+    )
     assert np.all(calculator_results['minimal_diff_off']['grad'] < grad_atol)
 
 
@@ -210,7 +213,7 @@ def _inner_problem_exp():
     n_spline_pars = int(np.ceil(spline_ratio * len(timepoints)))
 
     expected_values = {
-        'fun': 0.0,
+        'fun': np.log(2 * np.pi) * 11 / 2,
         'jac': np.zeros(n_spline_pars),
         'x': np.asarray([0.0, 2.0, 2.0, 2.0, 2.0, 2.0]),
     }
@@ -266,7 +269,7 @@ def test_spline_inner_solver():
         results[minimal_diff] = inner_solvers[minimal_diff].solve(
             problem=inner_problem,
             sim=[simulation],
-            sigma=[sigma],
+            amici_sigma=[sigma],
         )
 
     for minimal_diff in options.keys():
