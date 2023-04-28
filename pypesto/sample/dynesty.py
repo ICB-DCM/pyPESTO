@@ -48,6 +48,11 @@ class DynestySampler(Sampler):
     `sampler` is an instance of `pypesto.sample.DynestySampler`. The original
     dynesty results object is available at `sampler.results`.
 
+    NB: the dynesty samplers can be customized significantly, by providing
+    `sampler_args` and `run_args` to your `pypesto.sample.DynestySampler()`
+    call. For example, code to parallelize dynesty is provided in pyPESTO's
+    `sampler_study.ipynb` notebook.
+
     Wrapper around https://dynesty.readthedocs.io/en/stable/, see there for
     details.
     """
