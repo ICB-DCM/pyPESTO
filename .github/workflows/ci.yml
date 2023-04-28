@@ -17,7 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        # update to 3.11 when numba supports it
+        python-version: ['3.9', '3.10']
 
     steps:
     - name: Check out repository
@@ -293,7 +294,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.9']
 
     steps:
     - name: Check out repository
@@ -321,7 +322,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.9']
 
     steps:
     - name: Check out repository
