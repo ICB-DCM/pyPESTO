@@ -32,7 +32,7 @@ PEtab and AMICI
 .. toctree::
    :maxdepth: 2
 
-   example/Amici_workshop_2023.ipynb
+   example/amici.ipynb
    example/petab_import.ipynb
 
 Algorithms and features

@@ -16,7 +16,7 @@ base_dir='doc/example'
 
 # Various topics notebooks
 nbs_1=(
-  'Amici_workshop_2023.ipynb'
+  'amici.ipynb'
   'conversion_reaction.ipynb'
   'fixed_parameters.ipynb'
   'petab_import.ipynb'
