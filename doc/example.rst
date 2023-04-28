@@ -26,7 +26,7 @@ Getting started
    :maxdepth: 2
 
    example/getting_started.ipynb
-   example/rosenbrock.ipynb
+   example/custom_objective_function.ipynb
 
 PEtab and AMICI
 ---------------
