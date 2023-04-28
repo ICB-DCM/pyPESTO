@@ -1,3 +1,5 @@
+.. _example:
+
 Examples
 ========
 
@@ -46,7 +48,6 @@ Algorithms and features
    example/sampler_study.ipynb
    example/sampling_diagnostics.ipynb
    example/store.ipynb
-   example/hdf5_storage.ipynb
    example/model_selection.ipynb
    example/julia.ipynb
    example/hierarchical.ipynb
