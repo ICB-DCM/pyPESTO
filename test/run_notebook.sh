@@ -24,7 +24,6 @@ nbs_1=(
   'rosenbrock.ipynb'
   'store.ipynb'
   'synthetic_data.ipynb'
-  'hdf5_storage.ipynb'
   'hierarchical.ipynb'
   'example_ordinal.ipynb'
   'example_nonlinear_monotone.ipynb'
