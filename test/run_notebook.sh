@@ -22,7 +22,7 @@ nbs_1=(
   'petab_import.ipynb'
   'prior_definition.ipynb'
   'rosenbrock.ipynb'
-  'storage.ipynb'
+  'store.ipynb'
   'synthetic_data.ipynb'
   'hierarchical.ipynb'
   'example_ordinal.ipynb'
