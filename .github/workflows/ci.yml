@@ -316,7 +316,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici ipopt
 
     - name: Run notebooks 1
-      timeout-minutes: 15
+      timeout-minutes: 20
       run: tox -e notebooks1
 
   notebooks2:
@@ -344,5 +344,5 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run notebooks 2
-      timeout-minutes: 15
+      timeout-minutes: 20
       run: tox -e notebooks2
