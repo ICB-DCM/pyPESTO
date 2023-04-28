@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # update to 3.11 when numba supports it
+        # update to 3.11 when numba allows (needed in umap)
         python-version: ['3.9', '3.10']
 
     steps:
@@ -127,7 +127,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        # update to 3.11 when nlopt allows
+        python-version: ['3.9', '3.10']
 
     steps:
     - name: Check out repository
