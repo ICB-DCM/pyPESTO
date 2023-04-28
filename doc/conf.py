@@ -36,12 +36,16 @@ extensions = [
     'sphinx.ext.autodoc',
     # generate autodoc summaries
     'sphinx.ext.autosummary',
+    # use mathjax for latex formulas
+    'sphinx.ext.mathjax',
     # link to code
     'sphinx.ext.viewcode',
     # link to other projects' docs
     'sphinx.ext.intersphinx',
     # support numpy and google style docstrings
     'sphinx.ext.napoleon',
+    # support todo items
+    'sphinx.ext.todo',
     # source parser for jupyter notebook files
     'nbsphinx',
     # code highlighting in jupyter cells
@@ -157,7 +161,15 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'collapse_navigation': False,
+    'navigation_depth': -1,
+}
+
+# Title
+html_title = "pyPESTO documentation"
+# Navigation bar title
+html_short_title = "pyPESTO"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -166,19 +178,6 @@ html_static_path = ['_static']
 
 # Favicon
 html_favicon = "logo/logo_favicon.png"
-
-# Custom sidebar templates, must be a dictionary that maps document names
-# to template names.
-#
-# This is required for the alabaster theme
-# refs: http://alabaster.readthedocs.io/en/latest/installation.html#sidebars
-html_sidebars = {
-    '**': [
-        'relations.html',  # needs 'show_related': True theme option to display
-        'searchbox.html',
-    ]
-}
-
 
 # -- Options for HTMLHelp output ------------------------------------------
 
