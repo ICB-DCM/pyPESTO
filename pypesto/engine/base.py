@@ -1,6 +1,6 @@
 """Abstract engine base class."""
 import abc
-from typing import List
+from typing import Any, List
 
 from .task import Task
 
@@ -12,7 +12,9 @@ class Engine(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def execute(self, tasks: List[Task], progress_bar: bool = True):
+    def execute(
+        self, tasks: List[Task], progress_bar: bool = True
+    ) -> List[Any]:
         """Execute tasks.
 
         Parameters
