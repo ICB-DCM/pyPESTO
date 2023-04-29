@@ -1,5 +1,6 @@
 """Abstract Task class."""
 import abc
+from typing import Any
 
 
 class Task(abc.ABC):
@@ -15,5 +16,5 @@ class Task(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def execute(self):
+    def execute(self) -> Any:
         """Execute the task and return its results."""
