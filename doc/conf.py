@@ -54,6 +54,8 @@ extensions = [
     'myst_parser',
     # bibtex references
     'sphinxcontrib.bibtex',
+    # ensure that jQuery is installed
+    'sphinxcontrib.jquery',
 ]
 
 # default autodoc options
