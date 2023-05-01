@@ -161,10 +161,8 @@ def assign_ids(
         i = 0
         ids = [str(j) for j in range(0, n_starts)]
         while not used_ids.isdisjoint(ids):
-            ids = [
-                str(j) for j in range(n_used * i, n_used * i + n_starts)
-            ]
             i += 1
+            ids = [str(j) for j in range(n_used * i, n_used * i + n_starts)]
     if len(ids) != n_starts:
         raise AssertionError("Number of starts and ids must coincide.")
     if not used_ids.isdisjoint(ids):
