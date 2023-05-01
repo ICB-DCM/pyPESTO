@@ -162,7 +162,7 @@ def assign_ids(
         ids = [str(j) for j in range(0, n_starts)]
         while not used_ids.isdisjoint(ids):
             ids = [
-                str(j) for j in range(n_used + i, n_used + i + 1 + n_starts)
+                str(j) for j in range(n_used * i, n_used * i + n_starts)
             ]
             i += 1
     if len(ids) != n_starts:
