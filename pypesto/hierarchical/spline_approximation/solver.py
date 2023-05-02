@@ -95,7 +95,7 @@ class SplineInnerSolver(InnerSolver):
             # If the parameters are optimized in the inner problem, we
             # calculate the sigma analytically from the inner result.
             if group_dict[OPTIMIZE_NOISE]:
-                group_dict[INNER_NOISE_PARS] = self._calculate_sigma_for_group(
+                group_dict[INNER_NOISE_PARS] = _calculate_sigma_for_group(
                     inner_result=inner_result_for_group,
                     n_datapoints=group_dict[NUM_DATAPOINTS],
                 )
@@ -114,8 +114,9 @@ class SplineInnerSolver(InnerSolver):
 
             inner_results.append(inner_result_for_group)
             save_inner_parameters_to_inner_problem(
-                inner_parameters=problem.get_xs_for_group(group),
+                inner_problem=problem,
                 s=inner_result_for_group[SCIPY_X],
+                group=group,
             )
         return inner_results
 
@@ -368,24 +369,6 @@ class SplineInnerSolver(InnerSolver):
         }
         return options
 
-    def _calculate_sigma_for_group(
-        self,
-        inner_result: Dict,
-        n_datapoints: int,
-    ):
-        """Calculate the noise parameter sigma.
-
-        Parameters
-        ----------
-        noise_parameters:
-            The noise parameters of a group of the inner problem.
-        inner_result:
-            The inner optimization result.
-        """
-        sigma = np.sqrt(2 * inner_result[SCIPY_FUN] / (n_datapoints))
-
-        return sigma
-
     def _optimize_spline(
         self,
         inner_parameters: List[SplineInnerParameter],
@@ -601,6 +584,24 @@ class SplineInnerSolver(InnerSolver):
         }
 
         return inner_options
+
+
+def _calculate_sigma_for_group(
+    inner_result: Dict,
+    n_datapoints: int,
+):
+    """Calculate the noise parameter sigma.
+
+    Parameters
+    ----------
+    noise_parameters:
+        The noise parameters of a group of the inner problem.
+    inner_result:
+        The inner optimization result.
+    """
+    sigma = np.sqrt(2 * inner_result[SCIPY_FUN] / (n_datapoints))
+
+    return sigma
 
 
 def calculate_objective_function_for_obs(
@@ -869,8 +870,9 @@ def extract_expdata_using_mask(
 
 
 def save_inner_parameters_to_inner_problem(
-    inner_parameters,
-    s,
+    inner_problem: SplineInnerProblem,
+    s: np.ndarray,
+    group: int,
 ) -> None:
     """Save inner parameter values to the inner subproblem.
 
@@ -885,12 +887,23 @@ def save_inner_parameters_to_inner_problem(
     s : np.ndarray
         Reformulated inner spline parameters.
     """
+    group_dict = inner_problem.groups[group]
+    inner_spline_parameters = inner_problem.get_xs_for_group(group)
+    inner_noise_parameters = inner_problem.get_noise_parameters_for_group(
+        group
+    )
+
     xi = np.zeros(len(s))
     for i in range(len(s)):
         xi[i] = np.sum(s[: i + 1])
 
-    for idx in range(len(inner_parameters)):
-        inner_parameters[idx].value = xi[idx]
+    for idx in range(len(inner_spline_parameters)):
+        inner_spline_parameters[idx].value = xi[idx]
+
+    sigma = group_dict[INNER_NOISE_PARS]
+
+    if group_dict[OPTIMIZE_NOISE]:
+        inner_noise_parameters[0].value = sigma
 
 
 def _calculate_nllh_for_group(

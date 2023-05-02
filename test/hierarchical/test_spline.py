@@ -9,7 +9,7 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
-from pypesto.C import LIN, MODE_FUN, InnerParameterType
+from pypesto.C import LIN, MODE_FUN, SCIPY_FUN, InnerParameterType
 from pypesto.hierarchical.spline_approximation import (
     SplineInnerProblem,
     SplineInnerSolver,
@@ -18,6 +18,8 @@ from pypesto.hierarchical.spline_approximation.parameter import (
     SplineInnerParameter,
 )
 from pypesto.hierarchical.spline_approximation.solver import (
+    _calculate_nllh_for_group,
+    _calculate_sigma_for_group,
     extract_expdata_using_mask,
     get_monotonicity_measure,
     get_spline_mapped_simulations,
@@ -314,3 +316,26 @@ def test_get_spline_mapped_simulations():
         expected_spline_mapped_simulations,
         rtol=rtol,
     )
+
+
+def test_calculate_sigma_for_group():
+    """Test the calculation of sigma for a group."""
+    expected_sigma = np.sqrt(2 * 12.0 / 8)
+    inner_result = {
+        SCIPY_FUN: 12.0,
+    }
+    sigma = _calculate_sigma_for_group(inner_result, n_datapoints=8)
+    assert sigma == expected_sigma
+
+
+def test_calculate_nllh_for_group():
+    """Test the calculation of the nllh for a group."""
+    expected_nllh = 0.5 * 8 * np.log(2 * np.pi) + 12.0 / 1
+
+    inner_result = {
+        SCIPY_FUN: 12.0,
+    }
+    sigma = 1
+    n_datapoints = 8
+    nllh = _calculate_nllh_for_group(inner_result, sigma, n_datapoints)
+    assert nllh == expected_nllh
