@@ -86,6 +86,7 @@ ID = 'id'
 INNER_PARAMETERS = 'inner_parameters'
 INNER_RDATAS = 'inner_rdatas'
 PARAMETER_TYPE = 'parameterType'
+X_INNER_OPT = 'x_inner_opt'
 
 
 class InnerParameterType(str, Enum):
@@ -94,12 +95,16 @@ class InnerParameterType(str, Enum):
     OFFSET = 'offset'
     SCALING = 'scaling'
     SIGMA = 'sigma'
+    OPTIMAL_SCALING = 'optimal_scaling'
+    SPLINE = 'spline'
 
 
 DUMMY_INNER_VALUE = {
     InnerParameterType.OFFSET: 0.0,
     InnerParameterType.SCALING: 1.0,
     InnerParameterType.SIGMA: 1.0,
+    InnerParameterType.OPTIMAL_SCALING: 0.0,
+    InnerParameterType.SPLINE: 0.0,
 }
 
 INNER_PARAMETER_BOUNDS = {
@@ -115,8 +120,80 @@ INNER_PARAMETER_BOUNDS = {
         LOWER_BOUND: 0,
         UPPER_BOUND: float('inf'),
     },
+    InnerParameterType.OPTIMAL_SCALING: {
+        LOWER_BOUND: -float('inf'),
+        UPPER_BOUND: float('inf'),
+    },
+    InnerParameterType.SPLINE: {
+        LOWER_BOUND: -float('inf'),
+        UPPER_BOUND: float('inf'),
+    },
 }
 
+###############################################################################
+# OPTIMAL SCALING
+
+# Should go to PEtab constants at some point
+MEASUREMENT_CATEGORY = 'measurementCategory'
+MEASUREMENT_TYPE = 'measurementType'
+CENSORING_BOUNDS = 'censoringBounds'
+
+ORDINAL = 'ordinal'
+CENSORED = 'censored'
+LEFT_CENSORED = 'left-censored'
+RIGHT_CENSORED = 'right-censored'
+INTERVAL_CENSORED = 'interval-censored'
+CENSORING_TYPES = [LEFT_CENSORED, RIGHT_CENSORED, INTERVAL_CENSORED]
+
+REDUCED = 'reduced'
+STANDARD = 'standard'
+MAXMIN = 'max-min'
+MAX = 'max'
+
+METHOD = 'method'
+REPARAMETERIZED = 'reparameterized'
+INTERVAL_CONSTRAINTS = 'interval_constraints'
+MIN_GAP = 'min_gap'
+OPTIMAL_SCALING_OPTIONS = [
+    METHOD,
+    REPARAMETERIZED,
+    INTERVAL_CONSTRAINTS,
+    MIN_GAP,
+]
+
+CAT_LB = 'cat_lb'
+CAT_UB = 'cat_ub'
+
+NUM_CATEGORIES = 'num_categories'
+NUM_DATAPOINTS = 'num_datapoints'
+SURROGATE_DATA = 'surrogate_data'
+NUM_INNER_PARAMS = 'num_inner_params'
+LB_INDICES = 'lb_indices'
+UB_INDICES = 'ub_indices'
+
+QUANTITATIVE_IXS = 'quantitative_ixs'
+QUANTITATIVE_DATA = 'quantitative_data'
+NUM_CONSTR_FULL = 'num_constr_full'
+C_MATRIX = 'C_matrix'
+W_MATRIX = 'W_matrix'
+W_DOT_MATRIX = 'W_dot_matrix'
+
+SCIPY_SUCCESS = 'success'
+SCIPY_FUN = 'fun'
+SCIPY_X = 'x'
+
+###############################################################################
+# SPLINE APPROXIMATION
+
+MEASUREMENT_TYPE = 'measurementType'
+
+NONLINEAR_MONOTONE = 'nonlinear_monotone'
+
+SPLINE_RATIO = 'spline_ratio'
+MIN_DIFF_FACTOR = 'min_diff_factor'
+SPLINE_APPROXIMATION_OPTIONS = [SPLINE_RATIO, MIN_DIFF_FACTOR]
+
+MIN_SIM_RANGE = 1e-16
 
 ###############################################################################
 # HISTORY
@@ -132,6 +209,15 @@ TRACE_SAVE_ITER = "trace_save_iter"
 SUFFIXES_CSV = ["csv"]
 SUFFIXES_HDF5 = ["hdf5", "h5"]
 SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
+
+SPLINE_PAR_TYPE = 'spline'
+N_SPLINE_PARS = 'n_spline_pars'
+DATAPOINTS = 'datapoints'
+MIN_DATAPOINT = 'min_datapoint'
+MAX_DATAPOINT = 'max_datapoint'
+EXPDATA_MASK = 'expdata_mask'
+CURRENT_SIMULATION = 'current_simulation'
+NOISE_PARAMETERS = 'noise_parameters'
 
 
 ###############################################################################
@@ -175,6 +261,8 @@ AMICI_SY = 'sy'  # return field in amici simulation result
 AMICI_LLH = 'llh'  # return field in amici simulation result
 AMICI_STATUS = 'status'  # return field in amici simulation result
 AMICI_SIGMAY = 'sigmay'  # return field in amici simulation result
+AMICI_SSIGMAY = 'ssigmay'  # return field in amici simulation result
+AMICI_SSIGMAZ = 'ssigmaz'  # return field in amici simulation result
 
 CONDITION = 'condition'
 CONDITION_IDS = 'condition_ids'

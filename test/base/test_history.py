@@ -117,7 +117,6 @@ class HistoryTest(unittest.TestCase):
 
     def check_load_from_file(self, start: pypesto.OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from history file"""
-        # TODO other implementations
         if isinstance(start.history, MemoryHistory):
             return
         assert isinstance(start.history, (CsvHistory, Hdf5History))

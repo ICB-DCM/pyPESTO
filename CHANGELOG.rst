@@ -6,6 +6,29 @@ Release notes
 ..........
 
 
+0.2.17 (2023-03-25)
+-------------------
+
+* Optimize:
+    * Parameter estimation from ordinal data (#971)
+    * Parameter estimation from nonlinear-monotone data using spline approximation (#1028)
+    * Parameter estimation using censored data (#1041)
+    * Fix optimizer start point handling. (#1027)
+    * Add option to summary to print full or reduced vectors. (#1040, #1045)
+* Sampling:
+    * Dynesty sampler parallelization: changed the nested loglikelihood function to a class method (#1037)
+    * Dynesty sampler docs (#1039)
+* Engine
+    * Allow custom multiprocessing context (#1032)
+* General
+    * Updated example notebooks (#1050, #1026, #1051, #1056)
+    * Refactor docs (#1052)
+    * Update Dockerfile (#1034)
+    * proper bound handling for x_guesses (#1029)
+    * Updated to flake8 standards (#1042, #1049)
+    * Removed Python 3.8 support according to NEP29 (#1056)
+
+
 0.2.16 (2023-02-23)
 -------------------
 

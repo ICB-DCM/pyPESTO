@@ -48,6 +48,11 @@ class DynestySampler(Sampler):
     `sampler` is an instance of `pypesto.sample.DynestySampler`. The original
     dynesty results object is available at `sampler.results`.
 
+    NB: the dynesty samplers can be customized significantly, by providing
+    `sampler_args` and `run_args` to your `pypesto.sample.DynestySampler()`
+    call. For example, code to parallelize dynesty is provided in pyPESTO's
+    `sampler_study.ipynb` notebook.
+
     Wrapper around https://dynesty.readthedocs.io/en/stable/, see there for
     details.
     """
@@ -119,6 +124,15 @@ class DynestySampler(Sampler):
             + self.problem.lb
         )
 
+    def loglikelihood(self, x):
+        """Log-probability density function."""
+        # check if parameter lies within bounds
+        if any(x < self.problem.lb) or any(x > self.problem.ub):
+            return -np.inf
+        # invert sign
+        # TODO this is possibly the posterior if priors are defined
+        return -1.0 * self.problem.objective(x)
+
     def initialize(
         self,
         problem: Problem,
@@ -131,22 +145,13 @@ class DynestySampler(Sampler):
 
         self.problem = problem
 
-        def loglikelihood(x):
-            """Log-probability density function."""
-            # check if parameter lies within bounds
-            if any(x < self.problem.lb) or any(x > self.problem.ub):
-                return -np.inf
-            # invert sign
-            # TODO this is possibly the posterior if priors are defined
-            return -1.0 * self.problem.objective(x)
-
         sampler_class = dynesty.NestedSampler
         if self.dynamic:
             sampler_class = dynesty.DynamicNestedSampler
 
         # initialize sampler
         self.sampler = sampler_class(
-            loglikelihood=loglikelihood,
+            loglikelihood=self.loglikelihood,
             prior_transform=self.prior_transform,
             ndim=len(self.problem.x_free_indices),
             **self.sampler_args,

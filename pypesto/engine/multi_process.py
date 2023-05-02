@@ -1,8 +1,8 @@
 """Engines with multi-process parallelization."""
 import logging
+import multiprocessing
 import os
-from multiprocessing import Pool
-from typing import List
+from typing import Any, List
 
 import cloudpickle as pickle
 from tqdm import tqdm
@@ -31,21 +31,25 @@ class MultiProcessEngine(Engine):
         `os.cpu_count()`.
         The effectively used number of processes will be the minimum of
         `n_procs` and the number of tasks submitted.
+    method:
+        Start method, any of "fork", "spawn", "forkserver", or None,
+        giving the system specific default context.
     """
 
-    def __init__(self, n_procs: int = None):
+    def __init__(self, n_procs: int = None, method: str = None):
         super().__init__()
 
         if n_procs is None:
             n_procs = os.cpu_count()
-            logger.warning(
-                f"Engine set up to use up to {n_procs} processes in total. "
-                f"The number was automatically determined and might not be "
-                f"appropriate on some systems."
+            logger.info(
+                f"Engine will use up to {n_procs} processes (= CPU count)."
             )
         self.n_procs: int = n_procs
+        self.method: str = method
 
-    def execute(self, tasks: List[Task], progress_bar: bool = True):
+    def execute(
+        self, tasks: List[Task], progress_bar: bool = True
+    ) -> List[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
         Parameters
@@ -60,13 +64,17 @@ class MultiProcessEngine(Engine):
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
         n_procs = min(self.n_procs, n_tasks)
-        logger.info(
-            f"Performing parallel task execution on {n_procs} " f"processes."
-        )
+        logger.debug(f"Parallelizing on {n_procs} processes.")
 
-        with Pool(processes=n_procs) as pool:
-            results = pool.map(
-                work, tqdm(pickled_tasks, disable=not progress_bar)
+        ctx = multiprocessing.get_context(method=self.method)
+
+        with ctx.Pool(processes=n_procs) as pool:
+            results = list(
+                tqdm(
+                    pool.imap(work, pickled_tasks),
+                    total=len(pickled_tasks),
+                    disable=not progress_bar,
+                ),
             )
 
         return results

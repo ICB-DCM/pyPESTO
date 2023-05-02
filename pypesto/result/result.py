@@ -36,6 +36,13 @@ class Result:
         self.profile_result = profile_result or ProfileResult()
         self.sample_result = sample_result or SampleResult()
 
-    def summary(self) -> str:
-        """Get summary of the object."""
-        return self.optimize_result.summary()
+    def summary(self, full: bool = False) -> str:
+        """
+        Get summary of the object.
+
+        Parameters
+        ----------
+        full:
+            If True, print full vectors including fixed parameters.
+        """
+        return self.optimize_result.summary(full=full)
