@@ -11,27 +11,27 @@ Release notes
 
 New functionalities compared to 0.2.0:
 
-* ***New supported data types for parameter estimation:***
+* **New supported data types for parameter estimation:**
     * ordinal data
     * censored data
     * unbounded parameter optimization
-* ***New optimization approaches:***
+* **New optimization approaches:**
     * Hierarchical optimization
     * Spline approximation
-* ***New optimizers***: CMA-ES, Enhanced Scatter Search, Fides, NLopt, SACESS, SciPy Differential Evolution
-* ***New samplers:*** Emcee, Dynesty, Pymc v4
-* ***New Objectives***: Aesara objective, Julia objective, Jax objective
-* ***Ensemble analysis***
-* ***Model selection***
-* ***Predictions***
-* ***Hdf5 Storage***
+* **New optimizers**: CMA-ES, Enhanced Scatter Search, Fides, NLopt, SACESS, SciPy Differential Evolution
+* **New samplers:** Emcee, Dynesty, Pymc v4
+* **New Objectives:** Aesara objective, Julia objective, Jax objective
+* **Ensemble analysis**
+* **Model selection**
+* **Predictions**
+* **Hdf5 Storage**
 
 Not supported functionalities and versions compared to 0.2.0:
 
-* ***Removed Python 3.8 and older support***
-* ***Pymc (v3)***
-* ***Removed Theano objective***
-* ***Changed parameter indexing from boolean to int in profiling routines***
+* **Removed Python 3.8 and older support**
+* **Pymc (v3)**
+* **Removed Theano objective**
+* **Changed parameter indexing from boolean to int in profiling routines**
 
 
 
