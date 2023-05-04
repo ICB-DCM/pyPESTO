@@ -68,6 +68,7 @@ Thumbs.db
 
 #documentation
 doc/_build
+doc/api
 
 # data
 data/raw

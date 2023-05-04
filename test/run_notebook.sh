@@ -16,15 +16,14 @@ base_dir='doc/example'
 
 # Various topics notebooks
 nbs_1=(
-  'amici_import.ipynb'
+  'amici.ipynb'
   'conversion_reaction.ipynb'
   'fixed_parameters.ipynb'
   'petab_import.ipynb'
   'prior_definition.ipynb'
-  'rosenbrock.ipynb'
+  'custom_objective_function.ipynb'
   'store.ipynb'
   'synthetic_data.ipynb'
-  'hdf5_storage.ipynb'
   'hierarchical.ipynb'
   'example_ordinal.ipynb'
   'example_nonlinear_monotone.ipynb'

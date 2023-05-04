@@ -2,8 +2,65 @@ Release notes
 =============
 
 
+0.3 series
+..........
+
+
+0.3.0 (2023-05-02)
+-------------------
+
+New functionalities compared to 0.2.0:
+
+* **New supported data types for parameter estimation:**
+    * ordinal data
+    * censored data
+    * unbounded parameter optimization
+* **New optimization approaches:**
+    * Hierarchical optimization
+    * Spline approximation
+* **New optimizers**: CMA-ES, Enhanced Scatter Search, Fides, NLopt, SACESS, SciPy Differential Evolution
+* **New samplers:** Emcee, Dynesty, Pymc v4
+* **New Objectives:** Aesara objective, Julia objective, Jax objective
+* **Ensemble analysis**
+* **Model selection**
+* **Predictions**
+* **Hdf5 Storage**
+
+Not supported functionalities and versions compared to 0.2.0:
+
+* **Removed Python 3.8 and older support**
+* **Pymc (v3)**
+* **Removed Theano objective**
+* **Changed parameter indexing from boolean to int in profiling routines**
+
+
+
+
 0.2 series
 ..........
+
+
+0.2.17 (2023-05-02)
+-------------------
+
+* Optimize:
+    * Parameter estimation from ordinal data (#971)
+    * Parameter estimation from nonlinear-monotone data using spline approximation (#1028)
+    * Parameter estimation using censored data (#1041)
+    * Fix optimizer start point handling. (#1027)
+    * Add option to summary to print full or reduced vectors. (#1040, #1045)
+* Sampling:
+    * Dynesty sampler parallelization: changed the nested loglikelihood function to a class method (#1037)
+    * Dynesty sampler docs (#1039)
+* Engine
+    * Allow custom multiprocessing context (#1032)
+* General
+    * Updated example notebooks (#1050, #1026, #1051, #1056)
+    * Refactor docs (#1052)
+    * Update Dockerfile (#1034)
+    * proper bound handling for x_guesses (#1029)
+    * Updated to flake8 standards (#1042, #1049)
+    * Removed Python 3.8 support according to NEP29 (#1056)
 
 
 0.2.16 (2023-02-23)

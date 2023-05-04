@@ -1,6 +1,6 @@
 """Engines with multi-node parallelization."""
 import logging
-from typing import List
+from typing import Any, List
 
 import cloudpickle as pickle
 from mpi4py import MPI
@@ -31,7 +31,9 @@ class MPIPoolEngine(Engine):
     def __init__(self):
         super().__init__()
 
-    def execute(self, tasks: List[Task], progress_bar: bool = True):
+    def execute(
+        self, tasks: List[Task], progress_bar: bool = True
+    ) -> List[Any]:
         """
         Pickle tasks and distribute work to workers.
 
@@ -45,10 +47,7 @@ class MPIPoolEngine(Engine):
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
         n_procs = MPI.COMM_WORLD.Get_size()  # Size of communicator
-        logger.info(
-            f"Performing parallel task execution on {n_procs-1} "
-            f"workers with one manager."
-        )
+        logger.info(f"Parallelizing on {n_procs-1} workers with one manager.")
 
         with MPIPoolExecutor() as executor:
             results = executor.map(
