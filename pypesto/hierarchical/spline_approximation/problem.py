@@ -105,6 +105,19 @@ class SplineInnerProblem(InnerProblem):
                 len(self.get_noise_parameters_for_group(group)) > 0
             )
 
+    def initialize(self) -> None:
+        """Initialize the subproblem."""
+        # Initialize all parameter values.
+        for x in self.xs.values():
+            x.initialize()
+
+        # Initialize the groups.
+        for group in self.get_groups_for_xs(InnerParameterType.SPLINE):
+            self.groups[group][CURRENT_SIMULATION] = np.zeros(
+                self.groups[group][NUM_DATAPOINTS]
+            )
+            self.groups[group][INNER_NOISE_PARS] = 1
+
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
@@ -169,6 +182,13 @@ class SplineInnerProblem(InnerProblem):
         inner_par_dict = {}
         for x_id, x in self.xs.items():
             inner_par_dict[x_id] = x.value
+        return inner_par_dict
+
+    def get_inner_noise_parameter_dictionary(self) -> Dict:
+        """Get a dictionary with all noise inner parameter ids and their values."""
+        inner_par_dict = {}
+        for x in self.get_xs_for_type(InnerParameterType.SIGMA):
+            inner_par_dict[x.inner_parameter_id] = x.value
         return inner_par_dict
 
     def get_measurements_for_group(self, gr) -> np.ndarray:

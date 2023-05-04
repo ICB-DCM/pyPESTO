@@ -20,6 +20,7 @@ from ..C import (
     FVAL,
     GRAD,
     HESS,
+    INNER_PARAMETERS,
     MEASUREMENT_TYPE,
     METHOD,
     MODE_RES,
@@ -108,6 +109,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def initialize(self):
         """Initialize."""
+        self.best_fval = np.inf
         for calculator in self.inner_calculators:
             calculator.initialize()
 
@@ -120,6 +122,7 @@ class InnerCalculatorCollector(AmiciCalculator):
     ):
         """Construct inner calculators for each data type."""
         self.noise_dummy_values = {}
+        self.best_fval = np.inf
         if ORDINAL in self.data_types or CENSORED in self.data_types:
             optimal_scaling_inner_options = {
                 key: value
@@ -281,7 +284,8 @@ class InnerCalculatorCollector(AmiciCalculator):
         nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
             sensi_orders, mode, dim
         )
-        inner_parameters_dictionary = {}
+        all_inner_pars = {}
+        interpretable_inner_pars = {}
 
         # set order in solver
         sensi_order = 0
@@ -319,7 +323,8 @@ class InnerCalculatorCollector(AmiciCalculator):
                 RES: res,
                 SRES: sres,
                 RDATAS: rdatas,
-                X_INNER_OPT: inner_parameters_dictionary,
+                X_INNER_OPT: all_inner_pars,
+                INNER_PARAMETERS: interpretable_inner_pars,
             }
             ret[FVAL] = np.inf
             # if the gradient was requested,
@@ -369,7 +374,10 @@ class InnerCalculatorCollector(AmiciCalculator):
             nllh += inner_result[FVAL]
             if sensi_order > 0:
                 snllh += inner_result[GRAD]
-            inner_parameters_dictionary.update(inner_result[X_INNER_OPT])
+
+            all_inner_pars.update(inner_result[X_INNER_OPT])
+            if INNER_PARAMETERS in inner_result:
+                interpretable_inner_pars.update(inner_result[INNER_PARAMETERS])
 
         # add result for quantitative data
         if self.quantitative_data_mask is not None:
@@ -396,8 +404,14 @@ class InnerCalculatorCollector(AmiciCalculator):
             RES: res,
             SRES: sres,
             RDATAS: rdatas,
-            X_INNER_OPT: inner_parameters_dictionary,
         }
+
+        # Add inner parameters to return dict
+        # only if the objective value improved.
+        if ret[FVAL] < self.best_fval:
+            ret[X_INNER_OPT] = all_inner_pars
+            ret[INNER_PARAMETERS] = interpretable_inner_pars
+            self.best_fval = ret[FVAL]
 
         return filter_return_dict(ret)
 

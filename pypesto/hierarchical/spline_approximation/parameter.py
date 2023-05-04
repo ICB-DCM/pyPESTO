@@ -65,3 +65,7 @@ class SplineInnerParameter(InnerParameter):
         self.index = index
         self.estimate = estimate
         self.value = self.dummy_value
+
+    def initialize(self):
+        """Initialize."""
+        self.value = self.dummy_value

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from ...C import FVAL, MODE_FUN, MODE_RES, RDATAS, ModeType
+from ...C import FVAL, INNER_PARAMETERS, MODE_FUN, MODE_RES, RDATAS, ModeType
 from ..base import ObjectiveBase, ResultDict
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
@@ -213,6 +213,9 @@ class AmiciObjective(ObjectiveBase):
         # Custom (condition-specific) timepoints. See the
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
+
+        # Initialize the dictionary for saving of inner parameters.
+        self.inner_parameters = {}
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
@@ -453,6 +456,8 @@ class AmiciObjective(ObjectiveBase):
 
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]
+        if INNER_PARAMETERS in ret and ret[INNER_PARAMETERS]:
+            self.inner_parameters = ret[INNER_PARAMETERS]
 
         # check whether we should update data for preequilibration guesses
         if (

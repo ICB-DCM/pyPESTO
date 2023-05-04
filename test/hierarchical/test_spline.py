@@ -338,4 +338,4 @@ def test_calculate_nllh_for_group():
     sigma = 1
     n_datapoints = 8
     nllh = _calculate_nllh_for_group(inner_result, sigma, n_datapoints)
-    assert nllh == expected_nllh
+    assert nllh[SCIPY_FUN] == expected_nllh

@@ -76,6 +76,7 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
     def initialize(self):
         """Initialize."""
         self.inner_solver.initialize()
+        self.inner_problem.initialize()
 
     def __call__(
         self,

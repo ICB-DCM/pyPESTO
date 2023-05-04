@@ -11,6 +11,7 @@ from ...C import (
     FVAL,
     GRAD,
     HESS,
+    INNER_PARAMETERS,
     MODE_RES,
     RDATAS,
     RES,
@@ -68,6 +69,7 @@ class SplineAmiciCalculator(AmiciCalculator):
     def initialize(self):
         """Initialize."""
         self.inner_solver.initialize()
+        self.inner_problem.initialize()
 
     def __call__(
         self,
@@ -204,6 +206,10 @@ class SplineAmiciCalculator(AmiciCalculator):
         inner_result[
             X_INNER_OPT
         ] = self.inner_problem.get_inner_parameter_dictionary()
+
+        inner_result[
+            INNER_PARAMETERS
+        ] = self.inner_problem.get_inner_noise_parameter_dictionary()
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:

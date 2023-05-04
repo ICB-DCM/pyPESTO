@@ -36,6 +36,7 @@ def parameters(
     balance_alpha: bool = True,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     scale_to_interval: Optional[Tuple[float, float]] = None,
+    plot_inner_parameters: bool = True,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -73,6 +74,8 @@ def parameters(
     scale_to_interval:
         Tuple of bounds to which to scale all parameter values and bounds, or
         ``None`` to use bounds as determined by ``lb, ub``.
+    plot_inner_parameters:
+        Flag indicating whether to plot inner parameters (default: True).
 
     Returns
     -------
@@ -110,6 +113,7 @@ def parameters(
             ub=ub,
             parameter_indices=parameter_indices,
             start_indices=start_indices,
+            plot_inner_parameters=plot_inner_parameters,
         )
         lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
@@ -336,6 +340,7 @@ def handle_inputs(
     lb: Optional[Union[np.ndarray, List[float]]] = None,
     ub: Optional[Union[np.ndarray, List[float]]] = None,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
+    plot_inner_parameters: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray, List[str], np.ndarray, List[np.ndarray]]:
     """
     Compute the correct bounds for the parameter indices to be plotted.
@@ -354,6 +359,8 @@ def handle_inputs(
     start_indices:
         list of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
+    plot_inner_parameters:
+        Flag indicating whether inner parameters should be plotted.
 
     Returns
     -------
@@ -369,6 +376,15 @@ def handle_inputs(
     # retrieve results
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
+    # retrieve inner parameters if available
+    try:
+        inner_xs = result.optimize_result.inner_parameters
+        inner_xs_names = list(inner_xs[0].keys())
+        inner_xs = [list(inner_xs_idx.values()) for inner_xs_idx in inner_xs]
+        inner_lb = np.full(len(inner_xs_names), -np.inf)
+        inner_up = np.full(len(inner_xs_names), np.inf)
+    except AttributeError:
+        inner_xs = None
 
     # parse indices which should be plotted
     if start_indices is not None:
@@ -377,10 +393,14 @@ def handle_inputs(
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]
         fvals_out = [fvals[ind] for ind in start_indices]
+        if inner_xs is not None and plot_inner_parameters:
+            inner_xs_out = [inner_xs[ind] for ind in start_indices]
     else:
         # use non-reduced versions
         xs_out = xs
         fvals_out = fvals
+        if inner_xs is not None and plot_inner_parameters:
+            inner_xs_out = inner_xs
 
     # get bounds
     if lb is None:
@@ -403,6 +423,15 @@ def handle_inputs(
     else:
         lb = result.problem.get_full_vector(lb)
         ub = result.problem.get_full_vector(ub)
+
+    if inner_xs is not None and plot_inner_parameters:
+        lb = np.concatenate([lb, inner_lb])
+        ub = np.concatenate([ub, inner_up])
+        x_labels = x_labels + inner_xs_names
+        xs_out = [
+            np.concatenate([x, inner_x])
+            for x, inner_x in zip(xs_out, inner_xs_out)
+        ]
 
     return lb, ub, x_labels, fvals_out, xs_out
 
