@@ -26,7 +26,17 @@ from .optimization_stats import (
 )
 from .optimizer_convergence import optimizer_convergence
 from .optimizer_history import optimizer_history, optimizer_history_lowlevel
-from .parameters import parameter_hist, parameters, parameters_lowlevel
+from .ordinal_categories import (
+    plot_categories_from_inner_result,
+    plot_categories_from_pypesto_result,
+)
+from .parameters import (
+    optimization_scatter,
+    parameter_hist,
+    parameters,
+    parameters_correlation_matrix,
+    parameters_lowlevel,
+)
 from .profile_cis import profile_cis
 from .profiles import profile_lowlevel, profiles, profiles_lowlevel
 from .reference_points import ReferencePoint, create_references
@@ -37,5 +47,10 @@ from .sampling import (
     sampling_parameter_traces,
     sampling_prediction_trajectories,
     sampling_scatter,
+)
+from .spline_approximation import (
+    _add_spline_mapped_simulations_to_model_fit,
+    plot_splines_from_inner_result,
+    plot_splines_from_pypesto_result,
 )
 from .waterfall import waterfall, waterfall_lowlevel

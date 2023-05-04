@@ -31,7 +31,7 @@ for par in "$@"; do
       sudo apt-get install \
 	build-essential \
         coinor-libipopt1v5 coinor-libipopt-dev \
-        gfortran lcov pkg-config python-dev zlib1g-dev
+        gfortran lcov pkg-config python3-dev zlib1g-dev
     ;;
 
     pysb)

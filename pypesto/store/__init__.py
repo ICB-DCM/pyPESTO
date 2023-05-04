@@ -20,6 +20,5 @@ from .save_to_hdf5 import (
     ProblemHDF5Writer,
     ProfileResultHDF5Writer,
     SamplingResultHDF5Writer,
-    get_or_create_group,
     write_result,
 )

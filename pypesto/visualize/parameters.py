@@ -1,8 +1,11 @@
-from typing import Iterable, List, Optional, Sequence, Tuple, Union
+import logging
+from typing import Callable, Iterable, List, Optional, Sequence, Tuple, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from matplotlib.colors import Colormap
 from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
@@ -10,8 +13,14 @@ from pypesto.util import delete_nan_inf
 from ..C import RGBA
 from ..result import Result
 from .clust_color import assign_colors
-from .misc import process_result_list, process_start_indices
+from .misc import (
+    process_parameter_indices,
+    process_result_list,
+    process_start_indices,
+)
 from .reference_points import ReferencePoint, create_references
+
+logger = logging.getLogger(__name__)
 
 
 def parameters(
@@ -201,10 +210,10 @@ def parameter_hist(
     parameter_index = result.problem.x_names.index(parameter_name)
     parameter_values = [x[parameter_index] for x in xs]
 
-    ax.hist(parameter_values, color=color, bins=bins)
+    ax.hist(parameter_values, color=color, bins=bins, label=parameter_name)
     ax.set_xlabel(parameter_name)
     ax.set_ylabel("counts")
-    ax.set_title(f"Parameter {parameter_name}")
+    ax.set_title(f"{parameter_name}")
 
     return ax
 
@@ -259,7 +268,12 @@ def parameters_lowlevel(
     xs = np.array(xs)
     fvals = np.array(fvals)
     # remove nan or inf values in fvals and xs
-    xs, fvals = delete_nan_inf(fvals, xs, len(ub) if ub is not None else 1)
+    xs, fvals = delete_nan_inf(
+        fvals=fvals,
+        x=xs,
+        xdim=len(ub) if ub is not None else 1,
+        magnitude_bound=1e100,
+    )
 
     if size is None:
         # 0.5 inch height per parameter
@@ -358,7 +372,7 @@ def handle_inputs(
 
     # parse indices which should be plotted
     if start_indices is not None:
-        start_indices = process_start_indices(start_indices, len(fvals))
+        start_indices = process_start_indices(result, start_indices)
 
         # reduce number of displayed results
         xs_out = [xs[ind] for ind in start_indices]
@@ -391,3 +405,161 @@ def handle_inputs(
         ub = result.problem.get_full_vector(ub)
 
     return lb, ub, x_labels, fvals_out, xs_out
+
+
+def parameters_correlation_matrix(
+    result: Result,
+    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    method: Union[str, Callable] = 'pearson',
+    cluster: bool = True,
+    cmap: Union[Colormap, str] = 'bwr',
+    return_table: bool = False,
+) -> matplotlib.axes.Axes:
+    """
+    Plot correlation of optimized parameters.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'
+    parameter_indices:
+        List of integers specifying the parameters to be considered.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted
+    method:
+        The method to compute correlation. Allowed are `pearson, kendall,
+        spearman` or a callable function.
+    cluster:
+        Whether to cluster the correlation matrix.
+    cmap:
+        Colormap to use for the heatmap. Defaults to 'bwr'.
+    return_table:
+        Whether to return the parameter table additionally for further
+        inspection.
+
+    Returns
+    -------
+    ax:
+        The plot axis.
+    """
+    import seaborn as sns
+
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
+    parameter_indices = process_parameter_indices(
+        parameter_indices=parameter_indices, result=result
+    )
+    # put all parameters into a dataframe, where columns are parameters
+    parameters = [
+        result.optimize_result[i_start]['x'][parameter_indices]
+        for i_start in start_indices
+    ]
+    x_labels = [
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
+    ]
+    df = pd.DataFrame(parameters, columns=x_labels)
+    corr_matrix = df.corr(method=method)
+    if cluster:
+        ax = sns.clustermap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
+        )
+    else:
+        ax = sns.heatmap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
+        )
+    if return_table:
+        return ax, df
+    return ax
+
+
+def optimization_scatter(
+    result: Result,
+    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    diag_kind: str = "kde",
+    suptitle: str = None,
+    size: Tuple[float, float] = None,
+    show_bounds: bool = False,
+):
+    """
+    Plot a scatter plot of all pairs of parameters for the given starts.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'.
+    parameter_indices:
+        List of integers specifying the parameters to be considered.
+    start_indices:
+        List of integers specifying the multistarts to be plotted or
+        int specifying up to which start index should be plotted.
+    diag_kind:
+        Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’,
+        None}.
+    suptitle:
+        Title of the plot.
+    size:
+        Size of the plot.
+    show_bounds:
+        Whether to show the parameter bounds.
+
+    Returns
+    -------
+    ax:
+        The plot axis.
+    """
+    import seaborn as sns
+
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
+    parameter_indices = process_parameter_indices(
+        parameter_indices=parameter_indices, result=result
+    )
+    # remove all start indices, that encounter an inf value at the start
+    # resulting in optimize_result[start]["x"] being None
+    start_indices_finite = start_indices[
+        [
+            result.optimize_result[i_start]['x'] is not None
+            for i_start in start_indices
+        ]
+    ]
+    # compare start_indices with start_indices_finite and log a warning
+    if not np.all(start_indices == start_indices_finite):
+        logger.warning(
+            'Some start indices were removed due to inf values at the start.'
+        )
+    # put all parameters into a dataframe, where columns are parameters
+    parameters = [
+        result.optimize_result[i_start]['x'][parameter_indices]
+        for i_start in start_indices_finite
+    ]
+    x_labels = [
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
+    ]
+    df = pd.DataFrame(parameters, columns=x_labels)
+
+    sns.set(style="ticks")
+
+    ax = sns.pairplot(
+        df,
+        diag_kind=diag_kind,
+    )
+
+    if size is not None:
+        ax.fig.set_size_inches(size)
+    if suptitle:
+        ax.fig.suptitle(suptitle)
+    if show_bounds:
+        # set bounds of plot to parameter bounds. Only use diagonal as
+        # sns.PairGrid has sharex,sharey = True by default.
+        for i_axis, axis in enumerate(np.diag(ax.axes)):
+            axis.set_xlim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+            axis.set_ylim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+
+    return ax

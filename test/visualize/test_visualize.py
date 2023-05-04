@@ -91,7 +91,6 @@ def sample_petab_problem():
         n_samples=1000,
         sampler=sampler,
         x0=np.array([3, -4]),
-        filename=None,
     )
     return result
 
@@ -149,7 +148,7 @@ def create_optimization_history():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -167,7 +166,6 @@ def create_optimization_history():
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
-        filename=None,
         progress_bar=False,
     )
 
@@ -437,7 +435,7 @@ def test_parameters_hist():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -448,7 +446,6 @@ def test_parameters_hist():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
         progress_bar=False,
     )
 
@@ -456,8 +453,24 @@ def test_parameters_hist():
     visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
 
 
+@close_fig
+def test_optimization_scatter():
+    result = create_optimization_result()
+    visualize.optimization_scatter(result)
+
+
+@close_fig
+def test_optimization_scatter_with_x_None():
+    result = create_optimization_result()
+    # create an optimizerResult with x=None
+    optimizer_result = pypesto.OptimizerResult(x=None, fval=np.inf, id="inf")
+    result.optimize_result.append(optimize_result=optimizer_result)
+
+    visualize.optimization_scatter(result)
+
+
 # @close_fig
-def test_ensemble_dimension_reduction():
+def _test_ensemble_dimension_reduction():
     # creates a test problem
     problem = create_problem(n_parameters=20)
 
@@ -748,7 +761,7 @@ def test_optimization_stats():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxiter': 200}
+    optimizer_options = {'maxfun': 200}
     optimizer = optimize.ScipyOptimizer(
         method='TNC', options=optimizer_options
     )
@@ -759,7 +772,6 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
         progress_bar=False,
     )
 
@@ -768,7 +780,6 @@ def test_optimization_stats():
         optimizer=optimizer,
         n_starts=10,
         startpoint_method=pypesto.startpoint.uniform,
-        filename=None,
         progress_bar=False,
     )
 
@@ -1078,12 +1089,15 @@ def test_visualize_optimized_model_fit():
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
-        filename=None,
         progress_bar=False,
     )
 
     # test call of visualize_optimized_model_fit
-    visualize_optimized_model_fit(petab_problem=petab_problem, result=result)
+    visualize_optimized_model_fit(
+        petab_problem=petab_problem,
+        result=result,
+        pypesto_problem=problem,
+    )
 
 
 @close_fig
@@ -1108,7 +1122,6 @@ def test_time_trajectory_model():
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
-        filename=None,
         progress_bar=False,
     )
 

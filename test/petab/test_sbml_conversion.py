@@ -82,7 +82,6 @@ class AmiciObjectiveTest(unittest.TestCase):
 
 
 def parameter_estimation(objective, library, solver, fixed_pars, n_starts):
-
     if re.match(r'(?i)^(ls_)', solver):
         options = {'max_nfev': 10}
     else:
@@ -123,7 +122,6 @@ def parameter_estimation(objective, library, solver, fixed_pars, n_starts):
         n_starts=n_starts,
         startpoint_method=startpoints,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
 

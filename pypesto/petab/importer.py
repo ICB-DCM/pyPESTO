@@ -1,10 +1,14 @@
 """Contains the PetabImporter class."""
+from __future__ import annotations
+
 import importlib
 import logging
 import os
 import shutil
 import sys
 import tempfile
+import warnings
+from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
@@ -19,8 +23,23 @@ from typing import (
 import numpy as np
 import pandas as pd
 
-from ..C import CONDITION_SEP, MODE_FUN, MODE_RES
-from ..objective import AggregatedObjective, AmiciObjectBuilder, AmiciObjective
+from ..C import (
+    CENSORED,
+    CENSORING_TYPES,
+    CONDITION_SEP,
+    MEASUREMENT_TYPE,
+    MODE_FUN,
+    MODE_RES,
+    NONLINEAR_MONOTONE,
+    OPTIMAL_SCALING_OPTIONS,
+    ORDINAL,
+    SPLINE_APPROXIMATION_OPTIONS,
+)
+from ..hierarchical.calculator import HierarchicalAmiciCalculator
+from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
+from ..hierarchical.problem import InnerProblem
+from ..objective import AggregatedObjective, AmiciObjective
+from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
 from ..problem import Problem
@@ -52,10 +71,13 @@ class PetabImporter(AmiciObjectBuilder):
 
     def __init__(
         self,
-        petab_problem: 'petab.Problem',
+        petab_problem: petab.Problem,
         output_folder: str = None,
         model_name: str = None,
         validate_petab: bool = True,
+        validate_petab_hierarchical: bool = True,
+        hierarchical: bool = False,
+        inner_options: Dict = None,
     ):
         """Initialize importer.
 
@@ -71,12 +93,46 @@ class PetabImporter(AmiciObjectBuilder):
             compiled model python module.
         validate_petab:
             Flag indicating if the PEtab problem shall be validated.
+        validate_petab_hierarchical:
+            Flag indicating if the PEtab problem shall be validated in terms of
+            pyPESTO's hierarchical optimization implementation.
+        hierarchical:
+            Whether to use hierarchical optimization or not, in case the
+            underlying PEtab problem has parameters marked for hierarchical
+            optimization (non-empty `parameterType` column in the PEtab
+            parameter table). Required for ordinal, censored and nonlinear-monotone data.
+        inner_options:
+            Options for the inner problems and solvers.
+            If not provided, default options will be used.
         """
         self.petab_problem = petab_problem
+        self._hierarchical = hierarchical
+
+        self._non_quantitative_data_types = (
+            get_petab_non_quantitative_data_types(petab_problem)
+        )
+
+        if self._non_quantitative_data_types and not self._hierarchical:
+            raise ValueError(
+                "Ordinal, censored and nonlinear-monotone data require "
+                "hierarchical optimization to be enabled.",
+            )
+
+        self.inner_options = inner_options
+        if self.inner_options is None:
+            self.inner_options = {}
+
+        self.validate_inner_options()
 
         if validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
+        if self._hierarchical and validate_petab_hierarchical:
+            from ..hierarchical.petab import (
+                validate_hierarchical_petab_problem,
+            )
+
+            validate_hierarchical_petab_problem(petab_problem)
 
         if output_folder is None:
             output_folder = _find_output_folder_name(
@@ -94,7 +150,7 @@ class PetabImporter(AmiciObjectBuilder):
         yaml_config: Union[dict, str],
         output_folder: str = None,
         model_name: str = None,
-    ) -> 'PetabImporter':
+    ) -> PetabImporter:
         """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
 
@@ -103,6 +159,15 @@ class PetabImporter(AmiciObjectBuilder):
             output_folder=output_folder,
             model_name=model_name,
         )
+
+    def validate_inner_options(self):
+        """Validate the inner options."""
+        for key in self.inner_options:
+            if (
+                key
+                not in OPTIMAL_SCALING_OPTIONS + SPLINE_APPROXIMATION_OPTIONS
+            ):
+                raise ValueError(f"Unknown inner option {key}.")
 
     def check_gradients(
         self,
@@ -161,24 +226,22 @@ class PetabImporter(AmiciObjectBuilder):
                 return False
 
         return all(
-            [
-                any(
-                    [
-                        np.all(
-                            (mode_df.rel_err.values < rtol)
-                            | (mode_df.abs_err.values < atol)
-                        ),
-                    ]
-                )
-                for mode_df in dfs
-            ]
+            any(
+                [
+                    np.all(
+                        (mode_df.rel_err.values < rtol)
+                        | (mode_df.abs_err.values < atol)
+                    ),
+                ]
+            )
+            for mode_df in dfs
         )
 
     def create_model(
         self,
         force_compile: bool = False,
         **kwargs,
-    ) -> 'amici.Model':
+    ) -> amici.Model:
         """
         Import amici model.
 
@@ -215,20 +278,24 @@ class PetabImporter(AmiciObjectBuilder):
             )
             self.compile_model(**kwargs)
         else:
-            logger.info(
+            logger.debug(
                 f"Using existing amici model in folder "
                 f"{self.output_folder}."
             )
 
         return self._create_model()
 
-    def _create_model(self) -> 'amici.Model':
+    def _create_model(self) -> amici.Model:
         """Load model module and return the model, no checks/compilation."""
         # load moduĺe
         module = amici.import_model_module(
             module_name=self.model_name, module_path=self.output_folder
         )
         model = module.getModel()
+        amici.petab_import.check_model(
+            amici_model=model,
+            petab_problem=self.petab_problem,
+        )
 
         return model
 
@@ -276,15 +343,13 @@ class PetabImporter(AmiciObjectBuilder):
             shutil.rmtree(self.output_folder)
 
         amici.petab_import.import_model(
-            sbml_model=self.petab_problem.sbml_model,
-            condition_table=self.petab_problem.condition_df,
-            observable_table=self.petab_problem.observable_df,
+            petab_problem=self.petab_problem,
             model_name=self.model_name,
             model_output_dir=self.output_folder,
             **kwargs,
         )
 
-    def create_solver(self, model: 'amici.Model' = None) -> 'amici.Solver':
+    def create_solver(self, model: amici.Model = None) -> amici.Solver:
         """Return model solver."""
         # create model
         if model is None:
@@ -294,8 +359,8 @@ class PetabImporter(AmiciObjectBuilder):
         return solver
 
     def create_edatas(
-        self, model: 'amici.Model' = None, simulation_conditions=None
-    ) -> List['amici.ExpData']:
+        self, model: amici.Model = None, simulation_conditions=None
+    ) -> List[amici.ExpData]:
         """Create list of amici.ExpData objects."""
         # create model
         if model is None:
@@ -309,9 +374,9 @@ class PetabImporter(AmiciObjectBuilder):
 
     def create_objective(
         self,
-        model: 'amici.Model' = None,
-        solver: 'amici.Solver' = None,
-        edatas: Sequence['amici.ExpData'] = None,
+        model: amici.Model = None,
+        solver: amici.Solver = None,
+        edatas: Sequence[amici.ExpData] = None,
         force_compile: bool = False,
         **kwargs,
     ) -> AmiciObjective:
@@ -328,7 +393,10 @@ class PetabImporter(AmiciObjectBuilder):
         force_compile:
             Whether to force-compile the model if not passed.
         **kwargs:
-            Additional arguments passed on to the objective.
+            Additional arguments passed on to the objective. In case of ordinal
+            or nonlinear-monotone measurements, ``inner_options`` can optionally
+            be passed here. If none are given, ``inner_options`` given to the
+            importer constructor (or inner defaults) will be chosen.
 
         Returns
         -------
@@ -357,18 +425,16 @@ class PetabImporter(AmiciObjectBuilder):
             simulation_conditions=simulation_conditions,
             scaled_parameters=True,
             amici_model=model,
+            fill_fixed_parameters=False,
         )
 
         par_ids = self.petab_problem.x_ids
 
         # fill in dummy parameters (this is needed since some objective
         #  initialization e.g. checks for preeq parameters)
-        problem_parameters = {
-            key: val
-            for key, val in zip(
-                self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled
-            )
-        }
+        problem_parameters = dict(
+            zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
+        )
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
@@ -376,6 +442,42 @@ class PetabImporter(AmiciObjectBuilder):
             parameter_mapping=parameter_mapping,
             amici_model=model,
         )
+
+        calculator = None
+        amici_reporting = None
+
+        if self._non_quantitative_data_types and self._hierarchical:
+            inner_options = kwargs.pop('inner_options', None)
+            inner_options = (
+                inner_options
+                if inner_options is not None
+                else self.inner_options
+            )
+            calculator = InnerCalculatorCollector(
+                self._non_quantitative_data_types,
+                self.petab_problem,
+                model,
+                edatas,
+                inner_options,
+            )
+            amici_reporting = amici.RDataReporting.residuals
+
+        elif self._hierarchical:
+            inner_problem = InnerProblem.from_petab_amici(
+                self.petab_problem, model, edatas
+            )
+            calculator = HierarchicalAmiciCalculator(inner_problem)
+            amici_reporting = amici.RDataReporting.full
+            inner_parameter_ids = calculator.inner_problem.get_x_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
+
+        if self._hierarchical:
+            # FIXME: currently not supported with hierarchical
+            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+                warnings.warn(
+                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
+                )
+            kwargs['guess_steadystate'] = False
 
         # create objective
         obj = AmiciObjective(
@@ -386,6 +488,8 @@ class PetabImporter(AmiciObjectBuilder):
             x_names=par_ids,
             parameter_mapping=parameter_mapping,
             amici_object_builder=self,
+            calculator=calculator,
+            amici_reporting=amici_reporting,
             **kwargs,
         )
 
@@ -495,9 +599,7 @@ class PetabImporter(AmiciObjectBuilder):
         prior_list = []
 
         if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
-
             for i, x_id in enumerate(self.petab_problem.x_ids):
-
                 prior_type_entry = self.petab_problem.parameter_df.loc[
                     x_id, petab.OBJECTIVE_PRIOR_TYPE
                 ]
@@ -506,7 +608,6 @@ class PetabImporter(AmiciObjectBuilder):
                     isinstance(prior_type_entry, str)
                     and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
                 ):
-
                     prior_params = [
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[
@@ -529,24 +630,22 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
-    def create_startpoint_method(self) -> Union[StartpointMethod, None]:
+    def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
 
-        If the PEtab problem specifies an initializationPrior. Returns None,
-        if no initializationPrior is specified.
+        Parameters
+        ----------
+        **kwargs:
+            Additional keyword arguments passed on to
+            :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
-        if (
-            petab.INITIALIZATION_PRIOR_TYPE
-            not in self.petab_problem.parameter_df
-        ):
-            return None
 
         def startpoint_method(n_starts: int, **kwargs):
             return petab.sample_parameter_startpoints(
                 self.petab_problem.parameter_df, n_starts=n_starts
             )
 
-        return FunctionStartpoints(function=startpoint_method)
+        return FunctionStartpoints(function=startpoint_method, **kwargs)
 
     def create_problem(
         self,
@@ -579,27 +678,65 @@ class PetabImporter(AmiciObjectBuilder):
         if objective is None:
             objective = self.create_objective(**kwargs)
 
+        x_fixed_indices = self.petab_problem.x_fixed_indices
+        x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
+        x_ids = self.petab_problem.x_ids
+        lb = self.petab_problem.lb_scaled
+        ub = self.petab_problem.ub_scaled
+
+        # Raise error if the correct calculator is not used.
+
+        if self._non_quantitative_data_types:
+            if not isinstance(objective.calculator, InnerCalculatorCollector):
+                raise AssertionError(
+                    f"If there are ordinal, censored or nonlinear-monotone measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
+                )
+        elif self._hierarchical:
+            if not isinstance(
+                objective.calculator, HierarchicalAmiciCalculator
+            ):
+                raise AssertionError(
+                    f"If hierarchical optimization of relative data is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
+                )
+        # In case of hierarchical optimization, parameters estimated in the
+        # inner subproblem are removed from the outer problem
+        if not self._non_quantitative_data_types and self._hierarchical:
+            inner_parameter_ids = (
+                objective.calculator.inner_problem.get_x_ids()
+            )
+            lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
+            ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]
+            x_ids = [x for x in x_ids if x not in inner_parameter_ids]
+            x_fixed_indices = list(
+                map(x_ids.index, self.petab_problem.x_fixed_ids)
+            )
+
+        x_scales = [
+            self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
+            for x_id in x_ids
+        ]
+
         if problem_kwargs is None:
             problem_kwargs = {}
 
         prior = self.create_prior()
 
         if prior is not None:
+            if self._hierarchical:
+                raise NotImplementedError(
+                    "Hierarchical optimization in combination with priors "
+                    "is not yet supported."
+                )
             objective = AggregatedObjective([objective, prior])
-
-        x_scales = [
-            self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
-            for x_id in self.petab_problem.x_ids
-        ]
 
         problem = Problem(
             objective=objective,
-            lb=self.petab_problem.lb_scaled,
-            ub=self.petab_problem.ub_scaled,
-            x_fixed_indices=self.petab_problem.x_fixed_indices,
-            x_fixed_vals=self.petab_problem.x_nominal_fixed_scaled,
+            lb=lb,
+            ub=ub,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals,
             x_guesses=x_guesses,
-            x_names=self.petab_problem.x_ids,
+            x_names=x_ids,
             x_scales=x_scales,
             x_priors_defs=prior,
             **problem_kwargs,
@@ -609,8 +746,8 @@ class PetabImporter(AmiciObjectBuilder):
 
     def rdatas_to_measurement_df(
         self,
-        rdatas: Sequence['amici.ReturnData'],
-        model: 'amici.Model' = None,
+        rdatas: Sequence[amici.ReturnData],
+        model: amici.Model = None,
     ) -> pd.DataFrame:
         """
         Create a measurement dataframe in the petab format.
@@ -641,8 +778,8 @@ class PetabImporter(AmiciObjectBuilder):
 
     def rdatas_to_simulation_df(
         self,
-        rdatas: Sequence['amici.ReturnData'],
-        model: 'amici.Model' = None,
+        rdatas: Sequence[amici.ReturnData],
+        model: amici.Model = None,
     ) -> pd.DataFrame:
         """
         See `rdatas_to_measurement_df`.
@@ -678,10 +815,17 @@ class PetabImporter(AmiciObjectBuilder):
             A dataframe built from the rdatas in the format as in
             self.petab_problem.measurement_df.
         """
+
         # create rdata-like dicts from the prediction result
-        rdatas = []
-        for condition in prediction.conditions:
-            rdatas.append({'t': condition.timepoints, 'y': condition.output})
+        @dataclass
+        class FakeRData:
+            ts: np.ndarray
+            y: np.ndarray
+
+        rdatas = [
+            FakeRData(ts=condition.timepoints, y=condition.output)
+            for condition in prediction.conditions
+        ]
 
         # add an AMICI model, if possible
         model = None
@@ -707,7 +851,7 @@ class PetabImporter(AmiciObjectBuilder):
 
 
 def _find_output_folder_name(
-    petab_problem: 'petab.Problem',
+    petab_problem: petab.Problem,
     model_name: str,
 ) -> str:
     """
@@ -751,3 +895,39 @@ def _find_output_folder_name(
 def _find_model_name(output_folder: str) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
+
+
+def get_petab_non_quantitative_data_types(
+    petab_problem: petab.Problem,
+) -> List[str]:
+    """
+    Get the data types from the PEtab problem.
+
+    Parameters
+    ----------
+    petab_problem:
+        The PEtab problem.
+
+    Returns
+    -------
+    data_types:
+        A list of the data types.
+    """
+    non_quantitative_data_types = []
+    if MEASUREMENT_TYPE in petab_problem.measurement_df.columns:
+        petab_data_types = petab_problem.measurement_df[
+            MEASUREMENT_TYPE
+        ].unique()
+        if ORDINAL in petab_data_types:
+            non_quantitative_data_types.append(ORDINAL)
+        if any(
+            censoring_type in petab_data_types
+            for censoring_type in CENSORING_TYPES
+        ):
+            non_quantitative_data_types.append(CENSORED)
+        if NONLINEAR_MONOTONE in petab_data_types:
+            non_quantitative_data_types.append(NONLINEAR_MONOTONE)
+
+    if len(non_quantitative_data_types) == 0:
+        return None
+    return non_quantitative_data_types

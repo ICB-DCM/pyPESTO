@@ -1,0 +1,11 @@
+format_version: 1
+parameter_file: parameters_example_censored.tsv
+problems:
+- condition_files:
+  - experimentalCondition_example_censored.tsv
+  measurement_files:
+  - measurementData_example_censored.tsv
+  observable_files:
+  - observables_example_censored.tsv
+  sbml_files:
+  - model_example_censored.xml

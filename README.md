@@ -21,13 +21,16 @@ pyPESTO features include:
 * Interface to [AMICI](https://github.com/AMICI-dev/AMICI/) for efficient
   simulation and sensitivity analysis of ordinary differential equation (ODE)
   models
-  ([example](https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/amici_import.ipynb))
+  ([example](https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/amici.ipynb))
 * Parameter estimation pipeline for systems biology problems specified in
   [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
   ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/petab_import.ipynb))
-* Parameter estimation with qualitative data as described in
-  [Schmiester et al. (2020)](https://doi.org/10.1007/s00285-020-01522-w).
-  This is currently implemented in the `feature_ordinal` branch.
+* Parameter estimation with ordinal data as described in
+  [Schmiester et al. (2020)](https://doi.org/10.1007/s00285-020-01522-w) and
+  [Schmiester et al. (2021)](https://doi.org/10.1093/bioinformatics/btab512).
+  ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/example_ordinal.ipynb))
+* Parameter estimation with censored data. ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/example_censored.ipynb))
+* Parameter estimation with nonlinear-monotone data. ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/example_nonlinear_monotone.ipynb))
 
 ## Quick install
 

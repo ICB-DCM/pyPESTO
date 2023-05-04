@@ -7,7 +7,6 @@ from .. import C
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
-from .util import res_to_chi2
 
 
 class NegLogPriors(AggregatedObjective):
@@ -73,7 +72,7 @@ class NegLogParameterPriors(ObjectiveBase):
         self,
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: C.ModeType,
         **kwargs,
     ) -> ResultDict:
         """
@@ -103,7 +102,6 @@ class NegLogParameterPriors(ObjectiveBase):
             for order in sensi_orders:
                 if order == 0:
                     res[C.RES] = self.residual(x)
-                    res[C.CHI2] = res_to_chi2(res[C.RES])
                 elif order == 1:
                     res[C.SRES] = self.residual_jacobian(x)
                 else:
@@ -114,7 +112,7 @@ class NegLogParameterPriors(ObjectiveBase):
     def check_sensi_orders(
         self,
         sensi_orders: Tuple[int, ...],
-        mode: str,
+        mode: C.ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
         if mode == C.MODE_FUN:
@@ -143,7 +141,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return True
 
-    def check_mode(self, mode: str) -> bool:
+    def check_mode(self, mode: C.ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
         if mode == C.MODE_FUN:
             return True
@@ -248,7 +246,6 @@ def get_parameter_prior_dict(
     )
 
     if parameter_scale == C.LIN or prior_type.startswith('parameterScale'):
-
         return {
             'index': index,
             'density_fun': log_f,
@@ -299,7 +296,6 @@ def get_parameter_prior_dict(
         }
 
     elif parameter_scale == C.LOG10:
-
         log10 = np.log(10)
 
         def log_f_log10(x_log10):
@@ -451,7 +447,6 @@ def _prior_densities(
         return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
     elif prior_type in [C.NORMAL, C.PARAMETER_SCALE_NORMAL]:
-
         mean = prior_parameters[0]
         sigma = prior_parameters[1]
         sigma2 = sigma**2
@@ -472,7 +467,6 @@ def _prior_densities(
         return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
 
     elif prior_type in [C.LAPLACE, C.PARAMETER_SCALE_LAPLACE]:
-
         mean = prior_parameters[0]
         scale = prior_parameters[1]
         log_2_sigma = np.log(2 * prior_parameters[1])
@@ -500,7 +494,6 @@ def _prior_densities(
         # when implementing: add to tests
         raise NotImplementedError
     elif prior_type == C.LOG_NORMAL:
-
         # TODO check again :)
         mean = prior_parameters[0]
         sigma = prior_parameters[1]

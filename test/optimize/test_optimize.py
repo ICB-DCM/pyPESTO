@@ -3,6 +3,7 @@ This is for testing optimization of the pypesto.Objective.
 """
 
 import itertools as itt
+import logging
 import os
 import re
 import subprocess  # noqa: S404
@@ -19,6 +20,7 @@ import pypesto
 import pypesto.optimize as optimize
 from pypesto.store import read_result
 
+from ..base.test_x_fixed import create_problem
 from ..util import CRProblem, rosen_for_sensi
 
 
@@ -130,7 +132,10 @@ optimizers = [
 ]
 
 
-@pytest.fixture(params=optimizers)
+@pytest.fixture(
+    params=optimizers,
+    ids=[f"{i}-{o[0]}" for i, o in enumerate(optimizers)],
+)
 def optimizer(request):
     return request.param
 
@@ -204,7 +209,6 @@ def test_unbounded_minimize(optimizer):
                 n_starts=1,
                 startpoint_method=pypesto.startpoint.uniform,
                 options=options,
-                filename=None,
                 progress_bar=False,
             )
         return
@@ -215,7 +219,6 @@ def test_unbounded_minimize(optimizer):
             n_starts=1,
             startpoint_method=pypesto.startpoint.uniform,
             options=options,
-            filename=None,
             progress_bar=False,
         )
 
@@ -238,6 +241,7 @@ def get_optimizer(library, solver):
     options = {'maxiter': 100}
 
     if library == 'scipy':
+        options['maxfun'] = options.pop('maxiter')
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
     elif library == 'ipopt':
         optimizer = optimize.IpoptOptimizer()
@@ -280,7 +284,6 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
 
@@ -314,7 +317,6 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
     assert result.optimize_result.list[0].hess is None
@@ -327,7 +329,6 @@ def test_trim_results(problem):
         n_starts=1,
         startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
-        filename=None,
         progress_bar=False,
     )
     assert result.optimize_result.list[0].sres is None
@@ -344,6 +345,7 @@ def test_mpipoolengine():
         subprocess.check_call(  # noqa: S603,S607
             [
                 'mpiexec',
+                '--oversubscribe',
                 '-np',
                 '2',
                 'python',
@@ -377,7 +379,6 @@ def test_mpipoolengine():
             optimizer=optimizer,
             n_starts=2,
             engine=pypesto.engine.MultiProcessEngine(),
-            filename=None,
             progress_bar=False,
         )
 
@@ -409,7 +410,6 @@ def test_history_beats_optimizer():
         optimizer=optimize.ScipyOptimizer(method="TNC", options=scipy_options),
         n_starts=1,
         options=optimize.OptimizeOptions(history_beats_optimizer=True),
-        filename=None,
         progress_bar=False,
     )
 
@@ -418,7 +418,6 @@ def test_history_beats_optimizer():
         optimizer=optimize.ScipyOptimizer(method="TNC", options=scipy_options),
         n_starts=1,
         options=optimize.OptimizeOptions(history_beats_optimizer=False),
-        filename=None,
         progress_bar=False,
     )
 
@@ -439,3 +438,191 @@ def test_history_beats_optimizer():
         result_hist.optimize_result.list[0]['fval']
         < result_opt.optimize_result.list[0]['fval']
     )
+
+
+@pytest.mark.parametrize("ess_type", ["ess", "cess", "sacess"])
+@pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
+@pytest.mark.flaky(reruns=3)
+def test_ess(problem, local_optimizer, ess_type, request):
+    from pypesto.optimize.ess import (
+        CESSOptimizer,
+        ESSOptimizer,
+        SacessOptimizer,
+        get_default_ess_options,
+    )
+
+    if ess_type == "ess":
+        ess = ESSOptimizer(
+            dim_refset=10,
+            max_iter=20,
+            local_optimizer=local_optimizer,
+            local_n1=15,
+            local_n2=5,
+            n_threads=2,
+            balance=0.5,
+        )
+    elif ess_type == "cess":
+        if (
+            'cr' in request.node.callspec.id
+            or 'integrated' in request.node.callspec.id
+        ):
+            # Not pickleable - incompatible with CESS
+            pytest.skip()
+        # CESS with 4 processes
+        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
+        for x in ess_init_args:
+            x['local_optimizer'] = local_optimizer
+        ess = CESSOptimizer(
+            ess_init_args=ess_init_args,
+            max_iter=5,
+            max_walltime_s=10,
+        )
+    elif ess_type == "sacess":
+        if (
+            'cr' in request.node.callspec.id
+            or 'integrated' in request.node.callspec.id
+        ):
+            # Not pickleable - incompatible with CESS
+            pytest.skip()
+        # SACESS with 4 processes
+        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
+        for x in ess_init_args:
+            x['local_optimizer'] = local_optimizer
+        ess = SacessOptimizer(
+            max_walltime_s=1,
+            sacess_loglevel=logging.DEBUG,
+            ess_init_args=ess_init_args,
+        )
+    else:
+        raise ValueError(f"Unsupported ESS type {ess_type}.")
+
+    res = ess.minimize(
+        problem=problem,
+        startpoint_method=pypesto.startpoint.UniformStartpoints(),
+    )
+    print("ESS result: ", res.summary())
+
+    # best values roughly: cr: 4.701; rosen 7.592e-10
+    if 'rosen' in request.node.callspec.id:
+        if local_optimizer:
+            assert res.optimize_result[0].fval < 1e-4
+        assert res.optimize_result[0].fval < 1
+    elif 'cr' in request.node.callspec.id:
+        if local_optimizer:
+            assert res.optimize_result[0].fval < 5
+        assert res.optimize_result[0].fval < 20
+    else:
+        raise AssertionError()
+
+
+def test_ess_multiprocess(problem, request):
+    if (
+        'cr' in request.node.callspec.id
+        or 'integrated' in request.node.callspec.id
+    ):
+        # Not pickleable - incompatible with CESS
+        pytest.skip()
+
+    from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
+
+    ess = ESSOptimizer(
+        max_iter=20,
+        local_optimizer=optimize.FidesOptimizer(),
+    )
+    refset = RefSet(
+        dim=10,
+        evaluator=FunctionEvaluatorMP(
+            problem=problem,
+            startpoint_method=pypesto.startpoint.UniformStartpoints(),
+            n_procs=4,
+        ),
+    )
+    refset.initialize_random(10 * refset.dim)
+    res = ess.minimize(
+        refset=refset,
+    )
+    print("ESS result: ", res.summary())
+
+
+def test_scipy_integrated_grad():
+    integrated = True
+    obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
+    lb = 0 * np.ones((1, 2))
+    ub = 1 * np.ones((1, 2))
+    x_guesses = [[0.5, 0.5]]
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+        history_options=history_options,
+        progress_bar=False,
+    )
+    assert (
+        len(result.optimize_result.history[0].get_fval_trace())
+        == result.optimize_result.history[0].n_fval
+    )
+
+
+def test_correct_startpoint_usage(optimizer):
+    """
+    Test that the startpoint is correctly used in all optimizers.
+    """
+    # cmaes supports x0, but samples from this initial guess, therefore return
+    if optimizer == ('cmaes', ''):
+        return
+
+    opt = get_optimizer(*optimizer)
+    # return if the optimizer knowingly does not support x_guesses
+    if not opt.check_x0_support():
+        return
+
+    # define a problem with an x_guess
+    problem = CRProblem(x_guesses=[np.array([0.1, 0.1])]).get_problem()
+
+    # run optimization
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=opt,
+        n_starts=1,
+        progress_bar=False,
+        history_options=pypesto.HistoryOptions(trace_record=True),
+    )
+    # check that the startpoint was used
+    assert problem.x_guesses[0] == pytest.approx(
+        result.optimize_result[0].history.get_x_trace(0)
+    )
+
+
+def test_summary(caplog):
+    """Test the result summary."""
+    problem = create_problem()
+    optimizer = pypesto.optimize.ScipyOptimizer()
+    n_starts = 5
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=n_starts,
+        progress_bar=False,
+    )
+
+    # test that both full and reduced summary are available
+    assert isinstance(result.summary(full=False), str)
+    assert isinstance(result.summary(full=True), str)  # creates warning
+
+    # as we have fixed parameters, the string of full should be longer
+    assert len(result.summary(full=False)) < len(result.summary(full=True))
+
+    # test that a warning is correctly printed.
+    result.optimize_result[0].free_indices = None
+    result.optimize_result[0].summary(full=True)
+    expected_warning = (
+        "There is no information about fixed parameters, "
+        "run update_to_full with the corresponding problem first."
+    )
+    assert expected_warning in [r.message for r in caplog.records]

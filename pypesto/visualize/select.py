@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import matplotlib.pyplot as plt
 import networkx as nx
 from petab_select import Model
-from petab_select.constants import Criterion
+from petab_select.constants import VIRTUAL_INITIAL_MODEL, Criterion
 
 from .. import select as pypesto_select
 
@@ -67,6 +67,10 @@ def plot_selected_models(
         _, ax = plt.subplots(figsize=size)
     linewidth = 3
 
+    selected_models = [
+        model for model in selected_models if model != VIRTUAL_INITIAL_MODEL
+    ]
+
     criterion_values = {
         labels.get(
             model.get_hash(), default_label_maker(model)
@@ -103,9 +107,16 @@ def plot_selected_models(
     return ax
 
 
-def plot_history_digraph(
+def plot_history_digraph(*args, **kwargs):
+    """Ignore me. Renamed to `plot_calibrated_models_digraph`."""
+    raise NotImplementedError(
+        "This method is now `plot_calibrated_models_digraph`."
+    )
+
+
+def plot_calibrated_models_digraph(
     problem: pypesto_select.Problem,
-    history: Dict[str, Model] = None,
+    calibrated_models: Dict[str, Model] = None,
     criterion: Criterion = None,
     optimal_distance: float = 1,
     relative: bool = True,
@@ -113,7 +124,7 @@ def plot_history_digraph(
     labels: Dict[str, str] = None,
     ax: plt.Axes = None,
 ) -> plt.Axes:
-    """Plot all visited models in the model space, as a directed graph.
+    """Plot all calibrated models in the model space, as a directed graph.
 
     TODO replace magic numbers with options/constants
 
@@ -121,9 +132,9 @@ def plot_history_digraph(
     ----------
     problem:
         The pyPESTO Select problem.
-    history:
+    calibrated_models:
         The models calibrated during model selection, in the format of
-        `pypesto.select.Problem.history`.
+        `pypesto.select.Problem.calibrated_models`.
     criterion:
         The criterion.
     optimal_distance:
@@ -147,21 +158,21 @@ def plot_history_digraph(
     """
     if criterion is None:
         criterion = problem.petab_select_problem.criterion
-    if history is None:
-        history = problem.history
+    if calibrated_models is None:
+        calibrated_models = problem.calibrated_models
     if labels is None:
         labels = {}
 
     G = nx.DiGraph()
     edges = []
-    for model in history.values():
+    for model in calibrated_models.values():
         predecessor_model_hash = model.predecessor_model_hash
         if predecessor_model_hash is not None:
             from_ = labels.get(predecessor_model_hash, predecessor_model_hash)
             # may only not be the case for
             # COMPARED_MODEL_ID == INITIAL_VIRTUAL_MODEL
-            if predecessor_model_hash in history:
-                predecessor_model = history[predecessor_model_hash]
+            if predecessor_model_hash in calibrated_models:
+                predecessor_model = calibrated_models[predecessor_model_hash]
                 from_ = labels.get(
                     predecessor_model.get_hash(),
                     default_label_maker(predecessor_model),

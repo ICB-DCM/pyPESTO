@@ -1,24 +1,27 @@
 API reference
 =============
 
-.. automodule:: pypesto
+.. autosummary::
+   :toctree: api
 
-.. toctree::
-   :maxdepth: 2
-   :caption: API reference
-
-   api_engine
-   api_ensemble
-   api_logging
-   api_objective
-   api_optimize
-   api_petab
-   api_predict
-   api_problem
-   api_profile
-   api_result
-   api_sample
-   api_select
-   api_startpoint
-   api_store
-   api_visualize
+   pypesto.engine
+   pypesto.ensemble
+   pypesto.hierarchical
+   pypesto.hierarchical.optimal_scaling
+   pypesto.hierarchical.spline_approximation
+   pypesto.history
+   pypesto.logging
+   pypesto.objective
+   pypesto.objective.julia
+   pypesto.optimize
+   pypesto.petab
+   pypesto.predict
+   pypesto.problem
+   pypesto.profile
+   pypesto.result
+   pypesto.sample
+   pypesto.select
+   pypesto.startpoint
+   pypesto.store
+   pypesto.visualize
+   pypesto.visualize.model_fit

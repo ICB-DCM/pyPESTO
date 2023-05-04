@@ -5,7 +5,7 @@ import numpy as np
 import pypesto.optimize
 
 from ..engine import Task
-from ..objective import HistoryOptions
+from ..history import HistoryOptions
 from ..problem import Problem
 from ..result import OptimizerResult
 
@@ -53,6 +53,8 @@ class OptimizerTask(Task):
     def execute(self) -> OptimizerResult:
         """Execute the task."""
         logger.debug(f"Executing task {self.id}.")
+        # check for supplied x_guess support
+        self.optimizer.check_x0_support(self.problem.x_guesses)
 
         optimizer_result = self.optimizer.minimize(
             problem=self.problem,

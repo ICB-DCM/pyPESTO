@@ -1,6 +1,17 @@
+from __future__ import annotations
+
 import logging
 from functools import partial
-from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
@@ -33,6 +44,7 @@ from ..C import (
     X_NAMES,
     X_VECTOR,
     EnsembleType,
+    ModeType,
 )
 from ..engine import (
     Engine,
@@ -40,7 +52,10 @@ from ..engine import (
     MultiThreadEngine,
     SingleCoreEngine,
 )
-from ..objective import AmiciObjective
+
+if TYPE_CHECKING:
+    from ..objective import AmiciObjective
+
 from ..result import PredictionConditionResult, PredictionResult, Result
 from ..sample import geweke_test
 from .task import EnsembleTask
@@ -860,7 +875,7 @@ class Ensemble:
         prediction_id: str = None,
         sensi_orders: Tuple = (0,),
         default_value: float = None,
-        mode: str = MODE_FUN,
+        mode: ModeType = MODE_FUN,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
         engine: Engine = None,

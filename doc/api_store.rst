@@ -1,1 +1,0 @@
-.. automodule:: pypesto.store

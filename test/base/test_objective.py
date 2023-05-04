@@ -4,12 +4,15 @@ import copy
 import numbers
 
 import aesara.tensor as aet
+import jax
+import jax.numpy as jnp
 import numpy as np
 import pytest
 import sympy as sp
 
 import pypesto
 from pypesto.objective.aesara import AesaraObjective
+from pypesto.objective.jax import JaxObjective
 
 from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
 
@@ -182,27 +185,60 @@ def test_aesara(max_sensi_order, integrated):
     # apply inverse transform such that we evaluate at prob['x']
     x_ref = np.arcsinh(prob['x'])
 
-    # compose rosenbrock function with with sinh transformation
+    # compose rosenbrock function with sinh transformation
     obj = AesaraObjective(prob['obj'], x, aet.sinh(x))
 
-    # check value against
-    assert obj(x_ref) == prob['fval']
+    # check function values and derivatives, also after copy
+    for _obj in (obj, copy.deepcopy(obj)):
+        # function value
+        assert _obj(x_ref) == prob['fval']
 
-    if max_sensi_order > 0:
-        assert np.allclose(
-            obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
-        )
+        # gradient
+        if max_sensi_order > 0:
+            assert np.allclose(
+                _obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
+            )
 
-    if max_sensi_order > 1:
-        assert np.allclose(
-            prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
-            + np.diag(prob['grad'] * np.sinh(x_ref)),
-            obj(x_ref, sensi_orders=(2,)),
-        )
+        # hessian
+        if max_sensi_order > 1:
+            assert np.allclose(
+                prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
+                + np.diag(prob['grad'] * np.sinh(x_ref)),
+                _obj(x_ref, sensi_orders=(2,)),
+            )
 
-    # test everything still works after deepcopy
-    cobj = copy.deepcopy(obj)
-    assert cobj(x_ref) == prob['fval']
+
+def test_jax(max_sensi_order, integrated):
+    """Test function composition and gradient computation via jax"""
+    prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
+
+    # apply inverse transform such that we evaluate at prob['x']
+    x_ref = np.arcsinh(prob['x'])
+
+    def jac_op(x: jnp.array) -> jnp.array:
+        return jax.lax.sinh(x)
+
+    # compose rosenbrock function with sinh transformation
+    obj = JaxObjective(prob['obj'], jac_op)
+
+    # check function values and derivatives, also after copy
+    for _obj in (obj, copy.deepcopy(obj)):
+        # function value
+        assert _obj(x_ref) == prob['fval']
+
+        # gradient
+        if max_sensi_order > 0:
+            assert np.allclose(
+                _obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
+            )
+
+        # hessian
+        if max_sensi_order > 1:
+            assert np.allclose(
+                prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
+                + np.diag(prob['grad'] * np.sinh(x_ref)),
+                _obj(x_ref, sensi_orders=(2,)),
+            )
 
 
 @pytest.fixture(

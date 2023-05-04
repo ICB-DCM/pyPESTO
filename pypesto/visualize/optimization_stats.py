@@ -253,7 +253,7 @@ def optimization_run_property_per_multistart(
 
     Returns
     -------
-    ax:
+    axes:
         The plot axes.
     """
     supported_properties = {
@@ -379,7 +379,7 @@ def stats_lowlevel(
     values, fvals = delete_nan_inf(fvals, values)
 
     if start_indices is not None:
-        start_indices = process_start_indices(start_indices, len(values))
+        start_indices = process_start_indices(result, start_indices)
         values = values[start_indices]
         fvals = fvals[start_indices]
 
@@ -388,7 +388,6 @@ def stats_lowlevel(
     # assign colors
     colors = assign_colors(vals=fvals, colors=color, balance_alpha=False)
 
-    # sort TODO: issue # 378
     sorted_indices = sorted(range(n_starts), key=lambda j: fvals[j])
     values = values[sorted_indices]
 

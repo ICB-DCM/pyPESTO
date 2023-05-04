@@ -1,3 +1,5 @@
+.. _example:
+
 Examples
 ========
 
@@ -23,7 +25,8 @@ Getting started
 .. toctree::
    :maxdepth: 2
 
-   example/rosenbrock.ipynb
+   example/getting_started.ipynb
+   example/custom_objective_function.ipynb
 
 PEtab and AMICI
 ---------------
@@ -31,7 +34,7 @@ PEtab and AMICI
 .. toctree::
    :maxdepth: 2
 
-   example/amici_import.ipynb
+   example/amici.ipynb
    example/petab_import.ipynb
 
 Algorithms and features
@@ -42,14 +45,15 @@ Algorithms and features
 
    example/fixed_parameters.ipynb
    example/prior_definition.ipynb
+   example/sampler_study.ipynb
    example/sampling_diagnostics.ipynb
    example/store.ipynb
-   example/hdf5_storage.ipynb
    example/model_selection.ipynb
-
-..
-   temporarily disabled until pymc4 support is there https://github.com/ICB-DCM/pyPESTO/pull/818
-   example/sampler_study.ipynb
+   example/julia.ipynb
+   example/hierarchical.ipynb
+   example/example_ordinal.ipynb
+   example/example_censored.ipynb
+   example/example_nonlinear_monotone.ipynb
 
 Application examples
 --------------------

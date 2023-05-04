@@ -1,13 +1,13 @@
+from __future__ import annotations
+
 import os
 import shutil
+from typing import TYPE_CHECKING
 
 from .importer import PetabImporter
 
-try:
-    import amici
+if TYPE_CHECKING:
     import amici.petab_import_pysb
-except ImportError:
-    pass
 
 
 class PetabImporterPysb(PetabImporter):
@@ -15,8 +15,9 @@ class PetabImporterPysb(PetabImporter):
 
     def __init__(
         self,
-        petab_problem: 'amici.petab_import_pysb.PysbPetabProblem',
-        output_folder: str = None,
+        petab_problem: amici.petab_import_pysb.PysbPetabProblem,
+        validate_petab: bool = False,
+        **kwargs,
     ):
         """
         Initialize importer.
@@ -25,14 +26,17 @@ class PetabImporterPysb(PetabImporter):
         ----------
         petab_problem:
             Managing access to the model and data.
-        output_folder:
-            Folder to contain the amici model.
+        validate_petab:
+            Flag indicating if the PEtab problem shall be validated.
+        kwargs:
+            Passed to `PetabImporter.__init__`.
         """
+        if "model_name" not in kwargs:
+            kwargs["model_name"] = petab_problem.pysb_model.name
         super().__init__(
             petab_problem,
-            model_name=petab_problem.pysb_model.name,
-            output_folder=output_folder,
-            validate_petab=False,
+            validate_petab=validate_petab,
+            **kwargs,
         )
 
     def compile_model(self, **kwargs):
@@ -46,6 +50,8 @@ class PetabImporterPysb(PetabImporter):
         kwargs: Extra arguments passed to `amici.SbmlImporter.sbml2amici`.
 
         """
+        import amici.petab_import_pysb
+
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
