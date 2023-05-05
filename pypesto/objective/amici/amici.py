@@ -215,7 +215,7 @@ class AmiciObjective(ObjectiveBase):
         self.custom_timepoints = None
 
         # Initialize the dictionary for saving of inner parameters.
-        self.inner_parameters = {}
+        self.inner_parameters: Dict[str, float] = {}
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""

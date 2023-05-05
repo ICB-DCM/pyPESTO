@@ -223,6 +223,14 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         return quantitative_data_mask
 
+    def get_inner_parameter_ids(self) -> List[str]:
+        """Return the ids of the inner parameters."""
+        return [
+            parameter_id
+            for inner_calculator in self.inner_calculators
+            for parameter_id in inner_calculator.get_inner_parameter_ids()
+        ]
+
     def __call__(
         self,
         x_dct: Dict,

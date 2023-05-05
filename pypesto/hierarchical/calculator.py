@@ -60,6 +60,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         super().initialize()
         self.inner_solver.initialize()
 
+    def get_inner_parameter_ids(self) -> List[str]:
+        """Get the ids of the inner parameters."""
+        return self.inner_problem.get_x_ids()
+
     def __call__(
         self,
         x_dct: Dict,
