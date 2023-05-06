@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 import os.path
-from typing import Iterable, List, Optional, Union, Tuple
+from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -45,13 +45,13 @@ class PetabJlImporter:
 
     @staticmethod
     def from_yaml(
-            yaml_file: str,
-            odeSolverOptions: Optional[dict] = None,
-            gradientMethod: Optional[str] = None,
-            hessianMethod: Optional[str] = None,
-            sparseJacobian: Optional[bool] = None,
-            verbose: Optional[bool] = None,
-            directory: Optional[str] = None,
+        yaml_file: str,
+        odeSolverOptions: Optional[dict] = None,
+        gradientMethod: Optional[str] = None,
+        hessianMethod: Optional[str] = None,
+        sparseJacobian: Optional[bool] = None,
+        verbose: Optional[bool] = None,
+        directory: Optional[str] = None,
     ) -> PetabJlImporter:
         """
         Create a `PetabJlImporter` from a yaml file.
@@ -73,9 +73,7 @@ class PetabJlImporter:
 
         # write julia module
         source_file, module = _write_julia_file(
-            yaml_file=yaml_file,
-            options=options,
-            dir=directory
+            yaml_file=yaml_file, options=options, dir=directory
         )
 
         return PetabJlImporter(
@@ -113,7 +111,7 @@ class PetabJlImporter:
         obj = PEtabJlObjective(
             module=self.module,
             source_file=self.source_file,
-            petab_problem_name=self._petab_problem_name
+            petab_problem_name=self._petab_problem_name,
         )
         return obj
 
@@ -147,7 +145,7 @@ class PetabJlImporter:
             x_guesses=x_guesses,
             x_names=obj.x_names,
             lb_init=lb_init,
-            ub_init=ub_init
+            ub_init=ub_init,
         )
 
 
@@ -156,7 +154,7 @@ def _get_default_options(
     gradientMethod: Union[str, None] = None,
     hessianMethod: Union[str, None] = None,
     sparseJacobian: Union[str, None] = None,
-    verbose: Union[str, None] = None
+    verbose: Union[str, None] = None,
 ) -> dict:
     """
     If values are not specified, get default values for the options.
@@ -202,7 +200,10 @@ def _get_default_options(
 
     # check values for gradientMethod and hessianMethod
     allowed_gradient_methods = [
-        "ForwardDiff", "ForwardEquations", "Adjoint", "Zygote"
+        "ForwardDiff",
+        "ForwardEquations",
+        "Adjoint",
+        "Zygote",
     ]
     if gradientMethod not in allowed_gradient_methods:
         logger.warning(
@@ -210,9 +211,7 @@ def _get_default_options(
             f"{allowed_gradient_methods}. Defaulting to ForwardDiff."
         )
         gradientMethod = "ForwardDiff"
-    allowed_hessian_methods = [
-        "ForwardDiff", "BlocForwardDiff", "GaussNewton"
-    ]
+    allowed_hessian_methods = ["ForwardDiff", "BlocForwardDiff", "GaussNewton"]
     if hessianMethod not in allowed_hessian_methods:
         logger.warning(
             f"hessianMethod {hessianMethod} is not in "
@@ -232,9 +231,7 @@ def _get_default_options(
 
 
 def _write_julia_file(
-        yaml_file: str,
-        options: dict,
-        dir: str
+    yaml_file: str, options: dict, dir: str
 ) -> Tuple[str, str]:
     """
     Write the Julia file.
@@ -260,32 +257,35 @@ def _write_julia_file(
     source_file = os.path.join(dir, "PEtabJl_module.jl")
     module = "MyPEtabJlModule"
 
-    link_to_options = "https://sebapersson.github.io/" \
-                      "PEtab.jl/dev/API_choosen/#PEtab.setupPEtabODEProblem"
+    link_to_options = (
+        "https://sebapersson.github.io/"
+        "PEtab.jl/dev/API_choosen/#PEtab.setupPEtabODEProblem"
+    )
     odeSolvOpt_str = ", ".join(
         [f"{k}={v}" for k, v in options["odeSolverOptions"].items()]
     )
     # delete "solver=" from string
     odeSolvOpt_str = odeSolvOpt_str.replace("solver=", "")
 
-    content = f"module {module}Compile\n\n" \
-              f"using OrdinaryDiffEq\n" \
-              f"using PEtab\n\n" \
-              f"pathYaml = \"{yaml_file}\"\n" \
-              f"petabModel = readPEtabModel(pathYaml, verbose=true)\n\n" \
-              f"# A full list of options for createPEtabODEProblem can be " \
-              f"found at {link_to_options}\n" \
-              f"petabProblem = createPEtabODEProblem(\n\t" \
-              f"petabModel,\n\t" \
-              f"odeSolverOptions=ODESolverOptions({odeSolvOpt_str}),\n\t" \
-              f"gradientMethod=:{options['gradientMethod']},\n\t" \
-              f"hessianMethod=:{options['hessianMethod']},\n\t" \
-              f"sparseJacobian={options['sparseJacobian']},\n\t" \
-              f"verbose={options['verbose']}\n)\n\nend\n\n\n" \
-              f"module {module}\n\t" \
-              f"import ..{module}Compile: petabProblem\n" \
-              f"end"\
-
+    content = (
+        f"module {module}Compile\n\n"
+        f"using OrdinaryDiffEq\n"
+        f"using PEtab\n\n"
+        f"pathYaml = \"{yaml_file}\"\n"
+        f"petabModel = readPEtabModel(pathYaml, verbose=true)\n\n"
+        f"# A full list of options for createPEtabODEProblem can be "
+        f"found at {link_to_options}\n"
+        f"petabProblem = createPEtabODEProblem(\n\t"
+        f"petabModel,\n\t"
+        f"odeSolverOptions=ODESolverOptions({odeSolvOpt_str}),\n\t"
+        f"gradientMethod=:{options['gradientMethod']},\n\t"
+        f"hessianMethod=:{options['hessianMethod']},\n\t"
+        f"sparseJacobian={options['sparseJacobian']},\n\t"
+        f"verbose={options['verbose']}\n)\n\nend\n\n\n"
+        f"module {module}\n\t"
+        f"import ..{module}Compile: petabProblem\n"
+        f"end"
+    )
     # write file
     with open(source_file, "w") as f:
         f.write(content)
