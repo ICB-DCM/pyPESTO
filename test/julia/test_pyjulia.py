@@ -1,8 +1,12 @@
+import pickle
+
 import numpy as np
 
 from pypesto import Problem, optimize
-from pypesto.engine import MultiProcessEngine, SingleCoreEngine
-from pypesto.objective.julia import JuliaObjective, display_source_ipython
+from pypesto.engine import (MultiProcessEngine, SingleCoreEngine)
+from pypesto.objective.julia import (JuliaObjective, display_source_ipython,
+                                     PEtabJlObjective)
+from pypesto.petab import PetabJlImporter
 
 # The pyjulia wrapper appears to ignore global noqas, thus per line here
 
@@ -33,13 +37,19 @@ def test_pyjulia_pipeline():
 
     # define problem
     lb, ub = [-5.0] * n_p, [5.0] * n_p
-    problem = Problem(obj, lb=lb, ub=ub)
+    # create 10 random starting points within the bounds
+    x_guesses = rng.uniform(lb, ub, size=(10, n_p))
+    problem = Problem(obj, lb=lb, ub=ub, x_guesses=x_guesses)
 
     # optimize
-    result = optimize.minimize(problem, engine=SingleCoreEngine())
+    result = optimize.minimize(problem, engine=SingleCoreEngine(), n_starts=10)
 
     # use parallelization
-    result2 = optimize.minimize(problem, engine=MultiProcessEngine())
+    result2 = optimize.minimize(
+        problem,
+        engine=MultiProcessEngine(),
+        n_starts=10
+    )
 
     # check results match
     assert np.allclose(  # noqa: S101
@@ -52,3 +62,56 @@ def test_pyjulia_pipeline():
     # check with analytical value
     p_opt = obj.get("p_opt")
     assert np.allclose(result.optimize_result[0].x, p_opt)  # noqa: S101
+
+
+def test_petabJL_from_module():
+    """Test that PEtab.jl is integrated properly."""
+    # create objective
+    module = "MyModule2"
+    source_file = "doc/example/model_julia/PEtabJl_Test.jl"
+
+    importer = PetabJlImporter(
+        module=module,
+        source_file=source_file
+    )
+
+    problem = importer.create_problem()
+
+    obj = problem.objective
+
+    pickle.loads(pickle.dumps(obj))
+
+    # optimize with single core
+    result = optimize.minimize(
+        problem,
+        engine=SingleCoreEngine(),
+        n_starts=2
+    )
+    # optimize with multi core
+    result2 = optimize.minimize(
+        problem,
+        engine=MultiProcessEngine(n_procs=1),
+        n_starts=2
+    )
+
+    print(result.summary())
+    print(result2.summary())
+
+
+def test_petabJL_from_yaml():
+    """Test that PEtab.jl from yaml file is running smoothly"""
+    yaml_file = "doc/example/conversion_reaction/conversion_reaction.yaml"
+
+    importer = PetabJlImporter.from_yaml(yaml_file)
+
+    problem = importer.create_problem()
+
+    # optimize with single core
+    result = optimize.minimize(
+        problem,
+        engine=SingleCoreEngine(),
+        n_starts=2
+    )
+
+    print(result.summary())
+
