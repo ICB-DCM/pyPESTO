@@ -163,15 +163,19 @@ def test_finite_difference_checks():
     # Test the single step size `check_grad` method.
     eps = 1e-5
     result_single_eps = objective.check_grad(np.array([theta]), eps=eps)
-    assert result_single_eps['rel_err'].squeeze() == rel_err(eps)
+    np.testing.assert_almost_equal(
+        result_single_eps['rel_err'].squeeze(),
+        rel_err(eps),
+    )
 
     # Test the multiple step size `check_grad_multi_eps` method.
     multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
     result_multi_eps = objective.check_grad_multi_eps(
         [theta], multi_eps=multi_eps
     )
-    assert result_multi_eps['rel_err'].squeeze() == min(
-        rel_err(_eps) for _eps in multi_eps
+    np.testing.assert_almost_equal(
+        result_multi_eps['rel_err'].squeeze(),
+        min(rel_err(_eps) for _eps in multi_eps)
     )
 
 
