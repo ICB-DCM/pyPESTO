@@ -382,7 +382,7 @@ def handle_inputs(
         inner_xs_names = list(inner_xs[0].keys())
         inner_xs = [list(inner_xs_idx.values()) for inner_xs_idx in inner_xs]
         inner_lb = np.full(len(inner_xs_names), -np.inf)
-        inner_up = np.full(len(inner_xs_names), np.inf)
+        inner_ub = np.full(len(inner_xs_names), np.inf)
     except AttributeError:
         inner_xs = None
 
@@ -426,7 +426,7 @@ def handle_inputs(
 
     if inner_xs is not None and plot_inner_parameters:
         lb = np.concatenate([lb, inner_lb])
-        ub = np.concatenate([ub, inner_up])
+        ub = np.concatenate([ub, inner_ub])
         x_labels = x_labels + inner_xs_names
         xs_out = [
             np.concatenate([x, inner_x])

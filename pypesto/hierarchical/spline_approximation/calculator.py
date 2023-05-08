@@ -155,7 +155,6 @@ class SplineAmiciCalculator(AmiciCalculator):
             x_dct.update(
                 self.inner_problem.get_noise_dummy_values(scaled=True)
             )
-            breakpoint()
 
             # fill in parameters
             amici.parameter_mapping.fill_in_parameters(

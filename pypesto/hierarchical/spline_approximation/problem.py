@@ -344,8 +344,6 @@ def noise_inner_parameters_from_parameter_df(
             continue
         if petab.is_empty(row.get(PARAMETER_TYPE)) or not row[ESTIMATE]:
             continue
-        else:
-            estimate = True
         observable_id = noise_parameter_to_observable[row[PARAMETER_ID]]
         group = observable_ids.index(observable_id) + 1
 
@@ -359,7 +357,7 @@ def noise_inner_parameters_from_parameter_df(
                 observable_id=observable_id,
                 group=group,
                 index=None,
-                estimate=estimate,
+                estimate=True,
             )
         )
 

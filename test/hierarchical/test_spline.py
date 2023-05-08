@@ -205,7 +205,8 @@ def test_get_monotonicity_measure():
 
 
 def _inner_problem_exp():
-    timepoints = np.linspace(0, 10, 11)
+    n_timepoints = 11
+    timepoints = np.linspace(0, 10, n_timepoints)
 
     simulation = timepoints
     sigma = np.full(len(timepoints), 1)
@@ -215,7 +216,7 @@ def _inner_problem_exp():
     n_spline_pars = int(np.ceil(spline_ratio * len(timepoints)))
 
     expected_values = {
-        'fun': np.log(2 * np.pi) * 11 / 2,
+        'fun': np.log(2 * np.pi) * n_timepoints / 2,
         'jac': np.zeros(n_spline_pars),
         'x': np.asarray([0.0, 2.0, 2.0, 2.0, 2.0, 2.0]),
     }
@@ -330,12 +331,14 @@ def test_calculate_sigma_for_group():
 
 def test_calculate_nllh_for_group():
     """Test the calculation of the nllh for a group."""
-    expected_nllh = 0.5 * 8 * np.log(2 * np.pi) + 12.0 / 1
-
     inner_result = {
         SCIPY_FUN: 12.0,
     }
     sigma = 1
     n_datapoints = 8
+
+    expected_nllh = (
+        0.5 * n_datapoints * np.log(2 * np.pi) + inner_result[SCIPY_FUN] / 1
+    )
     nllh = _calculate_nllh_for_group(inner_result, sigma, n_datapoints)
     assert nllh[SCIPY_FUN] == expected_nllh

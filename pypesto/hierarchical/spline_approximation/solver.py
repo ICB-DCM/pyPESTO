@@ -278,7 +278,7 @@ class SplineInnerSolver(InnerSolver):
                     )
 
                     # If the spline parameter is at its boundary, the
-                    # corresponding Langrangian multiplier mu is set to 0.
+                    # corresponding Lagrangian multiplier mu is set to 0.
                     min_diff_all = np.full(N, min_diff)
                     min_diff_all[0] = 0.0
                     mu = np.asarray(
