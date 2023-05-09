@@ -1167,7 +1167,7 @@ def get_vector_indices(
         indices = np.round(np.linspace(0, len(candidates) - 1, n_vectors))
         return candidates[indices.astype(int)]
     else:
-        return candidates[:n_vectors]
+        return sorted(candidates, key=lambda i: trace_start[i])[:n_vectors]
 
 
 def get_percentile_label(percentile: Union[float, int, str]) -> str:
