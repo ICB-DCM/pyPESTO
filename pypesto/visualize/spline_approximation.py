@@ -54,6 +54,10 @@ def plot_splines_from_pypesto_result(
         )
     )
 
+    x_dct.update(
+        pypesto_result.problem.objective.calculator.noise_dummy_values
+    )
+
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_result.problem.objective.edatas
     parameter_mapping = pypesto_result.problem.objective.parameter_mapping
@@ -239,7 +243,7 @@ def _add_spline_mapped_simulations_to_model_fit(
             result.optimize_result.list[start_index]['x'],
         )
     )
-
+    x_dct.update(pypesto_problem.objective.calculator.noise_dummy_values)
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_problem.objective.edatas
     parameter_mapping = pypesto_problem.objective.parameter_mapping
