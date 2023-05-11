@@ -112,6 +112,9 @@ class MetropolisSampler(InternalSampler):
             llh_new = lpost_new - lprior_new
             # log acceptance probability (temper log likelihood)
             log_p_acc = min(beta * (llh_new - llh) + (lprior_new - lprior), 0)
+            # catch the nan case which occurs if both lpost_new and lprior_new are -inf
+            if np.isnan(log_p_acc):
+                log_p_acc = - np.inf
         else:
             # log acceptance probability (temper log posterior)
             log_p_acc = min(beta * (lpost_new - lpost), 0)
