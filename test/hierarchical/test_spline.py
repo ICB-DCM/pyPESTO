@@ -9,7 +9,7 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
-from pypesto.C import LIN, MODE_FUN, InnerParameterType
+from pypesto.C import LIN, MODE_FUN, SCIPY_FUN, InnerParameterType
 from pypesto.hierarchical.spline_approximation import (
     SplineInnerProblem,
     SplineInnerSolver,
@@ -18,6 +18,8 @@ from pypesto.hierarchical.spline_approximation.parameter import (
     SplineInnerParameter,
 )
 from pypesto.hierarchical.spline_approximation.solver import (
+    _calculate_nllh_for_group,
+    _calculate_sigma_for_group,
     extract_expdata_using_mask,
     get_monotonicity_measure,
     get_spline_mapped_simulations,
@@ -169,7 +171,10 @@ def test_spline_calculator_and_objective():
 
     # Since the nominal parameters are close to true ones, the
     # the fval and grad should both be low.
-    assert np.all(calculator_results['minimal_diff_on']['fval'] < atol)
+    expected_fval = np.log(2 * np.pi) * 18 / 2
+    assert np.isclose(
+        calculator_results['minimal_diff_on']['fval'], expected_fval, atol=atol
+    )
     assert np.all(calculator_results['minimal_diff_off']['grad'] < grad_atol)
 
 
@@ -200,7 +205,8 @@ def test_get_monotonicity_measure():
 
 
 def _inner_problem_exp():
-    timepoints = np.linspace(0, 10, 11)
+    n_timepoints = 11
+    timepoints = np.linspace(0, 10, n_timepoints)
 
     simulation = timepoints
     sigma = np.full(len(timepoints), 1)
@@ -210,7 +216,7 @@ def _inner_problem_exp():
     n_spline_pars = int(np.ceil(spline_ratio * len(timepoints)))
 
     expected_values = {
-        'fun': 0.0,
+        'fun': np.log(2 * np.pi) * n_timepoints / 2,
         'jac': np.zeros(n_spline_pars),
         'x': np.asarray([0.0, 2.0, 2.0, 2.0, 2.0, 2.0]),
     }
@@ -266,7 +272,7 @@ def test_spline_inner_solver():
         results[minimal_diff] = inner_solvers[minimal_diff].solve(
             problem=inner_problem,
             sim=[simulation],
-            sigma=[sigma],
+            amici_sigma=[sigma],
         )
 
     for minimal_diff in options.keys():
@@ -311,3 +317,28 @@ def test_get_spline_mapped_simulations():
         expected_spline_mapped_simulations,
         rtol=rtol,
     )
+
+
+def test_calculate_sigma_for_group():
+    """Test the calculation of sigma for a group."""
+    expected_sigma = np.sqrt(2 * 12.0 / 8)
+    inner_result = {
+        SCIPY_FUN: 12.0,
+    }
+    sigma = _calculate_sigma_for_group(inner_result, n_datapoints=8)
+    assert sigma == expected_sigma
+
+
+def test_calculate_nllh_for_group():
+    """Test the calculation of the nllh for a group."""
+    inner_result = {
+        SCIPY_FUN: 12.0,
+    }
+    sigma = 1
+    n_datapoints = 8
+
+    expected_nllh = (
+        0.5 * n_datapoints * np.log(2 * np.pi) + inner_result[SCIPY_FUN] / 1
+    )
+    nllh = _calculate_nllh_for_group(inner_result, sigma, n_datapoints)
+    assert nllh[SCIPY_FUN] == expected_nllh
