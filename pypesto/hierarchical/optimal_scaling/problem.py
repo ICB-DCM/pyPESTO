@@ -153,6 +153,18 @@ class OptimalScalingProblem(InnerProblem):
                     'have to either be all None, or all not None.'
                 )
 
+    def initialize(self) -> None:
+        """Initialize the subproblem."""
+        # Initialize all parameter values.
+        for x in self.xs.values():
+            x.initialize()
+
+        # Initialize the groups.
+        for group in self.get_groups_for_xs(InnerParameterType.SPLINE):
+            self.groups[group][SURROGATE_DATA] = np.zeros(
+                self.groups[group][NUM_DATAPOINTS]
+            )
+
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,

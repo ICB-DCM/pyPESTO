@@ -17,6 +17,7 @@ import pypesto.predict as predict
 import pypesto.sample as sample
 import pypesto.util
 import pypesto.visualize as visualize
+from pypesto.C import INNER_PARAMETERS
 from pypesto.visualize.model_fit import (
     time_trajectory_model,
     visualize_optimized_model_fit,
@@ -451,6 +452,25 @@ def test_parameters_hist():
 
     visualize.parameter_hist(result_1, 'x1')
     visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
+
+
+@pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
+@close_fig
+def test_parameters_hierarchical(scale_to_interval):
+    # create the necessary results
+    result = create_optimization_result()
+
+    # add hierarchical parameters
+    for index, optimizer_result in enumerate(result.optimize_result.list):
+        optimizer_result[INNER_PARAMETERS] = {
+            'inner_x_1': index + 3,
+            'inner_x_2': index + 3 + 0.1,
+        }
+
+    # test a call with hierarchical parameters
+    visualize.parameters(
+        result, scale_to_interval=scale_to_interval, size=(15, 12)
+    )
 
 
 @close_fig
