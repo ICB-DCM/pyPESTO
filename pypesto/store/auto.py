@@ -3,11 +3,15 @@
 import binascii
 import datetime
 import os
+import h5py
+import logging
 from typing import Callable, Union
 from warnings import warn
 
 from ..result import Result
 from .save_to_hdf5 import write_result
+
+logger = logging.getLogger(__name__)
 
 
 def autosave(
@@ -43,12 +47,15 @@ def autosave(
         filename = default_filename
     elif isinstance(filename, str):
         if os.path.exists(filename) and not overwrite:
-            warn(
-                f"The file {filename} already exists. "
-                "Please choose a different filename or set overwrite=True. "
-                "File will be saved as in AUTO mode."
-            )
-            filename = default_filename
+            with h5py.File(filename, 'r') as f:
+                storage_used = store_type in f.keys()
+            if storage_used:
+                logger.warning(
+                    f"There is already a {store_type}-result saved in "
+                    f"{filename}. Please choose a different filename or set "
+                    f"overwrite=True. File will be saved as in AUTO mode."
+                )
+                filename = default_filename
     if not isinstance(filename, str):
         filename = filename(
             result=result,
