@@ -399,6 +399,7 @@ class AmiciObjective(ObjectiveBase):
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
         amici_reporting: Optional['amici.RDataReporting'] = None,
+        **kwargs,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
