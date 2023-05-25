@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Sequence, Tuple
+from typing import Any, Dict, Sequence, Tuple
 
 import numpy as np
 
@@ -81,6 +81,7 @@ class AggregatedObjective(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
         mode: ModeType,
+        kwargs_list: Sequence[Dict[str, Any]] = None,
         **kwargs,
     ) -> ResultDict:
         """
@@ -88,11 +89,30 @@ class AggregatedObjective(ObjectiveBase):
 
         Main method to overwrite from the base class. It handles and
         delegates the actual objective evaluation.
+
+        Parameters
+        ----------
+        kwargs_list:
+            Objective-specific keyword arguments, where the dictionaries are
+            ordered by the objectives.
         """
+        if kwargs_list is not None and len(kwargs_list) != len(
+            self._objectives
+        ):
+            raise ValueError(
+                "The length of `kwargs_list` must match the number of "
+                "objectives you are aggregating."
+            )
         return aggregate_results(
             [
-                objective.call_unprocessed(x, sensi_orders, mode, **kwargs)
-                for objective in self._objectives
+                objective.call_unprocessed(
+                    x,
+                    sensi_orders,
+                    mode,
+                    **kwargs,
+                    **kwargs_list[i],
+                )
+                for i, objective in enumerate(self._objectives)
             ]
         )
 
