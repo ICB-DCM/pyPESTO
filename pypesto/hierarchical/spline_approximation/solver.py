@@ -8,13 +8,14 @@ from ...C import (
     CURRENT_SIMULATION,
     DATAPOINTS,
     EXPDATA_MASK,
+    INNER_NOISE_PARS,
     MAX_DATAPOINT,
     MIN_DATAPOINT,
     MIN_DIFF_FACTOR,
     MIN_SIM_RANGE,
     N_SPLINE_PARS,
-    NOISE_PARAMETERS,
     NUM_DATAPOINTS,
+    OPTIMIZE_NOISE,
     SCIPY_FUN,
     SCIPY_SUCCESS,
     SCIPY_X,
@@ -62,7 +63,7 @@ class SplineInnerSolver(InnerSolver):
         self,
         problem: SplineInnerProblem,
         sim: List[np.ndarray],
-        sigma: List[np.ndarray],
+        amici_sigma: List[np.ndarray],
     ) -> list:
         """Get results for every group (inner optimization problem).
 
@@ -72,35 +73,52 @@ class SplineInnerSolver(InnerSolver):
             InnerProblem from pyPESTO hierarchical.
         sim:
             Simulations from AMICI.
-        sigma:
+        amici_sigma:
             List of sigmas from AMICI.
 
         Returns
         -------
         List of optimization results of the inner subproblem.
         """
-        inner_optimization_results = []
+        inner_results = []
         for group in problem.get_groups_for_xs(InnerParameterType.SPLINE):
             group_dict = problem.groups[group]
-            group_dict[NOISE_PARAMETERS] = extract_expdata_using_mask(
-                expdata=sigma, mask=group_dict[EXPDATA_MASK]
-            )
             group_dict[CURRENT_SIMULATION] = extract_expdata_using_mask(
                 expdata=sim, mask=group_dict[EXPDATA_MASK]
             )
-
-            inner_optimization_results_per_group = self._optimize_spline(
+            # Optimize the spline for this group.
+            inner_result_for_group = self._optimize_spline(
                 inner_parameters=problem.get_free_xs_for_group(group),
                 group_dict=group_dict,
             )
-            inner_optimization_results.append(
-                inner_optimization_results_per_group
+
+            # If the parameters are optimized in the inner problem, we
+            # calculate the sigma analytically from the inner result.
+            if group_dict[OPTIMIZE_NOISE]:
+                group_dict[INNER_NOISE_PARS] = _calculate_sigma_for_group(
+                    inner_result=inner_result_for_group,
+                    n_datapoints=group_dict[NUM_DATAPOINTS],
+                )
+            # Otherwise, we extract the sigma from the AMICI noise parameters.
+            else:
+                group_dict[INNER_NOISE_PARS] = extract_expdata_using_mask(
+                    expdata=amici_sigma, mask=group_dict[EXPDATA_MASK]
+                )[0]
+
+            # Apply sigma to inner result.
+            inner_result_for_group = _calculate_nllh_for_group(
+                inner_result=inner_result_for_group,
+                sigma=group_dict[INNER_NOISE_PARS],
+                n_datapoints=group_dict[NUM_DATAPOINTS],
             )
+
+            inner_results.append(inner_result_for_group)
             save_inner_parameters_to_inner_problem(
-                inner_parameters=problem.get_xs_for_group(group),
-                s=inner_optimization_results_per_group[SCIPY_X],
+                inner_problem=problem,
+                s=inner_result_for_group[SCIPY_X],
+                group=group,
             )
-        return inner_optimization_results
+        return inner_results
 
     @staticmethod
     def calculate_obj_function(x_inner_opt: list):
@@ -137,8 +155,9 @@ class SplineInnerSolver(InnerSolver):
         problem: SplineInnerProblem,
         x_inner_opt: List[Dict],
         sim: List[np.ndarray],
-        sigma: List[np.ndarray],
+        amici_sigma: List[np.ndarray],
         sy: List[np.ndarray],
+        amici_ssigma: List[np.ndarray],
         parameter_mapping: ParameterMapping,
         par_opt_ids: List,
         par_sim_ids: List,
@@ -188,13 +207,25 @@ class SplineInnerSolver(InnerSolver):
                 # Current fix for scaling/offset parameters in models.
                 elif par_sim.startswith('observableParameter'):
                     continue
+                # For noise parameters optimized hierarchically, we
+                # do not calculate the gradient.
+                elif (
+                    par_sim.startswith('noiseParameter')
+                    and par_opt not in par_opt_ids
+                ):
+                    continue
                 else:
                     already_calculated.add(par_opt)
                 par_sim_idx = par_sim_ids.index(par_sim)
                 par_opt_idx = par_opt_ids.index(par_opt)
                 grad = 0.0
+
                 sy_for_outer_parameter = [
                     sy_cond[:, par_sim_idx, :] for sy_cond in sy
+                ]
+                ssigma_for_outer_parameter = [
+                    ssigma_cond[:, par_sim_idx, :]
+                    for ssigma_cond in amici_ssigma
                 ]
 
                 for group_idx, group in enumerate(
@@ -205,13 +236,17 @@ class SplineInnerSolver(InnerSolver):
                     group_dict = problem.groups[group]
 
                     measurements = group_dict[DATAPOINTS]
-                    sigma = group_dict[NOISE_PARAMETERS]
+                    sigma = group_dict[INNER_NOISE_PARS]
                     sim_all = group_dict[CURRENT_SIMULATION]
                     N = group_dict[N_SPLINE_PARS]
                     K = group_dict[NUM_DATAPOINTS]
 
                     sy_all = extract_expdata_using_mask(
                         expdata=sy_for_outer_parameter,
+                        mask=group_dict[EXPDATA_MASK],
+                    )
+                    ssigma_all = extract_expdata_using_mask(
+                        expdata=ssigma_for_outer_parameter,
                         mask=group_dict[EXPDATA_MASK],
                     )
 
@@ -225,11 +260,10 @@ class SplineInnerSolver(InnerSolver):
 
                     # For the reformulated problem, mu can be calculated
                     # as the inner gradient at the optimal point s.
-                    mu = calculate_inner_gradient(
+                    mu = calculate_inner_gradient_for_obs(
                         s=s,
                         sim_all=sim_all,
                         measurements=measurements,
-                        sigma=sigma,
                         N=N,
                         delta_c=delta_c,
                         c=c,
@@ -243,13 +277,26 @@ class SplineInnerSolver(InnerSolver):
                         min_diff_factor=self.options[MIN_DIFF_FACTOR],
                     )
 
-                    # Calculate df_ds term only if mu is not all 0
+                    # If the spline parameter is at its boundary, the
+                    # corresponding Lagrangian multiplier mu is set to 0.
+                    min_diff_all = np.full(N, min_diff)
+                    min_diff_all[0] = 0.0
+                    mu = np.asarray(
+                        [
+                            mu[i]
+                            if np.isclose(s[i] - min_diff_all[i], 0)
+                            else 0
+                            for i in range(len(s))
+                        ]
+                    )
+
+                    # Calculate (dJ_ds * ds_dtheta) term only if mu is not all 0
+                    ds_grad_term = 0.0
                     if np.any(mu):
                         s_dot = calculate_ds_dtheta(
                             sim_all=sim_all,
                             sy_all=sy_all,
                             measurements=measurements,
-                            sigma=sigma,
                             s=s,
                             C=C,
                             mu=mu,
@@ -261,15 +308,14 @@ class SplineInnerSolver(InnerSolver):
                             n=n,
                             min_diff=min_diff,
                         )
-                        df_ds = mu
-                        grad += df_ds.dot(s_dot)
+                        dres_ds = mu
+                        ds_grad_term = dres_ds.dot(s_dot)
 
-                    # Let's calculate the df_dyk term now:
-                    df_dyk = calculate_df_dyk(
+                    # Let's calculate the (dJ_dy * dy_dtheta) term now:
+                    dy_grad_term = calculate_dy_term(
                         sim_all=sim_all,
                         sy_all=sy_all,
                         measurements=measurements,
-                        sigma=sigma,
                         s=s,
                         N=N,
                         delta_c=delta_c,
@@ -279,7 +325,38 @@ class SplineInnerSolver(InnerSolver):
                         n=n,
                     )
 
-                    grad += df_dyk
+                    # Let's calculate the (dJ_dsigma^2 * dsigma^2_dtheta) term now:
+                    if not group_dict[OPTIMIZE_NOISE]:
+                        residual_squared = (
+                            calculate_objective_function_for_obs(
+                                s=s,
+                                sim_all=sim_all,
+                                measurements=measurements,
+                                N=N,
+                                delta_c=delta_c,
+                                c=c,
+                                n=n,
+                            )
+                        )
+                        dJ_dsigma2 = (
+                            K / (2 * sigma**2)
+                            - residual_squared / sigma**4
+                        )
+                        dsigma2_dtheta = ssigma_all[0]
+                        dsigma_grad_term = dJ_dsigma2 * dsigma2_dtheta
+                    # If we optimize the noise hierarchically,
+                    # the last term (dJ_dsigma^2 * dsigma^2_dtheta) is always 0
+                    # since the sigma is optimized such that dJ_dsigma2=0.
+                    else:
+                        dsigma_grad_term = 0.0
+
+                    # Combine all terms to get the complete gradient contribution
+                    grad += (
+                        dy_grad_term / sigma**2
+                        + ds_grad_term / sigma**2
+                        + dsigma_grad_term
+                    )
+
                 snllh[par_opt_idx] = grad
 
         return snllh
@@ -307,7 +384,6 @@ class SplineInnerSolver(InnerSolver):
             The group dictionary.
         """
         group_measurements = group_dict[DATAPOINTS]
-        group_noise_parameters = group_dict[NOISE_PARAMETERS]
         current_group_simulation = group_dict[CURRENT_SIMULATION]
         n_datapoints = group_dict[NUM_DATAPOINTS]
         n_spline_pars = group_dict[N_SPLINE_PARS]
@@ -337,11 +413,10 @@ class SplineInnerSolver(InnerSolver):
         )
 
         def objective_function_wrapper(x):
-            return calculate_objective_function(
+            return calculate_objective_function_for_obs(
                 s=x,
                 sim_all=current_group_simulation,
                 measurements=group_measurements,
-                sigma=group_noise_parameters,
                 N=n_spline_pars,
                 delta_c=distance_between_bases,
                 c=spline_bases,
@@ -349,11 +424,10 @@ class SplineInnerSolver(InnerSolver):
             )
 
         def inner_gradient_wrapper(x):
-            return calculate_inner_gradient(
+            return calculate_inner_gradient_for_obs(
                 s=x,
                 sim_all=current_group_simulation,
                 measurements=group_measurements,
-                sigma=group_noise_parameters,
                 N=n_spline_pars,
                 delta_c=distance_between_bases,
                 c=spline_bases,
@@ -505,18 +579,35 @@ class SplineInnerSolver(InnerSolver):
         inner_options = {
             "x0": x0,
             "method": "L-BFGS-B",
-            "options": {"ftol": 1e-10, "disp": None},
+            "options": {"ftol": 1e-16, "disp": None},
             "bounds": Bounds(lb=constraint_min_diff),
         }
 
         return inner_options
 
 
-def calculate_objective_function(
+def _calculate_sigma_for_group(
+    inner_result: Dict,
+    n_datapoints: int,
+):
+    """Calculate the noise parameter sigma.
+
+    Parameters
+    ----------
+    noise_parameters:
+        The noise parameters of a group of the inner problem.
+    inner_result:
+        The inner optimization result.
+    """
+    sigma = np.sqrt(2 * inner_result[SCIPY_FUN] / (n_datapoints))
+
+    return sigma
+
+
+def calculate_objective_function_for_obs(
     s: np.ndarray,
     sim_all: np.ndarray,
     measurements: np.ndarray,
-    sigma: np.ndarray,
     N: int,
     delta_c: float,
     c: np.ndarray,
@@ -525,18 +616,16 @@ def calculate_objective_function(
     """Objective function for reformulated inner spline problem."""
     obj = 0
 
-    for y_k, z_k, sigma_k, n_k in zip(sim_all, measurements, sigma, n):
+    for y_k, z_k, n_k in zip(sim_all, measurements, n):
         i = n_k - 1
         sum_s = 0
         sum_s = np.sum(s[:i])
         if i == 0:
-            obj += (1 / sigma_k**2) * (z_k - s[i]) ** 2
+            obj += (z_k - s[i]) ** 2
         elif i == N:
-            obj += (1 / sigma_k**2) * (z_k - sum_s) ** 2
+            obj += (z_k - sum_s) ** 2
         else:
-            obj += (1 / sigma_k**2) * (
-                z_k - (y_k - c[i - 1]) * s[i] / delta_c - sum_s
-            ) ** 2
+            obj += (z_k - (y_k - c[i - 1]) * s[i] / delta_c - sum_s) ** 2
     obj = obj / 2
     return obj
 
@@ -567,11 +656,10 @@ def get_spline_mapped_simulations(
     return mapped_simulations
 
 
-def calculate_inner_gradient(
+def calculate_inner_gradient_for_obs(
     s: np.ndarray,
     sim_all: np.ndarray,
     measurements: np.ndarray,
-    sigma: np.ndarray,
     N: int,
     delta_c: float,
     c: np.ndarray,
@@ -581,26 +669,23 @@ def calculate_inner_gradient(
 
     gradient = np.zeros(N)
 
-    for y_k, z_k, sigma_k, n_k in zip(sim_all, measurements, sigma, n):
-        weight_k = 1 / sigma_k**2
+    for y_k, z_k, n_k in zip(sim_all, measurements, n):
         sum_s = 0
         i = n_k - 1  # just the iterator to go over the Jacobian array
         sum_s = np.sum(s[:i])
         if i == 0:
-            gradient[i] += weight_k * (s[i] - z_k)
+            gradient[i] += s[i] - z_k
         elif i == N:
-            for j in range(i):
-                gradient[j] += weight_k * (sum_s - z_k)
+            gradient[:i] += np.full(i, sum_s - z_k)
         else:
             gradient[i] += (
-                weight_k
-                * ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
+                ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
                 * (y_k - c[i - 1])
                 / delta_c
             )
             gradient[:i] += np.full(
                 i,
-                weight_k * ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k),
+                (y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k,
             )
     return gradient
 
@@ -638,7 +723,6 @@ def calculate_ds_dtheta(
     sim_all: np.ndarray,
     sy_all: np.ndarray,
     measurements: np.ndarray,
-    sigma: np.ndarray,
     s: np.ndarray,
     C: np.ndarray,
     mu: np.ndarray,
@@ -659,77 +743,65 @@ def calculate_ds_dtheta(
     system to obtain the derivatives.
     """
 
-    Jacobian_derivative = np.zeros((N, N))
-    rhs = np.zeros(2 * N)
+    dgrad_dtheta_lhs = np.zeros((N, N))
+    dgrad_dtheta_rhs = np.zeros(2 * N)
 
-    for y_k, z_k, y_dot_k, sigma_k, n_k in zip(
-        sim_all, measurements, sy_all, sigma, n
-    ):
-        i = n_k - 1  # just the iterator to go over the Jacobian matrix
-        weight_k = 1 / sigma_k**2
+    for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
+        i = n_k - 1  # just the iterator to go over the matrix
         sum_s = 0
         sum_s = np.sum(s[:i])
 
-        # calculate the Jacobian derivative:
+        # Calculate dgrad_dtheta in the form of a linear system:
         if i == 0:
-            Jacobian_derivative[i][i] += weight_k
+            dgrad_dtheta_lhs[i][i] += 1
         elif i == N:
-            Jacobian_derivative = Jacobian_derivative + np.full(
-                (N, N), weight_k
-            )
+            dgrad_dtheta_lhs = dgrad_dtheta_lhs + np.full((N, N), 1)
 
         else:
-            Jacobian_derivative[i][i] += (
-                weight_k * (y_k - c[i - 1]) ** 2 / delta_c**2
-            )
-            rhs[i] += (
-                weight_k
-                * (2 * (y_k - c[i - 1]) / delta_c * s[i] + sum_s - z_k)
+            dgrad_dtheta_lhs[i][i] += (y_k - c[i - 1]) ** 2 / delta_c**2
+            dgrad_dtheta_rhs[i] += (
+                (2 * (y_k - c[i - 1]) / delta_c * s[i] + sum_s - z_k)
                 * (
                     (y_dot_k - c_dot[i - 1]) * delta_c
                     - (y_k - c[i - 1]) * delta_c_dot
                 )
                 / delta_c**2
             )
-            if i > 0:
-                Jacobian_derivative[i, :i] += np.full(
-                    i, weight_k * (y_k - c[i - 1]) / delta_c
+
+            dgrad_dtheta_lhs[i, :i] += np.full(i, (y_k - c[i - 1]) / delta_c)
+            dgrad_dtheta_lhs[:i, i] += np.full(i, (y_k - c[i - 1]) / delta_c)
+            dgrad_dtheta_rhs[:i] += np.full(
+                i,
+                (
+                    (y_dot_k - c_dot[i - 1]) * delta_c
+                    - (y_k - c[i - 1]) * delta_c_dot
                 )
-                Jacobian_derivative[:i, i] += np.full(
-                    i, weight_k * (y_k - c[i - 1]) / delta_c
-                )
-                rhs[:i] += np.full(
-                    i,
-                    weight_k
-                    * (
-                        (y_dot_k - c_dot[i - 1]) * delta_c
-                        - (y_k - c[i - 1]) * delta_c_dot
-                    )
-                    * s[i]
-                    / delta_c**2,
-                )
-                Jacobian_derivative[:i, :i] += np.full((i, i), weight_k)
+                * s[i]
+                / delta_c**2,
+            )
+            dgrad_dtheta_lhs[:i, :i] += np.full((i, i), 1)
 
     from scipy import linalg
 
     constraint_min_diff = np.diag(np.full(N, min_diff))
-    constraint_min_diff[0][0] = 0
+    constraint_min_diff[0, 0] = 0
+
     lhs = np.block(
         [
-            [Jacobian_derivative, C],
+            [dgrad_dtheta_lhs, C],
             [-np.diag(mu), constraint_min_diff - np.diag(s)],
         ]
     )
-    ds_dtheta = linalg.lstsq(lhs, rhs, lapack_driver="gelsy")
+
+    ds_dtheta = linalg.lstsq(lhs, dgrad_dtheta_rhs, lapack_driver="gelsy")
 
     return ds_dtheta[0][:N]
 
 
-def calculate_df_dyk(
+def calculate_dy_term(
     sim_all: np.ndarray,
     sy_all: np.ndarray,
     measurements: np.ndarray,
-    sigma: np.ndarray,
     s: np.ndarray,
     N: int,
     delta_c: float,
@@ -739,17 +811,14 @@ def calculate_df_dyk(
     n: np.ndarray,
 ):
     """Calculate the derivative of the objective function for one group with respect to the simulations."""
-    df_dyk = 0
+    df_dy = 0
 
-    for y_k, z_k, y_dot_k, sigma_k, n_k in zip(
-        sim_all, measurements, sy_all, sigma, n
-    ):
+    for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
         i = n_k - 1
         sum_s = np.sum(s[:i])
         if i > 0 and i < N:
-            df_dyk += (
-                (1 / sigma_k**2)
-                * ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
+            df_dy += (
+                ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
                 * s[i]
                 * (
                     (y_dot_k - c_dot[i - 1]) * delta_c
@@ -757,7 +826,9 @@ def calculate_df_dyk(
                 )
                 / delta_c**2
             )
-    return df_dyk
+        # There is no i==0 case, because in this case
+        # c[0] == y_k and so the derivative is zero.
+    return df_dy
 
 
 def calculate_spline_bases_gradient(
@@ -768,9 +839,17 @@ def calculate_spline_bases_gradient(
     min_idx = np.argmin(sim_all)
     max_idx = np.argmax(sim_all)
 
+    min_all = sim_all[min_idx]
+    max_all = sim_all[max_idx]
+    # Coming directly from differentiating _rescale_spline_bases
     if sim_all[max_idx] - sim_all[min_idx] < MIN_SIM_RANGE:
         delta_c_dot = 0
         c_dot = np.full(N, (sy_all[max_idx] - sy_all[min_idx]) / 2)
+        average_value = (max_all + min_all) / 2
+        if average_value < (MIN_SIM_RANGE / 2):
+            c_dot = np.full(N, 0)
+        else:
+            c_dot = np.full(N, (sy_all[max_idx] - sy_all[min_idx]) / 2)
     else:
         delta_c_dot = (sy_all[max_idx] - sy_all[min_idx]) / (N - 1)
         c_dot = np.linspace(sy_all[min_idx], sy_all[max_idx], N)
@@ -791,8 +870,9 @@ def extract_expdata_using_mask(
 
 
 def save_inner_parameters_to_inner_problem(
-    inner_parameters,
-    s,
+    inner_problem: SplineInnerProblem,
+    s: np.ndarray,
+    group: int,
 ) -> None:
     """Save inner parameter values to the inner subproblem.
 
@@ -807,12 +887,45 @@ def save_inner_parameters_to_inner_problem(
     s : np.ndarray
         Reformulated inner spline parameters.
     """
+    group_dict = inner_problem.groups[group]
+    inner_spline_parameters = inner_problem.get_xs_for_group(group)
+    inner_noise_parameters = inner_problem.get_noise_parameters_for_group(
+        group
+    )
+
     xi = np.zeros(len(s))
     for i in range(len(s)):
         xi[i] = np.sum(s[: i + 1])
 
-    for idx in range(len(inner_parameters)):
-        inner_parameters[idx].value = xi[idx]
+    for idx in range(len(inner_spline_parameters)):
+        inner_spline_parameters[idx].value = xi[idx]
+
+    sigma = group_dict[INNER_NOISE_PARS]
+
+    if group_dict[OPTIMIZE_NOISE]:
+        inner_noise_parameters[0].value = sigma
+
+
+def _calculate_nllh_for_group(
+    inner_result: Dict,
+    sigma: float,
+    n_datapoints: int,
+):
+    """Calculate the negative log-likelihood for the group.
+
+    Parameters
+    ----------
+    inner_result : dict
+        Result of the inner problem.
+    sigma : float
+        Standard deviation of the measurement noise.
+    n_datapoints : int
+        Number of datapoints.
+    """
+    inner_result[SCIPY_FUN] = 0.5 * np.log(
+        2 * np.pi * sigma**2
+    ) * n_datapoints + inner_result[SCIPY_FUN] / (sigma**2)
+    return inner_result
 
 
 def get_monotonicity_measure(measurement, simulation):
