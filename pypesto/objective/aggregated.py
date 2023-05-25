@@ -96,9 +96,9 @@ class AggregatedObjective(ObjectiveBase):
             Objective-specific keyword arguments, where the dictionaries are
             ordered by the objectives.
         """
-        if kwargs_list is not None and len(kwargs_list) != len(
-            self._objectives
-        ):
+        if kwargs_list is None:
+            kwargs_list = [{}] * len(self._objectives)
+        elif len(kwargs_list) != len(self._objectives):
             raise ValueError(
                 "The length of `kwargs_list` must match the number of "
                 "objectives you are aggregating."
@@ -110,9 +110,9 @@ class AggregatedObjective(ObjectiveBase):
                     sensi_orders,
                     mode,
                     **kwargs,
-                    **kwargs_list[i],
+                    **cur_kwargs,
                 )
-                for i, objective in enumerate(self._objectives)
+                for objective, cur_kwargs in zip(self._objectives, kwargs_list)
             ]
         )
 
