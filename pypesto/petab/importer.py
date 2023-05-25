@@ -468,8 +468,6 @@ class PetabImporter(AmiciObjectBuilder):
             )
             calculator = HierarchicalAmiciCalculator(inner_problem)
             amici_reporting = amici.RDataReporting.full
-            inner_parameter_ids = calculator.inner_problem.get_x_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
         if self._hierarchical:
             # FIXME: currently not supported with hierarchical
@@ -478,6 +476,8 @@ class PetabImporter(AmiciObjectBuilder):
                     "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
                 )
             kwargs['guess_steadystate'] = False
+            inner_parameter_ids = calculator.get_inner_parameter_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
         # create objective
         obj = AmiciObjective(
@@ -700,9 +700,9 @@ class PetabImporter(AmiciObjectBuilder):
                 )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
-        if not self._non_quantitative_data_types and self._hierarchical:
+        if self._hierarchical:
             inner_parameter_ids = (
-                objective.calculator.inner_problem.get_x_ids()
+                objective.calculator.get_inner_parameter_ids()
             )
             lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
             ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]

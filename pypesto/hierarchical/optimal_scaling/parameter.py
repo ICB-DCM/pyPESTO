@@ -85,3 +85,7 @@ class OptimalScalingParameter(InnerParameter):
         self.estimate = estimate
         self.value = self.dummy_value
         self.censoring_type = censoring_type
+
+    def initialize(self):
+        """Initialize."""
+        self.value = self.dummy_value

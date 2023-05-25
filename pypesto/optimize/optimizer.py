@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 import numpy as np
 import scipy.optimize
 
-from ..C import FVAL, GRAD, MODE_FUN, MODE_RES
+from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES
 from ..history import (
     HistoryOptions,
     NoHistory,
@@ -451,6 +451,8 @@ class ScipyOptimizer(Optimizer):
             exitflag=res.status,
             message=res.message,
         )
+        if hasattr(objective, INNER_PARAMETERS) and objective.inner_parameters:
+            optimizer_result[INNER_PARAMETERS] = objective.inner_parameters
 
         return optimizer_result
 
