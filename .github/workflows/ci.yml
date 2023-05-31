@@ -38,8 +38,6 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      env:
-        WANDB_MODE: offline
       timeout-minutes: 25
       run: tox -e base
 

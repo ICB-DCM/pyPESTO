@@ -9,6 +9,7 @@ from typing import Sequence
 import numpy as np
 import pytest
 import scipy.optimize as so
+import wandb
 
 import pypesto
 import pypesto.optimize as optimize
@@ -522,6 +523,7 @@ def history(request) -> pypesto.HistoryBase:
         )
     elif request.param == "wandb":
         history = WandBHistory()
+        wandb.init(mode='offline')
     elif request.param == "":
         history = pypesto.CountHistory()
     else:
