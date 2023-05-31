@@ -14,9 +14,11 @@ MaybeArray = Union[np.ndarray, 'np.nan']
 class HistoryTypeError(ValueError):
     """Error raised when an unsupported history type is requested."""
 
-    def __init__(self, history_type: str):
+    def __init__(
+        self, history_type: str, supported_suffixes: Sequence[str] = SUFFIXES
+    ):
         super().__init__(
-            f"Unsupported history type: {history_type}, expected {SUFFIXES}"
+            f"Unsupported history type: {history_type}, expected {supported_suffixes}."
         )
 
 

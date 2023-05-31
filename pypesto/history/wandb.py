@@ -12,6 +12,7 @@ from ..C import (
     N_HESS,
     N_RES,
     N_SRES,
+    RDATAS,
     RES,
     SRES,
     TIME,
@@ -67,11 +68,12 @@ class WandBHistory(CountHistory):
         self._step_metric: StepMetricType = step_metric
 
         wandb.config.update({'name': run_id})
-        wandb.define_metric(N_FVAL, summary="max")
-        wandb.define_metric(N_GRAD, summary="max")
-        wandb.define_metric(N_RES, summary="max")
-        wandb.define_metric(N_SRES, summary="max")
-        wandb.define_metric(TIME, summary="max")
+        wandb.define_metric(N_FVAL, summary="max", hidden=True)
+        wandb.define_metric(N_GRAD, summary="max", hidden=True)
+        wandb.define_metric(N_HESS, summary="max", hidden=True)
+        wandb.define_metric(N_RES, summary="max", hidden=True)
+        wandb.define_metric(N_SRES, summary="max", hidden=True)
+        wandb.define_metric(TIME, summary="max", hidden=True)
 
         if options.trace_record:
             wandb.define_metric(
@@ -118,11 +120,9 @@ class WandBHistory(CountHistory):
         if self.options.trace_record is not None:
             wand_log_dict.update(
                 {
-                    key: value
-                    if np.isscalar(value)
-                    else wandb.Histogram(value.flatten())
+                    key: value if np.isscalar(value) else value.flatten()
                     for key, value in result.items()
-                    if not np.isnan(value).all()
+                    if not key == RDATAS and not np.isnan(value).all()
                 }
             )
 

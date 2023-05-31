@@ -45,16 +45,20 @@ def preprocess_hdf5_history(
 
     # extract storage type
     path = Path(storage_file)
+    suffix = path.suffix[1:]
 
     # nothing to do if csv history and correctly set
-    if path.suffix[1:] in C.SUFFIXES_CSV:
+    if suffix in C.SUFFIXES_CSV:
         if "{id}" not in storage_file:
             raise CsvHistoryTemplateError(storage_file)
         return False
 
+    if suffix in C.SUFFIXES_WANDB:
+        return False
+
     # assuming hdf5 history henceforth
-    if path.suffix[1:] not in C.SUFFIXES_HDF5:
-        raise HistoryTypeError(path.suffix)
+    if suffix not in C.SUFFIXES_HDF5:
+        raise HistoryTypeError(suffix, C.SUFFIXES_HDF5)
 
     # nothing to do if no parallelization
     if isinstance(engine, SingleCoreEngine):

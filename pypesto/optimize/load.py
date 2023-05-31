@@ -151,7 +151,7 @@ def read_history_from_file(
             options=history_options,
         )
     else:
-        raise HistoryTypeError(suffix)
+        raise HistoryTypeError(suffix, SUFFIXES_CSV + SUFFIXES_HDF5)
 
     x0 = history.get_x_trace(0)
 

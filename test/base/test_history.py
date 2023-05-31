@@ -62,6 +62,8 @@ class HistoryTest(unittest.TestCase):
         self.history_options.trace_save_iter = 1
 
         for storage_type in ['.csv', '.hdf5', '.wandb', None]:
+            if storage_type == '.wandb':
+                wandb.init(mode='offline')
             with tempfile.TemporaryDirectory(dir=".") as tmpdir:
                 if storage_type == ".csv":
                     _, fn = tempfile.mkstemp(
@@ -103,7 +105,7 @@ class HistoryTest(unittest.TestCase):
                 # check that we can also aggregate from multiple files.
                 # load more results than what is generated to check whether
                 # this also works in case of incomplete results.
-                if storage_type is not None:
+                if storage_type not in ['.wandb', None]:
                     optimize.read_results_from_file(
                         self.problem,
                         self.history_options,
