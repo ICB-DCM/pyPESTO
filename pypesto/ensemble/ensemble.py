@@ -1111,29 +1111,25 @@ def entries_per_start(
     ens_ind = [np.flatnonzero(fval <= cutoff) for fval in fval_traces]
 
     # count the number of candidates per start
-    n_per_start = np.array([len(start) for start in ens_ind])
-
-    # if all possible indices can be included, return
-    if (n_per_start < max_per_start).all() and sum(n_per_start) < max_size:
-        return n_per_start
+    n_theo = np.array([len(start) for start in ens_ind])
 
     # trimm down starts that exceed the limit:
-    n_per_start = [min(n, max_per_start) for n in n_per_start]
+    n_per_start = [min(n, max_per_start) for n in n_theo]
 
-    # trimm down more until it fits the max size
-    decr = 0
-    while sum(n_per_start) > max_size:
-        n_per_start = [min(n, max_per_start - decr) for n in n_per_start]
-        decr += 1
-    # TODO: Possibility. With this implementation we could
-    #  in a scenario, where we have more candidates than
-    #  max size end up with an ensemble of size
-    #  `max_size - len(n_starts)` in the worst case. We could introduce
-    #  a flag which would be `force_max`, that indicates
-    #  whether those remaining free slots should be filled by
-    #  entries from certain starts. This would brng up the
-    #  discussion which starts to choose. One obvious choice
-    #  would be the best starts based on their endpoint.
+    # if all possible indices can be included, return
+    if sum(n_per_start) < max_size:
+        return n_per_start
+    n_equally = max_size // len(n_per_start)
+    n_left = max_size % len(n_per_start)
+    # divide numbers equally
+    n_per_start = [min(n, n_equally) for n in n_per_start]
+    # add one more to the first n_left possible (where n_theo > n_equally):
+    to_add = np.where(n_theo > n_equally)[0]
+    if len(to_add) > n_left:
+        to_add = to_add[0:n_left]
+    n_per_start = [
+        n + 1 if i in to_add else n for i, n in enumerate(n_per_start)
+    ]
 
     return n_per_start
 
@@ -1171,7 +1167,7 @@ def get_vector_indices(
         indices = np.round(np.linspace(0, len(candidates) - 1, n_vectors))
         return candidates[indices.astype(int)]
     else:
-        return candidates[:n_vectors]
+        return sorted(candidates, key=lambda i: trace_start[i])[:n_vectors]
 
 
 def get_percentile_label(percentile: Union[float, int, str]) -> str:
