@@ -49,7 +49,7 @@ class WandBHistory(CountHistory):
             {
                 key: value
                 for key, value in result.items()
-                if not np.isnan(value)
+                if not np.isnan(value).all()
             }
         )
 
