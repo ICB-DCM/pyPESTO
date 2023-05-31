@@ -3,8 +3,9 @@ from typing import Tuple
 
 import numpy as np
 
-from ..C import TIME, ModeType, ResultDict, X
+from ..C import TIME, ModeType, X
 from .base import CountHistory, add_fun_from_res, reduce_result_via_options
+from .util import ResultDict
 
 try:
     import wandb
