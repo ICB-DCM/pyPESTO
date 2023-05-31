@@ -9,10 +9,10 @@ from typing import Sequence
 import numpy as np
 import pytest
 import scipy.optimize as so
-import wandb
 
 import pypesto
 import pypesto.optimize as optimize
+import wandb
 from pypesto import (
     CsvHistory,
     Hdf5History,
@@ -61,7 +61,7 @@ class HistoryTest(unittest.TestCase):
 
         self.history_options.trace_save_iter = 1
 
-        for storage_type in ['.csv', '.hdf5', None]:
+        for storage_type in ['.csv', '.hdf5', '.wandb', None]:
             with tempfile.TemporaryDirectory(dir=".") as tmpdir:
                 if storage_type == ".csv":
                     _, fn = tempfile.mkstemp(
@@ -119,7 +119,7 @@ class HistoryTest(unittest.TestCase):
 
     def check_load_from_file(self, start: pypesto.OptimizerResult, id: str):
         """Verify we can reconstitute OptimizerResult from history file"""
-        if isinstance(start.history, MemoryHistory):
+        if isinstance(start.history, (MemoryHistory, WandBHistory)):
             return
         assert isinstance(start.history, (CsvHistory, Hdf5History))
 
@@ -166,7 +166,7 @@ class HistoryTest(unittest.TestCase):
     ):
         """verify we can reconstruct history objects from csv/hdf5 files"""
 
-        if isinstance(start.history, MemoryHistory):
+        if isinstance(start.history, (MemoryHistory, WandBHistory)):
             return
 
         assert isinstance(start.history, (CsvHistory, Hdf5History))
@@ -229,6 +229,12 @@ class HistoryTest(unittest.TestCase):
                 )
 
     def check_history_consistency(self, start: pypesto.OptimizerResult):
+        if isinstance(start.history, WandBHistory):
+            return
+        assert isinstance(
+            start.history, (CsvHistory, Hdf5History, MemoryHistory)
+        )
+
         def xfull(x_trace):
             return self.problem.get_full_vector(
                 x_trace, self.problem.x_fixed_vals
@@ -522,8 +528,10 @@ def history(request) -> pypesto.HistoryBase:
             id="id", file=file, options={'trace_record': True}
         )
     elif request.param == "wandb":
-        history = WandBHistory()
         wandb.init(mode='offline')
+        history = WandBHistory(
+            run_id="id", options=HistoryOptions(trace_record=True)
+        )
     elif request.param == "":
         history = pypesto.CountHistory()
     else:

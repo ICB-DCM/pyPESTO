@@ -219,7 +219,10 @@ TRACE_SAVE_ITER = "trace_save_iter"
 
 SUFFIXES_CSV = ["csv"]
 SUFFIXES_HDF5 = ["hdf5", "h5"]
-SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
+SUFFIXES_WANDB = ["wandb"] + [
+    f"wandb_{step}" for step in (TIME, N_FVAL, N_GRAD, N_HESS, N_RES, N_SRES)
+]
+SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5 + SUFFIXES_WANDB
 
 
 ###############################################################################

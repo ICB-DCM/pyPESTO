@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Sequence
 
-from ..C import SUFFIXES_CSV, SUFFIXES_HDF5
+from ..C import SUFFIXES_CSV, SUFFIXES_HDF5, SUFFIXES_WANDB
 from .base import CountHistory, HistoryBase
 from .csv import CsvHistory
 from .hdf5 import Hdf5History
@@ -51,5 +51,12 @@ def create_history(
         return CsvHistory(x_names=x_names, file=storage_file, options=options)
     elif suffix in SUFFIXES_HDF5:
         return Hdf5History(id=id, file=storage_file, options=options)
+    elif suffix in SUFFIXES_WANDB:
+        from .wandb import WandBHistory
+
+        step_metric = suffix.split('_')[1] if '_' in suffix else None
+        return WandBHistory(
+            run_id=id, step_metric=step_metric, options=options
+        )
     else:
         raise HistoryTypeError(suffix)

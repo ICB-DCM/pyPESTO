@@ -112,3 +112,4 @@ test/doc/example/tmp/benchmark-models/
 /BioNetGen-*.*.*
 /bionetgen.tar
 **.log
+wandb/
