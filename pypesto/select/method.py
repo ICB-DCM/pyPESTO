@@ -364,10 +364,6 @@ class MethodCaller:
             calibrated_models=self.calibrated_models,
             newly_calibrated_models=newly_calibrated_models,
             excluded_model_hashes=self.calibrated_models.keys(),
-            # FIXME meaning changes here, i.e. predecessor model is used as previous
-            #       predecessor model, since PEtab Select now gets the next predecessor
-            #       model if the candidate space has models.
-            previous_predecessor_model=predecessor_model,
             criterion=self.criterion,
         )
         predecessor_model = self.candidate_space.predecessor_model
