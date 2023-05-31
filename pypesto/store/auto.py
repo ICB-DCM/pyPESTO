@@ -2,11 +2,11 @@
 
 import binascii
 import datetime
-import os
-import h5py
 import logging
+import os
 from typing import Callable, Union
-from warnings import warn
+
+import h5py
 
 from ..result import Result
 from .save_to_hdf5 import write_result
