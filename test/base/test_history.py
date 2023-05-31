@@ -21,6 +21,7 @@ from pypesto import (
 )
 from pypesto.C import FVAL, GRAD, HESS, RES, SRES, X
 from pypesto.engine import MultiProcessEngine
+from pypesto.history.wandb import WandBHistory
 
 from ..util import CRProblem, load_amici_objective, rosen_for_sensi
 
@@ -506,7 +507,7 @@ class CRFunModeHistoryTest(HistoryTest):
         self.check_history()
 
 
-@pytest.fixture(params=["memory", "csv", "hdf5", ""])
+@pytest.fixture(params=["memory", "csv", "hdf5", "wandb", ""])
 def history(request) -> pypesto.HistoryBase:
     # initialize history with the requested backend
     if request.param == "memory":
@@ -519,6 +520,8 @@ def history(request) -> pypesto.HistoryBase:
         history = pypesto.Hdf5History(
             id="id", file=file, options={'trace_record': True}
         )
+    elif request.param == "wandb":
+        history = WandBHistory()
     elif request.param == "":
         history = pypesto.CountHistory()
     else:

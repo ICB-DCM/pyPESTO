@@ -17,8 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # update to 3.11 when numba allows (needed in umap)
-        python-version: ['3.9', '3.10']
+        python-version: ['3.9', '3.11']
 
     steps:
     - name: Check out repository
@@ -39,6 +38,8 @@ jobs:
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
+      env:
+        WANDB_MODE: offline
       timeout-minutes: 25
       run: tox -e base
 
