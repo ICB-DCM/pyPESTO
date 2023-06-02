@@ -6,11 +6,9 @@ import logging
 import os
 
 import numpy as np
+import petab
 import petabtests
 import yaml
-
-# must import after previous, otherwise circular import issues :(
-from amici.petab_import_pysb import PysbPetabProblem
 
 import pypesto.optimize as optimize
 from pypesto.petab import PetabImporterPysb
@@ -26,7 +24,9 @@ if 'BNGPATH' not in os.environ:
 
 def test_petab_pysb_optimization():
     test_case = '0001'
-    test_case_dir = os.path.join(petabtests.PYSB_DIR, test_case)
+    test_case_dir = os.path.join(
+        petabtests.CASES_DIR / 'v2.0.0' / 'pysb', test_case
+    )
     petab_yaml = os.path.join(test_case_dir, f'_{test_case}.yaml')
     solution_yaml = os.path.join(test_case_dir, f'_{test_case}_solution.yaml')
 
@@ -34,7 +34,7 @@ def test_petab_pysb_optimization():
     with open(solution_yaml) as f:
         solution = yaml.full_load(f)
 
-    petab_problem = PysbPetabProblem.from_yaml(petab_yaml)
+    petab_problem = petab.Problem.from_yaml(petab_yaml)
 
     importer = PetabImporterPysb(petab_problem)
     problem = importer.create_problem()

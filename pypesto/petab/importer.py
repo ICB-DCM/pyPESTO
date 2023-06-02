@@ -875,14 +875,14 @@ def _find_output_folder_name(
     if not os.path.exists(PetabImporter.MODEL_BASE_DIR):
         os.makedirs(PetabImporter.MODEL_BASE_DIR)
 
-    # try sbml model id
-    sbml_model_id = petab_problem.sbml_model.getId()
+    # try model id
+    model_id = petab_problem.model.model_id
     if model_name is not None:
-        sbml_model_id = model_name
+        model_id = model_name
 
-    if sbml_model_id:
+    if model_id:
         output_folder = os.path.abspath(
-            os.path.join(PetabImporter.MODEL_BASE_DIR, sbml_model_id)
+            os.path.join(PetabImporter.MODEL_BASE_DIR, model_id)
         )
     else:
         # create random folder name
