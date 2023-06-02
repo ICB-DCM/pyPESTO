@@ -37,7 +37,7 @@ for par in "$@"; do
     pysb)
       # bionetgen
       wget -q -O bionetgen.tar \
-        https://github.com/RuleWorld/bionetgen/releases/download/BioNetGen-2.6.0/BioNetGen-2.6.0-linux.tgz
+        https://github.com/RuleWorld/bionetgen/releases/download/BioNetGen-2.8.5/BioNetGen-2.8.5-linux.tgz
       tar -xf bionetgen.tar
     ;;
 

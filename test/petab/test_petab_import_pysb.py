@@ -17,7 +17,7 @@ from pypesto.petab import PetabImporterPysb
 
 # In CI, bionetgen is install here
 BNGPATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.6.0')
+    os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.8.5')
 )
 if 'BNGPATH' not in os.environ:
     logging.warning(f"Env var BNGPATH was not set. Setting to {BNGPATH}")
