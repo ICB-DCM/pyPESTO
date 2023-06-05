@@ -33,7 +33,7 @@ def test_petab_suite():
             n_skipped += 1
         except Exception as e:
             # run all despite failures
-            logger.error(f"Case {case} failed.")
+            logger.error(f"Case {version}/{model_type}/{case} failed.")
             logger.error(e)
     logger.info(
         f"{n_success} / {len(cases)} successful, " f"{n_skipped} skipped"
