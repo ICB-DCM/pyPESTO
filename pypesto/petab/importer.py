@@ -336,7 +336,7 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         kwargs: Extra arguments passed to :meth:`amici.SbmlImporter.sbml2amici`
-        or:meth:`amici.pysb_import.pysb2amici`.
+            or:meth:`amici.pysb_import.pysb2amici`.
         """
         # delete output directory
         if os.path.exists(self.output_folder):
