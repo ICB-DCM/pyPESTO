@@ -61,6 +61,19 @@ class PetabJlImporter:
 
         Parameters
         ----------
+        yaml_file:
+            The yaml file of the PEtab problem
+        odeSolverOptions:
+            Dictionary like options for the ode solver in julia
+        gradientMethod, hessianMethod:
+            Julia methods to compute gradient and hessian
+        sparseJacobian:
+            Whether to compute sparse Jacobians
+        verbose:
+            Whether to have a more informative log.
+        directory:
+            Where to write the julia file, defaults to the directory of the
+            yaml file.
         """
         # get default values
         options = _get_default_options(
@@ -73,7 +86,7 @@ class PetabJlImporter:
 
         # write julia module
         source_file, module = _write_julia_file(
-            yaml_file=yaml_file, options=options, dir=directory
+            yaml_file=yaml_file, options=options, directory=directory
         )
 
         return PetabJlImporter(
@@ -99,20 +112,20 @@ class PetabJlImporter:
         if self.source_file is None:
             self.source_file = f"{self.module}.jl"
 
-        print(self.source_file)
-        # check that file exists
-        print(os.path.exists(self.source_file))
-        Main.include(self.source_file)
-
-        self.petab_jl_problem = getattr(
-            getattr(Main, self.module), self._petab_problem_name, None
-        )
+        if not os.path.exists(self.source_file):
+            raise ValueError(
+                "The julia file does not exist. You can create "
+                "it from a petab yaml file path using "
+                "`PetabJlImporter.from_yaml(yaml_file)`"
+            )
 
         obj = PEtabJlObjective(
             module=self.module,
             source_file=self.source_file,
             petab_problem_name=self._petab_problem_name,
         )
+
+        self.petab_jl_problem = obj.petab_jl_problem
         return obj
 
     def create_problem(
@@ -231,7 +244,7 @@ def _get_default_options(
 
 
 def _write_julia_file(
-    yaml_file: str, options: dict, dir: str
+    yaml_file: str, options: dict, directory: str
 ) -> Tuple[str, str]:
     """
     Write the Julia file.
@@ -252,9 +265,9 @@ def _write_julia_file(
     module:
         The module name.
     """
-    if dir is None:
-        dir = ""  # current directory
-    source_file = os.path.join(dir, "PEtabJl_module.jl")
+    if directory is None:
+        directory = os.path.dirname(yaml_file)  # directory of the yaml file
+    source_file = os.path.join(directory, "PEtabJl_module.jl")
     module = "MyPEtabJlModule"
 
     link_to_options = (
@@ -268,7 +281,7 @@ def _write_julia_file(
     odeSolvOpt_str = odeSolvOpt_str.replace("solver=", "")
 
     content = (
-        f"module {module}Compile\n\n"
+        f"module {module}\n\n"
         f"using OrdinaryDiffEq\n"
         f"using PEtab\n\n"
         f"pathYaml = \"{yaml_file}\"\n"
@@ -281,10 +294,7 @@ def _write_julia_file(
         f"gradientMethod=:{options['gradientMethod']},\n\t"
         f"hessianMethod=:{options['hessianMethod']},\n\t"
         f"sparseJacobian={options['sparseJacobian']},\n\t"
-        f"verbose={options['verbose']}\n)\n\nend\n\n\n"
-        f"module {module}\n\t"
-        f"import ..{module}Compile: petabProblem\n"
-        f"end"
+        f"verbose={options['verbose']}\n)\n\nend\n"
     )
     # write file
     with open(source_file, "w") as f:
