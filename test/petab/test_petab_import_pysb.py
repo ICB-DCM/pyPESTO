@@ -13,7 +13,7 @@ import yaml
 import pypesto.optimize as optimize
 from pypesto.petab import PetabImporterPysb
 
-# In CI, bionetgen is install here
+# In CI, bionetgen is installed here
 BNGPATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.8.5')
 )

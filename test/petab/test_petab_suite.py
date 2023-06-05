@@ -1,7 +1,6 @@
 """Execute petab test suite."""
 
 import logging
-import os
 import sys
 
 import amici.petab_objective
@@ -20,9 +19,15 @@ logger = logging.getLogger(__name__)
 def test_petab_suite():
     """Execute all cases from the petab test suite, report performance."""
     n_success = n_skipped = 0
-    for case in petabtests.CASES_LIST:
+
+    cases = [
+        (case, model_type, version)
+        for (model_type, version) in (("sbml", "v1.0.0"), ("pysb", "v2.0.0"))
+        for case in petabtests.get_cases(format_=model_type, version=version)
+    ]
+    for case, model_type, version in cases:
         try:
-            execute_case(case)
+            execute_case(case, model_type, version)
             n_success += 1
         except Skipped:
             n_skipped += 1
@@ -30,19 +35,17 @@ def test_petab_suite():
             # run all despite failures
             logger.error(f"Case {case} failed.")
             logger.error(e)
-
     logger.info(
-        f"{n_success} / {len(petabtests.CASES_LIST)} successful, "
-        f"{n_skipped} skipped"
+        f"{n_success} / {len(cases)} successful, " f"{n_skipped} skipped"
     )
-    if n_success + n_skipped != len(petabtests.CASES_LIST):
+    if n_success + n_skipped != len(cases):
         sys.exit(1)
 
 
-def execute_case(case):
+def execute_case(case, model_type, version):
     """Wrapper for _execute_case for handling test outcomes"""
     try:
-        _execute_case(case)
+        _execute_case(case, model_type, version)
     except Exception as e:
         if isinstance(
             e, NotImplementedError
@@ -56,16 +59,16 @@ def execute_case(case):
             raise e
 
 
-def _execute_case(case):
+def _execute_case(case, model_type, version):
     """Run a single PEtab test suite case"""
     case = petabtests.test_id_str(case)
     logger.info(f"Case {case}")
 
     # case folder
-    case_dir = os.path.join(petabtests.CASES_DIR, case)
+    case_dir = petabtests.get_case_dir(case, model_type, version)
 
     # load solution
-    solution = petabtests.load_solution(case, 'sbml')
+    solution = petabtests.load_solution(case, format='sbml', version=version)
     gt_chi2 = solution[petabtests.CHI2]
     gt_llh = solution[petabtests.LLH]
     gt_simulation_dfs = solution[petabtests.SIMULATION_DFS]
@@ -74,17 +77,22 @@ def _execute_case(case):
     tol_simulations = solution[petabtests.TOL_SIMULATIONS]
 
     # import petab problem
-    yaml_file = os.path.join(case_dir, petabtests.problem_yaml_name(case))
+    yaml_file = case_dir / petabtests.problem_yaml_name(case)
 
     # unique folder for compiled amici model
-    output_folder = f'amici_models/model_{case}'
+    model_name = (
+        f'petab_test_case_{case}_{model_type}_{version.replace(".", "_" )}'
+    )
+    output_folder = f'amici_models/{model_name}'
 
     # import and create objective function
     if case.startswith('0006'):
         petab_problem = petab.Problem.from_yaml(yaml_file)
         petab.flatten_timepoint_specific_output_overrides(petab_problem)
         importer = pypesto.petab.PetabImporter(
-            petab_problem=petab_problem, output_folder=output_folder
+            petab_problem=petab_problem,
+            output_folder=output_folder,
+            model_name=model_name,
         )
         petab_problem = petab.Problem.from_yaml(yaml_file)
     else:

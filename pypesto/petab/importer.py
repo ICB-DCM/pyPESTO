@@ -857,10 +857,10 @@ def _find_output_folder_name(
     """
     Find a name for storing the compiled amici model in.
 
-    If available, use the sbml model name from the `petab_problem` or the
-    provided `model_name` (latter is given priority), otherwise create a
+    If available, use the model name from the ``petab_problem`` or the
+    provided ``model_name`` (latter is given priority), otherwise create a
     unique name. The folder will be located in the
-    `PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
+    ``PetabImporter.MODEL_BASE_DIR`` subdirectory of the current directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(
