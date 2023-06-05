@@ -1,13 +1,11 @@
 """Execute petab test suite."""
 
 import logging
-import sys
 
 import amici.petab_objective
 import petab
 import petabtests
 import pytest
-from _pytest.outcomes import Skipped
 
 import pypesto
 import pypesto.petab
@@ -16,33 +14,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def test_petab_suite():
-    """Execute all cases from the petab test suite, report performance."""
-    n_success = n_skipped = 0
-
-    cases = [
+@pytest.mark.parametrize(
+    "case, model_type, version",
+    [
         (case, model_type, version)
         for (model_type, version) in (("sbml", "v1.0.0"), ("pysb", "v2.0.0"))
         for case in petabtests.get_cases(format_=model_type, version=version)
-    ]
-    for case, model_type, version in cases:
-        try:
-            execute_case(case, model_type, version)
-            n_success += 1
-        except Skipped:
-            n_skipped += 1
-        except Exception as e:
-            # run all despite failures
-            logger.error(f"Case {version}/{model_type}/{case} failed.")
-            logger.error(e)
-    logger.info(
-        f"{n_success} / {len(cases)} successful, " f"{n_skipped} skipped"
-    )
-    if n_success + n_skipped != len(cases):
-        sys.exit(1)
-
-
-def execute_case(case, model_type, version):
+    ],
+)
+def test_petab_case(case, model_type, version):
     """Wrapper for _execute_case for handling test outcomes"""
     try:
         _execute_case(case, model_type, version)
@@ -68,7 +48,9 @@ def _execute_case(case, model_type, version):
     case_dir = petabtests.get_case_dir(case, model_type, version)
 
     # load solution
-    solution = petabtests.load_solution(case, format='sbml', version=version)
+    solution = petabtests.load_solution(
+        case, format=model_type, version=version
+    )
     gt_chi2 = solution[petabtests.CHI2]
     gt_llh = solution[petabtests.LLH]
     gt_simulation_dfs = solution[petabtests.SIMULATION_DFS]
@@ -151,9 +133,9 @@ def _execute_case(case, model_type, version):
     )
 
     if not all([llhs_match, chi2s_match, simulations_match]):
-        logger.error(f"Case {case} failed.")
+        logger.error(f"Case {version}/{model_type}/{case} failed.")
         raise AssertionError(
             f"Case {case}: Test results do not match " "expectations"
         )
 
-    logger.info(f"Case {case} passed.")
+    logger.info(f"Case {version}/{model_type}/{case} passed.")
