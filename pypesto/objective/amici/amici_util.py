@@ -67,8 +67,13 @@ def map_par_opt_to_par_sim(
     # iterate over simulation parameter indices
     for ix, val in enumerate(par_sim_vals):
         if not isinstance(val, numbers.Number):
-            # value is optimization parameter id
-            par_sim_vals[ix] = x_dct[val]
+            try:
+                # value is optimization parameter id
+                par_sim_vals[ix] = x_dct[val]
+            except KeyError:
+                # this may happen in case of states with NaN in the conditions
+                #  table
+                par_sim_vals[ix] = np.nan
 
     # return the created simulation parameter vector
     return np.array(par_sim_vals)
