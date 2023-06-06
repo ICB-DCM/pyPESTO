@@ -6,18 +6,15 @@ import logging
 import os
 
 import numpy as np
+import petab
 import petabtests
-import yaml
-
-# must import after previous, otherwise circular import issues :(
-from amici.petab_import_pysb import PysbPetabProblem
 
 import pypesto.optimize as optimize
 from pypesto.petab import PetabImporterPysb
 
-# In CI, bionetgen is install here
+# In CI, bionetgen is installed here
 BNGPATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.6.0')
+    os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.8.5')
 )
 if 'BNGPATH' not in os.environ:
     logging.warning(f"Env var BNGPATH was not set. Setting to {BNGPATH}")
@@ -26,16 +23,16 @@ if 'BNGPATH' not in os.environ:
 
 def test_petab_pysb_optimization():
     test_case = '0001'
-    test_case_dir = os.path.join(petabtests.PYSB_DIR, test_case)
-    petab_yaml = os.path.join(test_case_dir, f'_{test_case}.yaml')
-    solution_yaml = os.path.join(test_case_dir, f'_{test_case}_solution.yaml')
-
+    test_case_dir = petabtests.get_case_dir(
+        test_case, version='v2.0.0', format_='pysb'
+    )
+    petab_yaml = test_case_dir / petabtests.problem_yaml_name(test_case)
     # expected results
-    with open(solution_yaml) as f:
-        solution = yaml.full_load(f)
+    solution = petabtests.load_solution(
+        test_case, format='pysb', version='v2.0.0'
+    )
 
-    petab_problem = PysbPetabProblem.from_yaml(petab_yaml)
-
+    petab_problem = petab.Problem.from_yaml(petab_yaml)
     importer = PetabImporterPysb(petab_problem)
     problem = importer.create_problem()
 

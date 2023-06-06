@@ -32,7 +32,7 @@ class PetabImporterPysb(PetabImporter):
             Passed to `PetabImporter.__init__`.
         """
         if "model_name" not in kwargs:
-            kwargs["model_name"] = petab_problem.pysb_model.name
+            kwargs["model_name"] = petab_problem.model.model_id
         super().__init__(
             petab_problem,
             validate_petab=validate_petab,
