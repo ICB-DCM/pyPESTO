@@ -237,7 +237,7 @@ class Problem:
 
     def _check_x_guesses(self):
         """Check whether the supplied x_guesses adhere to the bounds."""
-        if self.x_guesses == np.zeros((0, self.dim_full)):
+        if self.x_guesses.size == 0:
             return
         adheres_ub = self.x_guesses < self.ub
         adheres_lb = self.x_guesses < self.lb
