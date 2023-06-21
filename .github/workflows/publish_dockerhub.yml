@@ -25,6 +25,7 @@ jobs:
         name: Build and push
         uses: docker/build-push-action@v4
         with:
+          file: ${{ github.workspace }}/pyPESTO/docker/Dockerfile
           push: true
           tags: ICB_DCM/pypesto:latest
 
