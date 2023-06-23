@@ -2,12 +2,8 @@
 This is for testing the pypesto.Objective.
 """
 
-import os
-
 import amici
-import benchmark_models_petab as models
 import numpy as np
-import petab
 import pytest
 
 import pypesto
@@ -49,15 +45,9 @@ def test_add_sim_grad_to_opt_grad():
     assert np.allclose(expected, opt_grad)
 
 
-def test_error_leastsquares_with_ssigma():
+def test_error_leastsquares_with_ssigma(loaded_models):
     model_name = "Zheng_PNAS2012"
-    petab_problem = petab.Problem.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
-    )
-    petab_problem.model_name = model_name
-    importer = pypesto.petab.PetabImporter(petab_problem)
-    obj = importer.create_objective()
-    problem = importer.create_problem(obj)
+    problem = loaded_models[model_name]
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         'ls_trf', options={'max_nfev': 50}
@@ -73,17 +63,14 @@ def test_error_leastsquares_with_ssigma():
 
 
 @pytest.mark.flaky(reruns=5)
-def test_preeq_guesses():
+def test_preeq_guesses(loaded_models):
     """
     Test whether optimization with preequilibration guesses works, asserts
     that steadystate guesses are written and checks that gradient is still
     correct with guesses set.
     """
     model_name = "Brannmark_JBC2010"
-    importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
-    )
-    problem = importer.create_problem()
+    problem = loaded_models[model_name]
     obj = problem.objective
     obj.amici_solver.setNewtonMaxSteps(0)
     obj.amici_model.setSteadyStateSensitivityMode(

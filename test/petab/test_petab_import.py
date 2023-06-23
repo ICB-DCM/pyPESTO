@@ -1,7 +1,7 @@
 """
 This is for testing the petab import.
 """
-
+import copy
 import logging
 import os
 import unittest
@@ -91,6 +91,7 @@ class PetabImportTest(unittest.TestCase):
 
             self.assertTrue(np.isfinite(result.optimize_result.fval[0]))
 
+    @pytest.mark.usefixtures("loaded_models")
     def test_check_gradients(self):
         """Test objective FD-gradient check function."""
         # Check gradients of simple model (should always be a true positive)
@@ -111,19 +112,19 @@ class PetabImportTest(unittest.TestCase):
         )
 
 
-def test_plist_mapping():
+def test_plist_mapping(loaded_models):
     """Test that the AMICI objective created via PEtab correctly maps
     gradient entries when some parameters are not estimated (realized via
     edata.plist)."""
     model_name = "Boehm_JProteomeRes2014"
-    petab_problem = pypesto.petab.PetabImporter.from_yaml(
+    problem = loaded_models[model_name]
+    petab_problem = petab.Problem.from_yaml(
         os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
     )
 
     # define test parameter
-    par = np.asarray(petab_problem.petab_problem.x_nominal_scaled)
+    par = np.asarray(petab_problem.x_nominal_scaled)
 
-    problem = petab_problem.create_problem()
     objective = problem.objective
     # check that x_names are correctly subsetted
     assert objective.x_names == [
@@ -143,20 +144,21 @@ def test_plist_mapping():
     assert np.all((df.rel_err.values < RTOL) | (df.abs_err.values < ATOL))
 
 
-def test_max_sensi_order():
+def test_max_sensi_order(loaded_models):
     """Test that the AMICI objective created via PEtab exposes derivatives
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
-    problem = pypesto.petab.PetabImporter.from_yaml(
+    problem = loaded_models[model_name]
+    petab_problem = petab.Problem.from_yaml(
         os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
     )
 
     # define test parameter
-    par = problem.petab_problem.x_nominal_scaled
+    par = np.array(petab_problem.x_nominal_scaled)[problem.x_free_indices]
     npar = len(par)
 
     # auto-computed max_sensi_order and fim_for_hess
-    objective = problem.create_objective()
+    objective = problem.objective
     hess = objective(par, sensi_orders=(2,))
     assert hess.shape == (npar, npar)
     assert (hess != 0).any()
@@ -170,21 +172,24 @@ def test_max_sensi_order():
     )
 
     # fix max_sensi_order to 1
-    objective = problem.create_objective(max_sensi_order=1)
-    objective(par, sensi_orders=(1,))
+    objective2 = copy.deepcopy(objective)
+    objective2.max_sensi_order = 1
+    objective2(par, sensi_orders=(1,))
     with pytest.raises(ValueError):
-        objective(par, sensi_orders=(2,))
+        objective2(par, sensi_orders=(2,))
 
     # do not use FIM
-    objective = problem.create_objective(fim_for_hess=False)
+    objective2 = copy.deepcopy(objective)
+    objective2.fim_for_hess = False
     with pytest.raises(ValueError):
-        objective(par, sensi_orders=(2,))
+        objective2(par, sensi_orders=(2,))
 
     # only allow computing function values
-    objective = problem.create_objective(max_sensi_order=0)
-    objective(par)
+    objective2 = copy.deepcopy(objective)
+    objective2.max_sensi_order = 0
+    objective2(par)
     with pytest.raises(ValueError):
-        objective(par, sensi_orders=(1,))
+        objective2(par, sensi_orders=(1,))
 
 
 def test_petab_pysb_optimization():
