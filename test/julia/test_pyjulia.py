@@ -59,11 +59,29 @@ def test_pyjulia_pipeline():
     assert np.allclose(result.optimize_result[0].x, p_opt)  # noqa: S101
 
 
+def test_petabJL_interface():
+    """Test the interface to PEtab.jl with provided solutions from julia."""
+    model_name = "boehm_JProteomeRes2014"
+    yaml_file = f"doc/example/{model_name}/{model_name}.yaml"
+
+    importer = PetabJlImporter.from_yaml(yaml_file)
+
+    problem = importer.create_problem()
+
+    parameters = [
+        -1.665827601408055, - 4.999704893599998, - 2.2096987817000167,
+        -1.78600654750001, 4.9901140088, 4.1977354885, 0.5857552705999998,
+        0.8189828191999999, 0.49868440400000047
+    ]
+
+    breakpoint()
+
+
 def test_petabJL_from_module():
     """Test that PEtab.jl is integrated properly."""
     # create objective
     module = "MyPEtabJlModule"
-    source_file = "doc/example/model_julia/PEtabJl_Test.jl"
+    source_file = "doc/example/conversion_reaction/PEtabJl_module.jl"
 
     importer = PetabJlImporter(module=module, source_file=source_file)
 

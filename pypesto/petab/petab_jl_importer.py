@@ -51,7 +51,7 @@ class PetabJlImporter:
         hessianMethod: Optional[str] = None,
         sparseJacobian: Optional[bool] = None,
         verbose: Optional[bool] = None,
-        directory: Optional[str] = None,
+        directory: Optional[str] = None
     ) -> PetabJlImporter:
         """
         Create a `PetabJlImporter` from a yaml file.
@@ -94,12 +94,21 @@ class PetabJlImporter:
             source_file=source_file,
         )
 
-    def create_objective(self) -> PEtabJlObjective:
+    def create_objective(
+            self, precompile: Optional[bool] = True
+    ) -> PEtabJlObjective:
         """
         Create a `pypesto.objective.PEtabJlObjective` from the PEtab.jl problem.
 
         The objective function will be the negative log likelihood or the
         negative log posterior, depending on the PEtab.jl problem.
+
+        Parameters
+        ----------
+        precompile:
+            Whether to precompile the julia module for speed up in
+            multistart optimization.
+
         """
         # lazy imports
         try:
@@ -123,6 +132,7 @@ class PetabJlImporter:
             module=self.module,
             source_file=self.source_file,
             petab_problem_name=self._petab_problem_name,
+            precompile=precompile
         )
 
         self.petab_jl_problem = obj.petab_jl_problem
@@ -133,6 +143,7 @@ class PetabJlImporter:
         x_guesses: Optional[Iterable[float]] = None,
         lb_init: Union[np.ndarray, List[float], None] = None,
         ub_init: Union[np.ndarray, List[float], None] = None,
+        precompile: Optional[bool] = True
     ) -> Problem:
         """
         Create a `pypesto.Problem` from the PEtab.jl problem.
@@ -146,8 +157,11 @@ class PetabJlImporter:
             The lower and upper bounds for initialization, typically for defining
             search start points.
             If not set, set to lb, ub.
+        precompile:
+            Whether to precompile the julia module for speed up in
+            multistart optimization.
         """
-        obj = self.create_objective()
+        obj = self.create_objective(precompile=precompile)
         lb = np.asarray(self.petab_jl_problem.lowerBounds)
         ub = np.asarray(self.petab_jl_problem.upperBounds)
 
