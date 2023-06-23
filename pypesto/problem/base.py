@@ -240,7 +240,7 @@ class Problem:
         if self.x_guesses.size == 0:
             return
         adheres_ub = self.x_guesses <= self.ub
-        adheres_lb = self.x_guesses <= self.lb
+        adheres_lb = self.x_guesses >= self.lb
         adheres_bounds = adheres_ub & adheres_lb
         # if any bounds are violated, log a warning
         if not adheres_bounds.all():
