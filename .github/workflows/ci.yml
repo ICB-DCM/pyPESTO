@@ -58,18 +58,21 @@ jobs:
       pull-requests: read
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: dorny/paths-filter@v2
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Check whether Tests need to be run
+      uses: dorny/paths-filter@v2
       id: filter
       with:
         filters: |
-          petab_filer:
+          petab_filter:
             - 'test/petab/**'
             - 'pypesto/objective/amici/**'
             - 'pypesto/petab/**'
             - 'pypesto/predict/**'
             - 'pypesto/result/predict.py'
-            - 'pypesto/**'
+
     - name: Check out repository
       uses: actions/checkout@v3
 
@@ -91,6 +94,10 @@ jobs:
       if: steps.filter.outputs.petab_filter == 'true'
       timeout-minutes: 35
       run: tox -e petab
+
+    - name: No tests needed
+      if: steps.filter.outputs.petab_filter == 'false'
+      run: echo "No tests needed as no relevant files were changed."
 
     - name: Coverage
       uses: codecov/codecov-action@v3
