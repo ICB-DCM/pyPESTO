@@ -21,19 +21,19 @@ jobs:
       id: filter
       with:
         filters: |
-          petab_filer:
+          petab_filter:
             - 'test/petab/**'
             - 'pypesto/objective/amici/**'
             - 'pypesto/petab/**'
             - 'pypesto/predict/**'
             - 'pypesto/result/predict.py'
             - 'pypesto/**'
-    - name: Run tests
+    - name: Run_tests
       if: steps.filter.outputs.petab_filter == 'true'
       timeout-minutes: 35
-      run: echo "Hello Tests"
+      run: echo "Hello_Tests"
 
     - name: Dont run tests
       if: steps.filter.outputs.petab_filter == 'false'
       timeout-minutes: 35
-      run: echo "Not Hello Tests"
+      run: echo steps.filter.outputs.petab_filter
