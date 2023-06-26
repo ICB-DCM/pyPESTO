@@ -1,0 +1,39 @@
+name: Test_action
+
+# trigger
+on:
+  pull_request:
+
+# jobs
+jobs:
+  Filtering:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.11']
+    # Required permissions
+    permissions:
+      pull-requests: read
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          petab_filer:
+            - 'test/petab/**'
+            - 'pypesto/objective/amici/**'
+            - 'pypesto/petab/**'
+            - 'pypesto/predict/**'
+            - 'pypesto/result/predict.py'
+            - 'pypesto/**'
+    - name: Run tests
+      if: steps.filter.outputs.petab_filter == 'true'
+      timeout-minutes: 35
+      run: echo "Hello Tests"
+
+    - name: Dont run tests
+      if: steps.filter.outputs.petab_filter == 'false'
+      timeout-minutes: 35
+      run: echo "Not Hello Tests"
