@@ -63,13 +63,12 @@ jobs:
       id: filter
       with:
         filters: |
-          petab_filer:
+          petab_filter:
             - 'test/petab/**'
             - 'pypesto/objective/amici/**'
             - 'pypesto/petab/**'
             - 'pypesto/predict/**'
             - 'pypesto/result/predict.py'
-            - 'pypesto/**'
     - name: Check out repository
       uses: actions/checkout@v3
 
