@@ -53,8 +53,23 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.9', '3.11']
+    # Required permissions
+    permissions:
+      pull-requests: read
 
     steps:
+    - uses: actions/checkout@v3
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          petab_filer:
+            - 'test/petab/**'
+            - 'pypesto/objective/amici/**'
+            - 'pypesto/petab/**'
+            - 'pypesto/predict/**'
+            - 'pypesto/result/predict.py'
+            - 'pypesto/**'
     - name: Check out repository
       uses: actions/checkout@v3
 
@@ -73,6 +88,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici pysb
 
     - name: Run tests
+      if: steps.filter.outputs.petab_filter == 'true'
       timeout-minutes: 35
       run: tox -e petab
 
