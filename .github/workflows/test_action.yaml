@@ -27,7 +27,6 @@ jobs:
             - 'pypesto/petab/**'
             - 'pypesto/predict/**'
             - 'pypesto/result/predict.py'
-            - 'pypesto/**'
     - name: Run_tests
       if: steps.filter.outputs.petab_filter == 'true'
       timeout-minutes: 35
