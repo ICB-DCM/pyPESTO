@@ -1,5 +1,5 @@
 """
-This is for testing the pypesto.Objective.
+This is for testing the pypesto.Objective. And another test.
 """
 
 import amici
