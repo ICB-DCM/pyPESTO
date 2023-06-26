@@ -29,6 +29,7 @@ Release notes
     * Fix numpy DeprecationWarnings (#1076)
     * GHA: Fix deprecation warnings (#1075)
     * Fixed bug on existing file and no overwrite (#1046)
+    * Fix error in bound checking (#1081)
 
 
 0.3.0 (2023-05-02)
