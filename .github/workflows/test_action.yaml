@@ -31,9 +31,9 @@ jobs:
     - name: Run_tests
       if: steps.filter.outputs.petab_filter == 'true'
       timeout-minutes: 35
-      run: echo "Hello_Tests"
+      run: echo "Hello Tests"
 
-    - name: Dont run tests
+    - name: Dont_run_tests
       if: steps.filter.outputs.petab_filter == 'false'
       timeout-minutes: 35
-      run: echo steps.filter.outputs.petab_filter
+      run: echo "Not Hello Tests"
