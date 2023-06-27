@@ -74,7 +74,17 @@ def test_petabJL_interface():
         skip_header=1,
     )
 
-    problem.objective(parameters, sensi_orders=(0,))
+    # check objective function
+    obj_ref = np.genfromtxt(
+        'doc/example/boehm_JProteomeRes2014/Boehm_validation/ObjectiveValue'
+        '.csv',
+        delimiter=',',
+        skip_header=1,
+    )
+    obj = problem.objective(parameters, sensi_orders=(0,))
+
+    assert np.allclose(obj, obj_ref)  # noqa: S101
+
     # check gradient value
     grad_ref = np.genfromtxt(
         'doc/example/boehm_JProteomeRes2014/Boehm_validation/Gradient.csv',
