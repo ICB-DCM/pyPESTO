@@ -66,15 +66,34 @@ def test_petabJL_interface():
 
     importer = PetabJlImporter.from_yaml(yaml_file)
 
-    problem = importer.create_problem()
+    problem = importer.create_problem(precompile=False)
 
-    parameters = [
-        -1.665827601408055, - 4.999704893599998, - 2.2096987817000167,
-        -1.78600654750001, 4.9901140088, 4.1977354885, 0.5857552705999998,
-        0.8189828191999999, 0.49868440400000047
-    ]
+    parameters = np.genfromtxt(
+        'doc/example/boehm_JProteomeRes2014/Boehm_validation/Parameter.csv',
+        delimiter=',',
+        skip_header=1,
+    )
 
-    breakpoint()
+    problem.objective(parameters, sensi_orders=(0,))
+    # check gradient value
+    grad_ref = np.genfromtxt(
+        'doc/example/boehm_JProteomeRes2014/Boehm_validation/Gradient.csv',
+        delimiter=',',
+        skip_header=1,
+    )
+    grad = problem.objective(parameters, sensi_orders=(1,))
+
+    assert np.allclose(grad, grad_ref)  # noqa: S101
+
+    # check hessian value
+    hess_ref = np.genfromtxt(
+        'doc/example/boehm_JProteomeRes2014/Boehm_validation/Hessian.csv',
+        delimiter=',',
+        skip_header=1,
+    )
+    hess = problem.objective(parameters, sensi_orders=(2,))
+
+    assert np.allclose(hess, hess_ref)  # noqa: S101
 
 
 def test_petabJL_from_module():
@@ -101,7 +120,7 @@ def test_petabJL_from_yaml():
 
     importer = PetabJlImporter.from_yaml(yaml_file)
 
-    problem = importer.create_problem()
+    problem = importer.create_problem(precompile=False)
 
     # optimize with single core
     optimize.minimize(problem, engine=SingleCoreEngine(), n_starts=10)

@@ -51,7 +51,7 @@ class PetabJlImporter:
         hessianMethod: Optional[str] = None,
         sparseJacobian: Optional[bool] = None,
         verbose: Optional[bool] = None,
-        directory: Optional[str] = None
+        directory: Optional[str] = None,
     ) -> PetabJlImporter:
         """
         Create a `PetabJlImporter` from a yaml file.
@@ -95,7 +95,7 @@ class PetabJlImporter:
         )
 
     def create_objective(
-            self, precompile: Optional[bool] = True
+        self, precompile: Optional[bool] = True
     ) -> PEtabJlObjective:
         """
         Create a `pypesto.objective.PEtabJlObjective` from the PEtab.jl problem.
@@ -132,7 +132,7 @@ class PetabJlImporter:
             module=self.module,
             source_file=self.source_file,
             petab_problem_name=self._petab_problem_name,
-            precompile=precompile
+            precompile=precompile,
         )
 
         self.petab_jl_problem = obj.petab_jl_problem
@@ -143,7 +143,7 @@ class PetabJlImporter:
         x_guesses: Optional[Iterable[float]] = None,
         lb_init: Union[np.ndarray, List[float], None] = None,
         ub_init: Union[np.ndarray, List[float], None] = None,
-        precompile: Optional[bool] = True
+        precompile: Optional[bool] = True,
     ) -> Problem:
         """
         Create a `pypesto.Problem` from the PEtab.jl problem.
