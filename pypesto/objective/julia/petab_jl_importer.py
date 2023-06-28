@@ -7,8 +7,8 @@ from typing import Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 
-from ..objective.julia import PEtabJlObjective
-from ..problem import Problem
+from pypesto.objective.julia import PEtabJlObjective
+from pypesto.problem import Problem
 
 logger = logging.getLogger(__name__)
 
