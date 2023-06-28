@@ -3,7 +3,7 @@ import numpy as np
 from pypesto import Problem, optimize
 from pypesto.engine import MultiProcessEngine, SingleCoreEngine
 from pypesto.objective.julia import JuliaObjective, display_source_ipython
-from pypesto.petab import PetabJlImporter
+from pypesto.petab.petab_jl_importer import PetabJlImporter
 
 # The pyjulia wrapper appears to ignore global noqas, thus per line here
 

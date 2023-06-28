@@ -7,7 +7,6 @@ pyPESTO support for the PEtab data format.
 import warnings
 
 from .importer import PetabImporter
-from .petab_jl_importer import PetabJlImporter
 
 # PEtab and amici are optional dependencies
 
