@@ -114,7 +114,7 @@ def test_petabJL_from_module():
 
     importer = PetabJlImporter(module=module, source_file=source_file)
 
-    problem = importer.create_problem()
+    problem = importer.create_problem(precompile=False)
 
     # optimize with single core
     optimize.minimize(problem, engine=SingleCoreEngine(), n_starts=2)
