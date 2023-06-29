@@ -242,6 +242,9 @@ class Problem:
 
         method_caller = self.create_method_caller(**kwargs)
         for start_index, predecessor_model in enumerate(predecessor_models):
+            method_caller.candidate_space.previous_predecessor_model = (
+                predecessor_model
+            )
             (
                 best_model,
                 newly_calibrated_models_list[start_index],

@@ -7,15 +7,17 @@ from ...C import (
     CURRENT_SIMULATION,
     DATAPOINTS,
     EXPDATA_MASK,
+    INNER_NOISE_PARS,
     INNER_PARAMETER_BOUNDS,
     LIN,
     MAX_DATAPOINT,
     MEASUREMENT_TYPE,
     MIN_DATAPOINT,
     N_SPLINE_PARS,
-    NOISE_PARAMETERS,
     NONLINEAR_MONOTONE,
     NUM_DATAPOINTS,
+    OPTIMIZE_NOISE,
+    PARAMETER_TYPE,
     SPLINE_PAR_TYPE,
     TIME,
     InnerParameterType,
@@ -24,13 +26,21 @@ from ..problem import (
     InnerProblem,
     _get_timepoints_with_replicates,
     ix_matrices_from_arrays,
+    scale_value,
 )
 from .parameter import SplineInnerParameter
 
 try:
     import amici
     import petab
-    from petab.C import OBSERVABLE_ID
+    from petab.C import (
+        ESTIMATE,
+        LOWER_BOUND,
+        NOISE_PARAMETERS,
+        OBSERVABLE_ID,
+        PARAMETER_ID,
+        UPPER_BOUND,
+    )
 except ImportError:
     pass
 
@@ -90,9 +100,23 @@ class SplineInnerProblem(InnerProblem):
             self.groups[group][CURRENT_SIMULATION] = np.zeros(
                 self.groups[group][NUM_DATAPOINTS]
             )
-            self.groups[group][NOISE_PARAMETERS] = np.zeros(
+            self.groups[group][INNER_NOISE_PARS] = 1
+            self.groups[group][OPTIMIZE_NOISE] = (
+                len(self.get_noise_parameters_for_group(group)) > 0
+            )
+
+    def initialize(self) -> None:
+        """Initialize the subproblem."""
+        # Initialize all parameter values.
+        for x in self.xs.values():
+            x.initialize()
+
+        # Initialize the groups.
+        for group in self.get_groups_for_xs(InnerParameterType.SPLINE):
+            self.groups[group][CURRENT_SIMULATION] = np.zeros(
                 self.groups[group][NUM_DATAPOINTS]
             )
+            self.groups[group][INNER_NOISE_PARS] = 1
 
     @staticmethod
     def from_petab_amici(
@@ -115,14 +139,21 @@ class SplineInnerProblem(InnerProblem):
 
     def get_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
         r"""Get ``SplineParameter``\s that belong to the given group."""
-        return [x for x in self.xs.values() if x.group == group]
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group
+            and x.inner_parameter_type == InnerParameterType.SPLINE
+        ]
 
     def get_free_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
         r"""Get ``SplineParameter``\s that are free and belong to the given group."""
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.estimate is True
+            if x.group == group
+            and x.estimate is True
+            and x.inner_parameter_type == InnerParameterType.SPLINE
         ]
 
     def get_fixed_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
@@ -130,7 +161,20 @@ class SplineInnerProblem(InnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.estimate is False
+            if x.group == group
+            and x.estimate is False
+            and x.inner_parameter_type == InnerParameterType.SPLINE
+        ]
+
+    def get_noise_parameters_for_group(
+        self, group: int
+    ) -> SplineInnerParameter:
+        r"""Get the ``SplineParameter``\ that is a noise parameters and belongs to the given group."""
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group
+            and x.inner_parameter_type == InnerParameterType.SIGMA
         ]
 
     def get_inner_parameter_dictionary(self) -> Dict:
@@ -138,6 +182,13 @@ class SplineInnerProblem(InnerProblem):
         inner_par_dict = {}
         for x_id, x in self.xs.items():
             inner_par_dict[x_id] = x.value
+        return inner_par_dict
+
+    def get_inner_noise_parameter_dictionary(self) -> Dict:
+        """Get a dictionary with all noise inner parameter ids and their values."""
+        inner_par_dict = {}
+        for x in self.get_xs_for_type(InnerParameterType.SIGMA):
+            inner_par_dict[x.inner_parameter_id] = x.value
         return inner_par_dict
 
     def get_measurements_for_group(self, gr) -> np.ndarray:
@@ -152,6 +203,14 @@ class SplineInnerProblem(InnerProblem):
                 for condition_index in range(len(ixs))
             ]
         )
+
+    def get_noise_dummy_values(self, scaled: bool) -> Dict[str, float]:
+        """Get dummy values for noise parameters of the nonlinear-monotone observable."""
+        return {
+            x_id: scale_value(x.value, x.scale) if scaled else x.value
+            for x_id, x in self.xs.items()
+            if x.inner_parameter_type == InnerParameterType.SIGMA
+        }
 
 
 def get_default_options() -> Dict:
@@ -176,6 +235,12 @@ def spline_inner_problem_from_petab_problem(
     inner_parameters = spline_inner_parameters_from_measurement_df(
         petab_problem.measurement_df, spline_ratio, amici_model
     )
+
+    # noise parameters for nonlinear-monotone observables
+    noise_parameters = noise_inner_parameters_from_parameter_df(
+        petab_problem, amici_model
+    )
+    inner_parameters.extend(noise_parameters)
 
     # used indices for all measurement specific parameters
     ixs = spline_ixs_for_measurement_specific_parameters(
@@ -206,7 +271,7 @@ def spline_inner_parameters_from_measurement_df(
     spline_ratio: float,
     amici_model: 'amici.Model',
 ) -> List[SplineInnerParameter]:
-    """Create list of inner free parameters from PEtab measurement table."""
+    """Create list of inner free spline parameters from PEtab measurement table."""
     df = df.reset_index()
 
     observable_ids = amici_model.getObservableIds()
@@ -247,6 +312,56 @@ def spline_inner_parameters_from_measurement_df(
     inner_parameters.sort(key=lambda x: (x.group, x.index))
 
     return inner_parameters
+
+
+def noise_inner_parameters_from_parameter_df(
+    petab_problem: 'petab.Problem',
+    amici_model: 'amici.Model',
+) -> List[SplineInnerParameter]:
+    """Create list of inner free noise parameters from PEtab parameter table."""
+    # Select the nonlinear monotone measurements.
+    measurement_df = petab_problem.measurement_df
+    measurement_df = measurement_df[
+        measurement_df[MEASUREMENT_TYPE] == NONLINEAR_MONOTONE
+    ]
+
+    observable_ids = amici_model.getObservableIds()
+
+    # Create a dictionary with unique pairs of observable id
+    # and noise parameter from the measurement table.
+    noise_parameter_to_observable = {}
+    for _, row in measurement_df.iterrows():
+        observable_id = row[OBSERVABLE_ID]
+        noise_parameter_id = row[NOISE_PARAMETERS]
+        noise_parameter_to_observable[noise_parameter_id] = observable_id
+
+    noise_parameters = []
+
+    parameter_df = petab_problem.parameter_df.reset_index()
+    # Create noise inner parameters.
+    for _, row in parameter_df.iterrows():
+        if row[PARAMETER_ID] not in noise_parameter_to_observable:
+            continue
+        if petab.is_empty(row.get(PARAMETER_TYPE)) or not row[ESTIMATE]:
+            continue
+        observable_id = noise_parameter_to_observable[row[PARAMETER_ID]]
+        group = observable_ids.index(observable_id) + 1
+
+        noise_parameters.append(
+            SplineInnerParameter(
+                inner_parameter_id=row[PARAMETER_ID],
+                inner_parameter_type=InnerParameterType.SIGMA,
+                scale=LIN,
+                lb=row[LOWER_BOUND],
+                ub=row[UPPER_BOUND],
+                observable_id=observable_id,
+                group=group,
+                index=None,
+                estimate=True,
+            )
+        )
+
+    return noise_parameters
 
 
 def spline_ixs_for_measurement_specific_parameters(

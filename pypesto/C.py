@@ -195,6 +195,17 @@ SPLINE_APPROXIMATION_OPTIONS = [SPLINE_RATIO, MIN_DIFF_FACTOR]
 
 MIN_SIM_RANGE = 1e-16
 
+SPLINE_PAR_TYPE = 'spline'
+N_SPLINE_PARS = 'n_spline_pars'
+DATAPOINTS = 'datapoints'
+MIN_DATAPOINT = 'min_datapoint'
+MAX_DATAPOINT = 'max_datapoint'
+EXPDATA_MASK = 'expdata_mask'
+CURRENT_SIMULATION = 'current_simulation'
+INNER_NOISE_PARS = 'inner_noise_pars'
+OPTIMIZE_NOISE = 'optimize_noise'
+
+
 ###############################################################################
 # HISTORY
 
@@ -209,15 +220,6 @@ TRACE_SAVE_ITER = "trace_save_iter"
 SUFFIXES_CSV = ["csv"]
 SUFFIXES_HDF5 = ["hdf5", "h5"]
 SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
-
-SPLINE_PAR_TYPE = 'spline'
-N_SPLINE_PARS = 'n_spline_pars'
-DATAPOINTS = 'datapoints'
-MIN_DATAPOINT = 'min_datapoint'
-MAX_DATAPOINT = 'max_datapoint'
-EXPDATA_MASK = 'expdata_mask'
-CURRENT_SIMULATION = 'current_simulation'
-NOISE_PARAMETERS = 'noise_parameters'
 
 CPU_TIME_TOTAL = 'cpu_time_total'
 PREEQ_CPU_TIME = 'preeq_cpu_time'

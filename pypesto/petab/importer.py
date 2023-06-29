@@ -335,14 +335,15 @@ class PetabImporter(AmiciObjectBuilder):
 
         Parameters
         ----------
-        kwargs: Extra arguments passed to `amici.SbmlImporter.sbml2amici`.
-
+        kwargs:
+            Extra arguments passed to :meth:`amici.SbmlImporter.sbml2amici`
+            or :meth:`amici.pysb_import.pysb2amici`.
         """
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        amici.petab_import.import_model(
+        amici.petab_import.import_petab_problem(
             petab_problem=self.petab_problem,
             model_name=self.model_name,
             model_output_dir=self.output_folder,
@@ -468,8 +469,6 @@ class PetabImporter(AmiciObjectBuilder):
             )
             calculator = HierarchicalAmiciCalculator(inner_problem)
             amici_reporting = amici.RDataReporting.full
-            inner_parameter_ids = calculator.inner_problem.get_x_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
         if self._hierarchical:
             # FIXME: currently not supported with hierarchical
@@ -478,6 +477,8 @@ class PetabImporter(AmiciObjectBuilder):
                     "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
                 )
             kwargs['guess_steadystate'] = False
+            inner_parameter_ids = calculator.get_inner_parameter_ids()
+            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
         # create objective
         obj = AmiciObjective(
@@ -700,9 +701,9 @@ class PetabImporter(AmiciObjectBuilder):
                 )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
-        if not self._non_quantitative_data_types and self._hierarchical:
+        if self._hierarchical:
             inner_parameter_ids = (
-                objective.calculator.inner_problem.get_x_ids()
+                objective.calculator.get_inner_parameter_ids()
             )
             lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
             ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]
@@ -857,10 +858,10 @@ def _find_output_folder_name(
     """
     Find a name for storing the compiled amici model in.
 
-    If available, use the sbml model name from the `petab_problem` or the
-    provided `model_name` (latter is given priority), otherwise create a
+    If available, use the model name from the ``petab_problem`` or the
+    provided ``model_name`` (latter is given priority), otherwise create a
     unique name. The folder will be located in the
-    `PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
+    ``PetabImporter.MODEL_BASE_DIR`` subdirectory of the current directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(
@@ -875,14 +876,14 @@ def _find_output_folder_name(
     if not os.path.exists(PetabImporter.MODEL_BASE_DIR):
         os.makedirs(PetabImporter.MODEL_BASE_DIR)
 
-    # try sbml model id
-    sbml_model_id = petab_problem.sbml_model.getId()
+    # try model id
+    model_id = petab_problem.model.model_id
     if model_name is not None:
-        sbml_model_id = model_name
+        model_id = model_name
 
-    if sbml_model_id:
+    if model_id:
         output_folder = os.path.abspath(
-            os.path.join(PetabImporter.MODEL_BASE_DIR, sbml_model_id)
+            os.path.join(PetabImporter.MODEL_BASE_DIR, model_id)
         )
     else:
         # create random folder name

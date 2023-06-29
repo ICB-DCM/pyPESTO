@@ -6,6 +6,33 @@ Release notes
 ..........
 
 
+0.3.1 (2023-06-22)
+-------------------
+* Visualize:
+    * Parameter plot w/ hier. pars, noise estimation for splines (#1061)
+* Sampling:
+    * AdaptiveMetropolis failure fix for bounded priors (#1065)
+* Ensembles
+    * Speed up Ensemble from History (#1063)
+* PEtab support:
+    * Support for petab 0.2.x (#1073)
+    * Remove PetabImporterPysb #1082)
+* Objective
+    * AggregatedObjective: objective-specific kwargs for call_unprocessed (#1068)
+* Select
+    * Use predecessor stored in file (#1059)
+    * support petab-select version 0.1.8 (#1070)
+* Examples
+    * Synthetic data: update for libpetab-python v0.2.0 (#1060)
+    * Fix error in sampling_diagnostics which led to test failure(#1092)
+* General
+    * Test fixes (#1064)
+    * Fix numpy DeprecationWarnings (#1076)
+    * GHA: Fix deprecation warnings (#1075)
+    * Fixed bug on existing file and no overwrite (#1046)
+    * Fix error in bound checking (#1081)
+
+
 0.3.0 (2023-05-02)
 -------------------
 

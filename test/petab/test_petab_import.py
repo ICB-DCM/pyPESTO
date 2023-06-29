@@ -2,6 +2,7 @@
 This is for testing the petab import.
 """
 
+import logging
 import os
 import unittest
 
@@ -9,13 +10,23 @@ import amici
 import benchmark_models_petab as models
 import numpy as np
 import petab
+import petabtests
 import pytest
 
 import pypesto
 import pypesto.optimize
 import pypesto.petab
+from pypesto.petab import PetabImporter
 
 from .test_sbml_conversion import ATOL, RTOL
+
+# In CI, bionetgen is installed here
+BNGPATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.8.5')
+)
+if 'BNGPATH' not in os.environ:
+    logging.warning(f"Env var BNGPATH was not set. Setting to {BNGPATH}")
+    os.environ['BNGPATH'] = BNGPATH
 
 
 class PetabImportTest(unittest.TestCase):
@@ -174,6 +185,39 @@ def test_max_sensi_order():
     objective(par)
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(1,))
+
+
+def test_petab_pysb_optimization():
+    test_case = '0001'
+    test_case_dir = petabtests.get_case_dir(
+        test_case, version='v2.0.0', format_='pysb'
+    )
+    petab_yaml = test_case_dir / petabtests.problem_yaml_name(test_case)
+    # expected results
+    solution = petabtests.load_solution(
+        test_case, format='pysb', version='v2.0.0'
+    )
+
+    petab_problem = petab.Problem.from_yaml(petab_yaml)
+    importer = PetabImporter(petab_problem)
+    problem = importer.create_problem()
+
+    # ensure simulation result for true parameters matches
+    assert np.isclose(
+        problem.objective(petab_problem.x_nominal), -solution[petabtests.LLH]
+    )
+
+    optimizer = pypesto.optimize.ScipyOptimizer()
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=10,
+        progress_bar=False,
+    )
+    fvals = np.array(result.optimize_result.fval)
+
+    # ensure objective after optimization is not worse than for true parameters
+    assert np.all(fvals <= -solution[petabtests.LLH])
 
 
 if __name__ == '__main__':

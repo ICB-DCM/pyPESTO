@@ -74,6 +74,9 @@ def plot_categories_from_pypesto_result(
             pypesto_result.optimize_result.list[start_index]['x'],
         )
     )
+    x_dct.update(
+        pypesto_result.problem.objective.calculator.noise_dummy_values
+    )
 
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_result.problem.objective.edatas
