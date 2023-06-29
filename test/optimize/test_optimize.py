@@ -18,6 +18,7 @@ from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
+from pypesto.optimize.util import assign_ids
 from pypesto.store import read_result
 
 from ..base.test_x_fixed import create_problem
@@ -626,3 +627,13 @@ def test_summary(caplog):
         "run update_to_full with the corresponding problem first."
     )
     assert expected_warning in [r.message for r in caplog.records]
+
+
+def test_assign_ids():
+    n_starts = 5
+    test_ids = [str(i) for i in range(n_starts)]
+    result = pypesto.Result()
+    result.optimize_result.id = test_ids
+
+    ids = assign_ids(n_starts=n_starts, ids=None, result=result)
+    assert ids == [str(i) for i in range(n_starts, n_starts * 2)]

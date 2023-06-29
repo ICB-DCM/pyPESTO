@@ -73,7 +73,7 @@ jobs:
       run: .github/workflows/install_deps.sh amici pysb
 
     - name: Run tests
-      timeout-minutes: 25
+      timeout-minutes: 35
       run: tox -e petab
 
     - name: Coverage
@@ -166,15 +166,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-hierarchical

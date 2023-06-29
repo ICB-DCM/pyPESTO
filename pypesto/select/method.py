@@ -300,12 +300,19 @@ class MethodCaller:
                 candidate_space.set_predecessor_model(predecessor_model)
         # Else generate one based on the PEtab Select problem.
         else:
-            self.candidate_space = (
-                self.petab_select_problem.new_candidate_space(
-                    method=self.method,
-                    predecessor_model=self.predecessor_model,
+            if predecessor_model is not None:
+                self.candidate_space = (
+                    self.petab_select_problem.new_candidate_space(
+                        method=self.method,
+                        predecessor_model=self.predecessor_model,
+                    )
                 )
-            )
+            else:
+                self.candidate_space = (
+                    self.petab_select_problem.new_candidate_space(
+                        method=self.method,
+                    )
+                )
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
@@ -357,10 +364,6 @@ class MethodCaller:
             calibrated_models=self.calibrated_models,
             newly_calibrated_models=newly_calibrated_models,
             excluded_model_hashes=self.calibrated_models.keys(),
-            # FIXME meaning changes here, i.e. predecessor model is used as previous
-            #       predecessor model, since PEtab Select now gets the next predecessor
-            #       model if the candidate space has models.
-            previous_predecessor_model=predecessor_model,
             criterion=self.criterion,
         )
         predecessor_model = self.candidate_space.predecessor_model
