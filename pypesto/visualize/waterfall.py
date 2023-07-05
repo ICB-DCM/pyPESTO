@@ -121,8 +121,10 @@ def waterfall(
         # parse input
         if order_by_id:
             start_ids = [s.id for s in results[j].optimize_result.list]
-            fvals_raw_is_finite = np.isfinite(fvals_raw) & (
-                np.absolute(fvals_raw) < 1e100
+            fvals_raw_is_finite = (
+                np.isfinite(fvals_raw)
+                & (np.absolute(fvals_raw) < 1e100)
+                & np.invert(np.isnan(fvals_raw))
             )
 
             fvals = []
