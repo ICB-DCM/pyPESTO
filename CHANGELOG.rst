@@ -24,6 +24,7 @@ Release notes
     * support petab-select version 0.1.8 (#1070)
 * Examples
     * Synthetic data: update for libpetab-python v0.2.0 (#1060)
+    * Fix error in sampling_diagnostics which led to test failure(#1092)
 * General
     * Test fixes (#1064)
     * Fix numpy DeprecationWarnings (#1076)
