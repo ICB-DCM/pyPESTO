@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import time
 from typing import Dict, List, Optional
+from warnings import warn
 
 import numpy as np
 
@@ -107,7 +108,7 @@ class CESSOptimizer:
     def minimize(
         self,
         problem: Problem,
-        startpoint_method: StartpointMethod,
+        startpoint_method: StartpointMethod = None,
     ) -> pypesto.Result:
         """Minimize the given objective using CESS.
 
@@ -117,7 +118,14 @@ class CESSOptimizer:
             Problem to run ESS on.
         startpoint_method:
             Method for choosing starting points.
+            **Deprecated. Use ``problem.startpoint_method`` instead.**
         """
+        if startpoint_method is not None:
+            warn(
+                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                DeprecationWarning,
+            )
+
         self._initialize()
 
         evaluator = FunctionEvaluator(
