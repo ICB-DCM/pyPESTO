@@ -10,7 +10,7 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import RGBA
+from ..C import RGBA, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -276,7 +276,7 @@ def parameters_lowlevel(
         fvals=fvals,
         x=xs,
         xdim=len(ub) if ub is not None else 1,
-        magnitude_bound=1e100,
+        magnitude_bound=WATERFALL_MAX_VALUE,
     )
 
     if size is None:

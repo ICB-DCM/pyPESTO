@@ -319,6 +319,9 @@ ALL = 'all'  # all parameters, also for start indices
 ALL_CLUSTERED = 'all_clustered'  # best + all that are in a cluster of size > 1
 FIRST_CLUSTER = 'first_cluster'  # all starts that belong to the first cluster
 
+# waterfall max value
+WATERFALL_MAX_VALUE = 1e100
+
 
 ###############################################################################
 # ENVIRONMENT VARIABLES
