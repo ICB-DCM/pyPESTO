@@ -16,6 +16,8 @@ from ...C import (
     N_SPLINE_PARS,
     NUM_DATAPOINTS,
     OPTIMIZE_NOISE,
+    REGULARIZATION_FACTOR,
+    REGULARIZE_SPLINE,
     SCIPY_FUN,
     SCIPY_SUCCESS,
     SCIPY_X,
@@ -55,6 +57,19 @@ class SplineInnerSolver(InnerSolver):
             raise TypeError(f"{MIN_DIFF_FACTOR} must be of type float.")
         elif self.options[MIN_DIFF_FACTOR] < 0:
             raise ValueError(f"{MIN_DIFF_FACTOR} must be greater than zero.")
+
+        elif type(self.options[REGULARIZE_SPLINE]) is not bool:
+            raise TypeError(f"{REGULARIZE_SPLINE} must be of type bool.")
+        if self.options[REGULARIZE_SPLINE]:
+            if type(self.options[REGULARIZATION_FACTOR]) is not float:
+                raise TypeError(
+                    f"{REGULARIZATION_FACTOR} must be of type float."
+                )
+            elif self.options[REGULARIZATION_FACTOR] < 0:
+                raise ValueError(
+                    f"{REGULARIZATION_FACTOR} must be greater than zero."
+                )
+
         for key in self.options:
             if key not in self.get_default_options():
                 raise ValueError(f"Unknown SplineInnerSolver option {key}.")
@@ -86,30 +101,18 @@ class SplineInnerSolver(InnerSolver):
             group_dict[CURRENT_SIMULATION] = extract_expdata_using_mask(
                 expdata=sim, mask=group_dict[EXPDATA_MASK]
             )
-            # Optimize the spline for this group.
-            inner_result_for_group = self._optimize_spline(
-                inner_parameters=problem.get_free_xs_for_group(group),
-                group_dict=group_dict,
-            )
 
-            # If the parameters are optimized in the inner problem, we
-            # calculate the sigma analytically from the inner result.
-            if group_dict[OPTIMIZE_NOISE]:
-                group_dict[INNER_NOISE_PARS] = _calculate_sigma_for_group(
-                    inner_result=inner_result_for_group,
-                    n_datapoints=group_dict[NUM_DATAPOINTS],
-                )
-            # Otherwise, we extract the sigma from the AMICI noise parameters.
-            else:
+            # If the noise parameters are optimized in the outer problem,
+            # extract them from amici return data.
+            if not group_dict[OPTIMIZE_NOISE]:
                 group_dict[INNER_NOISE_PARS] = extract_expdata_using_mask(
                     expdata=amici_sigma, mask=group_dict[EXPDATA_MASK]
                 )[0]
 
-            # Apply sigma to inner result.
-            inner_result_for_group = _calculate_nllh_for_group(
-                inner_result=inner_result_for_group,
-                sigma=group_dict[INNER_NOISE_PARS],
-                n_datapoints=group_dict[NUM_DATAPOINTS],
+            # Optimize the spline for this group.
+            inner_result_for_group = self._optimize_spline(
+                inner_parameters=problem.get_free_xs_for_group(group),
+                group_dict=group_dict,
             )
 
             inner_results.append(inner_result_for_group)
@@ -260,7 +263,7 @@ class SplineInnerSolver(InnerSolver):
 
                     # For the reformulated problem, mu can be calculated
                     # as the inner gradient at the optimal point s.
-                    mu = calculate_inner_gradient_for_obs(
+                    mu = _calculate_nllh_gradient_for_group(
                         s=s,
                         sim_all=sim_all,
                         measurements=measurements,
@@ -268,6 +271,11 @@ class SplineInnerSolver(InnerSolver):
                         delta_c=delta_c,
                         c=c,
                         n=n,
+                        regularization_factor=self.options[
+                            REGULARIZATION_FACTOR
+                        ],
+                        regularize_spline=self.options[REGULARIZE_SPLINE],
+                        group_dict=group_dict,
                     )
                     min_meas = group_dict[MIN_DATAPOINT]
                     max_meas = group_dict[MAX_DATAPOINT]
@@ -292,7 +300,7 @@ class SplineInnerSolver(InnerSolver):
 
                     # Calculate (dJ_ds * ds_dtheta) term only if mu is not all 0
                     ds_grad_term = 0.0
-                    if np.any(mu):
+                    if False:
                         s_dot = calculate_ds_dtheta(
                             sim_all=sim_all,
                             sy_all=sy_all,
@@ -311,7 +319,7 @@ class SplineInnerSolver(InnerSolver):
                         dres_ds = mu
                         ds_grad_term = dres_ds.dot(s_dot)
 
-                    # Let's calculate the (dJ_dy * dy_dtheta) term now:
+                    # Calculate the (dJ_dy * dy_dtheta) term:
                     dy_grad_term = calculate_dy_term(
                         sim_all=sim_all,
                         sy_all=sy_all,
@@ -325,24 +333,22 @@ class SplineInnerSolver(InnerSolver):
                         n=n,
                     )
 
-                    # Let's calculate the (dJ_dsigma^2 * dsigma^2_dtheta) term now:
+                    # Calculate the (dJ_dsigma^2 * dsigma^2_dtheta) term:
                     if not group_dict[OPTIMIZE_NOISE]:
-                        residual_squared = (
-                            calculate_objective_function_for_obs(
-                                s=s,
-                                sim_all=sim_all,
-                                measurements=measurements,
-                                N=N,
-                                delta_c=delta_c,
-                                c=c,
-                                n=n,
-                            )
+                        residual_squared = _calculate_residuals_for_group(
+                            s=s,
+                            sim_all=sim_all,
+                            measurements=measurements,
+                            N=N,
+                            delta_c=delta_c,
+                            c=c,
+                            n=n,
                         )
                         dJ_dsigma2 = (
                             K / (2 * sigma**2)
                             - residual_squared / sigma**4
                         )
-                        dsigma2_dtheta = ssigma_all[0]
+                        dsigma2_dtheta = ssigma_all[0] * sigma
                         dsigma_grad_term = dJ_dsigma2 * dsigma2_dtheta
                     # If we optimize the noise hierarchically,
                     # the last term (dJ_dsigma^2 * dsigma^2_dtheta) is always 0
@@ -366,6 +372,8 @@ class SplineInnerSolver(InnerSolver):
         """Return default options for solving the inner problem."""
         options = {
             MIN_DIFF_FACTOR: 1 / 2,
+            REGULARIZE_SPLINE: False,
+            REGULARIZATION_FACTOR: 0.0,
         }
         return options
 
@@ -383,55 +391,61 @@ class SplineInnerSolver(InnerSolver):
         group_dict:
             The group dictionary.
         """
-        group_measurements = group_dict[DATAPOINTS]
-        current_group_simulation = group_dict[CURRENT_SIMULATION]
-        n_datapoints = group_dict[NUM_DATAPOINTS]
-        n_spline_pars = group_dict[N_SPLINE_PARS]
-
         (
             distance_between_bases,
             spline_bases,
             intervals_per_sim,
         ) = self._rescale_spline_bases(
-            sim_all=current_group_simulation, N=n_spline_pars, K=n_datapoints
+            sim_all=group_dict[CURRENT_SIMULATION],
+            N=group_dict[N_SPLINE_PARS],
+            K=group_dict[NUM_DATAPOINTS],
         )
 
-        min_meas = group_dict[MIN_DATAPOINT]
-        max_meas = group_dict[MAX_DATAPOINT]
         min_diff = self._get_minimal_difference(
-            measurement_range=max_meas - min_meas,
-            N=n_spline_pars,
+            measurement_range=group_dict[MAX_DATAPOINT]
+            - group_dict[MIN_DATAPOINT],
+            N=group_dict[N_SPLINE_PARS],
             min_diff_factor=self.options[MIN_DIFF_FACTOR],
         )
 
         inner_options = self._get_inner_optimization_options(
             inner_parameters=inner_parameters,
-            N=n_spline_pars,
-            min_meas=min_meas,
-            max_meas=max_meas,
+            N=group_dict[N_SPLINE_PARS],
+            min_meas=group_dict[MIN_DATAPOINT],
+            max_meas=group_dict[MAX_DATAPOINT],
             min_diff=min_diff,
         )
 
+        # Wrap the analytical optimization of sigma and
+        # the regularization into the objective function
         def objective_function_wrapper(x):
-            return calculate_objective_function_for_obs(
+            return _calculate_nllh_for_group(
                 s=x,
-                sim_all=current_group_simulation,
-                measurements=group_measurements,
-                N=n_spline_pars,
+                sim_all=group_dict[CURRENT_SIMULATION],
+                measurements=group_dict[DATAPOINTS],
+                N=group_dict[N_SPLINE_PARS],
                 delta_c=distance_between_bases,
                 c=spline_bases,
                 n=intervals_per_sim,
+                regularization_factor=self.options[REGULARIZATION_FACTOR],
+                regularize_spline=self.options[REGULARIZE_SPLINE],
+                group_dict=group_dict,
             )
 
+        # Wrap the analytical optimization of sigma and
+        # the regularization into the gradient function
         def inner_gradient_wrapper(x):
-            return calculate_inner_gradient_for_obs(
+            return _calculate_nllh_gradient_for_group(
                 s=x,
-                sim_all=current_group_simulation,
-                measurements=group_measurements,
-                N=n_spline_pars,
+                sim_all=group_dict[CURRENT_SIMULATION],
+                measurements=group_dict[DATAPOINTS],
+                N=group_dict[N_SPLINE_PARS],
                 delta_c=distance_between_bases,
                 c=spline_bases,
                 n=intervals_per_sim,
+                regularization_factor=self.options[REGULARIZATION_FACTOR],
+                regularize_spline=self.options[REGULARIZE_SPLINE],
+                group_dict=group_dict,
             )
 
         results = minimize(
@@ -586,25 +600,207 @@ class SplineInnerSolver(InnerSolver):
         return inner_options
 
 
+def _calculate_nllh_for_group(
+    s: np.ndarray,
+    sim_all: np.ndarray,
+    measurements: np.ndarray,
+    N: int,
+    delta_c: float,
+    c: np.ndarray,
+    n: np.ndarray,
+    regularization_factor: float,
+    regularize_spline: bool,
+    group_dict: Dict,
+):
+    """Calculate the negative log-likelihood for the group.
+
+    Combines the sum of squared residuals, the noise parameter,
+    and the regularization term to the negative log-likelihood.
+
+    Parameters
+    ----------
+    s : np.ndarray
+        Reformulated inner spline parameters.
+    sim_all : np.ndarray
+        Simulations for the group.
+    measurements : np.ndarray
+        Measurements for the group.
+    N : int
+        Number of spline bases.
+    delta_c : float
+        Distance between two spline bases.
+    c : np.ndarray
+        Spline bases.
+    n : np.ndarray
+        Indices of the spline bases.
+    regularization_factor : float
+        Regularization factor.
+    regularize_spline : bool
+        Whether to regularize the spline.
+    group_dict : Dict
+        Dictionary containing the group information.
+
+    Returns
+    -------
+    nllh : float
+        Negative log-likelihood.
+    """
+    # Calculate residuals
+    residuals_squared = _calculate_residuals_for_group(
+        s=s,
+        sim_all=sim_all,
+        measurements=measurements,
+        N=N,
+        delta_c=delta_c,
+        c=c,
+        n=n,
+    )
+
+    # Calculate sigma
+    if group_dict[OPTIMIZE_NOISE]:
+        sigma = _calculate_sigma_for_group(
+            residuals_squared=residuals_squared,
+            n_datapoints=N,
+        )
+        group_dict[INNER_NOISE_PARS] = sigma
+    else:
+        sigma = group_dict[INNER_NOISE_PARS]
+
+    # Calculate regularization term
+    if regularize_spline:
+        regularization_term = _calculate_regularization_for_group(
+            s=s,
+            N=N,
+            c=c,
+            regularization_factor=regularization_factor,
+        )
+    else:
+        regularization_term = 0.0
+
+    # Combine all terms into the negative log-likelihood
+    nllh = (
+        0.5 * np.log(2 * np.pi * sigma**2) * N
+        + residuals_squared / (sigma**2)
+        + regularization_term
+    )
+    return nllh
+
+
+def _calculate_nllh_gradient_for_group(
+    s: np.ndarray,
+    sim_all: np.ndarray,
+    measurements: np.ndarray,
+    N: int,
+    delta_c: float,
+    c: np.ndarray,
+    n: np.ndarray,
+    regularization_factor: float,
+    regularize_spline: bool,
+    group_dict: Dict,
+):
+    """Calculate the gradient of the nllh wrt. spline differences s for the group.
+
+    Combines the gradient of the sum of squared residuals and the gradient of the
+    regularization term to the gradient of the negative log-likelihood.
+
+    Parameters
+    ----------
+    s : np.ndarray
+        Reformulated inner spline parameters.
+    sim_all : np.ndarray
+        Simulations for the group.
+    measurements : np.ndarray
+        Measurements for the group.
+    N : int
+        Number of spline bases.
+    delta_c : float
+        Distance between two spline bases.
+    c : np.ndarray
+        Spline bases.
+    n : np.ndarray
+        Indices of the spline bases.
+    regularization_factor : float
+        Regularization factor.
+    regularize_spline : bool
+        Whether to regularize the spline.
+    group_dict : Dict
+        Dictionary containing the group information.
+
+    Returns
+    -------
+    nllh_gradient : np.ndarray
+        Gradient of the negative log-likelihood wrt. spline differences s.
+    """
+    # Calculate gradient of residuals
+    residuals_squared_gradient = _calculate_residuals_gradient_for_group(
+        s=s,
+        sim_all=sim_all,
+        measurements=measurements,
+        N=N,
+        delta_c=delta_c,
+        c=c,
+        n=n,
+    )
+
+    # Calculate sigma
+    if group_dict[OPTIMIZE_NOISE]:
+        residuals_squared = _calculate_residuals_for_group(
+            s=s,
+            sim_all=sim_all,
+            measurements=measurements,
+            N=N,
+            delta_c=delta_c,
+            c=c,
+            n=n,
+        )
+        sigma = _calculate_sigma_for_group(
+            residuals_squared=residuals_squared,
+            n_datapoints=N,
+        )
+        group_dict[INNER_NOISE_PARS] = sigma
+    else:
+        sigma = group_dict[INNER_NOISE_PARS]
+
+    # Calculate gradient of regularization term
+    if regularize_spline:
+        regularization_term_gradient = (
+            _calculate_regularization_gradient_for_group(
+                s=s,
+                N=N,
+                c=c,
+                regularization_factor=regularization_factor,
+            )
+        )
+    else:
+        regularization_term_gradient = np.zeros_like(s)
+
+    # Combine all terms into the gradient of the negative log-likelihood
+    nllh_gradient = (
+        residuals_squared_gradient / (sigma**2)
+        + regularization_term_gradient
+    )
+    return nllh_gradient
+
+
 def _calculate_sigma_for_group(
-    inner_result: Dict,
+    residuals_squared: float,
     n_datapoints: int,
 ):
     """Calculate the noise parameter sigma.
 
     Parameters
     ----------
-    noise_parameters:
-        The noise parameters of a group of the inner problem.
-    inner_result:
-        The inner optimization result.
+    residuals_squared:
+        The sum of squared residuals divided by 2.
+    n_datapoints:
+        The number of datapoints.
     """
-    sigma = np.sqrt(2 * inner_result[SCIPY_FUN] / (n_datapoints))
+    sigma = np.sqrt(2 * residuals_squared / n_datapoints)
 
     return sigma
 
 
-def calculate_objective_function_for_obs(
+def _calculate_residuals_for_group(
     s: np.ndarray,
     sim_all: np.ndarray,
     measurements: np.ndarray,
@@ -613,7 +809,10 @@ def calculate_objective_function_for_obs(
     c: np.ndarray,
     n: np.ndarray,
 ):
-    """Objective function for reformulated inner spline problem."""
+    """Residuals squared for reformulated inner spline problem.
+
+    Equal to 1/2 * sum_k (tilde{z}_k - z_k)^2
+    """
     obj = 0
 
     for y_k, z_k, n_k in zip(sim_all, measurements, n):
@@ -630,33 +829,7 @@ def calculate_objective_function_for_obs(
     return obj
 
 
-def get_spline_mapped_simulations(
-    s: np.ndarray,
-    sim_all: np.ndarray,
-    N: int,
-    delta_c: float,
-    c: np.ndarray,
-    n: np.ndarray,
-):
-    """Return model simulations mapped using the approximation spline."""
-    mapped_simulations = np.zeros(len(sim_all))
-    xi = np.zeros(len(s))
-    for i in range(len(s)):
-        xi[i] = np.sum(s[: i + 1])
-
-    for y_k, n_k, index in zip(sim_all, n, range(len(sim_all))):
-        interval_index = n_k - 1
-        if interval_index == 0 or interval_index == N:
-            mapped_simulations[index] = xi[interval_index]
-        else:
-            mapped_simulations[index] = (y_k - c[interval_index - 1]) * (
-                xi[interval_index] - xi[interval_index - 1]
-            ) / delta_c + xi[interval_index - 1]
-
-    return mapped_simulations
-
-
-def calculate_inner_gradient_for_obs(
+def _calculate_residuals_gradient_for_group(
     s: np.ndarray,
     sim_all: np.ndarray,
     measurements: np.ndarray,
@@ -665,7 +838,7 @@ def calculate_inner_gradient_for_obs(
     c: np.ndarray,
     n: np.ndarray,
 ):
-    """Gradient of the objective function for the reformulated inner spline problem."""
+    """Gradient of the residuals with respect to the spline differences s_i for a group."""
 
     gradient = np.zeros(N)
 
@@ -688,6 +861,131 @@ def calculate_inner_gradient_for_obs(
                 (y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k,
             )
     return gradient
+
+
+def _calculate_regularization_for_group(
+    s: np.ndarray,
+    N: int,
+    c: np.ndarray,
+    regularization_factor: float,
+):
+    """Calculate regularization term the given spline.
+
+    We regularize the spline to be linear. To do this, we calculate the optimal
+    linear function that minimizes the sum of squared residuals with respect to
+    the spline knots. Then we calculate the sum of squared residuals for this
+    linear function. If the calculated offset is smaller than 0, we set it to 0.
+    This is because the spline is not allowed to be negative.
+    """
+    # Calculate the spline knots xi_i from spline differences s_i
+    lower_trian = np.tril(np.ones((N, N)))
+    xi = np.dot(lower_trian, s)
+
+    # Calculate auxiliary values
+    c_sum = np.sum(c)
+    xi_sum = np.sum(xi)
+    c_sum_squares = np.sum(c**2)
+    c_dot_xi = np.dot(c, xi)
+    # Calculate the optimal linear function offset
+    beta_opt = (xi_sum * c_sum_squares - c_dot_xi * c_sum) / (
+        N * c_sum_squares - c_sum**2
+    )
+
+    # If the offset is smaller than 0, we set it to 0
+    if beta_opt < 0:
+        beta_opt = 0
+
+    # Calculate the slope of the optimal linear function
+    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_sum_squares
+
+    # Calculate the sum of squared residuals for the optimal linear function
+    regularization_term = np.sum((xi - alpha_opt * c - beta_opt) ** 2) / (
+        2 * N
+    )
+
+    return regularization_term * regularization_factor
+
+
+def _calculate_regularization_gradient_for_group(
+    s: np.ndarray,
+    N: int,
+    c: np.ndarray,
+    regularization_factor: float,
+):
+    """Calculate regularization term gradient for the given spline."""
+    # Calculate the spline knots xi_i from spline differences s_i
+
+    lower_trian = np.tril(np.ones((N, N)))
+    xi = np.dot(lower_trian, s)
+
+    # Calculate auxiliary values
+    c_sum = np.sum(c)
+    xi_sum = np.sum(xi)
+    c_sum_squares = np.sum(c**2)
+    c_dot_xi = np.dot(c, xi)
+
+    upper_trian = np.triu(np.ones((N, N)))
+    c_reducing_sums = np.dot(upper_trian, c)
+    reducing_factor = np.arange(N, 0, -1)
+
+    # Calculate the optimal linear function offset
+    beta_opt = (xi_sum * c_sum_squares - c_dot_xi * c_sum) / (
+        N * c_sum_squares - c_sum**2
+    )
+
+    # If the offset is smaller than 0, we set it to 0.
+    # Otherwise, we calculate the gradient of the offset.
+    if beta_opt < 0:
+        beta_opt = 0
+        beta_opt_gradient = 0
+    else:
+        beta_opt_gradient = (
+            reducing_factor * c_sum_squares - c_reducing_sums * c_sum
+        ) / (N * c_sum_squares - c_sum**2)
+
+    # Calculate the slope of the optimal linear function
+    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_sum_squares
+
+    # Calculate the gradient of the slope
+    alpha_opt_gradient = (
+        c_reducing_sums - beta_opt_gradient * c_sum
+    ) / c_sum_squares
+
+    # Calculate some more auxiliary values
+    residuals = xi - alpha_opt * c - beta_opt
+
+    alpha_times_c = np.asarray([c]).T @ np.asarray([alpha_opt_gradient])
+    aux_matrix = lower_trian - alpha_times_c + beta_opt_gradient
+
+    # Calculate the gradient of the sum of squared residuals
+    regularization_gradient = residuals @ aux_matrix / N
+
+    return regularization_gradient * regularization_factor
+
+
+def get_spline_mapped_simulations(
+    s: np.ndarray,
+    sim_all: np.ndarray,
+    N: int,
+    delta_c: float,
+    c: np.ndarray,
+    n: np.ndarray,
+):
+    """Return model simulations mapped using the approximation spline."""
+    mapped_simulations = np.zeros(len(sim_all))
+    lower_trian = np.tril(np.ones((N, N)))
+    xi = np.dot(lower_trian, s)
+
+    for y_k, n_k, index in zip(sim_all, n, range(len(sim_all))):
+        interval_index = n_k - 1
+        if interval_index == 0 or interval_index == N:
+            mapped_simulations[index] = xi[interval_index]
+        else:
+            mapped_simulations[index] = (y_k - c[interval_index - 1]) * (
+                xi[interval_index] - xi[interval_index - 1]
+            ) / delta_c + xi[interval_index - 1]
+
+    return mapped_simulations
 
 
 def calculate_inner_hessian(
@@ -756,7 +1054,6 @@ def calculate_ds_dtheta(
             dgrad_dtheta_lhs[i][i] += 1
         elif i == N:
             dgrad_dtheta_lhs = dgrad_dtheta_lhs + np.full((N, N), 1)
-
         else:
             dgrad_dtheta_lhs[i][i] += (y_k - c[i - 1]) ** 2 / delta_c**2
             dgrad_dtheta_rhs[i] += (
@@ -796,6 +1093,136 @@ def calculate_ds_dtheta(
     ds_dtheta = linalg.lstsq(lhs, dgrad_dtheta_rhs, lapack_driver="gelsy")
 
     return ds_dtheta[0][:N]
+
+
+def _get_residual_ds_dtheta_contribution(
+    sim_all: np.ndarray,
+    sy_all: np.ndarray,
+    measurements: np.ndarray,
+    s: np.ndarray,
+    N: int,
+    delta_c: float,
+    delta_c_dot: float,
+    c: np.ndarray,
+    c_dot: np.ndarray,
+    n: np.ndarray,
+    sigma: float,
+):
+    """Get the residual contribution to the linear system for the derivative of s with respect to theta."""
+
+    residual_lhs = np.zeros((N, N))
+    residual_rhs = np.zeros(2 * N)
+
+    for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
+        i = n_k - 1  # just the iterator to go over the matrix
+        sum_s = 0
+        sum_s = np.sum(s[:i])
+
+        # Calculate dgrad_dtheta in the form of a linear system:
+        if i == 0:
+            residual_lhs[i][i] += 1
+        elif i == N:
+            residual_lhs = residual_lhs + np.full((N, N), 1)
+        else:
+            residual_lhs[i][i] += (y_k - c[i - 1]) ** 2 / delta_c**2
+            residual_rhs[i] += (
+                (2 * (y_k - c[i - 1]) / delta_c * s[i] + sum_s - z_k)
+                * (
+                    (y_dot_k - c_dot[i - 1]) * delta_c
+                    - (y_k - c[i - 1]) * delta_c_dot
+                )
+                / delta_c**2
+            )
+
+            residual_lhs[i, :i] += np.full(i, (y_k - c[i - 1]) / delta_c)
+            residual_lhs[:i, i] += np.full(i, (y_k - c[i - 1]) / delta_c)
+            residual_rhs[:i] += np.full(
+                i,
+                (
+                    (y_dot_k - c_dot[i - 1]) * delta_c
+                    - (y_k - c[i - 1]) * delta_c_dot
+                )
+                * s[i]
+                / delta_c**2,
+            )
+            residual_lhs[:i, :i] += np.full((i, i), 1)
+
+    residual_lhs = residual_lhs / sigma**2
+    residual_rhs = residual_rhs / sigma**2
+
+    return residual_lhs, residual_rhs
+
+
+def _get_sigma_ds_dtheta_contribution(
+    sim_all: np.ndarray,
+    sy_all: np.ndarray,
+    measurements: np.ndarray,
+    s: np.ndarray,
+    C: np.ndarray,
+    mu: np.ndarray,
+    N: int,
+    delta_c: float,
+    delta_c_dot: float,
+    c: np.ndarray,
+    c_dot: np.ndarray,
+    n: np.ndarray,
+    min_diff: float,
+    sigma: float,
+    ssigma: float,
+    optimize_noise: bool,
+):
+    """Get the sigma contribution to the linear system for the derivative of s with respect to theta."""
+    K = len(measurements)
+    sigma_lhs = np.zeros((N, N))
+    sigma_rhs = np.zeros(2 * N)
+
+    # Adding here a 2 * because the 1/2 was used up in the derivation wrt. theta
+    dres_ds = 2 * _calculate_residuals_gradient_for_group(
+        s=s,
+        sim_all=sim_all,
+        measurements=measurements,
+        N=N,
+        delta_c=delta_c,
+        c=c,
+        n=n,
+    )
+
+    if not optimize_noise:
+        sigma_rhs = dres_ds * ssigma / (2 * sigma**4 * K)
+        return sigma_lhs, sigma_rhs
+
+    for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
+        i = n_k - 1  # just the iterator to go over the matrix
+        sum_s = 0
+        sum_s = np.sum(s[:i])
+
+        # Calculate dgrad_dtheta in the form of a linear system:
+        if i == 0:
+            res = s[i] - z_k
+            sigma_lhs[:, i] += dres_ds * res
+        else:
+            res = (y_k - c[i - 1]) / delta_c * s[i] + sum_s - z_k
+            # TODO check that these are vectors really... and that the summation is correct
+            sigma_lhs[:, i] += (y_k - c[i - 1]) / delta_c * res * dres_ds
+
+            sigma_rhs += (
+                s[i]
+                * res
+                * (
+                    (y_dot_k - c_dot[i - 1]) * delta_c
+                    - (y_k - c[i - 1]) * delta_c_dot
+                )
+                / delta_c**2
+                * dres_ds
+            )
+
+            sigma_lhs[:, :i] += np.tile(res * dres_ds, (i, 1)).T
+
+    sigma_lhs /= -(sigma**4) * K
+    sigma_rhs /= sigma**4 * K
+    # We move the rhs to the other side so we don't add - here
+
+    return sigma_lhs, sigma_rhs
 
 
 def calculate_dy_term(
@@ -893,9 +1320,8 @@ def save_inner_parameters_to_inner_problem(
         group
     )
 
-    xi = np.zeros(len(s))
-    for i in range(len(s)):
-        xi[i] = np.sum(s[: i + 1])
+    lower_trian = np.tril(np.ones((len(s), len(s))))
+    xi = np.dot(lower_trian, s)
 
     for idx in range(len(inner_spline_parameters)):
         inner_spline_parameters[idx].value = xi[idx]
@@ -906,32 +1332,10 @@ def save_inner_parameters_to_inner_problem(
         inner_noise_parameters[0].value = sigma
 
 
-def _calculate_nllh_for_group(
-    inner_result: Dict,
-    sigma: float,
-    n_datapoints: int,
-):
-    """Calculate the negative log-likelihood for the group.
-
-    Parameters
-    ----------
-    inner_result : dict
-        Result of the inner problem.
-    sigma : float
-        Standard deviation of the measurement noise.
-    n_datapoints : int
-        Number of datapoints.
-    """
-    inner_result[SCIPY_FUN] = 0.5 * np.log(
-        2 * np.pi * sigma**2
-    ) * n_datapoints + inner_result[SCIPY_FUN] / (sigma**2)
-    return inner_result
-
-
 def get_monotonicity_measure(measurement, simulation):
     """Get monotonicity measure by calculating inversions.
 
-    Calculate the number of inversions in the simulation data
+    Calculates the number of inversions in the simulation data
     with respect to the measurement data.
 
     Parameters
