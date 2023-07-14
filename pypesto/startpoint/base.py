@@ -1,13 +1,16 @@
 """Startpoint base classes."""
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Callable, Union
+from typing import TYPE_CHECKING, Callable, Union
 
 import numpy as np
 
 from ..C import FVAL, GRAD
 from ..objective import ObjectiveBase
-from ..problem import Problem
+
+if TYPE_CHECKING:
+    import pypesto
 
 
 class StartpointMethod(ABC):
@@ -21,7 +24,7 @@ class StartpointMethod(ABC):
     def __call__(
         self,
         n_starts: int,
-        problem: Problem,
+        problem: pypesto.problem.Problem,
     ) -> np.ndarray:
         """Generate startpoints.
 
@@ -42,7 +45,7 @@ class NoStartpoints(StartpointMethod):
     def __call__(
         self,
         n_starts: int,
-        problem: Problem,
+        problem: pypesto.problem.Problem,
     ) -> np.ndarray:
         """Generate a (n_starts, dim) nan matrix."""
         startpoints = np.full(shape=(n_starts, problem.dim), fill_value=np.nan)
@@ -78,7 +81,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
     def __call__(
         self,
         n_starts: int,
-        problem: Problem,
+        problem: pypesto.problem.Problem,
     ) -> np.ndarray:
         """Generate checked startpoints."""
         # shape: (n_guesses, dim)

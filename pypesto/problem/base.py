@@ -1,12 +1,21 @@
 import copy
 import logging
-from typing import Iterable, List, Optional, SupportsFloat, SupportsInt, Union
+from typing import (
+    Callable,
+    Iterable,
+    List,
+    Optional,
+    SupportsFloat,
+    SupportsInt,
+    Union,
+)
 
 import numpy as np
 import pandas as pd
 
 from ..objective import ObjectiveBase
 from ..objective.priors import NegLogParameterPriors
+from ..startpoint import StartpointMethod, to_startpoint_method, uniform
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
@@ -60,6 +69,9 @@ class Problem:
     copy_objective:
         Whethter to generate a deep copy of the objective function before
         potential modification the problem class performs on it.
+    startpoint_method:
+        Method for how to choose start points. ``False`` means the optimizer
+        does not require start points, e.g. for the ``PyswarmOptimizer``.
 
     Notes
     -----
@@ -90,6 +102,7 @@ class Problem:
         lb_init: Union[np.ndarray, List[float], None] = None,
         ub_init: Union[np.ndarray, List[float], None] = None,
         copy_objective: bool = True,
+        startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     ):
         if copy_objective:
             objective = copy.deepcopy(objective)
@@ -146,6 +159,12 @@ class Problem:
 
         self.normalize()
         self._check_x_guesses()
+
+        # startpoint method
+        if startpoint_method is None:
+            startpoint_method = uniform
+        # convert startpoint method to class instance
+        self.startpoint_method = to_startpoint_method(startpoint_method)
 
     @property
     def lb(self) -> np.ndarray:
@@ -239,8 +258,8 @@ class Problem:
         """Check whether the supplied x_guesses adhere to the bounds."""
         if self.x_guesses.size == 0:
             return
-        adheres_ub = self.x_guesses < self.ub
-        adheres_lb = self.x_guesses < self.lb
+        adheres_ub = self.x_guesses <= self.ub
+        adheres_lb = self.x_guesses >= self.lb
         adheres_bounds = adheres_ub & adheres_lb
         # if any bounds are violated, log a warning
         if not adheres_bounds.all():
