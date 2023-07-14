@@ -300,10 +300,12 @@ class SplineInnerSolver(InnerSolver):
 
                     # Calculate (dJ_ds * ds_dtheta) term only if mu is not all 0
                     ds_grad_term = 0.0
-                    if False:
+                    if np.any(mu):
                         s_dot = calculate_ds_dtheta(
                             sim_all=sim_all,
                             sy_all=sy_all,
+                            sigma=sigma,
+                            ssigma=ssigma_all[0],
                             measurements=measurements,
                             s=s,
                             C=C,
@@ -315,9 +317,17 @@ class SplineInnerSolver(InnerSolver):
                             c_dot=c_dot,
                             n=n,
                             min_diff=min_diff,
+                            optimize_noise=group_dict[OPTIMIZE_NOISE],
+                            regularize_spline=self.options[REGULARIZE_SPLINE],
                         )
                         dres_ds = mu
                         ds_grad_term = dres_ds.dot(s_dot)
+                        # breakpoint if ds_grad_term is nonzero anywhere
+                        # if not np.isclose(ds_grad_term, 0.0, atol=1e-15):
+                        #     print(ds_grad_term)
+                        #     breakpoint()
+                        # else:
+                        #     print('ds_grad_term is zero', ds_grad_term)
 
                     # Calculate the (dJ_dy * dy_dtheta) term:
                     dy_grad_term = calculate_dy_term(
@@ -884,11 +894,11 @@ def _calculate_regularization_for_group(
     # Calculate auxiliary values
     c_sum = np.sum(c)
     xi_sum = np.sum(xi)
-    c_sum_squares = np.sum(c**2)
+    c_squares_sum = np.sum(c**2)
     c_dot_xi = np.dot(c, xi)
     # Calculate the optimal linear function offset
-    beta_opt = (xi_sum * c_sum_squares - c_dot_xi * c_sum) / (
-        N * c_sum_squares - c_sum**2
+    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+        N * c_squares_sum - c_sum**2
     )
 
     # If the offset is smaller than 0, we set it to 0
@@ -896,7 +906,7 @@ def _calculate_regularization_for_group(
         beta_opt = 0
 
     # Calculate the slope of the optimal linear function
-    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_sum_squares
+    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_squares_sum
 
     # Calculate the sum of squared residuals for the optimal linear function
     regularization_term = np.sum((xi - alpha_opt * c - beta_opt) ** 2) / (
@@ -921,41 +931,28 @@ def _calculate_regularization_gradient_for_group(
     # Calculate auxiliary values
     c_sum = np.sum(c)
     xi_sum = np.sum(xi)
-    c_sum_squares = np.sum(c**2)
+    c_squares_sum = np.sum(c**2)
     c_dot_xi = np.dot(c, xi)
 
-    upper_trian = np.triu(np.ones((N, N)))
-    c_reducing_sums = np.dot(upper_trian, c)
-    reducing_factor = np.arange(N, 0, -1)
-
     # Calculate the optimal linear function offset
-    beta_opt = (xi_sum * c_sum_squares - c_dot_xi * c_sum) / (
-        N * c_sum_squares - c_sum**2
+    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+        N * c_squares_sum - c_sum**2
     )
 
     # If the offset is smaller than 0, we set it to 0.
     # Otherwise, we calculate the gradient of the offset.
     if beta_opt < 0:
         beta_opt = 0
-        beta_opt_gradient = 0
-    else:
-        beta_opt_gradient = (
-            reducing_factor * c_sum_squares - c_reducing_sums * c_sum
-        ) / (N * c_sum_squares - c_sum**2)
 
     # Calculate the slope of the optimal linear function
-    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_sum_squares
-
-    # Calculate the gradient of the slope
-    alpha_opt_gradient = (
-        c_reducing_sums - beta_opt_gradient * c_sum
-    ) / c_sum_squares
+    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_squares_sum
 
     # Calculate some more auxiliary values
     residuals = xi - alpha_opt * c - beta_opt
 
-    alpha_times_c = np.asarray([c]).T @ np.asarray([alpha_opt_gradient])
-    aux_matrix = lower_trian - alpha_times_c + beta_opt_gradient
+    # Can remove terms from this aux_matrix due to optimality
+    # of the linear function (alpha & beta)
+    aux_matrix = lower_trian
 
     # Calculate the gradient of the sum of squared residuals
     regularization_gradient = residuals @ aux_matrix / N
@@ -1020,6 +1017,8 @@ def calculate_inner_hessian(
 def calculate_ds_dtheta(
     sim_all: np.ndarray,
     sy_all: np.ndarray,
+    sigma: float,
+    ssigma: float,
     measurements: np.ndarray,
     s: np.ndarray,
     C: np.ndarray,
@@ -1031,6 +1030,8 @@ def calculate_ds_dtheta(
     c_dot: np.ndarray,
     n: np.ndarray,
     min_diff: float,
+    optimize_noise: bool,
+    regularize_spline: bool,
 ):
     """Calculate derivatives of reformulated spline parameters with respect to outer parameter.
 
@@ -1044,39 +1045,45 @@ def calculate_ds_dtheta(
     dgrad_dtheta_lhs = np.zeros((N, N))
     dgrad_dtheta_rhs = np.zeros(2 * N)
 
-    for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
-        i = n_k - 1  # just the iterator to go over the matrix
-        sum_s = 0
-        sum_s = np.sum(s[:i])
+    # Collect all contributions
+    residual_lhs, residual_rhs = _get_residual_ds_dtheta_contribution(
+        sim_all=sim_all,
+        sy_all=sy_all,
+        sigma=sigma,
+        measurements=measurements,
+        s=s,
+        N=N,
+        delta_c=delta_c,
+        delta_c_dot=delta_c_dot,
+        c=c,
+        c_dot=c_dot,
+        n=n,
+    )
+    sigma_lhs, sigma_rhs = _get_sigma_ds_dtheta_contribution(
+        sim_all=sim_all,
+        sy_all=sy_all,
+        sigma=sigma,
+        ssigma=ssigma,
+        measurements=measurements,
+        s=s,
+        N=N,
+        delta_c=delta_c,
+        delta_c_dot=delta_c_dot,
+        c=c,
+        c_dot=c_dot,
+        n=n,
+        optimize_noise=optimize_noise,
+    )
+    if regularize_spline:
+        reg_lhs, reg_rhs = _get_regularization_ds_dtheta_contribution(
+            s=s, N=N, c=c, c_dot=c_dot
+        )
+    else:
+        reg_lhs, reg_rhs = np.zeros((N, N)), np.zeros(2 * N)
 
-        # Calculate dgrad_dtheta in the form of a linear system:
-        if i == 0:
-            dgrad_dtheta_lhs[i][i] += 1
-        elif i == N:
-            dgrad_dtheta_lhs = dgrad_dtheta_lhs + np.full((N, N), 1)
-        else:
-            dgrad_dtheta_lhs[i][i] += (y_k - c[i - 1]) ** 2 / delta_c**2
-            dgrad_dtheta_rhs[i] += (
-                (2 * (y_k - c[i - 1]) / delta_c * s[i] + sum_s - z_k)
-                * (
-                    (y_dot_k - c_dot[i - 1]) * delta_c
-                    - (y_k - c[i - 1]) * delta_c_dot
-                )
-                / delta_c**2
-            )
-
-            dgrad_dtheta_lhs[i, :i] += np.full(i, (y_k - c[i - 1]) / delta_c)
-            dgrad_dtheta_lhs[:i, i] += np.full(i, (y_k - c[i - 1]) / delta_c)
-            dgrad_dtheta_rhs[:i] += np.full(
-                i,
-                (
-                    (y_dot_k - c_dot[i - 1]) * delta_c
-                    - (y_k - c[i - 1]) * delta_c_dot
-                )
-                * s[i]
-                / delta_c**2,
-            )
-            dgrad_dtheta_lhs[:i, :i] += np.full((i, i), 1)
+    # Combine all contributions
+    dgrad_dtheta_lhs += residual_lhs + sigma_lhs + reg_lhs
+    dgrad_dtheta_rhs += residual_rhs + sigma_rhs + reg_rhs
 
     from scipy import linalg
 
@@ -1091,13 +1098,13 @@ def calculate_ds_dtheta(
     )
 
     ds_dtheta = linalg.lstsq(lhs, dgrad_dtheta_rhs, lapack_driver="gelsy")
-
     return ds_dtheta[0][:N]
 
 
 def _get_residual_ds_dtheta_contribution(
     sim_all: np.ndarray,
     sy_all: np.ndarray,
+    sigma: float,
     measurements: np.ndarray,
     s: np.ndarray,
     N: int,
@@ -1106,10 +1113,8 @@ def _get_residual_ds_dtheta_contribution(
     c: np.ndarray,
     c_dot: np.ndarray,
     n: np.ndarray,
-    sigma: float,
 ):
     """Get the residual contribution to the linear system for the derivative of s with respect to theta."""
-
     residual_lhs = np.zeros((N, N))
     residual_rhs = np.zeros(2 * N)
 
@@ -1150,25 +1155,24 @@ def _get_residual_ds_dtheta_contribution(
     residual_lhs = residual_lhs / sigma**2
     residual_rhs = residual_rhs / sigma**2
 
+    residual_rhs *= -1
+
     return residual_lhs, residual_rhs
 
 
 def _get_sigma_ds_dtheta_contribution(
     sim_all: np.ndarray,
     sy_all: np.ndarray,
+    sigma: float,
+    ssigma: float,
     measurements: np.ndarray,
     s: np.ndarray,
-    C: np.ndarray,
-    mu: np.ndarray,
     N: int,
     delta_c: float,
     delta_c_dot: float,
     c: np.ndarray,
     c_dot: np.ndarray,
     n: np.ndarray,
-    min_diff: float,
-    sigma: float,
-    ssigma: float,
     optimize_noise: bool,
 ):
     """Get the sigma contribution to the linear system for the derivative of s with respect to theta."""
@@ -1188,7 +1192,7 @@ def _get_sigma_ds_dtheta_contribution(
     )
 
     if not optimize_noise:
-        sigma_rhs = dres_ds * ssigma / (2 * sigma**4 * K)
+        sigma_rhs[:N] = dres_ds * ssigma / (2 * sigma**4 * K)
         return sigma_lhs, sigma_rhs
 
     for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
@@ -1204,8 +1208,7 @@ def _get_sigma_ds_dtheta_contribution(
             res = (y_k - c[i - 1]) / delta_c * s[i] + sum_s - z_k
             # TODO check that these are vectors really... and that the summation is correct
             sigma_lhs[:, i] += (y_k - c[i - 1]) / delta_c * res * dres_ds
-
-            sigma_rhs += (
+            sigma_rhs[:N] += (
                 s[i]
                 * res
                 * (
@@ -1223,6 +1226,104 @@ def _get_sigma_ds_dtheta_contribution(
     # We move the rhs to the other side so we don't add - here
 
     return sigma_lhs, sigma_rhs
+
+
+def _get_regularization_ds_dtheta_contribution(
+    s: np.ndarray,
+    N: int,
+    c: np.ndarray,
+    c_dot: np.ndarray,
+):
+    """Get the regularization contribution to the linear system for the derivative of s with respect to theta."""
+    lower_trian = np.tril(np.ones((N, N)))
+    xi = np.dot(lower_trian, s)
+
+    # Calculate auxiliary values
+    c_sum = np.sum(c)
+    xi_sum = np.sum(xi)
+    cdot_sum = np.sum(c_dot)
+    c_squares_sum = np.sum(c**2)
+    c_dot_xi = np.dot(c, xi)
+    c_dot_cdot = np.dot(c, c_dot)
+    cdot_dot_xi = np.dot(c_dot, xi)
+
+    upper_trian = np.triu(np.ones((N, N)))
+    c_reducing_sums = np.dot(upper_trian, c)
+    c_increasing_sums = np.dot(lower_trian, c)
+    cdot_increasing_sums = np.dot(lower_trian, c_dot)
+
+    reducing_factor = np.arange(N, 0, -1)
+    increasing_factor = np.arange(1, N + 1, 1)
+
+    # Calculate the optimal linear function offset
+    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+        N * c_squares_sum - c_sum**2
+    )
+
+    # If the offset is smaller than 0, we set it to 0.
+    # Otherwise, we calculate the gradient of the offset.
+    if beta_opt < 0:
+        beta_opt = 0
+        beta_opt_ds_gradient = 0
+    else:
+        beta_opt_ds_gradient = (
+            reducing_factor * c_squares_sum - c_reducing_sums * c_sum
+        ) / (N * c_squares_sum - c_sum**2)
+
+    # Calculate the slope of the optimal linear function
+    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_squares_sum
+
+    # Calculate the gradient of the slope
+    alpha_opt_ds_gradient = (
+        c_reducing_sums - beta_opt_ds_gradient * c_sum
+    ) / c_squares_sum
+
+    # Calculate \sum_n dbeta_dc_n * dc_n_dtheta
+    if beta_opt == 0:
+        beta_dc_term = 0
+    else:
+        denominator = N * c_squares_sum - c_sum**2
+        b_term_1 = (
+            xi_sum * 2 * c_dot_cdot - cdot_dot_xi * c_sum - c_dot_xi * cdot_sum
+        ) * denominator
+        b_term_2 = (xi_sum * c_squares_sum - c_dot_xi * c_sum) * (
+            2 * N * c_dot_cdot - 2 * cdot_sum * c_sum
+        )
+        beta_dc_term = (b_term_1 - b_term_2) / denominator**2
+
+    # Calculate \sum_n dalpha_dc_n * dc_n_dtheta
+    a_term_1 = (
+        cdot_dot_xi - beta_dc_term * c_sum - beta_opt * cdot_sum
+    ) * c_squares_sum
+    a_term_2 = (c_dot_xi - beta_opt * c_sum) * 2 * c_dot_cdot
+    alpha_dc_term = (a_term_1 - a_term_2) / c_squares_sum**2
+
+    # Some more auxiliary values
+    lhs_alpha_term = (
+        np.full((N, N), alpha_opt_ds_gradient).T * c_increasing_sums
+    ).T
+    lhs_beta_term = (
+        np.full((N, N), beta_opt_ds_gradient).T * increasing_factor
+    ).T
+
+    # Finally calculate the regularization lhs and rhs
+    reg_lhs = np.zeros((N, N))
+    reg_rhs = np.zeros(2 * N)
+
+    for j in range(N):
+        reg_lhs[j] += np.concatenate(
+            [np.arange(j + 1, 0, -1), np.zeros(N - j - 1)]
+        )
+    reg_lhs += lhs_alpha_term
+    reg_lhs += lhs_beta_term
+    reg_lhs /= N
+
+    reg_rhs[:N] += alpha_opt * cdot_increasing_sums
+    reg_rhs[:N] += alpha_dc_term * c_increasing_sums
+    reg_rhs[:N] += beta_dc_term * increasing_factor
+    reg_rhs[:N] /= N
+
+    return reg_lhs, reg_rhs
 
 
 def calculate_dy_term(
