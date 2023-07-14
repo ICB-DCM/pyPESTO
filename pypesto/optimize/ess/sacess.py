@@ -6,6 +6,7 @@ import time
 from multiprocessing import Manager, Process
 from multiprocessing.managers import SyncManager
 from typing import Any, Dict, List, Optional, Tuple
+from warnings import warn
 
 import numpy as np
 
@@ -96,9 +97,15 @@ class SacessOptimizer:
     def minimize(
         self,
         problem: Problem,
-        startpoint_method: StartpointMethod,
+        startpoint_method: StartpointMethod = None,
     ):
         """Solve the given optimization problem."""
+        if startpoint_method is not None:
+            warn(
+                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                DeprecationWarning,
+            )
+
         start_time = time.time()
         logger.debug(
             f"Running sacess with {self.num_workers} "

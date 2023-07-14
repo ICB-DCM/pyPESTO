@@ -307,9 +307,9 @@ def get_mcmc_like_dynesty_samples(sampler) -> McmcPtResult:
 def setup_dynesty() -> None:
     """Import dynesty."""
     try:
-        import dill  # noqa: S403
+        import cloudpickle  # noqa: S403
         import dynesty.utils
 
-        dynesty.utils.pickle_module = dill
+        dynesty.utils.pickle_module = cloudpickle
     except ImportError:
         raise SamplerImportError("dynesty")
