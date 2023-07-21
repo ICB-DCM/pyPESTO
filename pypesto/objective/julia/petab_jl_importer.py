@@ -217,11 +217,11 @@ def _get_default_options(
     if not odeSolverOptions["solver"].endswith("()"):
         odeSolverOptions["solver"] += "()"  # add parentheses
     if gradientMethod is None:
-        gradientMethod = "ForwardDiff"
+        gradientMethod = "nothing"
     if hessianMethod is None:
-        hessianMethod = "ForwardDiff"
+        hessianMethod = "nothing"
     if sparseJacobian is None:
-        sparseJacobian = "false"
+        sparseJacobian = "nothing"
     if verbose is None:
         verbose = "true"
 
@@ -297,6 +297,7 @@ def _write_julia_file(
     content = (
         f"module {module}\n\n"
         f"using OrdinaryDiffEq\n"
+        f"using Sundials\n"
         f"using PEtab\n\n"
         f"pathYaml = \"{yaml_file}\"\n"
         f"petabModel = readPEtabModel(pathYaml, verbose=true)\n\n"

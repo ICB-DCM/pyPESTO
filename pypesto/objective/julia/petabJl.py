@@ -66,7 +66,7 @@ class PEtabJlObjective(JuliaObjective):
         hess = self.petab_jl_problem.computeHessian
         x_names = np.asarray(self.petab_jl_problem.θ_estNames)
 
-        # call the super super constructor
+        # call the super super super constructor
         super(JuliaObjective, self).__init__(
             fun=fun, grad=grad, hess=hess, x_names=x_names
         )
@@ -174,6 +174,7 @@ class PEtabJlObjective(JuliaObjective):
         Pkg.add("PrecompileTools")
         Pkg.add("OrdinaryDiffEq")
         Pkg.add("PEtab")
+        Pkg.add("Sundials")
         Pkg.precompile()
 
 
