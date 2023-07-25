@@ -757,7 +757,9 @@ class PetabImporter(AmiciObjectBuilder):
             x_names=x_ids,
             x_scales=x_scales,
             x_priors_defs=prior,
-            startpoint_method=self.create_startpoint_method(x_ids=x_ids),
+            startpoint_method=self.create_startpoint_method(
+                x_ids=np.delete(x_ids, x_fixed_indices), **kwargs
+            ),
             **problem_kwargs,
         )
 
