@@ -5,7 +5,14 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
-from ..C import AMICI_SIGMAY, AMICI_Y, CURRENT_SIMULATION, DATAPOINTS, SCIPY_X
+from ..C import (
+    AMICI_SIGMAY,
+    AMICI_Y,
+    CURRENT_SIMULATION,
+    DATAPOINTS,
+    REGULARIZE_SPLINE,
+    SCIPY_X,
+)
 from ..problem import Problem
 from ..result import Result
 
@@ -109,12 +116,13 @@ def plot_splines_from_pypesto_result(
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
 
     return plot_splines_from_inner_result(
-        inner_problem, inner_results, observable_ids, **kwargs
+        inner_problem, inner_solver, inner_results, observable_ids, **kwargs
     )
 
 
 def plot_splines_from_inner_result(
     inner_problem: 'SplineInnerProblem',
+    inner_solver: 'SplineInnerSolver',
     results: List[Dict],
     observable_ids=None,
     **kwargs,
@@ -199,6 +207,20 @@ def plot_splines_from_inner_result(
             color='g',
             label='Spline function',
         )
+        if inner_solver.options[REGULARIZE_SPLINE]:
+            alpha_opt, beta_opt = _calculate_optimal_regularization(
+                s=s,
+                N=len(inner_parameters),
+                c=spline_bases,
+            )
+            axs[group_idx].plot(
+                spline_bases,
+                alpha_opt * spline_bases + beta_opt,
+                linestyle='--',
+                color='orange',
+                label='Regularization line',
+            )
+
         axs[group_idx].plot(
             simulation, mapped_simulations, 'r^', label='Mapped simulation'
         )
@@ -215,6 +237,34 @@ def plot_splines_from_inner_result(
         ax.remove()
 
     return fig, axs
+
+
+def _calculate_optimal_regularization(
+    s: np.ndarray,
+    N: int,
+    c: np.ndarray,
+):
+    lower_trian = np.tril(np.ones((N, N)))
+    xi = np.dot(lower_trian, s)
+
+    # Calculate auxiliary values
+    c_sum = np.sum(c)
+    xi_sum = np.sum(xi)
+    c_squares_sum = np.sum(c**2)
+    c_dot_xi = np.dot(c, xi)
+    # Calculate the optimal linear function offset
+    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+        N * c_squares_sum - c_sum**2
+    )
+
+    # If the offset is smaller than 0, we set it to 0
+    if beta_opt < 0:
+        beta_opt = 0
+
+    # Calculate the slope of the optimal linear function
+    alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_squares_sum
+
+    return alpha_opt, beta_opt
 
 
 def _add_spline_mapped_simulations_to_model_fit(
