@@ -10,7 +10,7 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import RGBA, WATERFALL_MAX_VALUE
+from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -377,15 +377,25 @@ def handle_inputs(
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
     # retrieve inner parameters if available
-    try:
-        inner_xs = result.optimize_result.inner_parameters
-        inner_xs_names = list(inner_xs[0].keys())
-        inner_xs = [list(inner_xs_idx.values()) for inner_xs_idx in inner_xs]
+    inner_xs = [
+        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
+    ]
+    if any(inner_xs):
+        inner_xs_names = next(
+            list(inner_xs_idx.keys())
+            for inner_xs_idx in inner_xs
+            if inner_xs_idx is not None
+        )
+        inner_xs = [
+            [np.nan for i in range(len(inner_xs_names))]
+            if inner_xs_idx is None
+            else list(inner_xs_idx.values())
+            for inner_xs_idx in inner_xs
+        ]
         inner_lb = np.full(len(inner_xs_names), -np.inf)
         inner_ub = np.full(len(inner_xs_names), np.inf)
-    except AttributeError:
+    else:
         inner_xs = None
-
     # parse indices which should be plotted
     if start_indices is not None:
         start_indices = process_start_indices(result, start_indices)
@@ -429,7 +439,7 @@ def handle_inputs(
         ub = np.concatenate([ub, inner_ub])
         x_labels = x_labels + inner_xs_names
         xs_out = [
-            np.concatenate([x, inner_x])
+            np.concatenate([x, inner_x]) if x is not None else None
             for x, inner_x in zip(xs_out, inner_xs_out)
         ]
 
