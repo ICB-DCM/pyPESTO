@@ -386,7 +386,7 @@ def handle_inputs(
                 inner_xs_names = list(inner_xs_idx.keys())
                 break
         inner_xs = [
-            [np.nan for i in range(len(inner_xs_names))]
+            np.full(len(inner_xs_names), np.nan)
             if inner_xs_idx is None
             else list(inner_xs_idx.values())
             for inner_xs_idx in inner_xs
