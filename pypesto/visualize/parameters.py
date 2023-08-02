@@ -393,6 +393,7 @@ def handle_inputs(
             else list(inner_xs_idx.values())
             for inner_xs_idx in inner_xs
         ]
+        # set bounds for inner parameters
         inner_lb = np.full(len(inner_xs_names), -np.inf)
         inner_ub = np.full(len(inner_xs_names), np.inf)
     else:
