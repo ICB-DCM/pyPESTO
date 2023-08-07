@@ -1348,6 +1348,14 @@ class FidesOptimizer(Optimizer):
             exitflag=opt.exitflag,
         )
 
+        if (
+            hasattr(problem.objective, INNER_PARAMETERS)
+            and problem.objective.inner_parameters
+        ):
+            optimizer_result[
+                INNER_PARAMETERS
+            ] = problem.objective.inner_parameters
+
         return optimizer_result
 
     def is_least_squares(self):
