@@ -34,6 +34,10 @@ class PetabJlImporter:
 
         Parameters
         ----------
+        module:
+            Name of the Julia model
+        source_file:
+            Path to the Julia source file.
         petab_problem:
             Wrapper around the PEtab.jl problem.
         """

@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 
 from pypesto import Problem, optimize
@@ -14,13 +16,14 @@ def test_pyjulia_pipeline():
     rng = np.random.default_rng(42)
 
     assert display_source_ipython(  # noqa: S101
-        "doc/example/model_julia/LR.jl"
+        f"{os.path.dirname(__file__)}/../../doc/example/model_julia/LR.jl"
     )
 
     # define objective
     obj = JuliaObjective(
         module="LR",
-        source_file="doc/example/model_julia/LR.jl",
+        source_file=f"{os.path.dirname(__file__)}/../../"
+        f"doc/example/model_julia/LR.jl",
         fun="fun",
         grad="grad",
     )

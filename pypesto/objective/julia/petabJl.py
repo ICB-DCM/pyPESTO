@@ -20,7 +20,7 @@ class PEtabJlObjective(JuliaObjective):
     module:
         Name of the julia module containing the objective.
     source_file:
-        Julia source file. Defaults to "{module_name}.jl".
+        Julia source file. Defaults to "{module}.jl".
     petab_problem_name:
         Name of the petab problem variable in the julia module.
     """
