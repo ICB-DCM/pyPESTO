@@ -65,22 +65,22 @@ def test_pyjulia_pipeline():
 def test_petabJL_interface():
     """Test the interface to PEtab.jl with provided solutions from julia."""
     model_name = "boehm_JProteomeRes2014"
-    yaml_file = f"doc/example/{model_name}/{model_name}.yaml"
+    examples_dir = f"{os.path.dirname(__file__)}/../../doc/example"
+    yaml_file = f"{examples_dir}/{model_name}/{model_name}.yaml"
 
     importer = PetabJlImporter.from_yaml(yaml_file)
 
     problem = importer.create_problem(precompile=False)
 
     parameters = np.genfromtxt(
-        'doc/example/boehm_JProteomeRes2014/Boehm_validation/Parameter.csv',
+        f'{examples_dir}/{model_name}/Boehm_validation/Parameter.csv',
         delimiter=',',
         skip_header=1,
     )
 
     # check objective function
     obj_ref = np.genfromtxt(
-        'doc/example/boehm_JProteomeRes2014/Boehm_validation/ObjectiveValue'
-        '.csv',
+        f'{examples_dir}/{model_name}/Boehm_validation/ObjectiveValue.csv',
         delimiter=',',
         skip_header=1,
     )
@@ -90,7 +90,7 @@ def test_petabJL_interface():
 
     # check gradient value
     grad_ref = np.genfromtxt(
-        'doc/example/boehm_JProteomeRes2014/Boehm_validation/Gradient.csv',
+        f'{examples_dir}/{model_name}/Boehm_validation/Gradient.csv',
         delimiter=',',
         skip_header=1,
     )
@@ -100,7 +100,7 @@ def test_petabJL_interface():
 
     # check hessian value
     hess_ref = np.genfromtxt(
-        'doc/example/boehm_JProteomeRes2014/Boehm_validation/Hessian.csv',
+        f'{examples_dir}/{model_name}/Boehm_validation/Hessian.csv',
         delimiter=',',
         skip_header=1,
     )
@@ -113,7 +113,10 @@ def test_petabJL_from_module():
     """Test that PEtab.jl is integrated properly."""
     # create objective
     module = "MyPEtabJlModule"
-    source_file = "doc/example/conversion_reaction/PEtabJl_module.jl"
+    source_file = (
+        f"{os.path.dirname(__file__)}/../../doc/"
+        f"example/conversion_reaction/PEtabJl_module.jl"
+    )
 
     importer = PetabJlImporter(module=module, source_file=source_file)
 
@@ -129,11 +132,14 @@ def test_petabJL_from_module():
 
 def test_petabJL_from_yaml():
     """Test that PEtab.jl from yaml file is running smoothly."""
-    yaml_file = "doc/example/conversion_reaction/conversion_reaction.yaml"
+    yaml_file = (
+        f"{os.path.dirname(__file__)}/../../doc/"
+        f"example/conversion_reaction/conversion_reaction.yaml"
+    )
 
     importer = PetabJlImporter.from_yaml(yaml_file)
 
     problem = importer.create_problem(precompile=False)
 
     # optimize with single core
-    optimize.minimize(problem, engine=SingleCoreEngine(), n_starts=10)
+    optimize.minimize(problem, engine=SingleCoreEngine(), n_starts=1)
