@@ -15,6 +15,7 @@ from ..C import (
     AMICI_SIGMAY,
     AMICI_Y,
     GRAD,
+    HESS,
     INNER_PARAMETERS,
     INNER_RDATAS,
     RDATAS,
@@ -118,6 +119,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(
                     shape=len(x_ids), fill_value=np.nan
+                )
+            if 2 in sensi_orders:
+                inner_result[HESS] = np.full(
+                    shape=(len(x_ids), len(x_ids)), fill_value=np.nan
                 )
             return inner_result
 
