@@ -10,7 +10,12 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
+from ..C import (
+    INNER_PARAMETER_NAMES,
+    INNER_PARAMETER_VALUES,
+    RGBA,
+    WATERFALL_MAX_VALUE,
+)
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -377,20 +382,20 @@ def handle_inputs(
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
     # retrieve inner parameters if available
+    for res in result.optimize_result.list:
+        if INNER_PARAMETER_NAMES in res:
+            inner_xs_names = res[INNER_PARAMETER_NAMES]
+            break
     inner_xs = [
-        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
+        res.get(INNER_PARAMETER_VALUES, None)
+        for res in result.optimize_result.list
     ]
     if any(inner_xs):
-        # search for first non-empty inner_xs to obtain inner_xs_names
-        for inner_xs_idx in inner_xs:
-            if inner_xs_idx is not None:
-                inner_xs_names = list(inner_xs_idx.keys())
-                break
         # fill inner_xs with nan if no inner_xs are available
         inner_xs = [
             np.full(len(inner_xs_names), np.nan)
             if inner_xs_idx is None
-            else list(inner_xs_idx.values())
+            else np.asarray(inner_xs_idx)
             for inner_xs_idx in inner_xs
         ]
         # set bounds for inner parameters
