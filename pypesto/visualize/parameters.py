@@ -384,13 +384,13 @@ def handle_inputs(
     # retrieve inner parameters if available
     for res in result.optimize_result.list:
         if INNER_PARAMETER_NAMES in res:
-            inner_xs_names = res[INNER_PARAMETER_NAMES]
+            inner_xs_names = list(res[INNER_PARAMETER_NAMES])
             break
     inner_xs = [
         res.get(INNER_PARAMETER_VALUES, None)
         for res in result.optimize_result.list
     ]
-    if any(inner_xs):
+    if any(inner_xs_idx is not None for inner_xs_idx in inner_xs):
         # fill inner_xs with nan if no inner_xs are available
         inner_xs = [
             np.full(len(inner_xs_names), np.nan)
