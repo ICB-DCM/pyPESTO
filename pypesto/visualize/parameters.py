@@ -383,7 +383,10 @@ def handle_inputs(
     xs = result.optimize_result.x
     # retrieve inner parameters if available
     for res in result.optimize_result.list:
-        if INNER_PARAMETER_NAMES in res:
+        if (
+            INNER_PARAMETER_NAMES in res
+            and res[INNER_PARAMETER_NAMES] is not None
+        ):
             inner_xs_names = list(res[INNER_PARAMETER_NAMES])
             break
     inner_xs = [
