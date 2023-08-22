@@ -194,12 +194,10 @@ class SacessOptimizer:
                 )
 
         # delete temporary files only after successful consolidation
-        map(
-            os.remove,
-            map(
-                SacessWorker.get_temp_result_filename, range(self.num_workers)
-            ),
-        )
+        for filename in map(
+            SacessWorker.get_temp_result_filename, range(self.num_workers)
+        ):
+            os.remove(filename)
 
         result.optimize_result.sort()
 
