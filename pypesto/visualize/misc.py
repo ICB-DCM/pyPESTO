@@ -185,7 +185,7 @@ def process_y_limits(ax, y_limits):
                     "log-scale. Using only upper bound."
                 )
 
-            # set limits
+        # set limits
         ax.set_ylim(y_limits)
 
     else:
