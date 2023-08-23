@@ -169,7 +169,7 @@ def waterfall(
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
     if inset_axes is not None:
         inset_axes = handle_options(
-            inset_axes, n_starts_to_zoom, refs, y_limits, offset_y
+            inset_axes, n_starts_to_zoom, refs, None, offset_y
         )
 
     if any(legends):
