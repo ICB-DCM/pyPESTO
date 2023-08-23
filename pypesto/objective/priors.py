@@ -272,19 +272,23 @@ def get_parameter_prior_dict(
                 + np.exp(x_log) * dd_log_f_ddx(np.exp(x_log))
             )
 
-        res_log = None
         if res is not None:
 
             def res_log(x_log):
                 """Residual-prior for log-parameters."""
                 return res(np.exp(x_log))
 
-        d_res_log = None
+        else:
+            res_log = None
+
         if d_res_dx is not None:
 
             def d_res_log(x_log):
                 """Residual-prior for log-parameters."""
                 return d_res_dx(np.exp(x_log)) * np.exp(x_log)
+
+        else:
+            d_res_log = None
 
         return {
             'index': index,

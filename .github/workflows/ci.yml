@@ -100,7 +100,7 @@ jobs:
     - name: Install julia
       uses: julia-actions/setup-julia@v1
       with:
-        version: 1.7
+        version: 1.9
 
     - name: Cache
       uses: actions/cache@v3
@@ -113,8 +113,11 @@ jobs:
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
 
+    - name: Install PEtabJL dependencies
+      run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"), Pkg.add("Sundials")'
+
     - name: Run tests
-      timeout-minutes: 20
+      timeout-minutes: 25
       run: tox -e julia
 
     - name: Coverage
