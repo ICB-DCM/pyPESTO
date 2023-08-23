@@ -117,8 +117,16 @@ class SacessOptimizer:
             num_workers=self.num_workers, dim=problem.dim
         )
 
-        logger_process = LoggerProcess()
-        logger_process.start()
+        logging_handler = logging.StreamHandler()
+        logging_handler.setFormatter(
+            logging.Formatter(
+                '%(asctime)s %(name)s %(levelname)-8s %(message)s'
+            )
+        )
+        logging_thread = logging.handlers.QueueListener(
+            multiprocessing.Queue(-1), logging_handler
+        )
+        logging_thread.start()
 
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
@@ -149,7 +157,7 @@ class SacessOptimizer:
                         worker,
                         problem,
                         startpoint_method,
-                        logger_process.queue,
+                        logging_thread.queue,
                     ),
                 )
                 for i, worker in enumerate(workers)
@@ -160,8 +168,7 @@ class SacessOptimizer:
             for p in worker_processes:
                 p.join()
 
-            logger_process.stop()
-            logger_process.join()
+            logging_thread.stop()
 
             walltime = time.time() - start_time
             logger.info(
@@ -710,39 +717,3 @@ def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
         settings[0],
         *(itertools.islice(itertools.cycle(settings[1:]), num_workers - 1)),
     ]
-
-
-class LoggerProcess(multiprocessing.Process):
-    """Helper class to enable logging from multiple processes.
-
-    Collect log records from a queue and log them.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.queue = multiprocessing.Queue(-1)
-
-    @staticmethod
-    def _configure():
-        """Configure the logger."""
-        root = logging.getLogger()
-        h = logging.StreamHandler()
-        f = logging.Formatter(
-            '%(asctime)s %(name)s %(levelname)-8s %(message)s'
-        )
-        h.setFormatter(f)
-        root.addHandler(h)
-
-    def stop(self):
-        """Stop the process."""
-        self.queue.put_nowait(None)
-
-    def run(self):
-        """Run the logger process."""
-        self._configure()
-        while True:
-            record = self.queue.get()
-            if record is None:
-                break
-            logger = logging.getLogger(record.name)
-            logger.handle(record)
