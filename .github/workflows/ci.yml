@@ -112,12 +112,6 @@ jobs:
       timeout-minutes: 10
       run: tox -e windows
 
-    - name: Coverage
-      uses: codecov/codecov-action@v3
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
-
   petab:
     runs-on: ubuntu-latest
     strategy:
