@@ -179,7 +179,7 @@ class SacessOptimizer:
                 )
             except FileNotFoundError:
                 # wait and retry, maybe the file wasn't found due to some filesystem latency issues
-                time.sleep(10)
+                time.sleep(5)
                 tmp_result = read_result(
                     tmp_result_filename, problem=False, optimize=True
                 )
