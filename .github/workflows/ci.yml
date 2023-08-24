@@ -48,6 +48,41 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./coverage.xml
 
+  mac:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        # update to 3.11 when numba allows (needed in umap)
+        python-version: ['3.10']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-mac
+
+    - name: Install dependencies
+      run: .github/workflows/install_deps.sh amici
+
+    - name: Run tests
+      timeout-minutes: 25
+      run: tox -e base
+
+    - name: Coverage
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
   petab:
     runs-on: ubuntu-latest
     strategy:
