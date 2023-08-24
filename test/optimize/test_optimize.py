@@ -492,6 +492,7 @@ def test_ess(problem, local_optimizer, ess_type, request):
         ess = SacessOptimizer(
             max_walltime_s=1,
             sacess_loglevel=logging.DEBUG,
+            ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
         )
     else:
