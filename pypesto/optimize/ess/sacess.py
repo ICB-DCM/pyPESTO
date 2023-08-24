@@ -189,10 +189,17 @@ class SacessOptimizer:
             tmp_result_filename = SacessWorker.get_temp_result_filename(
                 worker_idx
             )
-            tmp_result = read_result(
-                tmp_result_filename, problem=False, optimize=True
-            )
-            os.remove(tmp_result_filename)
+            try:
+                tmp_result = read_result(
+                    tmp_result_filename, problem=False, optimize=True
+                )
+            except FileNotFoundError:
+                # wait and retry, maybe the file wasn't found due to some filesystem latency issues
+                time.sleep(5)
+                tmp_result = read_result(
+                    tmp_result_filename, problem=False, optimize=True
+                )
+
             if result is None:
                 result = tmp_result
             else:
@@ -201,6 +208,13 @@ class SacessOptimizer:
                     sort=False,
                     prefix=f"{worker_idx}-",
                 )
+
+        # delete temporary files only after successful consolidation
+        for filename in map(
+            SacessWorker.get_temp_result_filename, range(self.num_workers)
+        ):
+            os.remove(filename)
+
         result.optimize_result.sort()
 
         result.problem = problem
