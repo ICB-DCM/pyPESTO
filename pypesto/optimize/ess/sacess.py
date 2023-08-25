@@ -1,6 +1,8 @@
 """Self-adaptive cooperative enhanced scatter search (SACESS)."""
 import itertools
 import logging
+import logging.handlers
+import multiprocessing
 import os
 import time
 from multiprocessing import Manager, Process
@@ -115,6 +117,17 @@ class SacessOptimizer:
             num_workers=self.num_workers, dim=problem.dim
         )
 
+        logging_handler = logging.StreamHandler()
+        logging_handler.setFormatter(
+            logging.Formatter(
+                '%(asctime)s %(name)s %(levelname)-8s %(message)s'
+            )
+        )
+        logging_thread = logging.handlers.QueueListener(
+            multiprocessing.Queue(-1), logging_handler
+        )
+        logging_thread.start()
+
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
         with Manager() as shmem_manager:
@@ -130,6 +143,7 @@ class SacessOptimizer:
                     ess_kwargs=ess_kwargs,
                     worker_idx=i,
                     max_walltime_s=self.max_walltime_s,
+                    loglevel=self.sacess_loglevel,
                     ess_loglevel=self.ess_loglevel,
                 )
                 for i, ess_kwargs in enumerate(ess_init_args)
@@ -143,7 +157,7 @@ class SacessOptimizer:
                         worker,
                         problem,
                         startpoint_method,
-                        self.sacess_loglevel,
+                        logging_thread.queue,
                     ),
                 )
                 for i, worker in enumerate(workers)
@@ -153,6 +167,8 @@ class SacessOptimizer:
             # wait for finish
             for p in worker_processes:
                 p.join()
+
+            logging_thread.stop()
 
             walltime = time.time() - start_time
             logger.info(
@@ -173,10 +189,17 @@ class SacessOptimizer:
             tmp_result_filename = SacessWorker.get_temp_result_filename(
                 worker_idx
             )
-            tmp_result = read_result(
-                tmp_result_filename, problem=False, optimize=True
-            )
-            os.remove(tmp_result_filename)
+            try:
+                tmp_result = read_result(
+                    tmp_result_filename, problem=False, optimize=True
+                )
+            except FileNotFoundError:
+                # wait and retry, maybe the file wasn't found due to some filesystem latency issues
+                time.sleep(5)
+                tmp_result = read_result(
+                    tmp_result_filename, problem=False, optimize=True
+                )
+
             if result is None:
                 result = tmp_result
             else:
@@ -185,6 +208,13 @@ class SacessOptimizer:
                     sort=False,
                     prefix=f"{worker_idx}-",
                 )
+
+        # delete temporary files only after successful consolidation
+        for filename in map(
+            SacessWorker.get_temp_result_filename, range(self.num_workers)
+        ):
+            os.remove(filename)
+
         result.optimize_result.sort()
 
         result.problem = problem
@@ -348,6 +378,7 @@ class SacessWorker:
     _n_sent_solutions: Number of solutions sent to the Manager.
     _max_walltime_s: Walltime limit.
     _logger: A Logger instance.
+    _loglevel: Logging level for sacess
     _ess_loglevel: Logging level for ESS runs
     """
 
@@ -357,6 +388,7 @@ class SacessWorker:
         ess_kwargs: Dict[str, Any],
         worker_idx: int,
         max_walltime_s: float = np.inf,
+        loglevel: int = logging.INFO,
         ess_loglevel: int = logging.WARNING,
     ):
         self._manager = manager
@@ -369,16 +401,19 @@ class SacessWorker:
         self._n_sent_solutions = 0
         self._max_walltime_s = max_walltime_s
         self._start_time = None
-        self._logger = logging.getLogger(str(os.getpid()))
-        # Set the manager logger to one created within the current process
-        self._manager._logger = self._logger
+        self._loglevel = loglevel
         self._ess_loglevel = ess_loglevel
+        self._logger = None
 
     def run(
         self,
         problem: Problem,
         startpoint_method: StartpointMethod,
     ):
+        self._logger.setLevel(self._loglevel)
+        # Set the manager logger to one created within the current process
+        self._manager._logger = self._logger
+
         """Start the worker."""
         self._logger.debug(
             f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
@@ -488,6 +523,9 @@ class SacessWorker:
         )
 
         ess = ESSOptimizer(**ess_kwargs)
+        ess.logger = self._logger.getChild(
+            f"sacess-{self._worker_idx:02d}-ess"
+        )
         ess.logger.setLevel(self._ess_loglevel)
 
         cur_ess_results = ess.minimize(
@@ -578,7 +616,7 @@ def _run_worker(
     worker: SacessWorker,
     problem: Problem,
     startpoint_method: StartpointMethod,
-    sacess_loglevel: int,
+    log_process_queue: multiprocessing.Queue,
 ):
     """Run the given SACESS worker.
 
@@ -587,7 +625,10 @@ def _run_worker(
     # different random seeds per process
     np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
-    worker._logger.setLevel(sacess_loglevel)
+    # Forward log messages to logging process
+    h = logging.handlers.QueueHandler(log_process_queue)
+    worker._logger = logging.getLogger(multiprocessing.current_process().name)
+    worker._logger.addHandler(h)
 
     return worker.run(problem=problem, startpoint_method=startpoint_method)
 
