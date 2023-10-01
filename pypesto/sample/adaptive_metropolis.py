@@ -147,7 +147,7 @@ def update_history_statistics(
     n_cur_sample: int,
     decay_constant: float,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Update sampling mean and covariante matrix via weighted average.
+    """Update sampling mean and covariance matrix via weighted average.
 
     Update sampling mean and covariance matrix based on the previous
     estimate and the most recent sample via a weighted average,
