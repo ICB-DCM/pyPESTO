@@ -10,7 +10,26 @@ from .sampler import InternalSampler, Sampler
 
 
 class ParallelTemperingSampler(Sampler):
-    """Simple parallel tempering sampler."""
+    """Simple parallel tempering sampler.
+
+    Parallem tempering is a Markov chain Monte Carlo (MCMC) method that
+    uses multiple chains with different temperatures to sample from a
+    probability distribution.
+    The chains are coupled by swapping samples between them.
+    This allows to sample from distributions with multiple modes more
+    efficiently, as high-temperature chains can jump between modes, while
+    low-temperature chains can sample the modes more precisely.
+
+    This implementation is based on:
+
+    * Vousden et al. 2016.
+      Dynamic temperature selection for parallel tempering in Markov chain
+      Monte Carlo simulations
+      (https://doi.org/10.1093/mnras/stv2422),
+
+    via a matlab-based reference implementation
+    (https://github.com/ICB-DCM/PESTO/blob/master/private/performPT.m).
+    """
 
     def __init__(
         self,
