@@ -7,7 +7,7 @@ Release notes
 
 
 0.3.2 (2023-10-02)
-------------------
+-------------------
 
 * Visualize:
     * Restrict fval magnitude in waterfall with order_by_id (#1090)
@@ -17,7 +17,7 @@ Release notes
     * Use cloudpickle for pickling dynesty sampler (#1094)
 * Optimize
     * Small fix on hierarchical initialise (#1095)
-    * Fix startpoint sampling for hierarchical optimization #1105)
+    * Fix startpoint sampling for hierarchical optimization (#1105)
     * SacessOptimizer: retry reading, delay deleting (#1110)
     * SacessOptimizer: Fix logging with multiprocessing (#1112)
     * SacessOptimizer: tmpdir option (#1115)
@@ -32,7 +32,7 @@ Release notes
     * PetabJL integration (#1089)
     * Other platform tests (#1113)
     * Dokumentation fixes (#1120)
-    * Updated CODEOWNER (#1122)
+    * Updated CODEOWNER (#1123)
 
 
 0.3.1 (2023-06-22)
