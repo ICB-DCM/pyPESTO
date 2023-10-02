@@ -17,7 +17,7 @@ Release notes
     * Use cloudpickle for pickling dynesty sampler (#1094)
 * Optimize
     * Small fix on hierarchical initialise (#1095)
-    * Fix startpoint sampling for hierarchical optimization Fix startpoint sampling for hierarchical optimization #1105)
+    * Fix startpoint sampling for hierarchical optimization (#1105)
     * SacessOptimizer: retry reading, delay deleting (#1110)
     * SacessOptimizer: Fix logging with multiprocessing (#1112)
     * SacessOptimizer: tmpdir option (#1115)
