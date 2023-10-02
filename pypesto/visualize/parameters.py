@@ -561,7 +561,7 @@ def optimization_scatter(
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
-    # remove all start indices, that encounter an inf value at the start
+    # remove all start indices that encounter an inf value at the start
     # resulting in optimize_result[start]["x"] being None
     start_indices_finite = start_indices[
         [
@@ -570,7 +570,7 @@ def optimization_scatter(
         ]
     ]
     # compare start_indices with start_indices_finite and log a warning
-    if not np.all(start_indices == start_indices_finite):
+    if len(start_indices) != len(start_indices_finite):
         logger.warning(
             'Some start indices were removed due to inf values at the start.'
         )
