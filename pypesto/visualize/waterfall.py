@@ -7,6 +7,7 @@ from mpl_toolkits.axes_grid1 import inset_locator
 
 from pypesto.util import delete_nan_inf
 
+from ..C import WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import RGBA, assign_colors
 from .misc import (
@@ -121,7 +122,9 @@ def waterfall(
         # parse input
         if order_by_id:
             start_ids = [s.id for s in results[j].optimize_result.list]
-            fvals_raw_is_finite = np.isfinite(fvals_raw)
+            fvals_raw_is_finite = np.isfinite(fvals_raw) & (
+                np.absolute(fvals_raw) < WATERFALL_MAX_VALUE
+            )
 
             fvals = []
             for start_id in start_id_ordering:
@@ -135,7 +138,9 @@ def waterfall(
             # also remove extremely large values. These values result in `inf`
             # values in the output of `scipy.cluster.hierarchy.linkage` in the
             # method `pypesto.util.assign_clusters`, which raises errors.
-            _, fvals = delete_nan_inf(fvals=fvals_raw, magnitude_bound=1e100)
+            _, fvals = delete_nan_inf(
+                fvals=fvals_raw, magnitude_bound=WATERFALL_MAX_VALUE
+            )
             fvals.sort()
 
         # assign colors
@@ -164,7 +169,7 @@ def waterfall(
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
     if inset_axes is not None:
         inset_axes = handle_options(
-            inset_axes, n_starts_to_zoom, refs, y_limits, offset_y
+            inset_axes, n_starts_to_zoom, refs, None, offset_y
         )
 
     if any(legends):

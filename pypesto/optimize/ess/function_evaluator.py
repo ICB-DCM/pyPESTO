@@ -5,6 +5,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from typing import Optional, Sequence, Tuple
+from warnings import warn
 
 import numpy as np
 
@@ -31,17 +32,28 @@ class FunctionEvaluator:
     def __init__(
         self,
         problem: Problem,
-        startpoint_method: StartpointMethod,
+        startpoint_method: StartpointMethod = None,
     ):
         """Construct.
 
         Parameters
         ----------
-        problem: The problem
-        startpoint_method: Method for choosing feasible parameters
+        problem:
+            The problem
+        startpoint_method:
+            Method for choosing feasible parameters
+            **Deprecated. Use ``problem.startpoint_method`` instead.**
         """
+        if startpoint_method is not None:
+            warn(
+                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                DeprecationWarning,
+            )
+
         self.problem: Problem = problem
-        self.startpoint_method: StartpointMethod = startpoint_method
+        self.startpoint_method: StartpointMethod = (
+            startpoint_method or problem.startpoint_method
+        )
         self.n_eval: int = 0
         self.n_eval_round: int = 0
 
@@ -103,9 +115,8 @@ class FunctionEvaluator:
         """
         fxs = np.full(shape=n, fill_value=np.nan)
         xs = np.full(shape=(n, self.problem.dim), fill_value=np.nan)
-
         while not np.isfinite(fxs).all():
-            retry_indices = np.argwhere(~np.isfinite(fxs)).squeeze()
+            retry_indices = np.argwhere(~np.isfinite(fxs)).flatten()
             xs[retry_indices] = self.startpoint_method(
                 n_starts=retry_indices.size, problem=self.problem
             )

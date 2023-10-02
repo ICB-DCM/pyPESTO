@@ -28,6 +28,7 @@ import enum
 import logging
 import time
 from typing import List, Optional, Tuple
+from warnings import warn
 
 import numpy as np
 
@@ -183,21 +184,24 @@ class ESSOptimizer:
             Problem to run ESS on.
         startpoint_method:
             Method for choosing starting points.
+            **Deprecated. Use ``problem.startpoint_method`` instead.**
         refset:
             The initial RefSet or ``None`` to auto-generate.
         """
+        if startpoint_method is not None:
+            warn(
+                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                DeprecationWarning,
+            )
+
         self._initialize()
         self.starttime = time.time()
 
-        if (
-            refset is None and (problem is None or startpoint_method is None)
-        ) or (
-            refset is not None
-            and (problem is not None or startpoint_method is not None)
+        if (refset is None and problem is None) or (
+            refset is not None and problem is not None
         ):
             raise ValueError(
-                "Either `refset` or `problem` and `startpoint_method` "
-                "has to be provided."
+                "Either `refset` or `problem` has to be provided."
             )
         # generate initial RefSet if not provided
         if refset is None:

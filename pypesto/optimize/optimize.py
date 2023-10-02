@@ -1,5 +1,6 @@
 import logging
 from typing import Callable, Iterable, Union
+from warnings import warn
 
 from ..engine import Engine, SingleCoreEngine
 from ..history import HistoryOptions
@@ -50,6 +51,7 @@ def minimize(
     startpoint_method:
         Method for how to choose start points. False means the optimizer does
         not require start points, e.g. for the 'PyswarmOptimizer'.
+        **Deprecated. Use ``problem.startpoint_method`` instead.**
     result:
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
@@ -88,7 +90,16 @@ def minimize(
 
     # startpoint method
     if startpoint_method is None:
-        startpoint_method = uniform
+        if problem.startpoint_method is None:
+            startpoint_method = uniform
+        else:
+            startpoint_method = problem.startpoint_method
+    else:
+        warn(
+            "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+            DeprecationWarning,
+        )
+
     # convert startpoint method to class instance
     startpoint_method = to_startpoint_method(startpoint_method)
 
