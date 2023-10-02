@@ -188,9 +188,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # update to 3.11 when nlopt allows
         # ipopt does not work on 3.9 (https://github.com/mechmotum/cyipopt/issues/225)
-        python-version: ['3.10', '3.11']
+        python-version: ['3.11']
 
     steps:
     - name: Check out repository
