@@ -32,7 +32,7 @@ Release notes
     * PetabJL integration (#1089)
     * Other platform tests (#1113)
     * Dokumentation fixes (#1120)
-    * Updated CODEOWNER (#1122)
+    * Updated CODEOWNER (#1123)
 
 
 0.3.1 (2023-06-22)
