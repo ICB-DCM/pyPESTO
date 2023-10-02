@@ -4,8 +4,8 @@
 
 [build-system]
 requires = [
-  "setuptools >= 52.0.0",
-  "wheel >= 0.36.2",
+  "setuptools >= 68.2.0",
+  "wheel >= 0.41.2",
 ]
 build-backend = "setuptools.build_meta"
 
