@@ -12,6 +12,8 @@ API reference
    pypesto.history
    pypesto.logging
    pypesto.objective
+   pypesto.objective.aesara
+   pypesto.objective.jax
    pypesto.objective.julia
    pypesto.optimize
    pypesto.petab
