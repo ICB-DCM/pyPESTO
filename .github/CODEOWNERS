@@ -4,43 +4,43 @@
 * @ICB-DCM/pypesto-maintainers
 
 /doc/example/hdf5_storage.ipynb @PaulJonasJost
-/doc/example/hierarchical.ipynb @dilpath @dweindl @yannikschaelte
-/doc/example/julia.ipynb @yannikschaelte
+/doc/example/hierarchical.ipynb @dilpath @dweindl
+/doc/example/julia.ipynb @PaulJonasJost
 /doc/example/model_selection.ipynb @dilpath
 /doc/example/petab_import.ipynb @dweindl @FFroehlich
-/doc/example/sampler_study.ipynb @dilpath @yannikschaelte
-/doc/example/sampling_diagnostics.ipynb @dilpath @yannikschaelte
+/doc/example/sampler_study.ipynb @dilpath
+/doc/example/sampling_diagnostics.ipynb @dilpath
 /doc/example/store.ipynb @PaulJonasJost
 /doc/example/synthetic_data.ipynb @dilpath
 /docker/ @dweindl
-/pypesto/engine/ @yannikschaelte
+/pypesto/engine/ @PaulJonasJost
 /pypesto/engine/mpi_pool.py @PaulJonasJost
 /pypesto/ensemble/ @dilpath
-/pypesto/hierarchical/ @dilpath @dweindl @yannikschaelte
+/pypesto/hierarchical/ @dilpath @dweindl
 /pypesto/hierarchical/optimal_scaling_approach/ @doresic
 /pypesto/history/ @PaulJonasJost
-/pypesto/objective/ @yannikschaelte
-/pypesto/objective/amici/ @yannikschaelte @dweindl @FFroehlich
+/pypesto/objective/ @PaulJonasJost
+/pypesto/objective/amici/ @PaulJonasJost @dweindl @FFroehlich
 /pypesto/objective/jax/ @FFroehlich
 /pypesto/objective/aesara/ @FFroehlich
-/pypesto/optimize/ @yannikschaelte
+/pypesto/optimize/ @PaulJonasJost
 /pypesto/petab/ @dweindl @FFroehlich
 /pypesto/predict/ @PaulJonasJost @dilpath
-/pypesto/problem/ @yannikschaelte
+/pypesto/problem/ @PaulJonasJost
 /pypesto/profile/ @PaulJonasJost
-/pypesto/result/ @yannikschaelte
-/pypesto/sample/ @dilpath @yannikschaelte
+/pypesto/result/ @PaulJonasJost
+/pypesto/sample/ @dilpath
 /pypesto/select/ @dilpath
-/pypesto/startpoint/ @yannikschaelte
+/pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
 /pypesto/visualize/ @plakrisenko @stephanmg
-/test/base/ @yannikschaelte
-/test/doc/ @yannikschaelte
-/test/hierarchical/ @dilpath @dweindl @yannikschaelte
-/test/julia/ @yannikschaelte
-/test/optimize/ @yannikschaelte
+/test/base/ @PaulJonasJost
+/test/doc/ @PaulJonasJost
+/test/hierarchical/ @dilpath @dweindl
+/test/julia/ @PaulJonasJost
+/test/optimize/ @PaulJonasJost
 /test/petab/ @dweindl @FFroehlich
 /test/profile/ @PaulJonasJost
-/test/sample/ @dilpath @yannikschaelte
+/test/sample/ @dilpath
 /test/select/ @dilpath
 /test/visualize/ @plakrisenko @stephanmg

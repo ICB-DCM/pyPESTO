@@ -8,7 +8,54 @@ from .metropolis import MetropolisSampler
 
 
 class AdaptiveMetropolisSampler(MetropolisSampler):
-    """Metropolis-Hastings sampler with adaptive proposal covariance."""
+    """Metropolis-Hastings sampler with adaptive proposal covariance.
+
+    A core problem of the standard Metropolis-Hastings sampler is
+    its fixed proposal distribution, which must be manually tuned.
+    This sampler adapts the proposal distribution during the sampling
+    process based on previous samples.
+    It adapts the correlation structure and the scaling factor of the
+    proposal distribution.
+    For both parts, there exist a variety of methods, see
+
+    * Ballnus et al. 2017.
+      Comprehensive benchmarking of Markov chain Monte Carlo methods for
+      dynamical systems
+      (https://doi.org/10.1186/s12918-017-0433-1)
+    * Andrieu et al. 2008.
+      A tutorial on adaptive MCMC
+      (https://doi.org/10.1007/s11222-008-9110-y)
+
+    for a review.
+
+    Here, we approximate the covariance matrix via a weighted average of
+    current and earlier samples,
+    with a decay factor determining the relative contribution of the
+    current sample and earlier ones to the weighted average of mean and
+    covariance.
+    The scaling factor we aim to converge to a fixed target acceptance rate
+    of 0.234, as suggested by theoretical results.
+    The implementation is based on:
+
+    * Lacki et al. 2015.
+      State-dependent swap strategies and automatic reduction of number of
+      temperatures in adaptive parallel tempering algorithm
+      (https://doi.org/10.1007/s11222-015-9579-0)
+    * Miasojedow et al. 2013.
+      An adaptive parallel tempering algorithm
+      (https://doi.org/10.1080/10618600.2013.778779)
+
+    In turn, these are based on adaptive MCMC as discussed in:
+
+    * Haario et al. 2001.
+      An adaptive Metropolis algorithm
+      (https://doi.org/10.2307/3318737)
+
+    For reference matlab implementations see:
+
+    * https://github.com/ICB-DCM/PESTO/blob/master/private/performPT.m
+    * https://github.com/ICB-DCM/PESTO/blob/master/private/updateStatistics.m
+    """
 
     def __init__(self, options: Dict = None):
         super().__init__(options)
@@ -79,7 +126,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
             decay_constant=decay_constant,
         )
 
-        # compute covariance scaling factor
+        # compute covariance scaling factor based on the target acceptance rate
         self._cov_scale *= np.exp(
             (np.exp(log_p_acc) - target_acceptance_rate)
             / np.power(n_sample_cur + 1, decay_constant)
@@ -100,8 +147,11 @@ def update_history_statistics(
     n_cur_sample: int,
     decay_constant: float,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Update sampling statistics.
+    """Update sampling mean and covariance matrix via weighted average.
+
+    Update sampling mean and covariance matrix based on the previous
+    estimate and the most recent sample via a weighted average,
+    with gradually decaying update rate.
 
     Parameters
     ----------
