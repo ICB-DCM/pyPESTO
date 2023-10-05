@@ -6,8 +6,38 @@ Release notes
 ..........
 
 
-0.3.1 (2023-06-22)
+0.3.2 (2023-10-02)
 -------------------
+
+* Visualize:
+    * Restrict fval magnitude in waterfall with order_by_id (#1090)
+    * Hierarchical parameter plot fix (#1106)
+    * Fix y-limits on waterfall (#1109)
+* Sampling:
+    * Use cloudpickle for pickling dynesty sampler (#1094)
+* Optimize
+    * Small fix on hierarchical initialise (#1095)
+    * Fix startpoint sampling for hierarchical optimization (#1105)
+    * SacessOptimizer: retry reading, delay deleting (#1110)
+    * SacessOptimizer: Fix logging with multiprocessing (#1112)
+    * SacessOptimizer: tmpdir option (#1115)
+* Storage:
+    * fix storage (#1099)
+* Examples
+    * Notebook on differences (#1098)
+* Problem
+    * Add startpoint_method to Problem (#1093)
+* General
+    * Added new entry to bib (#1100)
+    * PetabJL integration (#1089)
+    * Other platform tests (#1113)
+    * Dokumentation fixes (#1120)
+    * Updated CODEOWNER (#1123)
+
+
+0.3.1 (2023-06-22)
+------------------
+
 * Visualize:
     * Parameter plot w/ hier. pars, noise estimation for splines (#1061)
 * Sampling:
@@ -34,7 +64,7 @@ Release notes
 
 
 0.3.0 (2023-05-02)
--------------------
+------------------
 
 New functionalities compared to 0.2.0:
 
@@ -59,8 +89,6 @@ Not supported functionalities and versions compared to 0.2.0:
 * **Pymc (v3)**
 * **Removed Theano objective**
 * **Changed parameter indexing from boolean to int in profiling routines**
-
-
 
 
 0.2 series
