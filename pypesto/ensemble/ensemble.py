@@ -1207,7 +1207,7 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
 def calculate_cutoff(
     result: Result, 
     percentile: float = 0.95,
-    cr_option: string = "simultaneous",
+    cr_option: string = 'simultaneous',
 ):
     """
     Calculate the cutoff of the ensemble.
@@ -1226,8 +1226,8 @@ def calculate_cutoff(
         than 100, the cutoff will be returned as np.inf.
     cr_option:
         The type of confidence region, which determines the degree of freedom of
-        the chi^2 distribution for the cutoff value. It can take "simultaneous" or
-        "pointwise".
+        the chi^2 distribution for the cutoff value. It can take 'simultaneous' or
+        'pointwise'.
 
     Returns
     -------
@@ -1246,10 +1246,10 @@ def calculate_cutoff(
 
     # optimal point as base:
     fval_opt = result.optimize_result[0].fval
-    if cr_option == "simultaneous":
+    if cr_option == 'simultaneous':
         # degrees of freedom is equal to the number of parameters
         df = result.problem.dim
-    elif cr_option == "pointwise":
+    elif cr_option == 'pointwise':
         # degrees of freedom is equal to 1
         df = 1
 
