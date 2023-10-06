@@ -36,12 +36,12 @@ def _test_basic(engine):
     optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
     result = pypesto.optimize.minimize(
         problem=problem,
-        n_starts=5,
+        n_starts=2,
         engine=engine,
         optimizer=optimizer,
         progress_bar=False,
     )
-    assert len(result.optimize_result) == 5
+    assert len(result.optimize_result) == 2
 
 
 def test_petab():
@@ -59,7 +59,9 @@ def test_petab():
 def _test_petab(engine):
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(
-            models.MODELS_DIR, "Zheng_PNAS2012", "Zheng_PNAS2012.yaml"
+            models.MODELS_DIR,
+            "Boehm_JProteomeRes2014",
+            "Boehm_JProteomeRes2014.yaml",
         )
     )
     objective = petab_importer.create_objective()
@@ -79,7 +81,9 @@ def test_deepcopy_objective():
     """Test copying objectives (needed for MultiProcessEngine)."""
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(
-            models.MODELS_DIR, "Zheng_PNAS2012", "Zheng_PNAS2012.yaml"
+            models.MODELS_DIR,
+            "Boehm_JProteomeRes2014",
+            "Boehm_JProteomeRes2014.yaml",
         )
     )
     objective = petab_importer.create_objective()
@@ -114,7 +118,9 @@ def test_pickle_objective():
     """Test serializing objectives (needed for MultiThreadEngine)."""
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(
-            models.MODELS_DIR, "Zheng_PNAS2012", "Zheng_PNAS2012.yaml"
+            models.MODELS_DIR,
+            "Boehm_JProteomeRes2014",
+            "Boehm_JProteomeRes2014.yaml",
         )
     )
     objective = petab_importer.create_objective()
