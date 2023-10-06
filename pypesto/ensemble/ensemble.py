@@ -1204,7 +1204,11 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
     return f'{PERCENTILE} {percentile}'
 
 
-def calculate_cutoff(result: Result, percentile: float = 0.95):
+def calculate_cutoff(
+    result: Result, 
+    percentile: float = 0.95,
+    cr_option: string = "simultaneous",
+):
     """
     Calculate the cutoff of the ensemble.
 
@@ -1220,6 +1224,10 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
         The percentile of the chi^2 distribution. Between 0 and 100.
         Higher values will result in a more lax cutoff. If the value is greater
         than 100, the cutoff will be returned as np.inf.
+    cr_option:
+        The type of confidence region, which determines the degree of freedom of
+        the chi^2 distribution for the cutoff value. It can take "simultaneous" or
+        "pointwise".
 
     Returns
     -------
@@ -1230,10 +1238,20 @@ def calculate_cutoff(result: Result, percentile: float = 0.95):
             f"percentile={percentile} is too large. Choose "
             f"0<=percentile<=100."
         )
+    if cr_option not in ["simultaneous", "pointwise"]:
+        raise ValueError(
+            f"Confidence region must be either simultaneous
+            or pointwise."
+        )
+
     # optimal point as base:
     fval_opt = result.optimize_result[0].fval
-    # degrees of freedom is equal to the number of parameters
-    df = result.problem.dim
-    range = chi2.ppf(q=percentile / 100, df=df)
+    if cr_option == "simultaneous":
+        # degrees of freedom is equal to the number of parameters
+        df = result.problem.dim
+    elif cr_option == "pointwise":
+        # degrees of freedom is equal to 1
+        df = 1
 
+    range = chi2.ppf(q=percentile / 100, df=df)
     return fval_opt + range
