@@ -1205,9 +1205,9 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
 
 
 def calculate_cutoff(
-    result: Result, 
+    result: Result,
     percentile: float = 0.95,
-    cr_option: string = 'simultaneous',
+    cr_option: str = 'simultaneous',
 ):
     """
     Calculate the cutoff of the ensemble.
@@ -1240,8 +1240,7 @@ def calculate_cutoff(
         )
     if cr_option not in ["simultaneous", "pointwise"]:
         raise ValueError(
-            f"Confidence region must be either simultaneous "
-            f"or pointwise."
+            "Confidence region must be either simultaneous or pointwise."
         )
 
     # optimal point as base:
