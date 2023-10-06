@@ -1240,8 +1240,8 @@ def calculate_cutoff(
         )
     if cr_option not in ["simultaneous", "pointwise"]:
         raise ValueError(
-            f"Confidence region must be either simultaneous
-            or pointwise."
+            f"Confidence region must be either simultaneous "
+            f"or pointwise."
         )
 
     # optimal point as base:
