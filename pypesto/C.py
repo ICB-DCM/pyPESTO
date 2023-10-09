@@ -36,7 +36,7 @@ ENSEMBLE_TYPE = 'ensemble_type'
 PREDICTIONS = 'predictions'
 
 SIMULTANEOUS = 'simultaneous'
-POINTWISE = 'pointwise
+POINTWISE = 'pointwise'
 
 LOWER_BOUND = 'lower_bound'
 UPPER_BOUND = 'upper_bound'
