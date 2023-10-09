@@ -45,6 +45,8 @@ from ..C import (
     X_VECTOR,
     EnsembleType,
     ModeType,
+    SIMULTANEOUS,
+    POINTWISE
 )
 from ..engine import (
     Engine,
@@ -1207,7 +1209,7 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
 def calculate_cutoff(
     result: Result,
     percentile: float = 0.95,
-    cr_option: str = 'simultaneous',
+    cr_option: str = SIMULTANEOUS,
 ):
     """
     Calculate the cutoff of the ensemble.
@@ -1238,17 +1240,17 @@ def calculate_cutoff(
             f"percentile={percentile} is too large. Choose "
             f"0<=percentile<=100."
         )
-    if cr_option not in ["simultaneous", "pointwise"]:
+    if cr_option not in [SIMULTANEOUS, POINTWISE]:
         raise ValueError(
             "Confidence region must be either simultaneous or pointwise."
         )
 
     # optimal point as base:
     fval_opt = result.optimize_result[0].fval
-    if cr_option == 'simultaneous':
+    if cr_option == SIMULTANEOUS:
         # degrees of freedom is equal to the number of parameters
         df = result.problem.dim
-    elif cr_option == 'pointwise':
+    elif cr_option == POINTWISE:
         # degrees of freedom is equal to 1
         df = 1
 
