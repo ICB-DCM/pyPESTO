@@ -61,14 +61,14 @@ logger = logging.getLogger(__name__)
 
 class PetabImporter(AmiciObjectBuilder):
     """
-    Importer for Petab files.
+    Importer for PEtab files.
 
     Create an `amici.Model`, an `objective.AmiciObjective` or a
-    `pypesto.Problem` from Petab files. The created objective function is a
+    `pypesto.Problem` from PEtab files. The created objective function is a
     negative log-likelihood function and can thus be negative. The actual
-    form of the likelihood depends on the noise model specified in petab.
+    form of the likelihood depends on the noise model specified in the provided PEtab problem.
     For more information, see
-    [the documentation in petab](https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions)
+    [the PEtab documentation](https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions)
     """  # noqa
 
     MODEL_BASE_DIR = "amici_models"
