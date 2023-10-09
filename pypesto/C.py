@@ -35,6 +35,9 @@ VECTOR_TAGS = 'vector_tags'
 ENSEMBLE_TYPE = 'ensemble_type'
 PREDICTIONS = 'predictions'
 
+SIMULTANEOUS = 'simultaneous'
+POINTWISE = 'pointwise
+
 LOWER_BOUND = 'lower_bound'
 UPPER_BOUND = 'upper_bound'
 PREEQUILIBRATION_CONDITION_ID = 'preequilibrationConditionId'
