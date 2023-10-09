@@ -29,12 +29,14 @@ from ..C import (
     OUTPUT,
     OUTPUT_SENSI,
     PERCENTILE,
+    POINTWISE,
     PREDICTION_ARRAYS,
     PREDICTION_ID,
     PREDICTION_RESULTS,
     PREDICTION_SUMMARY,
     PREDICTIONS,
     PREDICTOR,
+    SIMULTANEOUS,
     STANDARD_DEVIATION,
     SUMMARY,
     TIMEPOINTS,
@@ -45,8 +47,6 @@ from ..C import (
     X_VECTOR,
     EnsembleType,
     ModeType,
-    SIMULTANEOUS,
-    POINTWISE
 )
 from ..engine import (
     Engine,
