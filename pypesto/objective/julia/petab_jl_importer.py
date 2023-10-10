@@ -166,8 +166,8 @@ class PetabJlImporter:
             multistart optimization.
         """
         obj = self.create_objective(precompile=precompile)
-        lb = np.asarray(self.petab_jl_problem.lowerBounds)
-        ub = np.asarray(self.petab_jl_problem.upperBounds)
+        lb = np.asarray(self.petab_jl_problem.lower_bounds)
+        ub = np.asarray(self.petab_jl_problem.upper_bounds)
 
         return Problem(
             objective=obj,
