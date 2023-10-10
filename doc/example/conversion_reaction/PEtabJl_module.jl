@@ -13,6 +13,7 @@ petabProblem = PEtabODEProblem(
 	ode_solver=ODESolver(Rodas5P(), abstol=1e-08, reltol=1e-08, maxiters=Int64(1e4)),
 	gradient_method=:ForwardDiff,
 	hessian_method=:ForwardDiff,
+	sparse_jacobian=nothing,
 	verbose=true
 )
 

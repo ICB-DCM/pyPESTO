@@ -50,10 +50,10 @@ class PetabJlImporter:
     @staticmethod
     def from_yaml(
         yaml_file: str,
-        odeSolverOptions: Optional[dict] = None,
-        gradientMethod: Optional[str] = None,
-        hessianMethod: Optional[str] = None,
-        sparseJacobian: Optional[bool] = None,
+        ode_solver_options: Optional[dict] = None,
+        gradient_method: Optional[str] = None,
+        hessian_method: Optional[str] = None,
+        sparse_jacobian: Optional[bool] = None,
         verbose: Optional[bool] = None,
         directory: Optional[str] = None,
     ) -> PetabJlImporter:
@@ -67,11 +67,11 @@ class PetabJlImporter:
         ----------
         yaml_file:
             The yaml file of the PEtab problem
-        odeSolverOptions:
+        ode_solver_options:
             Dictionary like options for the ode solver in julia
-        gradientMethod, hessianMethod:
+        gradient_method, hessian_method:
             Julia methods to compute gradient and hessian
-        sparseJacobian:
+        sparse_jacobian:
             Whether to compute sparse Jacobians
         verbose:
             Whether to have a more informative log.
@@ -81,10 +81,10 @@ class PetabJlImporter:
         """
         # get default values
         options = _get_default_options(
-            odeSolverOptions=odeSolverOptions,
-            gradientMethod=gradientMethod,
-            hessianMethod=hessianMethod,
-            sparseJacobian=sparseJacobian,
+            ode_solver_options=ode_solver_options,
+            gradient_method=gradient_method,
+            hessian_method=hessian_method,
+            sparse_jacobian=sparse_jacobian,
             verbose=verbose,
         )
 
@@ -181,10 +181,10 @@ class PetabJlImporter:
 
 
 def _get_default_options(
-    odeSolverOptions: Union[dict, None] = None,
-    gradientMethod: Union[str, None] = None,
-    hessianMethod: Union[str, None] = None,
-    sparseJacobian: Union[str, None] = None,
+    ode_solver_options: Union[dict, None] = None,
+    gradient_method: Union[str, None] = None,
+    hessian_method: Union[str, None] = None,
+    sparse_jacobian: Union[str, None] = None,
     verbose: Union[str, None] = None,
 ) -> dict:
     """
@@ -194,13 +194,13 @@ def _get_default_options(
 
     Parameters
     ----------
-    odeSolverOptions:
+    ode_solver_options:
         Options for the ODE solver.
-    gradientMethod:
+    gradient_method:
         Method for gradient calculation.
-    hessianMethod:
+    hessian_method:
         Method for hessian calculation.
-    sparseJacobian:
+    sparse_jacobian:
         Whether the jacobian should be sparse.
     verbose:
         Whether to print verbose output.
@@ -211,51 +211,51 @@ def _get_default_options(
         The options.
     """
     # get default values
-    if odeSolverOptions is None:
-        odeSolverOptions = {
+    if ode_solver_options is None:
+        ode_solver_options = {
             "solver": "Rodas5P",
             "abstol": 1e-8,
             "reltol": 1e-8,
             "maxiters": "Int64(1e4)",
         }
-    if not odeSolverOptions["solver"].endswith("()"):
-        odeSolverOptions["solver"] += "()"  # add parentheses
-    if gradientMethod is None:
-        gradientMethod = "nothing"
-    if hessianMethod is None:
-        hessianMethod = "nothing"
-    if sparseJacobian is None:
-        sparseJacobian = "nothing"
+    if not ode_solver_options["solver"].endswith("()"):
+        ode_solver_options["solver"] += "()"  # add parentheses
+    if gradient_method is None:
+        gradient_method = "nothing"
+    if hessian_method is None:
+        hessian_method = "nothing"
+    if sparse_jacobian is None:
+        sparse_jacobian = "nothing"
     if verbose is None:
         verbose = "true"
 
-    # check values for gradientMethod and hessianMethod
+    # check values for gradient_method and hessian_method
     allowed_gradient_methods = [
         "ForwardDiff",
         "ForwardEquations",
         "Adjoint",
         "Zygote",
     ]
-    if gradientMethod not in allowed_gradient_methods:
+    if gradient_method not in allowed_gradient_methods:
         logger.warning(
-            f"gradientMethod {gradientMethod} is not in "
+            f"gradient_method {gradient_method} is not in "
             f"{allowed_gradient_methods}. Defaulting to ForwardDiff."
         )
-        gradientMethod = "ForwardDiff"
+        gradient_method = "ForwardDiff"
     allowed_hessian_methods = ["ForwardDiff", "BlocForwardDiff", "GaussNewton"]
-    if hessianMethod not in allowed_hessian_methods:
+    if hessian_method not in allowed_hessian_methods:
         logger.warning(
-            f"hessianMethod {hessianMethod} is not in "
+            f"hessian_method {hessian_method} is not in "
             f"{allowed_hessian_methods}. Defaulting to ForwardDiff."
         )
-        hessianMethod = "ForwardDiff"
+        hessian_method = "ForwardDiff"
 
     # fill options
     options = {
-        "odeSolverOptions": odeSolverOptions,
-        "gradientMethod": gradientMethod,
-        "hessianMethod": hessianMethod,
-        "sparseJacobian": sparseJacobian,
+        "ode_solver_options": ode_solver_options,
+        "gradient_method": gradient_method,
+        "hessian_method": hessian_method,
+        "sparse_jacobian": sparse_jacobian,
         "verbose": verbose,
     }
     return options
@@ -293,7 +293,7 @@ def _write_julia_file(
         "PEtab.jl/dev/API_choosen/#PEtab.setupPEtabODEProblem"
     )
     odeSolvOpt_str = ", ".join(
-        [f"{k}={v}" for k, v in options["odeSolverOptions"].items()]
+        [f"{k}={v}" for k, v in options["ode_solver_options"].items()]
     )
     # delete "solver=" from string
     odeSolvOpt_str = odeSolvOpt_str.replace("solver=", "")
@@ -310,8 +310,9 @@ def _write_julia_file(
         f"petabProblem = PEtabODEProblem(\n\t"
         f"petabModel,\n\t"
         f"ode_solver=ODESolver({odeSolvOpt_str}),\n\t"
-        f"gradient_method=:{options['gradientMethod']},\n\t"
-        f"hessian_method=:{options['hessianMethod']},\n\t"
+        f"gradient_method=:{options['gradient_method']},\n\t"
+        f"hessian_method=:{options['hessian_method']},\n\t"
+        f"sparse_jacobian={options['sparse_jacobian']},\n\t"
         f"verbose={options['verbose']}\n)\n\nend\n"
     )
     # write file
