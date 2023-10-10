@@ -406,3 +406,11 @@ class OptimizeResult:
             "releases."
         )
         return [res[key] for res in self.list]
+
+    def get_by_id(self, ores_id: str):
+        """Get OptimizationResult with the specified id."""
+        for res in self.list:
+            if res.id == ores_id:
+                return res
+        else:
+            raise ValueError(f"no optimization result with id={ores_id}")
