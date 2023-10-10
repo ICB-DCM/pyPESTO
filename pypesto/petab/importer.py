@@ -61,11 +61,15 @@ logger = logging.getLogger(__name__)
 
 class PetabImporter(AmiciObjectBuilder):
     """
-    Importer for Petab files.
+    Importer for PEtab files.
 
     Create an `amici.Model`, an `objective.AmiciObjective` or a
-    `pypesto.Problem` from Petab files.
-    """
+    `pypesto.Problem` from PEtab files. The created objective function is a
+    negative log-likelihood function and can thus be negative. The actual
+    form of the likelihood depends on the noise model specified in the provided PEtab problem.
+    For more information, see
+    [the PEtab documentation](https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions)
+    """  # noqa
 
     MODEL_BASE_DIR = "amici_models"
 
@@ -631,20 +635,37 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
-    def create_startpoint_method(self, **kwargs) -> StartpointMethod:
+    def create_startpoint_method(
+        self, x_ids: Sequence[str] = None, **kwargs
+    ) -> StartpointMethod:
         """Create a startpoint method.
 
         Parameters
         ----------
+        x_ids:
+            If provided, create a startpoint method that only samples the
+            parameters with the given IDs.
         **kwargs:
             Additional keyword arguments passed on to
             :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
 
         def startpoint_method(n_starts: int, **kwargs):
-            return petab.sample_parameter_startpoints(
+            startpoints = petab.sample_parameter_startpoints(
                 self.petab_problem.parameter_df, n_starts=n_starts
             )
+            if x_ids is None:
+                return startpoints
+
+            # subset parameters according to the provided parameter IDs
+            from petab.C import ESTIMATE
+
+            parameter_df = self.petab_problem.parameter_df
+            pars_to_estimate = list(
+                parameter_df.index[parameter_df[ESTIMATE] == 1]
+            )
+            x_idxs = [pars_to_estimate.index(x_id) for x_id in x_ids]
+            return startpoints[:, x_idxs]
 
         return FunctionStartpoints(function=startpoint_method, **kwargs)
 
@@ -740,7 +761,9 @@ class PetabImporter(AmiciObjectBuilder):
             x_names=x_ids,
             x_scales=x_scales,
             x_priors_defs=prior,
-            startpoint_method=self.create_startpoint_method(),
+            startpoint_method=self.create_startpoint_method(
+                x_ids=np.delete(x_ids, x_fixed_indices)
+            ),
             **problem_kwargs,
         )
 
