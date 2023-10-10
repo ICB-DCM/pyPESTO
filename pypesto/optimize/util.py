@@ -63,8 +63,9 @@ def preprocess_hdf5_history(
     # create directory with same name as original file stem
     if "{id}" in path.stem:
         template_path = (
-            path.parent / path.stem.replace("{id}", "") / (
-                path.stem + path.suffix)
+            path.parent
+            / path.stem.replace("{id}", "")
+            / (path.stem + path.suffix)
         )
     else:
         template_path = (
