@@ -6,6 +6,23 @@ Release notes
 ..........
 
 
+0.3.3 (2023-10-11)
+-------------------
+
+* Visualize:
+    * Get optimization result by id (#1116)
+* Storage:
+    * {id} in history storage filename (#1118)
+* Objective:
+    * adjusted PEtab.jl syntax to new release(#1128, #1131)
+    * Documentation on PEtab importer (#1126)
+* Ensembles
+    * Additional option for cutoff calculation (#1124)
+    * fix ensembles from optimization endpoints (#1130)
+* General
+    * Added How to Cite (#1125)
+
+
 0.3.2 (2023-10-02)
 -------------------
 
