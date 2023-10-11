@@ -670,7 +670,7 @@ class Ensemble:
             # did not reach maximum size and the next value is still
             # lower than the cutoff value
             if start['fval'] <= abs_cutoff and len(x_vectors) < max_size:
-                x_vectors.append(start['x'])
+                x_vectors.append(start['x'][result.problem.x_free_indices])
 
                 # the vector tag will be a -1 to indicate it is the last step
                 vector_tags.append((int(start['id']), -1))
