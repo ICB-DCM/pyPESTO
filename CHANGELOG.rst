@@ -10,6 +10,23 @@ Release notes
 -------------------
 
 * Visualize:
+    * Get optimization result by id (#1116)
+* Storage:
+    * {id} in history storage filename (#1118)
+* Objective:
+    * adjusted PEtab.jl syntax to new release(#1128, #1131)
+    * Documentation on PEtab importer (#1126)
+* Ensembles
+    * Additional option for cutoff calculation (#1124)
+    * fix ensembles from optimization endpoints (#1130)
+* General
+    * Added How to Cite (#1125)
+
+
+0.3.2 (2023-10-02)
+-------------------
+
+* Visualize:
     * Restrict fval magnitude in waterfall with order_by_id (#1090)
     * Hierarchical parameter plot fix (#1106)
     * Fix y-limits on waterfall (#1109)
