@@ -745,6 +745,9 @@ class PetabImporter(AmiciObjectBuilder):
         if problem_kwargs is None:
             problem_kwargs = {}
 
+        if startpoint_kwargs is None:
+            startpoint_kwargs = {}
+
         prior = self.create_prior()
 
         if prior is not None:
