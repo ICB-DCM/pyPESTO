@@ -300,7 +300,8 @@ class SplineInnerSolver(InnerSolver):
 
                     # Calculate (dJ_ds * ds_dtheta) term only if mu is not all 0
                     ds_grad_term = 0.0
-                    if np.any(mu):
+                    #if np.any(mu):
+                    if False:
                         s_dot = calculate_ds_dtheta(
                             sim_all=sim_all,
                             sy_all=sy_all,

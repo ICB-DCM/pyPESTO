@@ -862,8 +862,9 @@ class Ensemble:
         mapping = []
         for parameter_id_objective in parameter_ids_objective:
             if parameter_id_objective in parameter_ids_ensemble:
+                # Append index of parameter in ensemble.
                 mapping.append(
-                    parameter_ids_ensemble.index(parameter_id_objective)
+                    list(parameter_ids_ensemble).index(parameter_id_objective)
                 )
             elif default_value is not None:
                 mapping.append(default_value)

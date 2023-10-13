@@ -26,6 +26,7 @@ try:
     from ..hierarchical.spline_approximation.solver import (
         SplineInnerSolver,
         get_spline_mapped_simulations,
+        _calculate_regularization_for_group,
     )
 except ImportError:
     pass
@@ -408,3 +409,106 @@ def _add_spline_mapped_simulations_to_model_fit(
         ax.legend()
 
     return axes
+
+
+def _obtain_regularization_for_start(
+    pypesto_result: Result, start_index=0, **kwargs
+):
+    # Get the parameters from the pypesto result for the start_index.
+    x_dct = dict(
+        zip(
+            pypesto_result.problem.objective.x_ids,
+            pypesto_result.optimize_result.list[start_index]['x'],
+        )
+    )
+
+    x_dct.update(
+        pypesto_result.problem.objective.calculator.noise_dummy_values
+    )
+
+    # Get the needed objects from the pypesto problem.
+    edatas = pypesto_result.problem.objective.edatas
+    parameter_mapping = pypesto_result.problem.objective.parameter_mapping
+    amici_model = pypesto_result.problem.objective.amici_model
+    amici_solver = pypesto_result.problem.objective.amici_solver
+    n_threads = pypesto_result.problem.objective.n_threads
+    observable_ids = amici_model.getObservableIds()
+
+    # Fill in the parameters.
+    amici.parameter_mapping.fill_in_parameters(
+        edatas=edatas,
+        problem_parameters=x_dct,
+        scaled_parameters=True,
+        parameter_mapping=parameter_mapping,
+        amici_model=amici_model,
+    )
+
+    # Simulate the model with the parameters from the pypesto result.
+    inner_rdatas = amici.runAmiciSimulations(
+        amici_model,
+        amici_solver,
+        edatas,
+        num_threads=min(n_threads, len(edatas)),
+    )
+
+    # If any amici simulation failed, raise warning and return None.
+    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+        warnings.warn(
+            'Warning: Some AMICI simulations failed. Cannot plot inner solutions.'
+        )
+        return None
+
+    # Get simulation and sigma.
+    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+    sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
+
+    spline_calculator = None
+    for (
+        calculator
+    ) in pypesto_result.problem.objective.calculator.inner_calculators:
+        if isinstance(calculator, SplineAmiciCalculator):
+            spline_calculator = calculator
+            break
+
+    # Get the inner solver and problem.
+    inner_solver = spline_calculator.inner_solver
+    inner_problem = spline_calculator.inner_problem
+
+    inner_results = inner_solver.solve(inner_problem, sim, sigma)
+
+    reg_term_sum = 0
+
+    # for each result and group, plot the inner solution
+    for result, group in zip(inner_results, inner_problem.groups):
+        group_idx = list(inner_problem.groups.keys()).index(group)
+
+        # For each group get the inner parameters and simulation
+        xs = inner_problem.get_xs_for_group(group)
+
+        s = result[SCIPY_X]
+
+        inner_parameters = np.array([x.value for x in xs])
+        measurements = inner_problem.groups[group][DATAPOINTS]
+        simulation = inner_problem.groups[group][CURRENT_SIMULATION]
+
+        # For the simulation, get the spline bases
+        delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
+            self=None,
+            sim_all=simulation,
+            N=len(inner_parameters),
+            K=len(simulation),
+        )
+
+        if inner_solver.options[REGULARIZE_SPLINE]:
+            reg_term = _calculate_regularization_for_group(
+                s=s,
+                N=len(inner_parameters),
+                c=spline_bases,
+                regularization_factor=inner_solver.options[
+                    'regularization_factor'
+                ],
+            )
+            reg_term_sum += reg_term
+    
+    return reg_term_sum
+            
