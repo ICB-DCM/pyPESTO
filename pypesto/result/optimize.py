@@ -126,7 +126,7 @@ class OptimizerResult(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
-    def summary(self, full: bool = False) -> str:
+    def summary(self, full: bool = False, show_hess: bool = True) -> str:
         """
         Get summary of the object.
 
@@ -134,6 +134,8 @@ class OptimizerResult(dict):
         ----------
         full:
             If True, print full vectors including fixed parameters.
+        show_hess:
+            If True, display the Hessian of the result.
 
         Returns
         -------
@@ -164,7 +166,7 @@ class OptimizerResult(dict):
                 f"* final gradient value: "
                 f"{self.grad if full else self.grad[self.free_indices]}\n"
             )
-        if self.hess is not None:
+        if self.hess is not None and show_hess:
             hess = self.hess
             if not full:
                 hess = self.hess[np.ix_(self.free_indices, self.free_indices)]
@@ -239,6 +241,7 @@ class OptimizeResult:
         disp_best: bool = True,
         disp_worst: bool = False,
         full: bool = False,
+        show_hess: bool = True,
     ) -> str:
         """
         Get summary of the object.
@@ -251,6 +254,8 @@ class OptimizeResult:
             Whether to display a detailed summary of the worst run.
         full:
             If True, print full vectors including fixed parameters.
+        show_hess:
+            If True, display the Hessian of the OptimizerResult.
         """
         if len(self) == 0:
             return "## Optimization Result \n\n*empty*\n"
@@ -295,7 +300,8 @@ class OptimizeResult:
         )
         if disp_best:
             summary += (
-                f"\nA summary of the best run:\n\n{self[0].summary(full)}"
+                f"\nA summary of the best run:\n\n"
+                f"{self[0].summary(full, show_hess=show_hess)}"
             )
         if disp_worst:
             summary += (

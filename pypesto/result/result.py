@@ -36,7 +36,7 @@ class Result:
         self.profile_result = profile_result or ProfileResult()
         self.sample_result = sample_result or SampleResult()
 
-    def summary(self, full: bool = False) -> str:
+    def summary(self, full: bool = False, show_hess: bool = True) -> str:
         """
         Get summary of the object.
 
@@ -44,5 +44,7 @@ class Result:
         ----------
         full:
             If True, print full vectors including fixed parameters.
+        show_hess:
+            If True, display the Hessian of the OptimizeResult.
         """
-        return self.optimize_result.summary(full=full)
+        return self.optimize_result.summary(full=full, show_hess=show_hess)
