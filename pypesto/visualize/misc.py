@@ -49,7 +49,6 @@ def process_result_list(
     """
     # check how many results were passed
     single_result = False
-    legend_error = False
     if isinstance(results, list):
         if len(results) == 1:
             single_result = True
