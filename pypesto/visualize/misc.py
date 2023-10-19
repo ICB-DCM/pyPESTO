@@ -80,18 +80,16 @@ def process_result_list(
                 legends.append('Result ' + str(i_leg))
         else:
             # legends were passed by user: check length
-            if isinstance(legends, list):
+            try:
+                if isinstance(legends, str):
+                    legends = [legends]
                 if len(legends) != len(results):
-                    legend_error = True
-            else:
-                legend_error = True
-
-    # size of legend list and size of results does not match
-    if legend_error:
-        raise ValueError(
-            'List of results passed and list of labels do '
-            'not have the same length but should. Stopping.'
-        )
+                    raise TypeError
+            except TypeError:
+                raise ValueError(
+                    'List of results passed and list of labels do '
+                    'not have the same length but should. Stopping.'
+                )
 
     return results, colors, legends
 
