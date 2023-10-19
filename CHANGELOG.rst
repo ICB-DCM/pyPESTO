@@ -12,13 +12,13 @@ Release notes
 * Visualize:
     * Get optimization result by id (#1116)
 * Storage:
-    * {id} in history storage filename (#1118)
+    * allow "{id}" in history storage filename (#1118)
 * Objective:
-    * adjusted PEtab.jl syntax to new release(#1128, #1131)
-    * Documentation on PEtab importer (#1126)
+    * adjusted PEtab.jl syntax to new release (#1128, #1131)
+    * Documentation on PEtab importer updated (#1126)
 * Ensembles
     * Additional option for cutoff calculation (#1124)
-    * fix ensembles from optimization endpoints (#1130)
+    * Ensembles from optimization endpoints now only takes free parameters (#1130)
 * General
     * Added How to Cite (#1125)
 
