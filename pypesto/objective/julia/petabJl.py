@@ -61,10 +61,10 @@ class PEtabJlObjective(JuliaObjective):
         self.petab_jl_problem = petab_jl_problem
 
         # get functions
-        fun = self.petab_jl_problem.computeCost
-        grad = self.petab_jl_problem.computeGradient
-        hess = self.petab_jl_problem.computeHessian
-        x_names = np.asarray(self.petab_jl_problem.θ_estNames)
+        fun = self.petab_jl_problem.compute_cost
+        grad = self.petab_jl_problem.compute_gradient
+        hess = self.petab_jl_problem.compute_hessian
+        x_names = np.asarray(self.petab_jl_problem.θ_names)
 
         # call the super super super constructor
         super(JuliaObjective, self).__init__(
@@ -102,10 +102,10 @@ class PEtabJlObjective(JuliaObjective):
         self.petab_jl_problem = petab_jl_problem
 
         # get functions
-        fun = self.petab_jl_problem.computeCost
-        grad = self.petab_jl_problem.computeGradient
-        hess = self.petab_jl_problem.computeHessian
-        x_names = np.asarray(self.petab_jl_problem.θ_estNames)
+        fun = self.petab_jl_problem.compute_cost
+        grad = self.petab_jl_problem.compute_gradient
+        hess = self.petab_jl_problem.compute_hessian
+        x_names = np.asarray(self.petab_jl_problem.θ_names)
 
         # call the super super constructor
         super(JuliaObjective, self).__init__(fun, grad, hess, x_names)
