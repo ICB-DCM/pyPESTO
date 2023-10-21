@@ -96,7 +96,7 @@ def process_result_list(
                 legend_type_error = True
 
     if legend_type_error:
-        raise TypeError("Unexpected legend type. Stopping")
+        raise TypeError("Unexpected legend type.")
 
     return results, colors, legends
 
