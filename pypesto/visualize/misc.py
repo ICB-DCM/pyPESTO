@@ -90,7 +90,7 @@ def process_result_list(
                 if len(legends) != len(results):
                     raise ValueError(
                         'List of results passed and list of labels do '
-                        'not have the same length but should. Stopping.'
+                        'not have the same length.'
                     )
             except TypeError:
                 legend_type_error = True
