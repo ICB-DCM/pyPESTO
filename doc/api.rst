@@ -23,6 +23,7 @@ API reference
    pypesto.result
    pypesto.sample
    pypesto.select
+   pypesto.select.postprocessors
    pypesto.startpoint
    pypesto.store
    pypesto.visualize
