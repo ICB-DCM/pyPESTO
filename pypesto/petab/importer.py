@@ -674,6 +674,7 @@ class PetabImporter(AmiciObjectBuilder):
         objective: AmiciObjective = None,
         x_guesses: Optional[Iterable[float]] = None,
         problem_kwargs: Dict[str, Any] = None,
+        startpoint_kwargs: Dict[str, Any] = None,
         **kwargs,
     ) -> Problem:
         """Create a :class:`pypesto.Problem`.
@@ -688,6 +689,9 @@ class PetabImporter(AmiciObjectBuilder):
             optimization.
         problem_kwargs:
             Passed to the `pypesto.Problem` constructor.
+        startpoint_kwargs:
+            Keyword arguments forwarded to
+            :meth:`PetabImporter.create_startpoint_method`.
         **kwargs:
             Additional key word arguments passed on to the objective,
             if not provided.
@@ -741,6 +745,9 @@ class PetabImporter(AmiciObjectBuilder):
         if problem_kwargs is None:
             problem_kwargs = {}
 
+        if startpoint_kwargs is None:
+            startpoint_kwargs = {}
+
         prior = self.create_prior()
 
         if prior is not None:
@@ -762,7 +769,7 @@ class PetabImporter(AmiciObjectBuilder):
             x_scales=x_scales,
             x_priors_defs=prior,
             startpoint_method=self.create_startpoint_method(
-                x_ids=np.delete(x_ids, x_fixed_indices)
+                x_ids=np.delete(x_ids, x_fixed_indices), **startpoint_kwargs
             ),
             **problem_kwargs,
         )
