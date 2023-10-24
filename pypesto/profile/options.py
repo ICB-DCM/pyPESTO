@@ -5,7 +5,7 @@ class ProfileOptions(dict):
     """
     Options for optimization based profiling.
 
-    Parameters
+    Attributes
     ----------
     default_step_size:
         Default step size of the profiling routine along the profile path
