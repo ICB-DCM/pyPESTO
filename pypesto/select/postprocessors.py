@@ -10,6 +10,14 @@ from .. import store, visualize
 from ..C import TYPE_POSTPROCESSOR
 from .model_problem import ModelProblem
 
+__all__ = [
+    'model_id_binary_postprocessor',
+    'multi_postprocessor',
+    'report_postprocessor',
+    'save_postprocessor',
+    'waterfall_plot_postprocessor',
+]
+
 
 def multi_postprocessor(
     problem: ModelProblem,
