@@ -132,6 +132,10 @@ def parameter_profile(
     for i_par in profile_index:
         # only compute profiles for free parameters
         if i_par in problem.x_fixed_indices:
+            # log a warning
+            logger.warning(
+                f"Parameter {i_par} is fixed and will not be profiled."
+            )
             continue
 
         current_profile = result.profile_result.get_profiler_result(
