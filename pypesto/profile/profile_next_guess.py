@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Literal, Tuple, Union
 
 import numpy as np
 
@@ -7,13 +7,20 @@ from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
 
+__all__ = ['next_guess', 'fixed_step', 'adaptive_step']
+
 
 def next_guess(
     x: np.ndarray,
     par_index: int,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     profile_options: ProfileOptions,
-    update_type: str,
+    update_type: Literal[
+        'fixed_step',
+        'adaptive_step_order_0',
+        'adaptive_step_order_1',
+        'adaptive_step_regression',
+    ],
     current_profile: ProfilerResult,
     problem: Problem,
     global_opt: float,
@@ -31,11 +38,14 @@ def next_guess(
     par_index:
         The index of the parameter of the current profile.
     par_direction:
-        The direction, in which the profiling is done (1 or -1).
+        The direction, in which the profiling is done (``1`` or ``-1``).
     profile_options:
         Various options applied to the profile optimization.
     update_type:
-        Type of update for next profile point.
+        Type of update for next profile point:
+        ``fixed_step`` (see :func:`fixed_step`),
+        ``adaptive_step_order_0``, ``adaptive_step_order_1``, or ``adaptive_step_regression``
+        (see :func:`adaptive_step`).
     current_profile:
         The profile which should be computed.
     problem:
@@ -60,7 +70,7 @@ def next_guess(
         order = np.nan
     else:
         raise Exception(
-            'Unsupported update_type for ' 'create_next_startpoint.'
+            f'Unsupported `update_type` {update_type} for `next_guess`.'
         )
 
     return adaptive_step(
@@ -78,11 +88,14 @@ def next_guess(
 def fixed_step(
     x: np.ndarray,
     par_index: int,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     options: ProfileOptions,
     problem: Problem,
 ) -> np.ndarray:
     """Most simple method to create the next guess.
+
+    Computes the next point based on the fixed step size given by
+    ``default_step_size`` in :class:`ProfileOptions`.
 
     Parameters
     ----------
@@ -91,7 +104,7 @@ def fixed_step(
     par_index:
         The index of the parameter of the current profile
     par_direction:
-        The direction, in which the profiling is done (1 or -1)
+        The direction, in which the profiling is done (``1`` or ``-1``)
     options:
         Various options applied to the profile optimization.
     problem:
@@ -119,7 +132,7 @@ def fixed_step(
 def adaptive_step(
     x: np.ndarray,
     par_index: int,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     options: ProfileOptions,
     current_profile: ProfilerResult,
     problem: Problem,
@@ -148,9 +161,9 @@ def adaptive_step(
     global_opt:
         log-posterior value of the global optimum
     order:
-        Specifies the precise algorithm for extrapolation: can be 0 (
-        just one parameter is updated), 1 (last two points used to
-        extrapolate all parameters), and np.nan (indicates that a more
+        Specifies the precise algorithm for extrapolation: can be ``0`` (
+        just one parameter is updated), ``1`` (last two points used to
+        extrapolate all parameters), and ``np.nan`` (indicates that a more
         complex regression should be used)
 
     Returns
@@ -252,7 +265,7 @@ def adaptive_step(
     # iterate until good step size is found
     if next_obj_target < next_obj:
         # The step is rather too long
-        return do_line_seach(
+        return do_line_search(
             next_x,
             step_size_guess,
             'decrease',
@@ -268,7 +281,7 @@ def adaptive_step(
 
     else:
         # The step is rather too short
-        return do_line_seach(
+        return do_line_search(
             next_x,
             step_size_guess,
             'increase',
@@ -387,7 +400,7 @@ def get_reg_polynomial(
     return reg_par
 
 
-def do_line_seach(
+def do_line_search(
     next_x: np.ndarray,
     step_size_guess: float,
     direction: str,
