@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import Callable, Iterable, Union
 
@@ -76,6 +77,8 @@ def parameter_profile(
     result:
         The profile results are filled into `result.profile_result`.
     """
+    # Copy the problem to avoid side effects
+    problem = copy.deepcopy(problem)
     # Handling defaults
     # profiling indices
     if profile_index is None:
