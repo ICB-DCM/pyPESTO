@@ -78,11 +78,11 @@ def parameter_profile(
         The profile results are filled into `result.profile_result`.
     """
     # Copy the problem to avoid side effects
-    problem_profiling = copy.deepcopy(problem)
+    problem = copy.deepcopy(problem)
     # Handling defaults
     # profiling indices
     if profile_index is None:
-        profile_index = problem_profiling.x_free_indices
+        profile_index = problem.x_free_indices
 
     # check profiling options
     if profile_options is None:
@@ -123,7 +123,7 @@ def parameter_profile(
     # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
     global_opt = initialize_profile(
-        problem_profiling, result, result_index, profile_index, profile_list
+        problem, result, result_index, profile_index, profile_list
     )
     # if engine==None set SingleCoreEngine() as default
     if engine is None:
@@ -134,7 +134,7 @@ def parameter_profile(
     # loop over parameters to create tasks
     for i_par in profile_index:
         # only compute profiles for free parameters
-        if i_par in problem_profiling.x_fixed_indices:
+        if i_par in problem.x_fixed_indices:
             continue
 
         current_profile = result.profile_result.get_profiler_result(
@@ -144,7 +144,7 @@ def parameter_profile(
 
         task = ProfilerTask(
             current_profile=current_profile,
-            problem=problem_profiling,
+            problem=problem,
             optimizer=optimizer,
             options=profile_options,
             create_next_guess=create_next_guess,
