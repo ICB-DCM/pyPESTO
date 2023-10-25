@@ -1215,10 +1215,11 @@ class FidesOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Optimizer options.
+            Optimizer options. See :meth:`fides.minimize.Optimizer.minimize`
+            and :class:`fides.constants.Options` for details.
         hessian_update:
-            Hessian update strategy. If this is None, a hybrid approximation
-            that switches from the problem.objective provided Hessian (
+            Hessian update strategy. If this is ``None``, a hybrid approximation
+            that switches from the ``problem.objective`` provided Hessian (
             approximation) to a BFGS approximation will be used.
         """
         super().__init__()
