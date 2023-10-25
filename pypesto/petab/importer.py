@@ -128,7 +128,8 @@ class PetabImporter(AmiciObjectBuilder):
 
         self.validate_inner_options()
 
-        if validate_petab:
+        self.validate_petab = validate_petab
+        if self.validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
         if self._hierarchical and validate_petab_hierarchical:
@@ -280,7 +281,7 @@ class PetabImporter(AmiciObjectBuilder):
             logger.info(
                 f"Compiling amici model to folder " f"{self.output_folder}."
             )
-            self.compile_model(**kwargs)
+            self.compile_model(validate=self.validate_petab, **kwargs)
         else:
             logger.debug(
                 f"Using existing amici model in folder "
