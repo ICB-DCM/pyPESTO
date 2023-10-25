@@ -53,6 +53,7 @@ try:
     import amici.petab_objective
     import petab
     from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
+    from petab.models import MODEL_TYPE_SBML
 except ImportError:
     pass
 
@@ -281,7 +282,13 @@ class PetabImporter(AmiciObjectBuilder):
             logger.info(
                 f"Compiling amici model to folder " f"{self.output_folder}."
             )
-            self.compile_model(validate=self.validate_petab, **kwargs)
+            if self.petab_problem.model.type_id == MODEL_TYPE_SBML:
+                self.compile_model(
+                    validate=self.validate_petab,
+                    **kwargs,
+                )
+            else:
+                self.compile_model(**kwargs)
         else:
             logger.debug(
                 f"Using existing amici model in folder "
