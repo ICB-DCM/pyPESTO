@@ -134,7 +134,7 @@ class OptimizerHistory:
             and not allclose(result[X], self.x_min)
         ):
             # issue a warning, as if this happens, then something may be wrong
-            logger.warn(
+            logger.warning(
                 f"History has a better point {fval} than the current best "
                 "point {self.fval_min}."
             )
