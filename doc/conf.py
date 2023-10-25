@@ -81,6 +81,7 @@ intersphinx_mapping = {
         None,
     ),
     'amici': ('https://amici.readthedocs.io/en/latest/', None),
+    'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
 }
 
 bibtex_bibfiles = ["using_pypesto.bib"]
