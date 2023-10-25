@@ -1337,8 +1337,11 @@ class FidesOptimizer(Optimizer):
         try:
             opt.minimize(x0)
             msg = self._convert_exitflag_to_message(opt)
-        except RuntimeError as err:
-            msg = str(err)
+        except RuntimeError:
+            import sys
+            import traceback
+
+            msg = "\n".join(traceback.format_exception(*sys.exc_info()))
 
         optimizer_result = OptimizerResult(
             x=opt.x_min,
