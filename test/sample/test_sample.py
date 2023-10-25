@@ -18,7 +18,7 @@ from pypesto.sample.pymc import PymcSampler
 
 
 def gaussian_llh(x):
-    return float(norm.logpdf(x))
+    return float(norm.logpdf(x).item())
 
 
 def gaussian_problem():
