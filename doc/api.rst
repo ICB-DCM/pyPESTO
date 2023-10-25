@@ -20,6 +20,7 @@ API reference
    pypesto.predict
    pypesto.problem
    pypesto.profile
+   pypesto.profile.profile_next_guess
    pypesto.result
    pypesto.sample
    pypesto.select
