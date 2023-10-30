@@ -89,6 +89,7 @@ def parameter_profile(
     if profile_options is None:
         profile_options = ProfileOptions()
     profile_options = ProfileOptions.create_instance(profile_options)
+    profile_options.validate()
 
     # create a function handle that will be called later to get the next point
     if isinstance(next_guess_method, str):
