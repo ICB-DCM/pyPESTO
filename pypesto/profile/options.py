@@ -91,3 +91,24 @@ class ProfileOptions(dict):
             return maybe_options
         options = ProfileOptions(**maybe_options)
         return options
+
+    def validate(self):
+        """Check if options are valid.
+
+        Raise ``ValueError`` if not.
+        """
+        if self.min_step_size <= 0:
+            raise ValueError("min_step_size must be > 0.")
+        if self.max_step_size <= 0:
+            raise ValueError("max_step_size must be > 0.")
+        if self.min_step_size > self.max_step_size:
+            raise ValueError("min_step_size must be <= max_step_size.")
+        if self.default_step_size <= 0:
+            raise ValueError("default_step_size must be > 0.")
+        if self.default_step_size > self.max_step_size:
+            raise ValueError("default_step_size must be <= max_step_size.")
+        if self.default_step_size < self.min_step_size:
+            raise ValueError("default_step_size must be >= min_step_size.")
+
+        if self.magic_factor_obj_value < 0 or self.magic_factor_obj_value >= 1:
+            raise ValueError("magic_factor_obj_value must be >= 0 and < 1.")
