@@ -415,6 +415,28 @@ def test_approximate_ci():
     assert np.isclose(ub, 9)
 
 
+def test_options_valid():
+    """Test ProfileOptions validity checks."""
+    # default settings are valid
+    profile.ProfileOptions()
+
+    # try to set invalid values
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(default_step_size=-1)
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(default_step_size=1, min_step_size=2)
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(
+            default_step_size=2,
+            min_step_size=1,
+        )
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(
+            min_step_size=2,
+            max_step_size=1,
+        )
+
+
 @pytest.mark.parametrize(
     "lb,ub",
     [(6 * np.ones(5), 10 * np.ones(5)), (-4 * np.ones(5), 1 * np.ones(5))],
