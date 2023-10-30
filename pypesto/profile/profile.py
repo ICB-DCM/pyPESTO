@@ -1,3 +1,4 @@
+import copy
 import logging
 from typing import Callable, Iterable, Union
 
@@ -55,8 +56,9 @@ def parameter_profile(
         Index from which optimization result profiling should be started
         (default: global optimum, i.e., index = 0).
     next_guess_method:
-        Function handle to a method that creates the next starting point for
-        optimization in profiling.
+        Method that creates the next starting point for optimization in profiling.
+        One of the ``update_type`` options supported by
+        :func:`pypesto.profile.profile_next_guess.next_guess`.
     profile_options:
         Various options applied to the profile optimization.
     progress_bar:
@@ -65,8 +67,8 @@ def parameter_profile(
         Name of the hdf5 file, where the result will be saved. Default is
         None, which deactivates automatic saving. If set to
         "Auto" it will automatically generate a file named
-        `year_month_day_profiling_result.hdf5`.
-        Optionally a method, see docs for `pypesto.store.auto.autosave`.
+        ``year_month_day_profiling_result.hdf5``.
+        Optionally a method, see docs for :func:`pypesto.store.auto.autosave`.
     overwrite:
         Whether to overwrite `result/profiling` in the autosave file
         if it already exists.
@@ -76,6 +78,8 @@ def parameter_profile(
     result:
         The profile results are filled into `result.profile_result`.
     """
+    # Copy the problem to avoid side effects
+    problem = copy.deepcopy(problem)
     # Handling defaults
     # profiling indices
     if profile_index is None:
@@ -85,6 +89,7 @@ def parameter_profile(
     if profile_options is None:
         profile_options = ProfileOptions()
     profile_options = ProfileOptions.create_instance(profile_options)
+    profile_options.validate()
 
     # create a function handle that will be called later to get the next point
     if isinstance(next_guess_method, str):
@@ -110,12 +115,12 @@ def parameter_profile(
             )
 
     elif callable(next_guess_method):
-        raise Exception(
+        raise NotImplementedError(
             'Passing function handles for computation of next '
             'profiling point is not yet supported.'
         )
     else:
-        raise Exception('Unsupported input for next_guess_method.')
+        raise ValueError('Unsupported input for next_guess_method.')
 
     # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
@@ -132,6 +137,10 @@ def parameter_profile(
     for i_par in profile_index:
         # only compute profiles for free parameters
         if i_par in problem.x_fixed_indices:
+            # log a warning
+            logger.warning(
+                f"Parameter {i_par} is fixed and will not be profiled."
+            )
             continue
 
         current_profile = result.profile_result.get_profiler_result(

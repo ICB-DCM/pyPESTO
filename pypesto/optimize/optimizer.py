@@ -608,7 +608,7 @@ class DlibOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The Dlib optimizer does not support x0.")
+            logger.warning("The Dlib optimizer does not support x0.")
         return False
 
 
@@ -666,7 +666,7 @@ class PyswarmOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The pyswarm optimizer does not support x0.")
+            logger.warning("The pyswarm optimizer does not support x0.")
         return False
 
 
@@ -940,7 +940,7 @@ class PyswarmsOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The pyswarms optimizer does not support x0.")
+            logger.warning("The pyswarms optimizer does not support x0.")
         return False
 
 
@@ -1186,7 +1186,7 @@ class NLoptOptimizer(Optimizer):
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ):
             if x_guesses is not None and x_guesses.size > 0:
-                logger.warn(
+                logger.warning(
                     f"The NLopt optimizer method {self.method} does "
                     "not support x0."
                 )
@@ -1215,10 +1215,11 @@ class FidesOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Optimizer options.
+            Optimizer options. See :meth:`fides.minimize.Optimizer.minimize`
+            and :class:`fides.constants.Options` for details.
         hessian_update:
-            Hessian update strategy. If this is None, a hybrid approximation
-            that switches from the problem.objective provided Hessian (
+            Hessian update strategy. If this is ``None``, a hybrid approximation
+            that switches from the ``problem.objective`` provided Hessian (
             approximation) to a BFGS approximation will be used.
         """
         super().__init__()
