@@ -7,6 +7,7 @@ import warnings
 from copy import deepcopy
 
 import numpy as np
+import pytest
 from numpy.testing import assert_almost_equal
 
 import pypesto
@@ -412,3 +413,25 @@ def test_approximate_ci():
     # bound value
     assert np.isclose(lb, -3)
     assert np.isclose(ub, 9)
+
+
+def test_options_valid():
+    """Test ProfileOptions validity checks."""
+    # default settings are valid
+    profile.ProfileOptions()
+
+    # try to set invalid values
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(default_step_size=-1)
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(default_step_size=1, min_step_size=2)
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(
+            default_step_size=2,
+            min_step_size=1,
+        )
+    with pytest.raises(ValueError):
+        profile.ProfileOptions(
+            min_step_size=2,
+            max_step_size=1,
+        )

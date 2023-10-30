@@ -97,7 +97,7 @@ class ProfileOptions(dict):
     def validate(self):
         """Check if options are valid.
 
-        Raise ``ValueError`` if not.
+        Raises ``ValueError`` if current settings aren't valid.
         """
         if self.min_step_size <= 0:
             raise ValueError("min_step_size must be > 0.")
