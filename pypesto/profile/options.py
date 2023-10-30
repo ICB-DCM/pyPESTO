@@ -66,6 +66,8 @@ class ProfileOptions(dict):
         self.magic_factor_obj_value = magic_factor_obj_value
         self.whole_path = whole_path
 
+        self.validate()
+
     def __getattr__(self, key):
         """Allow usage of keys like attributes."""
         try:
