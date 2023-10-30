@@ -435,3 +435,51 @@ def test_options_valid():
             min_step_size=2,
             max_step_size=1,
         )
+
+
+@pytest.mark.parametrize(
+    "lb,ub",
+    [(6 * np.ones(5), 10 * np.ones(5)), (-4 * np.ones(5), 1 * np.ones(5))],
+)
+def test_gh1165(lb, ub):
+    """Regression test for https://github.com/ICB-DCM/pyPESTO/issues/1165
+
+    Check profiles with non-symmetric bounds and whole_path=True span the full parameter domain.
+    """
+    obj = rosen_for_sensi(max_sensi_order=1)['obj']
+
+    problem = pypesto.Problem(
+        objective=obj,
+        lb=lb,
+        ub=ub,
+    )
+
+    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=2,
+        progress_bar=False,
+    )
+    # just any parameter
+    par_idx = 1
+    profile.parameter_profile(
+        problem=problem,
+        result=result,
+        optimizer=optimizer,
+        next_guess_method='fixed_step',
+        profile_index=[par_idx],
+        progress_bar=False,
+        profile_options=profile.ProfileOptions(
+            min_step_size=0.1,
+            delta_ratio_max=0.05,
+            default_step_size=0.5,
+            ratio_min=0.01,
+            whole_path=True,
+        ),
+    )
+    # parameter value of the profiled parameter
+    x_path = result.profile_result.list[0][par_idx]['x_path'][par_idx, :]
+    # ensure we cover lb..ub
+    assert x_path[0] == lb[par_idx], (x_path.min(), lb[par_idx])
+    assert x_path[-1] == ub[par_idx], (x_path.max(), ub[par_idx])
