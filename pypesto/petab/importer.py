@@ -44,7 +44,7 @@ from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
 from ..problem import Problem
 from ..result import PredictionResult
-from ..startpoint import FunctionStartpoints, StartpointMethod
+from ..startpoint import CheckedStartpoints, StartpointMethod
 
 try:
     import amici
@@ -52,7 +52,11 @@ try:
     import amici.petab_import
     import amici.petab_objective
     import petab
-    from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
+    from petab.C import (
+        ESTIMATE,
+        PREEQUILIBRATION_CONDITION_ID,
+        SIMULATION_CONDITION_ID,
+    )
 except ImportError:
     pass
 
@@ -635,39 +639,16 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
-    def create_startpoint_method(
-        self, x_ids: Sequence[str] = None, **kwargs
-    ) -> StartpointMethod:
+    def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
 
         Parameters
         ----------
-        x_ids:
-            If provided, create a startpoint method that only samples the
-            parameters with the given IDs.
         **kwargs:
             Additional keyword arguments passed on to
             :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
-
-        def startpoint_method(n_starts: int, **kwargs):
-            startpoints = petab.sample_parameter_startpoints(
-                self.petab_problem.parameter_df, n_starts=n_starts
-            )
-            if x_ids is None:
-                return startpoints
-
-            # subset parameters according to the provided parameter IDs
-            from petab.C import ESTIMATE
-
-            parameter_df = self.petab_problem.parameter_df
-            pars_to_estimate = list(
-                parameter_df.index[parameter_df[ESTIMATE] == 1]
-            )
-            x_idxs = [pars_to_estimate.index(x_id) for x_id in x_ids]
-            return startpoints[:, x_idxs]
-
-        return FunctionStartpoints(function=startpoint_method, **kwargs)
+        return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
     def create_problem(
         self,
@@ -769,7 +750,7 @@ class PetabImporter(AmiciObjectBuilder):
             x_scales=x_scales,
             x_priors_defs=prior,
             startpoint_method=self.create_startpoint_method(
-                x_ids=np.delete(x_ids, x_fixed_indices), **startpoint_kwargs
+                **startpoint_kwargs
             ),
             **problem_kwargs,
         )
@@ -963,3 +944,67 @@ def get_petab_non_quantitative_data_types(
     if len(non_quantitative_data_types) == 0:
         return None
     return non_quantitative_data_types
+
+
+class PetabStartpoints(CheckedStartpoints):
+    """Startpoint method for PEtab problems."""
+
+    def __init__(self, petab_problem: petab.Problem, **kwargs):
+        super().__init__(**kwargs)
+        self.petab_problem = petab_problem
+
+    def __call__(
+        self,
+        n_starts: int,
+        problem: Problem,
+    ) -> np.ndarray:
+        """Call the startpoint method."""
+        # temporarily safe `problem`, because we'll need it in `sample()`,
+        #  but `CheckedStartpoints` doesn't provide it there.
+        self._problem = problem
+        try:
+            res = super().__call__(n_starts, problem)
+        finally:
+            self._problem = None
+        return res
+
+    def sample(
+        self,
+        n_starts: int,
+        lb: np.ndarray,
+        ub: np.ndarray,
+    ) -> np.ndarray:
+        """Actual startpoint sampling."""
+        pypesto_problem = self._problem
+        parameter_df = self.petab_problem.parameter_df
+
+        # startpoints from PEtab for all parameters with ESTIMATE=1
+        startpoints = petab.sample_parameter_startpoints(
+            parameter_df, n_starts=n_starts
+        )
+
+        # check for any additional fixed parameters
+        #  (i.e. fixed in pypesto but ESTIMATE=1 in PEtab)
+        current_free_ids = np.asarray(pypesto_problem.x_names)[
+            pypesto_problem.x_free_indices
+        ]
+        petab_free_ids = parameter_df.index[parameter_df[ESTIMATE] == 1]
+        if np.all(current_free_ids == petab_free_ids):
+            # no fixed parameters - good as is
+            return startpoints
+
+        # only return the non-fixed parameters
+        #  we go via parameter names here to handle the case where any
+        #  parameters are fixed in addition to those with ESTIMATE=0,
+        #  which happens e.g. during computing parameter profiles
+        current_free_ids = list(current_free_ids)
+        petab_free_ids = list(petab_free_ids)
+        problem_par_id_to_petab_par_idx = {
+            problem_par_id: petab_free_ids.index(problem_par_id)
+            for problem_par_id in current_free_ids
+        }
+        x_free_indices_petab = [
+            problem_par_id_to_petab_par_idx[problem_par_id]
+            for problem_par_id in current_free_ids
+        ]
+        return startpoints[:, x_free_indices_petab]
