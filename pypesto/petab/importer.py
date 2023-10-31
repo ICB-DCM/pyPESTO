@@ -989,7 +989,9 @@ class PetabStartpoints(CheckedStartpoints):
             pypesto_problem.x_free_indices
         ]
         petab_free_ids = parameter_df.index[parameter_df[ESTIMATE] == 1]
-        if np.all(current_free_ids == petab_free_ids):
+        if len(current_free_ids) == len(petab_free_ids) and np.all(
+            current_free_ids == petab_free_ids
+        ):
             # no fixed parameters - good as is
             return startpoints
 
