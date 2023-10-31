@@ -92,15 +92,31 @@ def walk_along_profile(
         startpoint = np.array([x_next[i] for i in problem.x_free_indices])
 
         # run optimization
-        # IMPORTANT: This optimization will need a proper exception
-        # handling (coming soon)
         if startpoint.size > 0:
-            optimizer_result = optimizer.minimize(
-                problem=problem,
-                x0=startpoint,
-                id='0',
-                optimize_options=OptimizeOptions(allow_failed_starts=False),
-            )
+            # number of optimization attempts for the given value of i_par in case
+            #  no finite solution is found
+            max_tries = 10
+            for i_optimize_attempt in range(max_tries):
+                optimizer_result = optimizer.minimize(
+                    problem=problem,
+                    x0=startpoint,
+                    id=str(i_optimize_attempt),
+                    optimize_options=OptimizeOptions(
+                        allow_failed_starts=False
+                    ),
+                )
+                if np.isfinite(optimizer_result.fval):
+                    break
+                # sample a new starting point for another attempt
+                #  might be preferable to stay close to the previous point, at least initially,
+                #  but for now, we just sample from anywhere within the parameter bounds
+                startpoint = problem.startpoint_method(
+                    n_starts=1, problem=problem
+                )[0]
+            else:
+                raise RuntimeError(
+                    f"Computing profile point failed. Could not find a finite solution after {max_tries} attempts."
+                )
         else:
             # if too many parameters are fixed, there is nothing to do ...
             fval = problem.objective(np.array([]))
