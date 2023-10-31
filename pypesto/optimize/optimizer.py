@@ -94,7 +94,12 @@ def history_decorator(minimize):
             )
         except Exception as err:
             if optimize_options.allow_failed_starts:
-                logger.error(f'start {id} failed: {err}')
+                import sys
+                import traceback
+
+                trace = "\n".join(traceback.format_exception(*sys.exc_info()))
+
+                logger.error(f'start {id} failed:\n{trace}')
                 result = OptimizerResult(
                     x0=x0, exitflag=-1, message=str(err), id=id
                 )
