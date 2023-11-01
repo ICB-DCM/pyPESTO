@@ -977,7 +977,7 @@ class PetabStartpoints(CheckedStartpoints):
         if (
             self._priors is not None
             and len(current_free_ids) == len(self._free_ids)
-            and current_free_ids == self._free_ids
+            and np.all(current_free_ids == self._free_ids)
         ):
             # no need to update
             return
