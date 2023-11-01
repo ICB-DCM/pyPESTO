@@ -9,6 +9,7 @@ import sys
 import tempfile
 import warnings
 from dataclasses import dataclass
+from functools import partial
 from typing import (
     Any,
     Callable,
@@ -17,6 +18,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Tuple,
     Union,
 )
 
@@ -947,11 +949,51 @@ def get_petab_non_quantitative_data_types(
 
 
 class PetabStartpoints(CheckedStartpoints):
-    """Startpoint method for PEtab problems."""
+    """Startpoint method for PEtab problems.
+
+    Samples optimization startpoints from the distributions defined in the
+    provided PEtab problem. The PEtab-problem is copied.
+    """
 
     def __init__(self, petab_problem: petab.Problem, **kwargs):
         super().__init__(**kwargs)
-        self.petab_problem = petab_problem
+        self._parameter_df = petab_problem.parameter_df.copy()
+        self._priors: Optional[List[Tuple]] = None
+        self._free_ids: Optional[List[str]] = None
+
+    def _setup(
+        self,
+        pypesto_problem: Problem,
+    ):
+        """Update priors if necessary.
+
+        Check if ``problem.x_free_indices`` changed since last, and if so,
+        get the corresponding priors from PEtab.
+        """
+        current_free_ids = np.asarray(pypesto_problem.x_names)[
+            pypesto_problem.x_free_indices
+        ]
+
+        if (
+            self._priors is not None
+            and len(current_free_ids) == len(self._free_ids)
+            and current_free_ids == self._free_ids
+        ):
+            # no need to update
+            return
+
+        # update priors
+        self._free_ids = current_free_ids
+        id_to_prior = dict(
+            zip(
+                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
+                petab.parameters.get_priors_from_df(
+                    self._parameter_df, mode=petab.INITIALIZATION
+                ),
+            )
+        )
+
+        self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
 
     def __call__(
         self,
@@ -959,14 +1001,10 @@ class PetabStartpoints(CheckedStartpoints):
         problem: Problem,
     ) -> np.ndarray:
         """Call the startpoint method."""
-        # temporarily safe `problem`, because we'll need it in `sample()`,
-        #  but `CheckedStartpoints` doesn't provide it there.
-        self._problem = problem
-        try:
-            res = super().__call__(n_starts, problem)
-        finally:
-            self._problem = None
-        return res
+        # Update the list of priors if needed
+        self._setup(pypesto_problem=problem)
+
+        return super().__call__(n_starts, problem)
 
     def sample(
         self,
@@ -974,39 +1012,12 @@ class PetabStartpoints(CheckedStartpoints):
         lb: np.ndarray,
         ub: np.ndarray,
     ) -> np.ndarray:
-        """Actual startpoint sampling."""
-        pypesto_problem = self._problem
-        parameter_df = self.petab_problem.parameter_df
+        """Actual startpoint sampling.
 
-        # startpoints from PEtab for all parameters with ESTIMATE=1
-        startpoints = petab.sample_parameter_startpoints(
-            parameter_df, n_starts=n_starts
-        )
+        Must only be called through `self.__call__` to ensure that the list of priors
+        matches the currently free parameters in the :class:`pypesto.Problem`.
+        """
+        sampler = partial(petab.sample_from_prior, n_starts=n_starts)
+        startpoints = list(map(sampler, self._priors))
 
-        # check for any additional fixed parameters
-        #  (i.e. fixed in pypesto but ESTIMATE=1 in PEtab)
-        current_free_ids = np.asarray(pypesto_problem.x_names)[
-            pypesto_problem.x_free_indices
-        ]
-        petab_free_ids = parameter_df.index[parameter_df[ESTIMATE] == 1]
-        if len(current_free_ids) == len(petab_free_ids) and np.all(
-            current_free_ids == petab_free_ids
-        ):
-            # no fixed parameters - good as is
-            return startpoints
-
-        # only return the non-fixed parameters
-        #  we go via parameter names here to handle the case where any
-        #  parameters are fixed in addition to those with ESTIMATE=0,
-        #  which happens e.g. during computing parameter profiles
-        current_free_ids = list(current_free_ids)
-        petab_free_ids = list(petab_free_ids)
-        problem_par_id_to_petab_par_idx = {
-            problem_par_id: petab_free_ids.index(problem_par_id)
-            for problem_par_id in current_free_ids
-        }
-        x_free_indices_petab = [
-            problem_par_id_to_petab_par_idx[problem_par_id]
-            for problem_par_id in current_free_ids
-        ]
-        return startpoints[:, x_free_indices_petab]
+        return np.array(startpoints).T
