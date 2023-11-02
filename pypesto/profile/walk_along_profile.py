@@ -112,8 +112,13 @@ def walk_along_profile(
                 )
                 if np.isfinite(optimizer_result.fval):
                     break
+
+                profiled_par_id = problem.x_names[i_par]
+                profiled_par_value = startpoint[
+                    problem.x_free_indices.index(i_par)
+                ]
                 logger.warning(
-                    f"Optimization at {problem.x_names[i_par]}={startpoint[i_par]} failed."
+                    f"Optimization at {profiled_par_id}={profiled_par_value} failed."
                 )
                 # sample a new starting point for another attempt
                 #  might be preferable to stay close to the previous point, at least initially,
