@@ -967,7 +967,7 @@ class PetabStartpoints(CheckedStartpoints):
     ):
         """Update priors if necessary.
 
-        Check if ``problem.x_free_indices`` changed since last, and if so,
+        Check if ``problem.x_free_indices`` changed since last call, and if so,
         get the corresponding priors from PEtab.
         """
         current_free_ids = np.asarray(pypesto_problem.x_names)[
