@@ -9,6 +9,7 @@ import sys
 import tempfile
 import warnings
 from dataclasses import dataclass
+from functools import partial
 from typing import (
     Any,
     Callable,
@@ -17,6 +18,7 @@ from typing import (
     List,
     Optional,
     Sequence,
+    Tuple,
     Union,
 )
 
@@ -44,7 +46,7 @@ from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
 from ..problem import Problem
 from ..result import PredictionResult
-from ..startpoint import FunctionStartpoints, StartpointMethod
+from ..startpoint import CheckedStartpoints, StartpointMethod
 
 try:
     import amici
@@ -52,7 +54,12 @@ try:
     import amici.petab_import
     import amici.petab_objective
     import petab
-    from petab.C import PREEQUILIBRATION_CONDITION_ID, SIMULATION_CONDITION_ID
+    from petab.C import (
+        ESTIMATE,
+        PREEQUILIBRATION_CONDITION_ID,
+        SIMULATION_CONDITION_ID,
+    )
+    from petab.models import MODEL_TYPE_SBML
 except ImportError:
     pass
 
@@ -128,7 +135,8 @@ class PetabImporter(AmiciObjectBuilder):
 
         self.validate_inner_options()
 
-        if validate_petab:
+        self.validate_petab = validate_petab
+        if self.validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
         if self._hierarchical and validate_petab_hierarchical:
@@ -280,7 +288,13 @@ class PetabImporter(AmiciObjectBuilder):
             logger.info(
                 f"Compiling amici model to folder " f"{self.output_folder}."
             )
-            self.compile_model(**kwargs)
+            if self.petab_problem.model.type_id == MODEL_TYPE_SBML:
+                self.compile_model(
+                    validate=self.validate_petab,
+                    **kwargs,
+                )
+            else:
+                self.compile_model(**kwargs)
         else:
             logger.debug(
                 f"Using existing amici model in folder "
@@ -635,39 +649,16 @@ class PetabImporter(AmiciObjectBuilder):
         else:
             return None
 
-    def create_startpoint_method(
-        self, x_ids: Sequence[str] = None, **kwargs
-    ) -> StartpointMethod:
+    def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
 
         Parameters
         ----------
-        x_ids:
-            If provided, create a startpoint method that only samples the
-            parameters with the given IDs.
         **kwargs:
             Additional keyword arguments passed on to
             :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
-
-        def startpoint_method(n_starts: int, **kwargs):
-            startpoints = petab.sample_parameter_startpoints(
-                self.petab_problem.parameter_df, n_starts=n_starts
-            )
-            if x_ids is None:
-                return startpoints
-
-            # subset parameters according to the provided parameter IDs
-            from petab.C import ESTIMATE
-
-            parameter_df = self.petab_problem.parameter_df
-            pars_to_estimate = list(
-                parameter_df.index[parameter_df[ESTIMATE] == 1]
-            )
-            x_idxs = [pars_to_estimate.index(x_id) for x_id in x_ids]
-            return startpoints[:, x_idxs]
-
-        return FunctionStartpoints(function=startpoint_method, **kwargs)
+        return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
     def create_problem(
         self,
@@ -769,7 +760,7 @@ class PetabImporter(AmiciObjectBuilder):
             x_scales=x_scales,
             x_priors_defs=prior,
             startpoint_method=self.create_startpoint_method(
-                x_ids=np.delete(x_ids, x_fixed_indices), **startpoint_kwargs
+                **startpoint_kwargs
             ),
             **problem_kwargs,
         )
@@ -963,3 +954,78 @@ def get_petab_non_quantitative_data_types(
     if len(non_quantitative_data_types) == 0:
         return None
     return non_quantitative_data_types
+
+
+class PetabStartpoints(CheckedStartpoints):
+    """Startpoint method for PEtab problems.
+
+    Samples optimization startpoints from the distributions defined in the
+    provided PEtab problem. The PEtab-problem is copied.
+    """
+
+    def __init__(self, petab_problem: petab.Problem, **kwargs):
+        super().__init__(**kwargs)
+        self._parameter_df = petab_problem.parameter_df.copy()
+        self._priors: Optional[List[Tuple]] = None
+        self._free_ids: Optional[List[str]] = None
+
+    def _setup(
+        self,
+        pypesto_problem: Problem,
+    ):
+        """Update priors if necessary.
+
+        Check if ``problem.x_free_indices`` changed since last call, and if so,
+        get the corresponding priors from PEtab.
+        """
+        current_free_ids = np.asarray(pypesto_problem.x_names)[
+            pypesto_problem.x_free_indices
+        ]
+
+        if (
+            self._priors is not None
+            and len(current_free_ids) == len(self._free_ids)
+            and np.all(current_free_ids == self._free_ids)
+        ):
+            # no need to update
+            return
+
+        # update priors
+        self._free_ids = current_free_ids
+        id_to_prior = dict(
+            zip(
+                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
+                petab.parameters.get_priors_from_df(
+                    self._parameter_df, mode=petab.INITIALIZATION
+                ),
+            )
+        )
+
+        self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
+
+    def __call__(
+        self,
+        n_starts: int,
+        problem: Problem,
+    ) -> np.ndarray:
+        """Call the startpoint method."""
+        # Update the list of priors if needed
+        self._setup(pypesto_problem=problem)
+
+        return super().__call__(n_starts, problem)
+
+    def sample(
+        self,
+        n_starts: int,
+        lb: np.ndarray,
+        ub: np.ndarray,
+    ) -> np.ndarray:
+        """Actual startpoint sampling.
+
+        Must only be called through `self.__call__` to ensure that the list of priors
+        matches the currently free parameters in the :class:`pypesto.Problem`.
+        """
+        sampler = partial(petab.sample_from_prior, n_starts=n_starts)
+        startpoints = list(map(sampler, self._priors))
+
+        return np.array(startpoints).T
