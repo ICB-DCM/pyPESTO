@@ -32,7 +32,7 @@ class ModelProblem:
         calibrated.
     minimize_options:
         Keyword argument options that will be passed on to
-        `pypesto.optimize.minimize`.
+        :func:`pypesto.optimize.minimize`.
     minimize_result:
         A pyPESTO result with an optimize result.
     model:
@@ -40,13 +40,13 @@ class ModelProblem:
     model_id:
         The ID of the PEtab Select model.
     objective_customizer:
-        A method that takes a `pypesto.objective.AmiciObjective` as
+        A method that takes a :class:`pypesto.objective.AmiciObjective` as
         input, and makes changes to the objective in-place.
     postprocessor:
-        A method that takes a `ModelSelectionProblem` as input. For
+        A method that takes a :class:`ModelSelectionProblem` as input. For
         example, this can be a function that generates a waterfall
         plot. This postprocessor is applied at the end of the
-        `ModelProblem.set_result` method.
+        :meth:`ModelProblem.set_result` method.
     pypesto_problem:
         The pyPESTO problem for the model.
     valid:
@@ -75,9 +75,9 @@ class ModelProblem:
         Parameters
         ----------
         autorun:
-            If `False`, the model parameters will not be estimated. Allows
-            users to manually call pypesto.minimize with custom options,
-            then`set_result()`.
+            If ``False``, the model parameters will not be estimated. Allows
+            users to manually call ``pypesto.minimize`` with custom options,
+            then :meth:`set_result()`.
 
         TODO: constraints
         """

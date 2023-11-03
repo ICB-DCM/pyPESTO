@@ -72,7 +72,28 @@ class PetabImportTest(unittest.TestCase):
 
             self.assertTrue(np.isfinite(ret))
 
-    def test_3_optimize(self):
+    def test_3_startpoints(self):
+        # test startpoint sampling
+        for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
+            obj = obj_edatas[0]
+            problem = importer.create_problem(obj)
+
+            # test for original problem
+            original_dim = problem.dim
+            startpoints = problem.startpoint_method(
+                n_starts=2, problem=problem
+            )
+            self.assertEqual(startpoints.shape, (2, problem.dim))
+
+            # test with fixed parameters
+            problem.fix_parameters(0, 1)
+            self.assertEqual(problem.dim, original_dim - 1)
+            startpoints = problem.startpoint_method(
+                n_starts=2, problem=problem
+            )
+            self.assertEqual(startpoints.shape, (2, problem.dim))
+
+    def test_4_optimize(self):
         # run optimization
         for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
             obj = obj_edatas[0]

@@ -49,7 +49,7 @@ def process_result_list(
     """
     # check how many results were passed
     single_result = False
-    legend_error = False
+    legend_type_error = False
     if isinstance(results, list):
         if len(results) == 1:
             single_result = True
@@ -68,6 +68,10 @@ def process_result_list(
         # create list of legends for later handling
         if not isinstance(legends, list):
             legends = [legends]
+        try:
+            str(legends[0])
+        except TypeError:
+            legend_type_error = True
     else:
         # if more than one result is passed, we use one color per result
         colors = assign_colors_for_list(len(results), colors)
@@ -80,18 +84,19 @@ def process_result_list(
                 legends.append('Result ' + str(i_leg))
         else:
             # legends were passed by user: check length
-            if isinstance(legends, list):
+            try:
+                if isinstance(legends, str):
+                    legends = [legends]
                 if len(legends) != len(results):
-                    legend_error = True
-            else:
-                legend_error = True
+                    raise ValueError(
+                        'List of results passed and list of labels do '
+                        'not have the same length.'
+                    )
+            except TypeError:
+                legend_type_error = True
 
-    # size of legend list and size of results does not match
-    if legend_error:
-        raise ValueError(
-            'List of results passed and list of labels do '
-            'not have the same length but should. Stopping.'
-        )
+    if legend_type_error:
+        raise TypeError("Unexpected legend type.")
 
     return results, colors, legends
 

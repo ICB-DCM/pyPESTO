@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, List, Tuple, Union
+from typing import Callable, List, Literal, Tuple, Union
 
 import numpy as np
 
@@ -7,13 +7,20 @@ from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
 
+__all__ = ['next_guess', 'fixed_step', 'adaptive_step']
+
 
 def next_guess(
     x: np.ndarray,
     par_index: int,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     profile_options: ProfileOptions,
-    update_type: str,
+    update_type: Literal[
+        'fixed_step',
+        'adaptive_step_order_0',
+        'adaptive_step_order_1',
+        'adaptive_step_regression',
+    ],
     current_profile: ProfilerResult,
     problem: Problem,
     global_opt: float,
@@ -31,11 +38,14 @@ def next_guess(
     par_index:
         The index of the parameter of the current profile.
     par_direction:
-        The direction, in which the profiling is done (1 or -1).
+        The direction, in which the profiling is done (``1`` or ``-1``).
     profile_options:
         Various options applied to the profile optimization.
     update_type:
-        Type of update for next profile point.
+        Type of update for next profile point:
+        ``fixed_step`` (see :func:`fixed_step`),
+        ``adaptive_step_order_0``, ``adaptive_step_order_1``, or ``adaptive_step_regression``
+        (see :func:`adaptive_step`).
     current_profile:
         The profile which should be computed.
     problem:
@@ -52,15 +62,16 @@ def next_guess(
         return fixed_step(
             x, par_index, par_direction, profile_options, problem
         )
-    elif update_type == 'adaptive_step_order_0':
+
+    if update_type == 'adaptive_step_order_0':
         order = 0
     elif update_type == 'adaptive_step_order_1':
         order = 1
     elif update_type == 'adaptive_step_regression':
         order = np.nan
     else:
-        raise Exception(
-            'Unsupported update_type for ' 'create_next_startpoint.'
+        raise ValueError(
+            f'Unsupported `update_type` {update_type} for `next_guess`.'
         )
 
     return adaptive_step(
@@ -78,11 +89,14 @@ def next_guess(
 def fixed_step(
     x: np.ndarray,
     par_index: int,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     options: ProfileOptions,
     problem: Problem,
 ) -> np.ndarray:
     """Most simple method to create the next guess.
+
+    Computes the next point based on the fixed step size given by
+    ``default_step_size`` in :class:`ProfileOptions`.
 
     Parameters
     ----------
@@ -91,7 +105,7 @@ def fixed_step(
     par_index:
         The index of the parameter of the current profile
     par_direction:
-        The direction, in which the profiling is done (1 or -1)
+        The direction, in which the profiling is done (``1`` or ``-1``)
     options:
         Various options applied to the profile optimization.
     problem:
@@ -119,7 +133,7 @@ def fixed_step(
 def adaptive_step(
     x: np.ndarray,
     par_index: int,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     options: ProfileOptions,
     current_profile: ProfilerResult,
     problem: Problem,
@@ -148,9 +162,9 @@ def adaptive_step(
     global_opt:
         log-posterior value of the global optimum
     order:
-        Specifies the precise algorithm for extrapolation: can be 0 (
-        just one parameter is updated), 1 (last two points used to
-        extrapolate all parameters), and np.nan (indicates that a more
+        Specifies the precise algorithm for extrapolation: can be ``0`` (
+        just one parameter is updated), ``1`` (last two points used to
+        extrapolate all parameters), and ``np.nan`` (indicates that a more
         complex regression should be used)
 
     Returns
@@ -194,14 +208,12 @@ def adaptive_step(
     # check whether we must make a minimum step anyway, since we're close to
     # the next bound
     min_delta_x = x[par_index] + par_direction * options.min_step_size
-    if par_direction == -1:
-        if min_delta_x < problem.lb_full[par_index]:
-            step_length = problem.lb_full[par_index] - x[par_index]
-            return x + step_length * delta_x_dir
-    else:
-        if min_delta_x > problem.ub_full[par_index]:
-            step_length = problem.ub_full[par_index] - x[par_index]
-            return x + step_length * delta_x_dir
+    if par_direction == -1 and (min_delta_x < problem.lb_full[par_index]):
+        step_length = problem.lb_full[par_index] - x[par_index]
+        return x + step_length * delta_x_dir
+    elif par_direction == 1 and (min_delta_x > problem.ub_full[par_index]):
+        step_length = problem.ub_full[par_index] - x[par_index]
+        return x + step_length * delta_x_dir
 
     # parameter extrapolation function
     def par_extrapol(step_length):
@@ -250,37 +262,19 @@ def adaptive_step(
     next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
     # iterate until good step size is found
-    if next_obj_target < next_obj:
-        # The step is rather too long
-        return do_line_seach(
-            next_x,
-            step_size_guess,
-            'decrease',
-            par_extrapol,
-            next_obj,
-            next_obj_target,
-            clip_to_minmax,
-            clip_to_bounds,
-            par_index,
-            problem,
-            options,
-        )
-
-    else:
-        # The step is rather too short
-        return do_line_seach(
-            next_x,
-            step_size_guess,
-            'increase',
-            par_extrapol,
-            next_obj,
-            next_obj_target,
-            clip_to_minmax,
-            clip_to_bounds,
-            par_index,
-            problem,
-            options,
-        )
+    return do_line_search(
+        next_x,
+        step_size_guess,
+        "decrease" if next_obj_target < next_obj else "increase",
+        par_extrapol,
+        next_obj,
+        next_obj_target,
+        clip_to_minmax,
+        clip_to_bounds,
+        par_index,
+        problem,
+        options,
+    )
 
 
 def handle_profile_history(
@@ -323,10 +317,6 @@ def handle_profile_history(
             last_delta_x = (
                 current_profile.x_path[:, -1] - current_profile.x_path[:, -2]
             )
-            step_size_guess = np.abs(
-                current_profile.x_path[par_index, -1]
-                - current_profile.x_path[par_index, -2]
-            )
             delta_x_dir = last_delta_x / step_size_guess
         elif np.isnan(order):
             # compute the regression polynomial for parameter extrapolation
@@ -359,7 +349,7 @@ def get_reg_polynomial(
     for i_par in range(problem.dim_full):
         if i_par in problem.x_fixed_indices:
             # if we meet the current profiling parameter or a fixed parameter,
-            # there is nothing to do, so pass an np.nan
+            # there is nothing to do, so pass a np.nan
             reg_par.append(np.nan)
         else:
             # Do polynomial interpolation of profile path
@@ -387,10 +377,10 @@ def get_reg_polynomial(
     return reg_par
 
 
-def do_line_seach(
+def do_line_search(
     next_x: np.ndarray,
     step_size_guess: float,
-    direction: str,
+    direction: Literal['increase', 'decrease'],
     par_extrapol: Callable,
     next_obj: float,
     next_obj_target: float,
@@ -430,21 +420,19 @@ def do_line_seach(
 
         if hit_bounds:
             return next_x
-        else:
-            # compute new objective value
-            problem.fix_parameters(par_index, next_x[par_index])
-            last_obj = copy.copy(next_obj)
-            next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
-            # check for root crossing and compute correct step size in case
-            if direction == 'decrease' and next_obj_target >= next_obj:
-                return next_x_interpolate(
-                    next_obj, last_obj, next_x, last_x, next_obj_target
-                )
-            elif direction == 'increase' and next_obj_target <= next_obj:
-                return next_x_interpolate(
-                    next_obj, last_obj, next_x, last_x, next_obj_target
-                )
+        # compute new objective value
+        problem.fix_parameters(par_index, next_x[par_index])
+        last_obj = copy.copy(next_obj)
+        next_obj = problem.objective(problem.get_reduced_vector(next_x))
+
+        # check for root crossing and compute correct step size in case
+        if (direction == 'decrease' and next_obj_target >= next_obj) or (
+            direction == 'increase' and next_obj_target <= next_obj
+        ):
+            return next_x_interpolate(
+                next_obj, last_obj, next_x, last_x, next_obj_target
+            )
 
 
 def next_x_interpolate(
@@ -467,12 +455,15 @@ def clip(
     lower: Union[float, np.ndarray],
     upper: Union[float, np.ndarray],
 ) -> Union[float, np.ndarray]:
-    """Restrict a scalar or a vector to given bounds."""
+    """Restrict a scalar or a vector to given bounds.
+
+    ``vector_guess`` is modified in-place if it is an array.
+    """
     if isinstance(vector_guess, float):
-        vector_guess = np.max([np.min([vector_guess, upper]), lower])
-    else:
-        for i_par, i_guess in enumerate(vector_guess):
-            vector_guess[i_par] = np.max(
-                [np.min([i_guess, upper[i_par]]), lower[i_par]]
-            )
+        return np.max([np.min([vector_guess, upper]), lower])
+
+    for i_par, i_guess in enumerate(vector_guess):
+        vector_guess[i_par] = np.max(
+            [np.min([i_guess, upper[i_par]]), lower[i_par]]
+        )
     return vector_guess
