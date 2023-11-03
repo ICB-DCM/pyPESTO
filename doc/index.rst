@@ -45,6 +45,7 @@ pyPESTO - Parameter EStimation TOolbox for python
    references
    contact
    license
+   how_to_cite
    logo
 
 

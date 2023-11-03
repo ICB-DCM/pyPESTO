@@ -115,9 +115,8 @@ class FunctionEvaluator:
         """
         fxs = np.full(shape=n, fill_value=np.nan)
         xs = np.full(shape=(n, self.problem.dim), fill_value=np.nan)
-
         while not np.isfinite(fxs).all():
-            retry_indices = np.argwhere(~np.isfinite(fxs)).squeeze()
+            retry_indices = np.argwhere(~np.isfinite(fxs)).flatten()
             xs[retry_indices] = self.startpoint_method(
                 n_starts=retry_indices.size, problem=self.problem
             )
