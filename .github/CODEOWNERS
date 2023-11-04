@@ -34,7 +34,7 @@
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
 /pypesto/visualize/@stephanmg @m-philipps
-/test/base/ @PaulJonasJost ?
+/test/base/ @PaulJonasJost @m-philipps
 /test/doc/ @PaulJonasJost
 /test/hierarchical/ @dweindl @doresic
 /test/julia/ @PaulJonasJost
