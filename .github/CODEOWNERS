@@ -26,7 +26,7 @@
 /pypesto/optimize/ @PaulJonasJost ?
 /pypesto/petab/ @dweindl @FFroehlich
 /pypesto/predict/ @dilpath
-/pypesto/problem/ @PaulJonasJost ?
+/pypesto/problem/ @PaulJonasJost @m-philipps 
 /pypesto/profile/ @PaulJonasJost ?
 /pypesto/result/ @PaulJonasJost
 /pypesto/sample/ @dilpath @vwiela
