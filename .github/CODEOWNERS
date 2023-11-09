@@ -23,11 +23,11 @@
 /pypesto/objective/amici/ @dweindl @FFroehlich
 /pypesto/objective/jax/ @FFroehlich
 /pypesto/objective/aesara/ @FFroehlich
-/pypesto/optimize/ @PaulJonasJost ?
+/pypesto/optimize/ @PaulJonasJost
 /pypesto/petab/ @dweindl @FFroehlich
 /pypesto/predict/ @dilpath
-/pypesto/problem/ @PaulJonasJost @m-philipps 
-/pypesto/profile/ @PaulJonasJost ?
+/pypesto/problem/ @PaulJonasJost @m-philipps
+/pypesto/profile/ @PaulJonasJost
 /pypesto/result/ @PaulJonasJost
 /pypesto/sample/ @dilpath @vwiela
 /pypesto/select/ @dilpath
@@ -44,4 +44,3 @@
 /test/sample/ @dilpath
 /test/select/ @dilpath
 /test/visualize/ @stephanmg @m-philipps
-
