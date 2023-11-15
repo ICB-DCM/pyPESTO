@@ -6,6 +6,32 @@ Release notes
 ..........
 
 
+0.3.4 (2023-11-16)
+-------------------
+
+* General
+    * Documentation (#1140, #1146, #1152, #1149  )
+    * Updated Jupyter Notebooks (#1141 )
+    * Update code to avoid deprecations (#1158)
+    * Updated maintainers and codeownership (#1171, #1170)
+* Profile:
+    * Fix problem overwrite of profiling (#1153)
+    * Add warning, trying to profile fixed parameter (#1155)
+    * ProfileOptions: add some basic integrity checking (#1163)
+    * Fix pypesto.profile.parameter_profile incorrectly assuming symmetric bounds (#1166)
+    * Improve pypesto/profile/profile_next_guess.py (#1167)
+* Problem:
+    * Add/forward startpoint_kwargs in PetabImporter.create_problem (#1135)
+    * Support valid AMICI noise distributions that are invalid in PEtab (#1157)
+    * Fix startpoint sampling for PEtab-derived problems with fixed parameters (#1169)
+* Optimize
+    * Log traceback in case of exceptions during optimizations (#1156)
+* Hierarchical:
+    * Fix HierarchicalAmiciCalculator.__call__ not setting 'hess' in result (#1161)
+* Visualization:
+    * Fix legend argument checking for waterfall/parameter/history plots (#1139)
+
+
 0.3.3 (2023-10-19)
 -------------------
 
