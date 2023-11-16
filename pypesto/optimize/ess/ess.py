@@ -70,7 +70,7 @@ class ESSOptimizer:
     def __init__(
         self,
         *,
-        max_iter: int = 10**100,
+        max_iter: int = None,
         dim_refset: int = None,
         local_n1: int = 1,
         local_n2: int = 10,
@@ -122,15 +122,17 @@ class ESSOptimizer:
             Number of parallel threads to use for parallel function evaluation.
             Mutually exclusive with `n_procs`.
         """
-        if max_eval is None and max_walltime_s is None:
+        if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
             raise ValueError(
-                "Either `max_eval` or `max_walltime_s` have to be provided."
+                "Either `max_iter`, `max_eval` or `max_walltime_s` have to be provided."
             )
         if max_eval is None:
             max_eval = np.inf
         if max_walltime_s is None:
             max_walltime_s = np.inf
+        if max_iter is None:
+            max_iter = np.inf
 
         # Hyperparameters
         self.local_n1: int = local_n1
