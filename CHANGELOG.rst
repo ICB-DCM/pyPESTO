@@ -10,8 +10,8 @@ Release notes
 -------------------
 
 * General
-    * Documentation (#1140, #1146, #1152, #1149  )
-    * Updated Jupyter Notebooks (#1141 )
+    * Documentation (#1140, #1146, #1152, #1149)
+    * Updated Jupyter Notebooks (#1141)
     * Update code to avoid deprecations (#1158)
     * Updated maintainers and codeownership (#1171, #1170)
 * Profile:
