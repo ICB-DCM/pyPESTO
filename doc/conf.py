@@ -74,7 +74,7 @@ autodoc_mock_imports = ["amici"]
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/devdocs/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    'scipy': ('http://scipy.github.io/devdocs/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'petab': (
         'https://petab.readthedocs.io/projects/libpetab-python/en/latest/',
