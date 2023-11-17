@@ -33,8 +33,8 @@ class SacessOptimizer:
     """SACESS optimizer.
 
     A shared-memory-based implementation of the SaCeSS algorithm presented in
-    [PenasGon2017]_. Multiple processes (`workers`) run consecutive ESSs in
-    parallel. After each ESS run, depending on the outcome, there is a chance
+    [PenasGon2017]_. Multiple processes (`workers`) run ESSs in parallel.
+    After each ESS iteration, depending on the outcome, there is a chance
     of exchanging good parameters, and changing ESS hyperparameters to those of
     the most promising worker.
 
@@ -306,9 +306,13 @@ class SacessManager:
         the top of the scoreboard and returns those settings.
         """
         with self._lock:
-            leader_options = self._ess_options[np.argmax(self._worker_scores)]
-            self._ess_options[worker_idx] = leader_options
-            return leader_options.copy()
+            leader_options = self._ess_options[
+                np.argmax(self._worker_scores)
+            ].copy()
+            for setting in ["local_n2", "balance", "dim_refset"]:
+                if setting in leader_options:
+                    self._ess_options[worker_idx] = leader_options[setting]
+            return self._ess_options[worker_idx].copy()
 
     def submit_solution(
         self,
@@ -383,7 +387,7 @@ class SacessManager:
 class SacessWorker:
     """A SACESS worker.
 
-    Repeatedly runs ESSs and exchanges information with a SacessManager.
+    Runs ESSs and exchanges information with a SacessManager.
     Corresponds to a worker process in [PenasGon2017]_.
 
     Attributes
@@ -467,25 +471,21 @@ class SacessWorker:
                 self._refset.dim,
             )
         )
-        i_iter = 0
+
         ess_results = pypesto.Result(problem=problem)
+        ess = self._setup_ess(startpoint_method)
 
         # run ESS until exit criteria are met, but start at least one iteration
-        while self._keep_going() or i_iter == 0:
-            # run standard ESS
-            ess = self._setup_ess()
-            cur_ess_results = ess.minimize(
-                refset=self._refset,
-            )
-            self._logger.debug(
-                f"#{self._worker_idx}: ESS finished with best "
-                f"f(x)={ess.fx_best}"
-            )
+        while self._keep_going() or ess.n_iter == 0:
+            # perform one ESS iteration
+            ess._do_iteration()
 
+            # TODO maybe not in every iteration?
             # drop all but the 50 best results
+            cur_ess_results = ess._create_result()
             ess_results.optimize_result.append(
                 cur_ess_results.optimize_result,
-                prefix=f"{self._worker_idx}_{i_iter}_",
+                prefix=f"{self._worker_idx}_{ess.n_iter}_",
             )
             ess_results.optimize_result.list = (
                 ess_results.optimize_result.list[:50]
@@ -503,19 +503,16 @@ class SacessWorker:
             self._best_known_fx = min(ess.fx_best, self._best_known_fx)
 
             self._cooperate()
-
             self._maybe_adapt(problem)
 
             self._logger.info(
-                f"sacess worker {self._worker_idx} iteration {i_iter} "
+                f"sacess worker {self._worker_idx} iteration {ess.n_iter} "
                 f"(best: {self._best_known_fx})."
             )
 
-            i_iter += 1
+        ess._report_final()
 
-    def _setup_ess(
-        self,
-    ) -> ESSOptimizer:
+    def _setup_ess(self, startpoint_method: StartpointMethod) -> ESSOptimizer:
         """Run ESS."""
         ess_kwargs = self._ess_kwargs.copy()
         # account for sacess walltime limit
@@ -529,6 +526,11 @@ class SacessWorker:
             f"sacess-{self._worker_idx:02d}-ess"
         )
         ess.logger.setLevel(self._ess_loglevel)
+
+        ess._initialize_minimize(
+            startpoint_method=startpoint_method, refset=self._refset
+        )
+
         return ess
 
     def _cooperate(self):
@@ -564,6 +566,7 @@ class SacessWorker:
             self._ess_kwargs = self._manager.reconfigure_worker(
                 self._worker_idx
             )
+            self._refset.resize(self._ess_kwargs['dim_refset'])
             self._logger.debug(
                 f"Updated settings on worker {self._worker_idx} to "
                 f"{self._ess_kwargs}"
@@ -612,12 +615,21 @@ class SacessWorker:
         if "cooperative_solution" not in refset.attributes:
             label = np.zeros(shape=refset.dim)
             # on first call, mark the worst solution as "cooperative solution"
-            label[np.argmax(refset.fx)] = 1
+            cooperative_solution_idx = np.argmax(refset.fx)
+            label[cooperative_solution_idx] = 1
             refset.add_attribute("cooperative_solution", label)
+        elif (
+            cooperative_solution_idx := np.argwhere(
+                refset.attributes["cooperative_solution"]
+            )
+        ).size == 0:
+            # the attribute exists, but no member is marked as cooperative
+            # solution. this may happen if we shrink the refset.
+            cooperative_solution_idx = np.argmax(refset.fx)
 
         # replace the cooperative solution
         refset.update(
-            i=np.argwhere(refset.attributes["cooperative_solution"]),
+            i=cooperative_solution_idx,
             x=x,
             fx=fx,
         )

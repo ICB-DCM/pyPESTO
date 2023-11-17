@@ -160,6 +160,46 @@ class RefSet:
         """
         Add an attribute array to the refset members.
 
+        An attribute can be any 1D array of the same length as the refset.
         The added array will be sorted together with the refset members.
         """
+        if len(values) != self.dim:
+            raise ValueError("Attribute length does not match refset length.")
         self.attributes[name] = values
+
+    def resize(self, new_dim: int):
+        """
+        Resize the refset.
+
+        If the dimension does not change, do nothing.
+        If size is decreased, drop entries from the end (i.e., the worst
+        values, assuming it is sorted). If size is increased, the new
+        entries are filled with randomly and the refset is sorted.
+
+        NOTE: Any attributes are just truncated or filled with zeros.
+        """
+        if new_dim == self.dim:
+            return
+
+        if new_dim < self.dim:
+            # shrink
+            self.fx = self.fx[:new_dim]
+            self.x = self.x[:new_dim]
+            self.n_stuck = self.n_stuck[:new_dim]
+            for attribute_name, attribute_values in self.attributes.items():
+                self.attributes[attribute_name] = attribute_values[:new_dim]
+            self.dim = new_dim
+        else:
+            # grow
+            new_x, new_fx = self.evaluator.multiple_random(new_dim - self.dim)
+            self.fx = np.append(self.fx, new_fx)
+            self.x = np.vstack((self.x, new_x))
+            self.n_stuck = np.append(
+                self.n_stuck, np.zeros(shape=(new_dim - self.dim))
+            )
+            for attribute_name, attribute_values in self.attributes.items():
+                self.attributes[attribute_name] = np.append(
+                    attribute_values, np.zeros(shape=(new_dim - self.dim))
+                )
+            self.dim = new_dim
+            self.sort()
