@@ -326,6 +326,7 @@ class SacessManager:
         sender_idx: Index of the worker submitting the results.
         elapsed_time_s: Elapsed time since the beginning of the sacess run.
         """
+        abs_change = fx - self._best_known_fx.value
         with self._lock:
             # cooperation step
             # solution improves best value by at least a factor of ...
@@ -340,10 +341,7 @@ class SacessManager:
                 or (self._best_known_fx.value == 0 and fx < 0)
                 or (
                     fx < self._best_known_fx.value
-                    and abs(
-                        (self._best_known_fx.value - fx)
-                        / self._best_known_fx.value
-                    )
+                    and abs(abs_change / self._best_known_fx.value)
                     > self._rejection_threshold.value
                 )
             ):
@@ -361,10 +359,11 @@ class SacessManager:
             else:
                 # reject solution
                 self._rejections.value += 1
+
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
-                    f"abs change: {fx - self._best_known_fx.value} "
-                    f"rel change: {abs((self._best_known_fx.value - fx) / self._best_known_fx.value)} "
+                    f"abs change: {abs_change} "
+                    f"rel change: {abs(abs_change / self._best_known_fx.value):.4g} "
                     f" (threshold: {self._rejection_threshold.value}) "
                     f"(total rejections: {self._rejections.value})."
                 )
