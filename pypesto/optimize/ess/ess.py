@@ -36,11 +36,7 @@ import pypesto.optimize
 from pypesto import OptimizerResult, Problem
 from pypesto.startpoint import StartpointMethod
 
-from .function_evaluator import (
-    FunctionEvaluator,
-    FunctionEvaluatorMP,
-    FunctionEvaluatorMT,
-)
+from .function_evaluator import FunctionEvaluator, create_function_evaluator
 from .refset import RefSet
 
 logger = logging.getLogger(__name__)
@@ -189,6 +185,57 @@ class ESSOptimizer:
         self.evaluator: Optional[FunctionEvaluator] = None
         self.starttime: Optional[float] = None
 
+    def _initialize_minimize(
+        self,
+        problem: Problem = None,
+        startpoint_method: StartpointMethod = None,
+        refset: Optional[RefSet] = None,
+    ):
+        if startpoint_method is not None:
+            warn(
+                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                DeprecationWarning,
+            )
+
+        self._initialize()
+        self.starttime = time.time()
+
+        if (refset is None and problem is None) or (
+            refset is not None and problem is not None
+        ):
+            raise ValueError(
+                "Either `refset` or `problem` has to be provided."
+            )
+
+        # generate initial RefSet if not provided
+        if refset is None:
+            if self.dim_refset is None:
+                raise ValueError(
+                    "Either refset or dim_refset have to be provided."
+                )
+            # [EgeaMar2010]_ 2.1
+            self.n_diverse = self.n_diverse or 10 * problem.dim
+            self.evaluator = create_function_evaluator(
+                problem,
+                startpoint_method,
+                n_threads=self.n_threads,
+                n_procs=self.n_procs,
+            )
+
+            self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
+            # Initial RefSet generation
+            self.refset.initialize_random(n_diverse=self.n_diverse)
+        else:
+            self.refset = refset
+
+        self.evaluator = self.refset.evaluator
+        self.x_best = np.full(
+            shape=(self.evaluator.problem.dim,), fill_value=np.nan
+        )
+        # initialize global best from initial refset
+        for x, fx in zip(self.refset.x, self.refset.fx):
+            self._maybe_update_global_best(x, fx)
+
     def minimize(
         self,
         problem: Problem = None,
@@ -207,89 +254,46 @@ class ESSOptimizer:
         refset:
             The initial RefSet or ``None`` to auto-generate.
         """
-        if startpoint_method is not None:
-            warn(
-                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
-                DeprecationWarning,
-            )
-
-        self._initialize()
-        self.starttime = time.time()
-
-        if (refset is None and problem is None) or (
-            refset is not None and problem is not None
-        ):
-            raise ValueError(
-                "Either `refset` or `problem` has to be provided."
-            )
-        # generate initial RefSet if not provided
-        if refset is None:
-            if self.dim_refset is None:
-                raise ValueError(
-                    "Either refset or dim_refset have to be provided."
-                )
-            # [EgeaMar2010]_ 2.1
-            self.n_diverse = self.n_diverse or 10 * problem.dim
-            if self.n_procs:
-                self.evaluator = FunctionEvaluatorMP(
-                    problem=problem,
-                    startpoint_method=startpoint_method,
-                    n_procs=self.n_procs,
-                )
-            else:
-                self.evaluator = FunctionEvaluatorMT(
-                    problem=problem,
-                    startpoint_method=startpoint_method,
-                    n_threads=self.n_threads or 1,
-                )
-
-            self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
-            # Initial RefSet generation
-            self.refset.initialize_random(n_diverse=self.n_diverse)
-            refset = self.refset
-        else:
-            self.refset = refset
-
-        self.evaluator = refset.evaluator
-        self.x_best = np.full(
-            shape=(self.evaluator.problem.dim,), fill_value=np.nan
+        self._initialize_minimize(
+            problem=problem, startpoint_method=startpoint_method, refset=refset
         )
-        # initialize global best from initial refset
-        for x, fx in zip(refset.x, refset.fx):
-            self._maybe_update_global_best(x, fx)
 
         # [PenasGon2017]_ Algorithm 1
         while self._keep_going():
-            self.x_best_has_changed = False
-
-            refset.sort()
-            self._report_iteration()
-            refset.prune_too_close()
-
-            # Apply combination method to update the RefSet
-            x_best_children, fx_best_children = self._combine_solutions()
-
-            # Go-beyond strategy to further improve the new combinations
-            self._go_beyond(x_best_children, fx_best_children)
-
-            # Maybe perform a local search
-            if self.local_optimizer is not None and self._keep_going():
-                self._do_local_search(x_best_children, fx_best_children)
-
-            # Replace RefSet members by best children where an improvement
-            #  was made. replace stuck members by random points.
-            for i in range(refset.dim):
-                if fx_best_children[i] < refset.fx[i]:
-                    refset.update(i, x_best_children[i], fx_best_children[i])
-                else:
-                    refset.n_stuck[i] += 1
-                    if refset.n_stuck[i] > self.n_change:
-                        refset.replace_by_random(i)
-
-            self.n_iter += 1
+            self._do_iteration()
 
         self._report_final()
         return self._create_result()
+
+    def _do_iteration(self):
+        """Perform an ESS iteration."""
+        self.x_best_has_changed = False
+
+        self.refset.sort()
+        self._report_iteration()
+        self.refset.prune_too_close()
+
+        # Apply combination method to update the RefSet
+        x_best_children, fx_best_children = self._combine_solutions()
+
+        # Go-beyond strategy to further improve the new combinations
+        self._go_beyond(x_best_children, fx_best_children)
+
+        # Maybe perform a local search
+        if self.local_optimizer is not None and self._keep_going():
+            self._do_local_search(x_best_children, fx_best_children)
+
+        # Replace RefSet members by best children where an improvement
+        #  was made. replace stuck members by random points.
+        for i in range(self.refset.dim):
+            if fx_best_children[i] < self.refset.fx[i]:
+                self.refset.update(i, x_best_children[i], fx_best_children[i])
+            else:
+                self.refset.n_stuck[i] += 1
+                if self.refset.n_stuck[i] > self.n_change:
+                    self.refset.replace_by_random(i)
+
+        self.n_iter += 1
 
     def _create_result(self) -> pypesto.Result:
         """Create the result object.
