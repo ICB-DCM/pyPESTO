@@ -125,7 +125,7 @@ class SacessOptimizer:
 
         start_time = time.time()
         logger.debug(
-            f"Running sacess with {self.num_workers} "
+            f"Running {self.__class__.__name__} with {self.num_workers} "
             f"workers: {self.ess_init_args}"
         )
         ess_init_args = self.ess_init_args or get_default_ess_options(
@@ -169,7 +169,7 @@ class SacessOptimizer:
             # launch worker processes
             worker_processes = [
                 Process(
-                    name=f"sacess-worker-{i:02d}",
+                    name=f"{self.__class__.__name__}-worker-{i:02d}",
                     target=_run_worker,
                     args=(
                         worker,
@@ -457,7 +457,7 @@ class SacessWorker:
             n_threads=self._ess_kwargs.get('n_threads'),
         )
 
-        # create refset from ndiverse
+        # create initial refset
         self._refset = RefSet(
             dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
         )
@@ -574,7 +574,7 @@ class SacessWorker:
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
             f"best known: {self._best_known_fx}, "
-            f"rel change: {(self._best_known_fx - fx) / fx}, "
+            f"rel change: {(self._best_known_fx - fx) / fx:.4g}, "
             f"threshold: {self._acceptance_threshold}"
         )
 
