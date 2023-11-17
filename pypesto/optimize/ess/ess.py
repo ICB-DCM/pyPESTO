@@ -70,7 +70,7 @@ class ESSOptimizer:
     def __init__(
         self,
         *,
-        max_iter: int = 10**100,
+        max_iter: int = None,
         dim_refset: int = None,
         local_n1: int = 1,
         local_n2: int = 10,
@@ -79,7 +79,7 @@ class ESSOptimizer:
             "pypesto.optimize.Optimizer",
             Callable[..., "pypesto.optimize.Optimizer"],
         ] = None,
-        max_eval=np.inf,
+        max_eval=None,
         n_diverse: int = None,
         n_procs=None,
         n_threads=None,
@@ -129,6 +129,18 @@ class ESSOptimizer:
             Number of parallel threads to use for parallel function evaluation.
             Mutually exclusive with `n_procs`.
         """
+        if max_eval is None and max_walltime_s is None and max_iter is None:
+            # in this case, we'd run forever
+            raise ValueError(
+                "Either `max_iter`, `max_eval` or `max_walltime_s` have to be provided."
+            )
+        if max_eval is None:
+            max_eval = np.inf
+        if max_walltime_s is None:
+            max_walltime_s = np.inf
+        if max_iter is None:
+            max_iter = np.inf
+
         # Hyperparameters
         self.local_n1: int = local_n1
         self.local_n2: int = local_n2
@@ -237,7 +249,6 @@ class ESSOptimizer:
             refset = self.refset
         else:
             self.refset = refset
-            problem = refset.evaluator.problem
 
         self.evaluator = refset.evaluator
         self.x_best = np.full(
@@ -262,7 +273,7 @@ class ESSOptimizer:
             self._go_beyond(x_best_children, fx_best_children)
 
             # Maybe perform a local search
-            if self.local_optimizer is not None:
+            if self.local_optimizer is not None and self._keep_going():
                 self._do_local_search(x_best_children, fx_best_children)
 
             # Replace RefSet members by best children where an improvement
@@ -389,6 +400,9 @@ class ESSOptimizer:
             best_idx = np.argmin(fxs_new)
             fy[i] = fxs_new[best_idx]
             y[i] = xs_new[best_idx]
+
+            if not self._keep_going():
+                break
         return y, fy
 
     def _combine(self, i, j) -> np.array:
@@ -571,6 +585,8 @@ class ESSOptimizer:
             self._maybe_update_global_best(
                 x_best_children[i], fx_best_children[i]
             )
+            if not self._keep_going():
+                break
 
     def _report_iteration(self):
         """Log the current iteration."""
