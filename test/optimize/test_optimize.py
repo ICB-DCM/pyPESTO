@@ -525,11 +525,16 @@ def test_ess_multiprocess(problem, request):
         # Not pickleable - incompatible with CESS
         pytest.skip()
 
+    from fides.constants import Options as FidesOptions
+
     from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
 
     ess = ESSOptimizer(
         max_iter=20,
-        local_optimizer=optimize.FidesOptimizer(),
+        # also test passing a callable as local_optimizer
+        local_optimizer=lambda max_walltime_s, **kwargs: optimize.FidesOptimizer(
+            options={FidesOptions.MAXTIME: max_walltime_s}
+        ),
     )
     refset = RefSet(
         dim=10,
