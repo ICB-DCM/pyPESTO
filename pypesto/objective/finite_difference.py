@@ -212,7 +212,7 @@ class FDDelta:
         self.delta = delta_opt
 
         # log
-        logger.info(f"Optimal FD delta: {self.delta}")
+        logger.debug(f"Optimal FD delta: {self.delta}")
         self.updates += 1
 
     def get(self) -> np.ndarray:

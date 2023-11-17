@@ -3,16 +3,11 @@
 import copy
 import numbers
 
-import aesara.tensor as aet
-import jax
-import jax.numpy as jnp
 import numpy as np
 import pytest
 import sympy as sp
 
 import pypesto
-from pypesto.objective.aesara import AesaraObjective
-from pypesto.objective.jax import JaxObjective
 
 from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
 
@@ -162,7 +157,9 @@ def test_finite_difference_checks():
 
     # Test the single step size `check_grad` method.
     eps = 1e-5
-    result_single_eps = objective.check_grad(np.array([theta]), eps=eps)
+    result_single_eps = objective.check_grad(
+        np.array([theta]), eps=eps, verbosity=False
+    )
     np.testing.assert_almost_equal(
         result_single_eps['rel_err'].squeeze(),
         rel_err(eps),
@@ -171,7 +168,7 @@ def test_finite_difference_checks():
     # Test the multiple step size `check_grad_multi_eps` method.
     multi_eps = {1e-1, 1e-3, 1e-5, 1e-7, 1e-9}
     result_multi_eps = objective.check_grad_multi_eps(
-        [theta], multi_eps=multi_eps
+        [theta], multi_eps=multi_eps, verbosity=False
     )
 
     np.testing.assert_almost_equal(
@@ -182,6 +179,10 @@ def test_finite_difference_checks():
 
 def test_aesara(max_sensi_order, integrated):
     """Test function composition and gradient computation via aesara"""
+    import aesara.tensor as aet
+
+    from pypesto.objective.aesara import AesaraObjective
+
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
     # create aesara specific symbolic tensor variables
@@ -215,6 +216,11 @@ def test_aesara(max_sensi_order, integrated):
 
 def test_jax(max_sensi_order, integrated):
     """Test function composition and gradient computation via jax"""
+    import jax
+    import jax.numpy as jnp
+
+    from pypesto.objective.jax import JaxObjective
+
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
     # apply inverse transform such that we evaluate at prob['x']
