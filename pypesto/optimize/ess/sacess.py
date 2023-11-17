@@ -472,7 +472,7 @@ class SacessWorker:
         # run ESS until exit criteria are met, but start at least one iteration
         while self._keep_going() or i_iter == 0:
             # run standard ESS
-            ess, cur_ess_results = self._setup_ess()
+            ess = self._setup_ess()
             cur_ess_results = ess.minimize(
                 refset=self._refset,
             )
