@@ -93,7 +93,7 @@ def history_decorator(minimize):
                 message=result.message, exitflag=result.exitflag
             )
         except Exception as err:
-            if optimize_options.allow_failed_starts:
+            if optimize_options and optimize_options.allow_failed_starts:
                 import sys
                 import traceback
 
