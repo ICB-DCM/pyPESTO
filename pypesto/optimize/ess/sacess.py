@@ -432,6 +432,7 @@ class SacessWorker:
         self._ess_loglevel = ess_loglevel
         self._logger = None
         self._tmp_result_file = tmp_result_file
+        self._refset = None
 
     def run(
         self,
@@ -456,12 +457,13 @@ class SacessWorker:
         )
 
         # create refset from ndiverse
-        refset = RefSet(
+        self._refset = RefSet(
             dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
         )
-        refset.initialize_random(
+        self._refset.initialize_random(
             n_diverse=max(
-                self._ess_kwargs.get('n_diverse', 10 * problem.dim), refset.dim
+                self._ess_kwargs.get('n_diverse', 10 * problem.dim),
+                self._refset.dim,
             )
         )
         i_iter = 0
@@ -471,7 +473,7 @@ class SacessWorker:
         while self._keep_going() or i_iter == 0:
             # run standard ESS
             ess, cur_ess_results = self._run_ess(
-                refset=refset,
+                refset=self._refset,
             )
 
             # drop all but the 50 best results
@@ -494,39 +496,9 @@ class SacessWorker:
             self.maybe_update_best(ess.x_best, ess.fx_best)
             self._best_known_fx = min(ess.fx_best, self._best_known_fx)
 
-            # cooperation step
-            # try to obtain a new solution from manager
-            recv_x, recv_fx = self._manager.get_best_solution()
-            self._logger.log(
-                logging.DEBUG - 1,
-                f"Worker {self._worker_idx} received solution {recv_fx} "
-                f"(known best: {self._best_known_fx}).",
-            )
-            if recv_fx < self._best_known_fx or (
-                not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
-            ):
-                self._logger.debug(
-                    f"Worker {self._worker_idx} received better solution."
-                )
-                self._best_known_fx = recv_fx
-                self._n_received_solutions += 1
-                self.replace_solution(refset, x=recv_x, fx=recv_fx)
+            self._cooperate()
 
-            # Adaptive step
-            # Update ESS settings if we received way more solutions than we
-            # sent
-            # Magic numbers from [PenasGon2017]_ algorithm 5
-            if (
-                self._n_received_solutions > 10 * self._n_sent_solutions + 20
-                and self._neval > problem.dim * 5000
-            ):
-                self._ess_kwargs = self._manager.reconfigure_worker(
-                    self._worker_idx
-                )
-                self._logger.debug(
-                    f"Updated settings on worker {self._worker_idx} to "
-                    f"{self._ess_kwargs}"
-                )
+            self._maybe_adapt(problem)
 
             self._logger.info(
                 f"sacess worker {self._worker_idx} iteration {i_iter} "
@@ -561,6 +533,44 @@ class SacessWorker:
             f"f(x)={ess.fx_best}"
         )
         return ess, cur_ess_results
+
+    def _cooperate(self):
+        """Cooperation step."""
+        # try to obtain a new solution from manager
+        recv_x, recv_fx = self._manager.get_best_solution()
+        self._logger.log(
+            logging.DEBUG - 1,
+            f"Worker {self._worker_idx} received solution {recv_fx} "
+            f"(known best: {self._best_known_fx}).",
+        )
+        if recv_fx < self._best_known_fx or (
+            not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
+        ):
+            self._logger.debug(
+                f"Worker {self._worker_idx} received better solution."
+            )
+            self._best_known_fx = recv_fx
+            self._n_received_solutions += 1
+            self.replace_solution(self._refset, x=recv_x, fx=recv_fx)
+
+    def _maybe_adapt(self, problem: Problem):
+        """Perform adaptation step.
+
+        Update ESS settings if conditions are met.
+        """
+        # Update ESS settings if we received way more solutions than we  sent
+        # Magic numbers from [PenasGon2017]_ algorithm 5
+        if (
+            self._n_received_solutions > 10 * self._n_sent_solutions + 20
+            and self._neval > problem.dim * 5000
+        ):
+            self._ess_kwargs = self._manager.reconfigure_worker(
+                self._worker_idx
+            )
+            self._logger.debug(
+                f"Updated settings on worker {self._worker_idx} to "
+                f"{self._ess_kwargs}"
+            )
 
     def maybe_update_best(self, x: np.array, fx: float):
         """Maybe update the best known solution and send it to the manager."""
