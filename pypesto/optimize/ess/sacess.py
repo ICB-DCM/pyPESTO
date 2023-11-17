@@ -186,15 +186,17 @@ class SacessOptimizer:
             for p in worker_processes:
                 p.join()
 
-            logging_thread.stop()
+        logging_thread.stop()
 
-            walltime = time.time() - start_time
-            logger.info(
-                f"sacess stopping after {walltime:3g}s with global best "
-                f"{sacess_manager.get_best_solution()[1]}."
-            )
+        result = self._create_result(problem)
 
-        return self._create_result(problem)
+        walltime = time.time() - start_time
+        logger.info(
+            f"{self.__class__.__name__} stopped after {walltime:3g}s with global best "
+            f"{result.optimize_result[0].fval}."
+        )
+
+        return result
 
     def _create_result(self, problem: Problem) -> pypesto.Result:
         """Create result object.

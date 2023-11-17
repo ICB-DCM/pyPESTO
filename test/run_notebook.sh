@@ -52,7 +52,7 @@ fi
 
 run_notebook () {
   # Run a notebook
-  tempfile=$(tempfile)
+  tempfile=$(mktemp)
   jupyter nbconvert \
     --ExecutePreprocessor.timeout=-1 --debug --stdout --execute \
     --to markdown $@ &> $tempfile
