@@ -143,9 +143,7 @@ class ESSOptimizer:
         self.max_iter: int = max_iter
         self.max_eval: int = max_eval
         self.dim_refset: int = dim_refset
-        self.local_optimizer: Optional[
-            'pypesto.optimize.Optimizer'
-        ] = local_optimizer
+        self.local_optimizer = local_optimizer
         self.n_diverse: int = n_diverse
         if n_procs is not None and n_threads is not None:
             raise ValueError(
@@ -204,7 +202,7 @@ class ESSOptimizer:
             refset is not None and problem is not None
         ):
             raise ValueError(
-                "Either `refset` or `problem` has to be provided."
+                "Exactly one of `problem` or `refset` has to be provided."
             )
 
         # generate initial RefSet if not provided
@@ -519,7 +517,7 @@ class ESSOptimizer:
 
         self.logger.info(
             f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
-            f" took {optimizer_result.time:.3g}s, finished with "
+            f"took {optimizer_result.time:.3g}s, finished with "
             f"{optimizer_result.exitflag}: {optimizer_result.message}"
         )
         self.local_solutions.append(optimizer_result.x)
