@@ -12,7 +12,7 @@ pip install tox
 # Update package lists
 if [ "$(uname)" == "Darwin" ]; then
   # MacOS
-  brew update
+  :
 else
   # Linux
   sudo apt-get update
