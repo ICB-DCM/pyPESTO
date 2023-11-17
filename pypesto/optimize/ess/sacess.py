@@ -306,7 +306,7 @@ class SacessManager:
         with self._lock:
             leader_options = self._ess_options[np.argmax(self._worker_scores)]
             self._ess_options[worker_idx] = leader_options
-            return leader_options
+            return leader_options.copy()
 
     def submit_solution(
         self,
@@ -472,8 +472,13 @@ class SacessWorker:
         # run ESS until exit criteria are met, but start at least one iteration
         while self._keep_going() or i_iter == 0:
             # run standard ESS
-            ess, cur_ess_results = self._run_ess(
+            ess, cur_ess_results = self._setup_ess()
+            cur_ess_results = ess.minimize(
                 refset=self._refset,
+            )
+            self._logger.debug(
+                f"#{self._worker_idx}: ESS finished with best "
+                f"f(x)={ess.fx_best}"
             )
 
             # drop all but the 50 best results
@@ -507,10 +512,9 @@ class SacessWorker:
 
             i_iter += 1
 
-    def _run_ess(
+    def _setup_ess(
         self,
-        refset: RefSet,
-    ) -> Tuple[ESSOptimizer, pypesto.Result]:
+    ) -> ESSOptimizer:
         """Run ESS."""
         ess_kwargs = self._ess_kwargs.copy()
         # account for sacess walltime limit
@@ -524,15 +528,7 @@ class SacessWorker:
             f"sacess-{self._worker_idx:02d}-ess"
         )
         ess.logger.setLevel(self._ess_loglevel)
-
-        cur_ess_results = ess.minimize(
-            refset=refset,
-        )
-        self._logger.debug(
-            f"#{self._worker_idx}: ESS finished with best "
-            f"f(x)={ess.fx_best}"
-        )
-        return ess, cur_ess_results
+        return ess
 
     def _cooperate(self):
         """Cooperation step."""
