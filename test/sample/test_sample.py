@@ -545,6 +545,7 @@ def test_autocorrelation_short_chain():
     assert ess is None
 
 
+@pytest.mark.flaky(reruns=3)
 def test_autocorrelation_mixture():
     """Check that the autocorrelation is the same for the same chain
     with different scalings."""

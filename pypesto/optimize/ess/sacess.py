@@ -471,7 +471,8 @@ class SacessWorker:
         i_iter = 0
         ess_results = pypesto.Result(problem=problem)
 
-        while self._keep_going():
+        # run ESS until exit criteria are met, but start at least one iteration
+        while self._keep_going() or i_iter == 0:
             # run standard ESS
             ess, cur_ess_results = self._run_ess(
                 refset=refset,
