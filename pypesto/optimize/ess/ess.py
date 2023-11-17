@@ -27,7 +27,7 @@ References
 import enum
 import logging
 import time
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple, Union
 from warnings import warn
 
 import numpy as np
@@ -75,7 +75,10 @@ class ESSOptimizer:
         local_n1: int = 1,
         local_n2: int = 10,
         balance: float = 0.5,
-        local_optimizer: 'pypesto.optimize.Optimizer' = None,
+        local_optimizer: Union[
+            "pypesto.optimize.Optimizer",
+            Callable[..., "pypesto.optimize.Optimizer"],
+        ] = None,
         max_eval=np.inf,
         n_diverse: int = None,
         n_procs=None,
@@ -100,7 +103,11 @@ class ESSOptimizer:
             searches. Maximally one local search per performed in each
             iteration.
         local_optimizer:
-            Local optimizer for refinement, or ``None`` to skip local searches.
+            Local optimizer for refinement, or a callable that creates an
+            :class:`pypesto.optimize.Optimizer` or ``None`` to skip local searches.
+            In case of a callable, it will be called with the keyword arguments
+            `max_walltime_s` and `max_eval`, which should be passed to the optimizer
+            (if supported) to honor the overall budget.
         n_diverse:
             Number of samples to choose from to construct the initial RefSet
         max_eval:
@@ -331,18 +338,27 @@ class ESSOptimizer:
             self.exit_flag = ESSExitFlag.MAX_ITER
             return False
 
-        if self.evaluator.n_eval >= self.max_eval:
+        if self._get_remaining_eval() <= 0:
             self.exit_flag = ESSExitFlag.MAX_EVAL
             return False
 
-        if (
-            self.max_walltime_s is not None
-            and time.time() - self.starttime > self.max_walltime_s
-        ):
+        if self._get_remaining_time() <= 0:
             self.exit_flag = ESSExitFlag.MAX_TIME
             return False
 
         return True
+
+    def _get_remaining_time(self):
+        """Get remaining wall time in seconds."""
+        if self.max_walltime_s is None:
+            return np.inf
+        return self.max_walltime_s - (time.time() - self.starttime)
+
+    def _get_remaining_eval(self):
+        """Get remaining function evaluations."""
+        if self.max_eval is None:
+            return np.inf
+        return self.max_eval - self.evaluator.n_eval
 
     def _combine_solutions(self) -> Tuple[np.array, np.array]:
         """Combine solutions and evaluate.
@@ -464,7 +480,15 @@ class ESSOptimizer:
 
         # actual local search
         # TODO DW: try alternatives if it fails on initial point?
-        optimizer_result: OptimizerResult = self.local_optimizer.minimize(
+        optimizer = (
+            self.local_optimizer
+            if isinstance(self.local_optimizer, pypesto.optimize.Optimizer)
+            else self.local_optimizer(
+                max_eval=self._get_remaining_eval(),
+                max_walltime_s=self._get_remaining_time(),
+            )
+        )
+        optimizer_result: OptimizerResult = optimizer.minimize(
             problem=self.evaluator.problem,
             x0=local_search_x0,
             id="0",
