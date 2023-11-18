@@ -13,6 +13,7 @@ import numpy as np
 
 import pypesto.optimize
 from pypesto import OptimizerResult, Problem
+from pypesto.history import MemoryHistory
 from pypesto.startpoint import StartpointMethod
 
 from .function_evaluator import FunctionEvaluator, create_function_evaluator
@@ -167,6 +168,7 @@ class ESSOptimizer:
         self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
         self.evaluator: Optional[FunctionEvaluator] = None
         self.starttime: Optional[float] = None
+        self.history = MemoryHistory()
 
     def _initialize_minimize(
         self,
@@ -250,6 +252,7 @@ class ESSOptimizer:
             self._do_iteration()
 
         self._report_final()
+        self.history.finalize(exitflag=self.exit_flag.name)
         return self._create_result()
 
     def _do_iteration(self):
@@ -534,6 +537,12 @@ class ESSOptimizer:
             self.x_best = x[:]
             self.fx_best = fx
             self.x_best_has_changed = True
+            self.history.update(
+                self.x_best,
+                (0,),
+                pypesto.C.MODE_FUN,
+                {pypesto.C.FVAL: self.fx_best},
+            )
 
     def _go_beyond(self, x_best_children, fx_best_children):
         """Apply go-beyond strategy.
