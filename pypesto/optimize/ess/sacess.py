@@ -311,7 +311,9 @@ class SacessManager:
             ].copy()
             for setting in ["local_n2", "balance", "dim_refset"]:
                 if setting in leader_options:
-                    self._ess_options[worker_idx] = leader_options[setting]
+                    self._ess_options[worker_idx][setting] = leader_options[
+                        setting
+                    ]
             return self._ess_options[worker_idx].copy()
 
     def submit_solution(
@@ -357,7 +359,8 @@ class SacessManager:
                 )
                 # accept
                 self._best_known_fx.value = fx
-                self._best_known_x.value = x
+                for i, xi in enumerate(x):
+                    self._best_known_x[i] = xi
                 self._worker_comms[sender_idx] += 1
                 self._worker_scores[sender_idx] = (
                     self._worker_comms[sender_idx] * elapsed_time_s
@@ -543,10 +546,14 @@ class SacessWorker:
             f"(known best: {self._best_known_fx}).",
         )
         if recv_fx < self._best_known_fx or (
-            not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
+            not np.isfinite(self._best_known_fx) and np.isfinite(recv_fx)
         ):
+            if not np.isfinite(recv_x).all():
+                raise AssertionError(
+                    f"Received non-finite parameters {recv_x}."
+                )
             self._logger.debug(
-                f"Worker {self._worker_idx} received better solution."
+                f"Worker {self._worker_idx} received better solution {recv_fx}."
             )
             self._best_known_fx = recv_fx
             self._n_received_solutions += 1
@@ -577,7 +584,7 @@ class SacessWorker:
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
             f"best known: {self._best_known_fx}, "
-            f"rel change: {(self._best_known_fx - fx) / fx:.4g}, "
+            f"rel change: {(fx - self._best_known_fx) / fx:.4g}, "
             f"threshold: {self._acceptance_threshold}"
         )
 
