@@ -358,9 +358,14 @@ class SacessManager:
                     f"Accepted solution from worker {sender_idx}: {fx}."
                 )
                 # accept
-                self._best_known_fx.value = fx
+                if len(x) != len(self._best_known_x):
+                    raise AssertionError(
+                        f"Received solution with {len(x)} parameters, "
+                        f"but expected {len(self._best_known_x)}."
+                    )
                 for i, xi in enumerate(x):
                     self._best_known_x[i] = xi
+                self._best_known_fx.value = fx
                 self._worker_comms[sender_idx] += 1
                 self._worker_scores[sender_idx] = (
                     self._worker_comms[sender_idx] * elapsed_time_s
