@@ -461,16 +461,14 @@ class ESSOptimizer:
         """
         if self.local_only_best_sol and self.x_best_has_changed:
             self.logger.debug("Local search only from best point.")
-            local_search_x0 = self.x_best
-            local_search_fx0 = self.fx_best
+            local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         # first local search?
         elif not self.local_solutions and self.n_iter >= self.local_n1:
             self.logger.debug(
                 "First local search from best point due to "
                 f"local_n1={self.local_n1}."
             )
-            local_search_x0 = self.x_best
-            local_search_fx0 = self.fx_best
+            local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         elif (
             self.local_solutions
             and self.n_iter - self.last_local_search_niter >= self.local_n2
@@ -492,43 +490,51 @@ class ESSOptimizer:
             priority = (
                 1 - self.balance
             ) * quality_order + self.balance * diversity_order
-            chosen_child_idx = np.argmin(priority)
-            local_search_x0 = x_best_children[chosen_child_idx]
-            local_search_fx0 = fx_best_children[chosen_child_idx]
+            local_search_x0_fx0_candidates = (
+                (x_best_children[i], fx_best_children[i])
+                for i in np.argsort(priority)
+            )
         else:
             return
 
         # actual local search
-        # TODO DW: try alternatives if it fails on initial point?
-        optimizer = (
-            self.local_optimizer
-            if isinstance(self.local_optimizer, pypesto.optimize.Optimizer)
-            else self.local_optimizer(
-                max_eval=self._get_remaining_eval(),
-                max_walltime_s=self._get_remaining_time(),
+        # repeat until a finite value is found, or we don't have any startpoints left
+        for (
+            local_search_x0,
+            local_search_fx0,
+        ) in local_search_x0_fx0_candidates:
+            optimizer = (
+                self.local_optimizer
+                if isinstance(self.local_optimizer, pypesto.optimize.Optimizer)
+                else self.local_optimizer(
+                    max_eval=self._get_remaining_eval(),
+                    max_walltime_s=self._get_remaining_time(),
+                )
             )
-        )
-        optimizer_result: OptimizerResult = optimizer.minimize(
-            problem=self.evaluator.problem,
-            x0=local_search_x0,
-            id="0",
-        )
-        # add function evaluations during local search to our function
-        #  evaluation counter (NOTE: depending on the setup, we might neglect
-        #  gradient evaluations).
-        self.evaluator.n_eval += optimizer_result.n_fval
-        self.evaluator.n_eval_round += optimizer_result.n_fval
+            optimizer_result: OptimizerResult = optimizer.minimize(
+                problem=self.evaluator.problem,
+                x0=local_search_x0,
+                id="0",
+            )
+            # add function evaluations during local search to our function
+            #  evaluation counter (NOTE: depending on the setup, we might neglect
+            #  gradient evaluations).
+            self.evaluator.n_eval += optimizer_result.n_fval
+            self.evaluator.n_eval_round += optimizer_result.n_fval
 
-        self.logger.info(
-            f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
-            f"took {optimizer_result.time:.3g}s, finished with "
-            f"{optimizer_result.exitflag}: {optimizer_result.message}"
-        )
-        self.local_solutions.append(optimizer_result.x)
+            self.logger.info(
+                f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
+                f"took {optimizer_result.time:.3g}s, finished with "
+                f"{optimizer_result.exitflag}: {optimizer_result.message}"
+            )
+            if np.isfinite(optimizer_result.fval):
+                self.local_solutions.append(optimizer_result.x)
 
-        self._maybe_update_global_best(
-            optimizer_result.x, optimizer_result.fval
-        )
+                self._maybe_update_global_best(
+                    optimizer_result.x, optimizer_result.fval
+                )
+                break
+
         self.last_local_search_niter = self.n_iter
         self.evaluator.reset_round_counter()
 
