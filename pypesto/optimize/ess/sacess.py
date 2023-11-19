@@ -366,7 +366,7 @@ class SacessManager:
                     f"Rejected solution from worker {sender_idx} "
                     f"abs change: {abs_change} "
                     f"rel change: {abs(abs_change / self._best_known_fx.value):.4g} "
-                    f" (threshold: {self._rejection_threshold.value}) "
+                    f"(threshold: {self._rejection_threshold.value}) "
                     f"(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
