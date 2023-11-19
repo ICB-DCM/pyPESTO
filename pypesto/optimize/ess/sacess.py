@@ -21,7 +21,7 @@ from ...store.read_from_hdf5 import read_result
 from ...store.save_to_hdf5 import write_result
 from ..optimize import Problem
 from .ess import ESSExitFlag, ESSOptimizer
-from .function_evaluator import FunctionEvaluatorMP, FunctionEvaluatorMT
+from .function_evaluator import create_function_evaluator
 from .refset import RefSet
 
 __all__ = ["SacessOptimizer", "get_default_ess_options"]
@@ -125,7 +125,7 @@ class SacessOptimizer:
 
         start_time = time.time()
         logger.debug(
-            f"Running sacess with {self.num_workers} "
+            f"Running {self.__class__.__name__} with {self.num_workers} "
             f"workers: {self.ess_init_args}"
         )
         ess_init_args = self.ess_init_args or get_default_ess_options(
@@ -169,7 +169,7 @@ class SacessOptimizer:
             # launch worker processes
             worker_processes = [
                 Process(
-                    name=f"sacess-worker-{i:02d}",
+                    name=f"{self.__class__.__name__}-worker-{i:02d}",
                     target=_run_worker,
                     args=(
                         worker,
@@ -308,7 +308,7 @@ class SacessManager:
         with self._lock:
             leader_options = self._ess_options[np.argmax(self._worker_scores)]
             self._ess_options[worker_idx] = leader_options
-            return leader_options
+            return leader_options.copy()
 
     def submit_solution(
         self,
@@ -328,6 +328,7 @@ class SacessManager:
         sender_idx: Index of the worker submitting the results.
         elapsed_time_s: Elapsed time since the beginning of the sacess run.
         """
+        abs_change = fx - self._best_known_fx.value
         with self._lock:
             # cooperation step
             # solution improves best value by at least a factor of ...
@@ -342,10 +343,7 @@ class SacessManager:
                 or (self._best_known_fx.value == 0 and fx < 0)
                 or (
                     fx < self._best_known_fx.value
-                    and abs(
-                        (self._best_known_fx.value - fx)
-                        / self._best_known_fx.value
-                    )
+                    and abs(abs_change / self._best_known_fx.value)
                     > self._rejection_threshold.value
                 )
             ):
@@ -363,10 +361,12 @@ class SacessManager:
             else:
                 # reject solution
                 self._rejections.value += 1
+
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
-                    f"rel change: {abs((self._best_known_fx.value - fx) / self._best_known_fx.value)} "
-                    f" < {self._rejection_threshold.value} "
+                    f"abs change: {abs_change} "
+                    f"rel change: {abs(abs_change / self._best_known_fx.value):.4g} "
+                    f"(threshold: {self._rejection_threshold.value}) "
                     f"(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
@@ -433,41 +433,38 @@ class SacessWorker:
         self._ess_loglevel = ess_loglevel
         self._logger = None
         self._tmp_result_file = tmp_result_file
+        self._refset = None
 
     def run(
         self,
         problem: Problem,
         startpoint_method: StartpointMethod,
     ):
+        self._start_time = time.time()
+
         self._logger.setLevel(self._loglevel)
         # Set the manager logger to one created within the current process
         self._manager._logger = self._logger
 
-        """Start the worker."""
         self._logger.debug(
             f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
         )
 
-        if n_procs := self._ess_kwargs.get('n_procs'):
-            evaluator = FunctionEvaluatorMP(
-                problem=problem,
-                startpoint_method=startpoint_method,
-                n_procs=n_procs,
-            )
-        else:
-            evaluator = FunctionEvaluatorMT(
-                problem=problem,
-                startpoint_method=startpoint_method,
-                n_threads=self._ess_kwargs.get('n_threads', 1),
-            )
-        self._start_time = time.time()
-        # create refset from ndiverse
-        refset = RefSet(
+        evaluator = create_function_evaluator(
+            problem,
+            startpoint_method,
+            n_procs=self._ess_kwargs.get('n_procs'),
+            n_threads=self._ess_kwargs.get('n_threads'),
+        )
+
+        # create initial refset
+        self._refset = RefSet(
             dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
         )
-        refset.initialize_random(
+        self._refset.initialize_random(
             n_diverse=max(
-                self._ess_kwargs.get('n_diverse', 10 * problem.dim), refset.dim
+                self._ess_kwargs.get('n_diverse', 10 * problem.dim),
+                self._refset.dim,
             )
         )
         i_iter = 0
@@ -476,8 +473,13 @@ class SacessWorker:
         # run ESS until exit criteria are met, but start at least one iteration
         while self._keep_going() or i_iter == 0:
             # run standard ESS
-            ess, cur_ess_results = self._run_ess(
-                refset=refset,
+            ess = self._setup_ess()
+            cur_ess_results = ess.minimize(
+                refset=self._refset,
+            )
+            self._logger.debug(
+                f"#{self._worker_idx}: ESS finished with best "
+                f"f(x)={ess.fx_best}"
             )
 
             # drop all but the 50 best results
@@ -500,39 +502,9 @@ class SacessWorker:
             self.maybe_update_best(ess.x_best, ess.fx_best)
             self._best_known_fx = min(ess.fx_best, self._best_known_fx)
 
-            # cooperation step
-            # try to obtain a new solution from manager
-            recv_x, recv_fx = self._manager.get_best_solution()
-            self._logger.log(
-                logging.DEBUG - 1,
-                f"Worker {self._worker_idx} received solution {recv_fx} "
-                f"(known best: {self._best_known_fx}).",
-            )
-            if recv_fx < self._best_known_fx or (
-                not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
-            ):
-                self._logger.debug(
-                    f"Worker {self._worker_idx} received better solution."
-                )
-                self._best_known_fx = recv_fx
-                self._n_received_solutions += 1
-                self.replace_solution(refset, x=recv_x, fx=recv_fx)
+            self._cooperate()
 
-            # Adaptive step
-            # Update ESS settings if we received way more solutions than we
-            # sent
-            # Magic numbers from [PenasGon2017]_ algorithm 5
-            if (
-                self._n_received_solutions > 10 * self._n_sent_solutions + 20
-                and self._neval > problem.dim * 5000
-            ):
-                self._ess_kwargs = self._manager.reconfigure_worker(
-                    self._worker_idx
-                )
-                self._logger.debug(
-                    f"Updated settings on worker {self._worker_idx} to "
-                    f"{self._ess_kwargs}"
-                )
+            self._maybe_adapt(problem)
 
             self._logger.info(
                 f"sacess worker {self._worker_idx} iteration {i_iter} "
@@ -541,10 +513,9 @@ class SacessWorker:
 
             i_iter += 1
 
-    def _run_ess(
+    def _setup_ess(
         self,
-        refset: RefSet,
-    ) -> Tuple[ESSOptimizer, pypesto.Result]:
+    ) -> ESSOptimizer:
         """Run ESS."""
         ess_kwargs = self._ess_kwargs.copy()
         # account for sacess walltime limit
@@ -558,22 +529,52 @@ class SacessWorker:
             f"sacess-{self._worker_idx:02d}-ess"
         )
         ess.logger.setLevel(self._ess_loglevel)
+        return ess
 
-        cur_ess_results = ess.minimize(
-            refset=refset,
+    def _cooperate(self):
+        """Cooperation step."""
+        # try to obtain a new solution from manager
+        recv_x, recv_fx = self._manager.get_best_solution()
+        self._logger.log(
+            logging.DEBUG - 1,
+            f"Worker {self._worker_idx} received solution {recv_fx} "
+            f"(known best: {self._best_known_fx}).",
         )
-        self._logger.debug(
-            f"#{self._worker_idx}: ESS finished with best "
-            f"f(x)={ess.fx_best}"
-        )
-        return ess, cur_ess_results
+        if recv_fx < self._best_known_fx or (
+            not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
+        ):
+            self._logger.debug(
+                f"Worker {self._worker_idx} received better solution."
+            )
+            self._best_known_fx = recv_fx
+            self._n_received_solutions += 1
+            self.replace_solution(self._refset, x=recv_x, fx=recv_fx)
+
+    def _maybe_adapt(self, problem: Problem):
+        """Perform adaptation step.
+
+        Update ESS settings if conditions are met.
+        """
+        # Update ESS settings if we received way more solutions than we  sent
+        # Magic numbers from [PenasGon2017]_ algorithm 5
+        if (
+            self._n_received_solutions > 10 * self._n_sent_solutions + 20
+            and self._neval > problem.dim * 5000
+        ):
+            self._ess_kwargs = self._manager.reconfigure_worker(
+                self._worker_idx
+            )
+            self._logger.debug(
+                f"Updated settings on worker {self._worker_idx} to "
+                f"{self._ess_kwargs}"
+            )
 
     def maybe_update_best(self, x: np.array, fx: float):
         """Maybe update the best known solution and send it to the manager."""
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
             f"best known: {self._best_known_fx}, "
-            f"rel change: {(self._best_known_fx - fx) / fx}, "
+            f"rel change: {(self._best_known_fx - fx) / fx:.4g}, "
             f"threshold: {self._acceptance_threshold}"
         )
 
