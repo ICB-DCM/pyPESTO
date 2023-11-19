@@ -59,7 +59,7 @@ repos:
   - id: style
     name: Check style
     description: Check style
-    require_serial: true
-    entry: tox -e project,flake8 --
+    pass_filenames: false
+    entry: tox -e project,flake8
     language: system
     types: [python]
