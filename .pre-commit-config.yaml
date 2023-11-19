@@ -60,5 +60,5 @@ repos:
     name: Check style
     description: Check style
     entry: tox -e project,flake8 --
-    language: python
+    language: system
     types: [python]
