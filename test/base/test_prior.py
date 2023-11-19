@@ -125,7 +125,7 @@ def test_mode(scale, prior_type_list):
 
             # flat functions don't have local minima, so dont check this
             # for uniform priors
-            print("XXXXX", result.optimize_result.list[0].fval)
+
             num_optim = result.optimize_result.list[0]['x'][~np.isnan(topt)]
             assert np.isclose(
                 num_optim, topt[~np.isnan(topt)], atol=1e-03
