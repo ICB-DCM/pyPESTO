@@ -43,6 +43,6 @@ class PredictorTask(Task):
 
     def execute(self):  # -> 'pypesto.predict.PredictionResult':  # noqa: F821
         """Execute and return the prediction."""
-        logger.info(f"Executing task {self.id}.")
+        logger.debug(f"Executing task {self.id}.")
         prediction = self.predictor(self.x, self.sensi_orders, self.mode)
         return prediction

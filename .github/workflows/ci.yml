@@ -305,7 +305,9 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
+        path: |
+          ~/.cache
+          .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
 
     - name: Install dependencies
@@ -313,10 +315,6 @@ jobs:
 
     - name: Check repository size
       run: tox -e size
-
-    - name: Run quality checks
-      timeout-minutes: 5
-      run: tox -e project,flake8
 
     - name: Run pre-commit hooks
       run: pre-commit run --all-files
