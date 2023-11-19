@@ -1,6 +1,7 @@
 """History utility functions."""
 
 import numbers
+from functools import wraps
 from typing import Dict, Sequence, Union
 
 import numpy as np
@@ -38,6 +39,7 @@ def trace_wrap(f):
     integer `ix` the output to a single value.
     """
 
+    @wraps(f)
     def wrapped_f(
         self, ix: Union[Sequence[int], int, None] = None, trim: bool = False
     ) -> Union[Sequence[Union[float, MaybeArray]], Union[float, MaybeArray]]:

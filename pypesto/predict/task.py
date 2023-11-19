@@ -28,7 +28,7 @@ class PredictorTask(Task):
 
     def __init__(
         self,
-        predictor: 'pypesto.predict.Predictor',  # noqa: F821
+        predictor,  #: 'pypesto.predict.Predictor',  # noqa: F821
         x: Sequence[float],
         sensi_orders: Tuple[int, ...],
         mode: ModeType,
@@ -41,7 +41,7 @@ class PredictorTask(Task):
         self.mode = mode
         self.id = id
 
-    def execute(self) -> 'pypesto.predict.PredictionResult':  # noqa: F821
+    def execute(self):  # -> 'pypesto.predict.PredictionResult':  # noqa: F821
         """Execute and return the prediction."""
         logger.info(f"Executing task {self.id}.")
         prediction = self.predictor(self.x, self.sensi_orders, self.mode)
