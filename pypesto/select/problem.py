@@ -7,8 +7,6 @@ from petab_select import Model
 from ..C import TYPE_POSTPROCESSOR
 from .method import MethodCaller
 
-__all__ = ["Problem"]
-
 
 class Problem:
     """Handles use of a model selection algorithm.
