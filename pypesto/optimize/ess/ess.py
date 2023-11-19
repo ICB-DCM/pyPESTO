@@ -189,6 +189,10 @@ class ESSOptimizer:
         startpoint_method: StartpointMethod = None,
         refset: Optional[RefSet] = None,
     ):
+        """Initialize for optimizations.
+
+        Create initial refset, start timer, ... .
+        """
         if startpoint_method is not None:
             warn(
                 "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
