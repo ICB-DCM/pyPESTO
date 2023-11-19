@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 from petab_select import Criterion, Model
 
-from ..C import TYPE_POSTPROCESSOR
 from ..objective import ObjectiveBase
 from ..optimize import minimize
 from ..problem import Problem
@@ -12,7 +11,7 @@ from ..result import OptimizerResult, Result
 from .misc import model_to_pypesto_problem
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
-POSTPROCESSOR_TYPE = Callable[["ModelProblem"], None]
+TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
 
 
 class ModelProblem:
@@ -65,7 +64,7 @@ class ModelProblem:
         x_guess: List[float] = None,
         minimize_options: Dict = None,
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
-        postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
     ):
         """Construct then calibrate a model problem.

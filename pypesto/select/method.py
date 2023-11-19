@@ -14,9 +14,8 @@ from petab_select import (
     Model,
 )
 
-from ..C import TYPE_POSTPROCESSOR
 from ..problem import Problem
-from .model_problem import ModelProblem
+from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
 
 
 class MethodSignalProceed(str, Enum):
