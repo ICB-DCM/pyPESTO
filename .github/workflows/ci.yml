@@ -31,14 +31,16 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-base
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 25
+      timeout-minutes: 30
       run: tox -e base
 
     - name: Coverage
@@ -65,7 +67,9 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
+        path: |
+          ~/.cache
+          .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci
 
     - name: Install dependencies
@@ -124,8 +128,10 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-petab
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici pysb
@@ -165,8 +171,9 @@ jobs:
       with:
         path: |
           ~/.cache
+          .tox/
           ~/.julia/artifacts
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-julia
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
@@ -203,8 +210,10 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-optimize
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh ipopt
@@ -237,8 +246,10 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-hierarchical
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -271,8 +282,10 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-select
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -308,7 +321,7 @@ jobs:
         path: |
           ~/.cache
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-quality
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: pip install tox pre-commit
@@ -337,8 +350,10 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-docs
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
@@ -368,8 +383,10 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks1
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici ipopt
@@ -396,8 +413,10 @@ jobs:
     - name: Cache
       uses: actions/cache@v3
       with:
-        path: ~/.cache
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-notebooks2
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
