@@ -4,8 +4,8 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import petab_select
 from petab_select import Model
 
-from ..C import TYPE_POSTPROCESSOR
 from .method import MethodCaller
+from .model_problem import TYPE_POSTPROCESSOR, ModelProblem  # noqa: F401
 
 
 class Problem:
