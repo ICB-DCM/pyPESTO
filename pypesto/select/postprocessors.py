@@ -7,8 +7,7 @@ import numpy as np
 from petab_select.constants import ESTIMATE, TYPE_PATH, Criterion
 
 from .. import store, visualize
-from ..C import TYPE_POSTPROCESSOR
-from .model_problem import ModelProblem
+from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
 
 __all__ = [
     'model_id_binary_postprocessor',

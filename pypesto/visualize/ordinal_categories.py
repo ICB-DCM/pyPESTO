@@ -1,5 +1,8 @@
 import warnings
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
+
+if TYPE_CHECKING:
+    import pypesto
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,9 +17,7 @@ try:
     from ..hierarchical.optimal_scaling.parameter import (
         OptimalScalingParameter,
     )
-    from ..hierarchical.optimal_scaling.problem import OptimalScalingProblem
     from ..hierarchical.optimal_scaling.solver import (
-        OptimalScalingInnerSolver,
         compute_interval_constraints,
         get_bounds_for_category,
         undo_inner_parameter_reparameterization,
@@ -155,8 +156,8 @@ def plot_categories_from_pypesto_result(
 
 
 def plot_categories_from_inner_result(
-    inner_problem: 'OptimalScalingProblem',
-    inner_solver: 'OptimalScalingInnerSolver',
+    inner_problem: 'pypesto.hierarchical.optimal_scaling.problem.OptimalScalingProblem',
+    inner_solver: 'pypesto.hierarchical.optimal_scaling.solver.OptimalScalingInnerSolver',
     results: List[Dict],
     simulation: List[np.ndarray],
     timepoints: List[np.ndarray],
