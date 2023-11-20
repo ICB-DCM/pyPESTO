@@ -528,7 +528,7 @@ def history(request) -> pypesto.HistoryBase:
     for _ in range(10):
         result = {FVAL: np.random.randn(), GRAD: np.random.randn(7)}
         history.update(np.random.randn(7), (0, 1), 'mode_fun', result)
-    history.finalize()
+    history.finalize(message="some message", exitflag="some flag")
 
     return history
 
@@ -539,6 +539,8 @@ def test_history_properties(history: pypesto.HistoryBase):
     assert history.n_hess == 0
     assert history.n_res == 0
     assert history.n_sres == 0
+    assert history.exitflag == "some flag"
+    assert history.message == "some message"
 
     if not history.implements_trace():
         with pytest.raises(NotImplementedError):
