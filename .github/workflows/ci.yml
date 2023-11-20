@@ -70,6 +70,7 @@ jobs:
         path: |
           ~/.cache
           .tox/
+          ~/Library/Caches/Homebrew
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci
 
     - name: Install dependencies
