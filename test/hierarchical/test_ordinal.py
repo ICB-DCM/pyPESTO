@@ -82,7 +82,8 @@ def test_evaluate_objective(inner_options: List[Dict]):
 def test_optimization(inner_options: List[Dict]):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
-
+    # Set seed for reproducibility.
+    np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
         method='L-BFGS-B', options={'maxiter': 10}
     )
