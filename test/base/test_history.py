@@ -200,6 +200,11 @@ class HistoryTest(unittest.TestCase):
                 'x_names',
                 'editable',
             ]
+            # exitflag and message are not stored in CsvHistory
+            and (
+                not isinstance(start.history, CsvHistory)
+                or a not in ["_exitflag", "_message", "exitflag", "message"]
+            )
         ]
         for attr in history_attributes:
             assert getattr(start.history, attr) == getattr(
