@@ -141,7 +141,6 @@ class SacessOptimizer:
         logging_thread = logging.handlers.QueueListener(
             multiprocessing.Queue(-1), logging_handler
         )
-        logging_thread.start()
 
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
@@ -182,6 +181,11 @@ class SacessOptimizer:
             ]
             for p in worker_processes:
                 p.start()
+
+            # start logging thread only AFTER starting the worker processes
+            #  to prevent deadlocks
+            logging_thread.start()
+
             # wait for finish
             for p in worker_processes:
                 p.join()

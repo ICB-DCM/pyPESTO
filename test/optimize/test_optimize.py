@@ -441,6 +441,9 @@ def test_history_beats_optimizer():
     )
 
 
+@pytest.mark.filterwarnings(
+    "ignore:Passing `startpoint_method` directly is deprecated.*:DeprecationWarning"
+)
 @pytest.mark.parametrize("ess_type", ["ess", "cess", "sacess"])
 @pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
 @pytest.mark.flaky(reruns=3)
@@ -485,8 +488,12 @@ def test_ess(problem, local_optimizer, ess_type, request):
         ):
             # Not pickleable - incompatible with CESS
             pytest.skip()
-        # SACESS with 4 processes
-        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
+        # SACESS with 12 processes
+        #  We use a higher number than reasonable to be more likely to trigger
+        #  any potential race conditions (gh-1204)
+        ess_init_args = get_default_ess_options(
+            num_workers=12, dim=problem.dim
+        )
         for x in ess_init_args:
             x['local_optimizer'] = local_optimizer
         ess = SacessOptimizer(
