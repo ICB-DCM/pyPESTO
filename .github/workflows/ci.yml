@@ -11,6 +11,10 @@ on:
     # run Monday and Thursday at 03:42 UTC
     - cron: '42 3 * * MON,THU'
 
+env:
+  # use all available cores for compiling amici models
+  AMICI_PARALLEL_COMPILE: ""
+
 # jobs
 jobs:
   base:
@@ -40,6 +44,9 @@ jobs:
     - name: Run tests
       timeout-minutes: 25
       run: tox -e base
+      env:
+        CC: clang
+        CXX: clang++
 
     - name: Coverage
       uses: codecov/codecov-action@v3
@@ -133,6 +140,9 @@ jobs:
     - name: Run tests
       timeout-minutes: 35
       run: tox -e petab
+      env:
+        CC: clang
+        CXX: clang++
 
     - name: Coverage
       uses: codecov/codecov-action@v3

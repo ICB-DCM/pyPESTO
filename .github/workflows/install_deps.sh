@@ -32,7 +32,7 @@ for par in "$@"; do
         brew install swig hdf5 libomp
       else
         sudo apt-get install \
-          swig libatlas-base-dev libhdf5-serial-dev
+          swig libatlas-base-dev libhdf5-serial-dev clang
       fi
     ;;
 
