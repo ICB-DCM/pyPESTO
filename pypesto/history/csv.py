@@ -97,7 +97,7 @@ class CsvHistory(CountHistoryBase):
 
     def finalize(self, message: str = None, exitflag: str = None):
         """See `HistoryBase` docstring."""
-        super().finalize()
+        super().finalize(message=message, exitflag=exitflag)
         self._save_trace(finalize=True)
 
     def _update_trace(
