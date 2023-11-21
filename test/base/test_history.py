@@ -200,6 +200,11 @@ class HistoryTest(unittest.TestCase):
                 'x_names',
                 'editable',
             ]
+            # exitflag and message are not stored in CsvHistory
+            and (
+                not isinstance(start.history, CsvHistory)
+                or a not in ["_exitflag", "_message", "exitflag", "message"]
+            )
         ]
         for attr in history_attributes:
             assert getattr(start.history, attr) == getattr(
@@ -528,7 +533,7 @@ def history(request) -> pypesto.HistoryBase:
     for _ in range(10):
         result = {FVAL: np.random.randn(), GRAD: np.random.randn(7)}
         history.update(np.random.randn(7), (0, 1), 'mode_fun', result)
-    history.finalize()
+    history.finalize(message="some message", exitflag="some flag")
 
     return history
 
@@ -539,6 +544,8 @@ def test_history_properties(history: pypesto.HistoryBase):
     assert history.n_hess == 0
     assert history.n_res == 0
     assert history.n_sres == 0
+    assert history.exitflag == "some flag"
+    assert history.message == "some message"
 
     if not history.implements_trace():
         with pytest.raises(NotImplementedError):
