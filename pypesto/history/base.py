@@ -118,6 +118,16 @@ class HistoryBase(ABC):
     def start_time(self) -> float:
         """Return start time."""
 
+    @property
+    @abstractmethod
+    def message(self) -> str:
+        """Return message."""
+
+    @property
+    @abstractmethod
+    def exitflag(self) -> str:
+        """Return exitflag."""
+
     @abstractmethod
     def get_x_trace(
         self,
@@ -304,6 +314,14 @@ class NoHistory(HistoryBase):
     def start_time(self) -> float:  # noqa: D102
         raise NotImplementedError()
 
+    @property
+    def message(self) -> float:  # noqa: D102
+        raise NotImplementedError()
+
+    @property
+    def exitflag(self) -> float:  # noqa: D102
+        raise NotImplementedError()
+
     def get_x_trace(  # noqa: D102
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
@@ -354,6 +372,8 @@ class CountHistoryBase(HistoryBase):
         self._n_res: int = 0
         self._n_sres: int = 0
         self._start_time: float = time.time()
+        self._exitflag = ""
+        self._message = ""
 
     def update(  # noqa: D102
         self,
@@ -406,6 +426,22 @@ class CountHistoryBase(HistoryBase):
     @property
     def start_time(self) -> float:  # noqa: D102
         return self._start_time
+
+    @property
+    def message(self) -> str:  # noqa: D102
+        return self._message
+
+    @property
+    def exitflag(self) -> str:  # noqa: D102
+        return self._exitflag
+
+    def finalize(  # noqa: D102
+        self,
+        message: str = None,
+        exitflag: str = None,
+    ) -> None:  # noqa: D102
+        self._message = message
+        self._exitflag = exitflag
 
 
 class CountHistory(CountHistoryBase):
