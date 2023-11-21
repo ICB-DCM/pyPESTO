@@ -528,10 +528,15 @@ class ESSOptimizer:
                 f"{optimizer_result.exitflag}: {optimizer_result.message}"
             )
             if np.isfinite(optimizer_result.fval):
-                self.local_solutions.append(optimizer_result.x)
+                local_solution_x = optimizer_result.x[
+                    optimizer_result.free_indices
+                ]
+                local_solution_fx = optimizer_result.fval
+
+                self.local_solutions.append(local_solution_x)
 
                 self._maybe_update_global_best(
-                    optimizer_result.x, optimizer_result.fval
+                    local_solution_x, local_solution_fx
                 )
                 break
 
