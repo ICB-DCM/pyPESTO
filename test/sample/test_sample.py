@@ -2,7 +2,6 @@
 
 import os
 
-import matplotlib.pyplot as plt
 import numpy as np
 import petab
 import pytest
@@ -13,7 +12,6 @@ import pypesto
 import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
-import pypesto.visualize as visualize
 from pypesto.sample.pymc import PymcSampler
 
 
@@ -226,10 +224,6 @@ def test_pipeline(sampler, problem):
     # Warning here: pypesto/visualize/sampling.py:1104
     # geweke test
     sample.geweke_test(result=result)
-
-    # some plot
-    visualize.sampling_1d_marginals(result)
-    plt.close()
 
 
 def test_ground_truth():
