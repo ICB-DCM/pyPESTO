@@ -183,7 +183,7 @@ class ProfileResult:
     """
 
     def __init__(self):
-        self.list = []
+        self.list: list[list[ProfilerResult]] = []
 
     def append_empty_profile_list(self) -> int:
         """Append an empty profile list to the list of profile lists.
