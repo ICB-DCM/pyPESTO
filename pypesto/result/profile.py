@@ -52,9 +52,9 @@ class ProfilerResult(dict):
         x_path: np.ndarray,
         fval_path: np.ndarray,
         ratio_path: np.ndarray,
-        gradnorm_path: np.ndarray = np.nan,
-        exitflag_path: np.ndarray = np.nan,
-        time_path: np.ndarray = np.nan,
+        gradnorm_path: np.ndarray = None,
+        exitflag_path: np.ndarray = None,
+        time_path: np.ndarray = None,
         time_total: float = 0.0,
         n_fval: int = 0,
         n_grad: int = 0,
@@ -64,19 +64,41 @@ class ProfilerResult(dict):
         super().__init__()
 
         # initialize profile path
-        x_shape = x_path.shape
-        if len(x_shape) == 1:
-            self.x_path = np.zeros((x_shape[0], 1))
-            self.x_path[:, 0] = x_path[:]
-        else:
-            self.x_path = np.zeros((x_shape[0], x_shape[1]))
-            self.x_path[:, :] = x_path[:, :]
+        if not x_path.ndim == 2:
+            raise ValueError("x_path must be a 2D array.")
 
-        self.fval_path = np.asarray(fval_path)
-        self.ratio_path = np.asarray(ratio_path)
-        self.gradnorm_path = np.asarray(gradnorm_path)
-        self.exitflag_path = np.asarray(exitflag_path)
-        self.time_path = np.asarray(time_path)
+        self.x_path = x_path.copy()
+        self.fval_path = fval_path.copy()
+        self.ratio_path = ratio_path.copy()
+
+        if gradnorm_path is None:
+            self.gradnorm_path = np.full(x_path.shape[1], np.nan)
+        else:
+            self.gradnorm_path = gradnorm_path.copy()
+
+        if exitflag_path is None:
+            self.exitflag_path = np.full(x_path.shape[1], np.nan)
+        else:
+            self.exitflag_path = exitflag_path.copy()
+
+        if time_path is None:
+            self.time_path = np.full(x_path.shape[1], np.nan)
+        else:
+            self.time_path = time_path.copy()
+
+        if (
+            not self.x_path.shape[1]
+            == len(self.fval_path)
+            == len(self.ratio_path)
+            == len(self.gradnorm_path)
+            == len(self.exitflag_path)
+            == len(self.time_path)
+        ):
+            raise ValueError(
+                "x_path, fval_path, ratio_path, gradnorm_path, exitflag_path, "
+                "time_path must have the same length."
+            )
+
         self.time_total = time_total
         self.n_fval = n_fval
         self.n_grad = n_grad
@@ -131,26 +153,12 @@ class ProfilerResult(dict):
         n_hess:
             Number of Hessian evaluations performed to find `x`.
         """
-
-        # short function to append to numpy vectors
-        def append_to_vector(field_name, val):
-            field_new = np.zeros(self[field_name].size + 1)
-            field_new[0:-1] = self[field_name]
-            field_new[-1] = val
-            self[field_name] = field_new
-
-        # write profile path
-        x_new = np.zeros((self.x_path.shape[0], self.x_path.shape[1] + 1))
-        x_new[:, 0:-1] = self.x_path
-        x_new[:, -1] = x
-        self.x_path = x_new
-
-        # append to other paths
-        append_to_vector("fval_path", fval)
-        append_to_vector("ratio_path", ratio)
-        append_to_vector("gradnorm_path", gradnorm)
-        append_to_vector("exitflag_path", exitflag)
-        append_to_vector("time_path", time)
+        self.x_path = np.hstack((self.x_path, x[..., np.newaxis]))
+        self.fval_path = np.hstack((self.fval_path, fval))
+        self.ratio_path = np.hstack((self.ratio_path, ratio))
+        self.gradnorm_path = np.hstack((self.gradnorm_path, gradnorm))
+        self.exitflag_path = np.hstack((self.exitflag_path, exitflag))
+        self.time_path = np.hstack((self.time_path, time))
 
         # increment the time and f_eval counters
         self.time_total += time
