@@ -178,8 +178,8 @@ def create_profile_result():
     result = create_optimization_result()
 
     # write some dummy results for profiling
-    ratio_path_1 = [0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15]
-    ratio_path_2 = [0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1]
+    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15])
+    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1])
     x_path_1 = np.array(
         [
             [2.0, 2.1, 2.3, 2.5, 2.7, 2.9, 3.0],
