@@ -21,6 +21,7 @@ def walk_along_profile(
     create_next_guess: Callable,
     global_opt: float,
     i_par: int,
+    max_tries: int = 10,
 ) -> ProfilerResult:
     """
     Compute half a profile.
@@ -47,6 +48,9 @@ def walk_along_profile(
         Handle of the method which creates the next profile point proposal
     i_par:
         index for the current parameter
+    max_tries:
+        If optimization at a given profile point fails, retry optimization
+        ``max_tries`` times with randomly sampled starting points.
 
     Returns
     -------
@@ -69,6 +73,8 @@ def walk_along_profile(
             stop_profile = x_now[i_par] >= problem.ub_full[[i_par]]
         else:
             raise AssertionError("par_direction must be -1 or 1")
+
+        # ... check likelihood ratio
         if not options.whole_path:
             stop_profile |= current_profile.ratio_path[-1] < options.ratio_min
 
@@ -92,15 +98,39 @@ def walk_along_profile(
         startpoint = np.array([x_next[i] for i in problem.x_free_indices])
 
         # run optimization
-        # IMPORTANT: This optimization will need a proper exception
-        # handling (coming soon)
         if startpoint.size > 0:
-            optimizer_result = optimizer.minimize(
-                problem=problem,
-                x0=startpoint,
-                id='0',
-                optimize_options=OptimizeOptions(allow_failed_starts=False),
-            )
+            # number of optimization attempts for the given value of i_par in case
+            #  no finite solution is found
+            for i_optimize_attempt in range(max_tries):
+                optimizer_result = optimizer.minimize(
+                    problem=problem,
+                    x0=startpoint,
+                    id=str(i_optimize_attempt),
+                    optimize_options=OptimizeOptions(
+                        allow_failed_starts=False
+                    ),
+                )
+                if np.isfinite(optimizer_result.fval):
+                    break
+
+                profiled_par_id = problem.x_names[i_par]
+                profiled_par_value = startpoint[
+                    problem.x_free_indices.index(i_par)
+                ]
+                logger.warning(
+                    f"Optimization at {profiled_par_id}={profiled_par_value} failed."
+                )
+                # sample a new starting point for another attempt
+                #  might be preferable to stay close to the previous point, at least initially,
+                #  but for now, we just sample from anywhere within the parameter bounds
+                # alternatively, run multi-start optimization
+                startpoint = problem.startpoint_method(
+                    n_starts=1, problem=problem
+                )[0]
+            else:
+                raise RuntimeError(
+                    f"Computing profile point failed. Could not find a finite solution after {max_tries} attempts."
+                )
         else:
             # if too many parameters are fixed, there is nothing to do ...
             fval = problem.objective(np.array([]))
