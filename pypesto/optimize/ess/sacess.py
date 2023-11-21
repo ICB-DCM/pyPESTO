@@ -5,6 +5,7 @@ import logging.handlers
 import multiprocessing
 import os
 import time
+from math import ceil, sqrt
 from multiprocessing import Manager, Process
 from multiprocessing.managers import SyncManager
 from pathlib import Path
@@ -311,7 +312,9 @@ class SacessManager:
             ].copy()
             for setting in ["local_n2", "balance", "dim_refset"]:
                 if setting in leader_options:
-                    self._ess_options[worker_idx] = leader_options[setting]
+                    self._ess_options[worker_idx][setting] = leader_options[
+                        setting
+                    ]
             return self._ess_options[worker_idx].copy()
 
     def submit_solution(
@@ -356,8 +359,14 @@ class SacessManager:
                     f"Accepted solution from worker {sender_idx}: {fx}."
                 )
                 # accept
+                if len(x) != len(self._best_known_x):
+                    raise AssertionError(
+                        f"Received solution with {len(x)} parameters, "
+                        f"but expected {len(self._best_known_x)}."
+                    )
+                for i, xi in enumerate(x):
+                    self._best_known_x[i] = xi
                 self._best_known_fx.value = fx
-                self._best_known_x.value = x
                 self._worker_comms[sender_idx] += 1
                 self._worker_scores[sender_idx] = (
                     self._worker_comms[sender_idx] * elapsed_time_s
@@ -543,10 +552,14 @@ class SacessWorker:
             f"(known best: {self._best_known_fx}).",
         )
         if recv_fx < self._best_known_fx or (
-            not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
+            not np.isfinite(self._best_known_fx) and np.isfinite(recv_fx)
         ):
+            if not np.isfinite(recv_x).all():
+                raise AssertionError(
+                    f"Received non-finite parameters {recv_x}."
+                )
             self._logger.debug(
-                f"Worker {self._worker_idx} received better solution."
+                f"Worker {self._worker_idx} received better solution {recv_fx}."
             )
             self._best_known_fx = recv_fx
             self._n_received_solutions += 1
@@ -577,7 +590,7 @@ class SacessWorker:
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
             f"best known: {self._best_known_fx}, "
-            f"rel change: {(self._best_known_fx - fx) / fx:.4g}, "
+            f"rel change: {(fx - self._best_known_fx) / fx:.4g}, "
             f"threshold: {self._acceptance_threshold}"
         )
 
@@ -688,87 +701,163 @@ def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
     Setting appropriate values for ``n_threads`` and ``local_optimizer`` is
     left to the user. Defaults to single-threaded and no local optimizer.
 
+    Based on https://bitbucket.org/DavidPenas/sacess-library/src/508e7ac15579104731cf1f8c3969960c6e72b872/src/method_module_fortran/eSS/parallelscattersearchfunctions.f90#lines-929
+
     Parameters
     ----------
     num_workers: Number of configurations to return.
     dim: Problem dimension.
     """
-    min_dimrefset = 3
+    min_dimrefset = 5
+
+    def dim_refset(x):
+        return max(min_dimrefset, ceil((1 + sqrt(4 * dim * x)) / 2))
+
     settings = [
         # settings for first worker
         {
-            'dim_refset': 10 * dim,
+            'dim_refset': dim_refset(10),
             'balance': 0.5,
             'local_n2': 10,
         },
         # for the remaining workers, cycle through these settings
         # 1
         {
-            'dim_refset': max(min_dimrefset, dim),
+            'dim_refset': dim_refset(1),
             'balance': 0.0,
             'local_n1': 1,
             'local_n2': 1,
         },
         # 2
         {
-            'dim_refset': 3 * dim,
+            'dim_refset': dim_refset(3),
             'balance': 0.0,
-            'local_n1': 4,
-            'local_n2': 4,
+            'local_n1': 1000,
+            'local_n2': 1000,
         },
         # 3
         {
-            'dim_refset': 5 * dim,
+            'dim_refset': dim_refset(5),
             'balance': 0.25,
             'local_n1': 10,
             'local_n2': 10,
         },
         # 4
         {
-            'dim_refset': 10 * dim,
+            'dim_refset': dim_refset(10),
             'balance': 0.5,
             'local_n1': 20,
             'local_n2': 20,
         },
         # 5
         {
-            'dim_refset': 15 * dim,
+            'dim_refset': dim_refset(15),
             'balance': 0.25,
             'local_n1': 100,
             'local_n2': 100,
         },
         # 6
         {
-            'dim_refset': 12 * dim,
+            'dim_refset': dim_refset(12),
             'balance': 0.25,
-            'local_n1': 50,
-            'local_n2': 50,
+            'local_n1': 1000,
+            'local_n2': 1000,
         },
         # 7
         {
-            'dim_refset': int(7.5 * dim),
+            'dim_refset': dim_refset(7.5),
             'balance': 0.25,
             'local_n1': 15,
             'local_n2': 15,
         },
         # 8
         {
-            'dim_refset': 5 * dim,
+            'dim_refset': dim_refset(5),
             'balance': 0.25,
             'local_n1': 7,
             'local_n2': 7,
         },
         # 9
         {
-            'dim_refset': max(min_dimrefset, 2 * dim),
+            'dim_refset': dim_refset(2),
             'balance': 0.0,
-            'local_n1': 2,
-            'local_n2': 2,
+            'local_n1': 1000,
+            'local_n2': 1000,
         },
         # 10
         {
-            'dim_refset': max(min_dimrefset, int(0.5 * dim)),
+            'dim_refset': dim_refset(0.5),
             'balance': 0.0,
+            'local_n1': 1,
+            'local_n2': 1,
+        },
+        # 11
+        {
+            'dim_refset': dim_refset(1.5),
+            'balance': 1.0,
+            'local_n1': 1,
+            'local_n2': 1,
+        },
+        # 12
+        {
+            'dim_refset': dim_refset(3.5),
+            'balance': 1.0,
+            'local_n1': 4,
+            'local_n2': 4,
+        },
+        # 13
+        {
+            'dim_refset': dim_refset(5.5),
+            'balance': 0.1,
+            'local_n1': 10,
+            'local_n2': 10,
+        },
+        # 14
+        {
+            'dim_refset': dim_refset(10.5),
+            'balance': 0.3,
+            'local_n1': 20,
+            'local_n2': 20,
+        },
+        # 15
+        {
+            'dim_refset': dim_refset(15.5),
+            'balance': 0.2,
+            'local_n1': 1000,
+            'local_n2': 1000,
+        },
+        # 16
+        {
+            'dim_refset': dim_refset(12.5),
+            'balance': 0.2,
+            'local_n1': 10,
+            'local_n2': 10,
+        },
+        # 17
+        {
+            'dim_refset': dim_refset(8),
+            'balance': 0.75,
+            'local_n1': 15,
+            'local_n2': 15,
+        },
+        # 18
+        {
+            'dim_refset': dim_refset(5.5),
+            'balance': 0.75,
+            'local_n1': 1000,
+            'local_n2': 1000,
+        },
+        # 19
+        {
+            'dim_refset': dim_refset(2.2),
+            'balance': 1.0,
+            'local_n1': 2,
+            'local_n2': 2,
+        },
+        # 20
+        {
+            'dim_refset': dim_refset(1),
+            'balance': 1.0,
             'local_n1': 1,
             'local_n2': 1,
         },
