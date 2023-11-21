@@ -7,4 +7,8 @@ from .function_evaluator import (
     FunctionEvaluatorMT,
 )
 from .refset import RefSet
-from .sacess import SacessOptimizer, get_default_ess_options
+from .sacess import (
+    SacessOptimizer,
+    get_default_ess_options,
+    sacess_fides_wrapper,
+)

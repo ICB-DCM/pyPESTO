@@ -9,7 +9,7 @@ from math import ceil, sqrt
 from multiprocessing import Manager, Process
 from multiprocessing.managers import SyncManager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from uuid import uuid1
 from warnings import warn
 
@@ -25,7 +25,11 @@ from .ess import ESSExitFlag, ESSOptimizer
 from .function_evaluator import create_function_evaluator
 from .refset import RefSet
 
-__all__ = ["SacessOptimizer", "get_default_ess_options"]
+__all__ = [
+    "SacessOptimizer",
+    "get_default_ess_options",
+    "sacess_fides_wrapper",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +38,17 @@ class SacessOptimizer:
     """SACESS optimizer.
 
     A shared-memory-based implementation of the SaCeSS algorithm presented in
-    [PenasGon2017]_. Multiple processes (`workers`) run ESSs in parallel.
+    :footcite:t:`PenasGon2017`. Multiple processes (`workers`) run
+    :class:`enhanced scatter searches (ESSs) <ESSOptimizer>` in parallel.
     After each ESS iteration, depending on the outcome, there is a chance
     of exchanging good parameters, and changing ESS hyperparameters to those of
-    the most promising worker.
+    the most promising worker. See :footcite:t:`PenasGon2017` for details.
 
-    .. [PenasGon2017] 'Parameter estimation in large-scale systems biology models:
-       a parallel and self-adaptive cooperative strategy', David R. Penas,
-       Patricia González, Jose A. Egea, Ramón Doallo and Julio R. Banga,
-       BMC Bioinformatics 2017, 18, 52. https://doi.org/10.1186/s12859-016-1452-4
+    :class:`SacessOptimizer` can be used with or without a local optimizer, but
+    it is highly recommended to use one.
+
+    .. footbibliography::
+
     """
 
     def __init__(
@@ -67,14 +73,21 @@ class SacessOptimizer:
             Resource limits such as ``max_eval`` apply to a single CESS
             iteration, not to the full search.
             Mutually exclusive with ``num_workers``.
+            Recommended default settings can be obtained from
+            :func:`get_default_ess_options`.
         num_workers:
             Number of workers to be used. If this argument is given,
             (different) default ESS settings will be used for each worker.
             Mutually exclusive with ``ess_init_args``.
+            See :func:`get_default_ess_options` for details on the default
+            settings.
         max_walltime_s:
             Maximum walltime in seconds. Will only be checked between local
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search. Defaults to no limit.
+            Note that in order to impose the wall time limit also on the local
+            optimizer, the user has to provide a wrapper function similar to
+            :func:`sacess_fides_wrapper`.
         ess_loglevel:
             Loglevel for ESS runs.
         sacess_loglevel:
@@ -117,7 +130,16 @@ class SacessOptimizer:
         problem: Problem,
         startpoint_method: StartpointMethod = None,
     ):
-        """Solve the given optimization problem."""
+        """Solve the given optimization problem.
+
+        Parameters
+        ----------
+        problem:
+            Minimization problem.
+        startpoint_method:
+            Method for choosing starting points.
+            **Deprecated. Use ``problem.startpoint_method`` instead.**
+        """
         if startpoint_method is not None:
             warn(
                 "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
@@ -696,11 +718,21 @@ def _run_worker(
     return worker.run(problem=problem, startpoint_method=startpoint_method)
 
 
-def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
+def get_default_ess_options(
+    num_workers: int,
+    dim: int,
+    local_optimizer: Union[
+        bool,
+        "pypesto.optimize.Optimizer",
+        Callable[..., "pypesto.optimize.Optimizer"],
+    ] = True,
+) -> List[Dict]:
     """Get default ESS settings for (SA)CESS.
 
     Returns settings for ``num_workers`` parallel scatter searches, combining
-    more aggressive and more conservative configurations.
+    more aggressive and more conservative configurations. Mainly intended for
+    use with :class:`SacessOptimizer`. For details on the different options,
+    see keyword arguments of :meth:`ESSOptimizer.__init__`.
 
     Setting appropriate values for ``n_threads`` and ``local_optimizer`` is
     left to the user. Defaults to single-threaded and no local optimizer.
@@ -710,7 +742,10 @@ def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
     Parameters
     ----------
     num_workers: Number of configurations to return.
-    dim: Problem dimension.
+    dim: Problem dimension (number of optimized parameters).
+    local_optimizer: The local optimizer to use
+        (see same argument in :class:`ESSOptimizer`), or a boolean indicating
+        whether to set the default local optimizer (currently :class:`FidesOptimizer`).
     """
     min_dimrefset = 5
 
@@ -866,7 +901,64 @@ def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
             'local_n2': 1,
         },
     ]
+
+    # Set local optimizer
+    for cur_settings in settings:
+        if local_optimizer is True:
+            cur_settings['local_optimizer'] = sacess_fides_wrapper()
+        elif local_optimizer is not False:
+            cur_settings['local_optimizer'] = local_optimizer
+
     return [
         settings[0],
         *(itertools.islice(itertools.cycle(settings[1:]), num_workers - 1)),
     ]
+
+
+def sacess_fides_wrapper(
+    fides_options: Optional[dict[str, Any]] = None,
+    fides_kwargs: Optional[dict[str, Any]] = None,
+) -> Callable[..., "pypesto.optimize.Optimizer"]:
+    """Return a function that creates a :class:`FidesOptimizer` instance.
+
+    To be used with :class:`SacessOptimizer`. The returned optimizer factory
+    will forward the walltime limit and function evaluation limit imposed on
+    :class:`SacessOptimizer` to :class:`FidesOptimizer`. Besides that, default
+    options are used.
+
+    Parameters
+    ----------
+    fides_options:
+        Options for the :class:`FidesOptimizer`.
+        See :class:`fides.constants.Options`.
+    fides_kwargs:
+        Keyword arguments for the :class:`FidesOptimizer`. See
+        :meth:`FidesOptimizer.__init__`. Must not include ``options``.
+
+    Returns
+    -------
+    A function to be passed as ``local_optimizer`` to :meth:`ESSOptimizer.__init__`.
+    """
+    from ..optimizer import OptimizerImportError
+
+    try:
+        from fides.constants import Options as FidesOptions
+    except ImportError:
+        raise OptimizerImportError("fides")
+
+    if fides_options is None:
+        fides_options = {}
+    if fides_kwargs is None:
+        fides_kwargs = {}
+
+    def optimizer_factory(max_walltime_s: int, max_eval: int):
+        fides_options[FidesOptions.MAXTIME] = max_walltime_s
+
+        # only accepts int
+        if np.isfinite(max_eval):
+            fides_options[FidesOptions.MAXITER] = int(max_eval)
+        return pypesto.optimize.FidesOptimizer(
+            **fides_kwargs, options=fides_options
+        )
+
+    return optimizer_factory

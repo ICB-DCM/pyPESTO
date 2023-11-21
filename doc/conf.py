@@ -71,6 +71,8 @@ autodoc_default_options = {
     'autodoc_inherit_docstrings': True,
 }
 autodoc_mock_imports = ["amici"]
+autodoc_class_signature = "separated"
+
 
 # links for intersphinx
 intersphinx_mapping = {
@@ -90,7 +92,7 @@ intersphinx_mapping = {
 typehints_document_rtype = True
 autodoc_typehints = "description"
 
-bibtex_bibfiles = ["using_pypesto.bib"]
+bibtex_bibfiles = ["using_pypesto.bib", "references.bib"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
