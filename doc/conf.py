@@ -56,6 +56,8 @@ extensions = [
     'sphinxcontrib.bibtex',
     # ensure that jQuery is installed
     'sphinxcontrib.jquery',
+    # type hint formatting
+    'sphinx_autodoc_typehints',
 ]
 
 # default autodoc options
@@ -83,6 +85,10 @@ intersphinx_mapping = {
     'amici': ('https://amici.readthedocs.io/en/latest/', None),
     'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
 }
+
+
+typehints_document_rtype = True
+autodoc_typehints = "description"
 
 bibtex_bibfiles = ["using_pypesto.bib"]
 

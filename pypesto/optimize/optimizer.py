@@ -5,6 +5,7 @@ import logging
 import re
 import time
 import warnings
+from functools import wraps
 from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
@@ -46,6 +47,7 @@ def history_decorator(minimize):
     Default decorator for the minimize() method.
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -93,7 +95,7 @@ def history_decorator(minimize):
                 message=result.message, exitflag=result.exitflag
             )
         except Exception as err:
-            if optimize_options.allow_failed_starts:
+            if optimize_options and optimize_options.allow_failed_starts:
                 import sys
                 import traceback
 
@@ -129,6 +131,7 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -160,6 +163,7 @@ def fix_decorator(minimize):
     derivatives).
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
