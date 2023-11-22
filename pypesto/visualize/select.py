@@ -21,7 +21,7 @@ def default_label_maker(model: Model) -> str:
 def plot_selected_models(
     selected_models: List[Model],
     criterion: str = Criterion.AIC,
-    relative: str = True,
+    relative: bool = True,
     fz: int = 14,
     size: Tuple[float, float] = (5, 4),
     labels: Dict[str, str] = None,

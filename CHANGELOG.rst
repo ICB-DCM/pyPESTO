@@ -2,6 +2,45 @@ Release notes
 =============
 
 
+0.4 series
+..........
+
+
+0.4.0 (2023-11-22)
+-------------------
+
+* General
+    * Documentation (#1140, #1146, #1152, #1149, #1192)
+    * Updated Jupyter Notebooks (#1141)
+    * Update code to avoid deprecations/warnings (#1158, #1184)
+    * Updated maintainers and codeownership (#1171, #1170)
+    * Improve tests and GHA (#1178, #1185, #1188, #1190, #1193, #1199, #1198, #1197, #1208)
+* Profile:
+    * Fix problem overwrite of profiling (#1153)
+    * Add warning, trying to profile fixed parameter (#1155)
+    * ProfileOptions: add some basic integrity checking (#1163)
+    * Fix pypesto.profile.parameter_profile incorrectly assuming symmetric bounds (#1166)
+    * Improve pypesto/profile/profile_next_guess.py (#1167)
+    * Parameter profile: retry optimization in case of failure (#1168)
+    * Fix incorrect types in pypesto.result.profile.ProfilerResult (#1210)
+* Problem:
+    * Add/forward startpoint_kwargs in PetabImporter.create_problem (#1135)
+    * Support valid AMICI noise distributions that are invalid in PEtab (#1157)
+    * Fix startpoint sampling for PEtab-derived problems with fixed parameters (#1169)
+* Optimize
+    * Log traceback in case of exceptions during optimizations (#1156)
+    * Saccess optimizer improvements (#1177, #1187, #1194, #1195, #1201, #1202, #1204)
+    * ESS optimizer improvements (#1176, #1181, #1182)
+    * Fix check for allow_failed_starts (#1180)
+    * Handle message and exitflag in histories (#1203)
+    * Fix indexing error for 0-dimensional HDF5 datasets (#1206)
+* Hierarchical:
+    * Fix HierarchicalAmiciCalculator.__call__ not setting 'hess' in result (#1161)
+* Visualization:
+    * Fix legend argument checking for waterfall/parameter/history plots (#1139)
+    * Fix waterfall start indices for multiple results (#1200)
+
+
 0.3 series
 ..........
 

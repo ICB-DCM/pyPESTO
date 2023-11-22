@@ -7,8 +7,15 @@ import numpy as np
 from petab_select.constants import ESTIMATE, TYPE_PATH, Criterion
 
 from .. import store, visualize
-from ..C import TYPE_POSTPROCESSOR
-from .model_problem import ModelProblem
+from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
+
+__all__ = [
+    'model_id_binary_postprocessor',
+    'multi_postprocessor',
+    'report_postprocessor',
+    'save_postprocessor',
+    'waterfall_plot_postprocessor',
+]
 
 
 def multi_postprocessor(
@@ -17,7 +24,7 @@ def multi_postprocessor(
 ):
     """Combine multiple postprocessors into a single postprocessor.
 
-    See `save_postprocessor` for usage hints.
+    See :meth:`save_postprocessor` for usage hints.
 
     Parameters
     ----------
@@ -25,7 +32,7 @@ def multi_postprocessor(
         A model selection :class:`ModelProblem` that has been optimized.
     postprocessors:
         A list of postprocessors, which will be sequentially applied to the
-        optimized model `problem`.
+        optimized model ``problem``.
         The location where results will be stored.
     """
     for postprocessor in postprocessors:
@@ -38,7 +45,7 @@ def waterfall_plot_postprocessor(
 ):
     """Produce a waterfall plot.
 
-    See `save_postprocessor` for usage hints and argument documentation.
+    See :meth:`save_postprocessor` for usage hints and argument documentation.
     """
     visualize.waterfall(problem.minimize_result)
     plot_output_path = Path(output_path) / (problem.model.model_hash + ".png")
@@ -53,9 +60,11 @@ def save_postprocessor(
     """Save the parameter estimation result.
 
     When used, first set the output folder for results, e.g. with
-    `functools.partial`. This is because postprocessors should take only a
+    :func:`functools.partial`. This is because postprocessors should take only a
     single parameter: an optimized model.
+
     .. code-block:: python
+
        from functools import partial
        output_path = 'results'
        pp = partial(save_postprocessor, output_path=output_path)
@@ -71,7 +80,7 @@ def save_postprocessor(
     output_path:
         The location where output will be stored.
     use_model_hash:
-        Whether the filename should use the model hash. Defaults to `False`,
+        Whether the filename should use the model hash. Defaults to ``False``,
         in which case the model ID is used instead.
     """
     stem = problem.model.model_id
@@ -86,14 +95,14 @@ def save_postprocessor(
 def model_id_binary_postprocessor(problem: ModelProblem):
     """Change a PEtab Select model ID to a binary string.
 
-    Changes the model ID in-place to be a string like `M_ijk`, where
-    `i`, `j`, `k`, etc. are `1` if the parameter in that position is estimated,
-    or `0` if the parameter is fixed.
+    Changes the model ID in-place to be a string like ``M_ijk``, where
+    ``i``, ``j``, ``k``, etc. are ``1`` if the parameter in that position is estimated,
+    or ``0`` if the parameter is fixed.
 
-    To ensure that other postprocessors (e.g. `report_postprocessor`) use this
-    new model ID, when in use with a `multi_postprocessor`, ensure this is
-    before the other postprocessors in the `postprocessors` argument of
-    `multi_postprocessor`.
+    To ensure that other postprocessors (e.g. :func:`report_postprocessor`) use this
+    new model ID, when in use with a :func:`multi_postprocessor`, ensure this is
+    before the other postprocessors in the ``postprocessors`` argument of
+    :func:`multi_postprocessor`.
 
     Parameters
     ----------

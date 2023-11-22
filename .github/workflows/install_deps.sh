@@ -12,7 +12,7 @@ pip install tox
 # Update package lists
 if [ "$(uname)" == "Darwin" ]; then
   # MacOS
-  brew update
+  :
 else
   # Linux
   sudo apt-get update
@@ -32,7 +32,7 @@ for par in "$@"; do
         brew install swig hdf5 libomp
       else
         sudo apt-get install \
-          swig libatlas-base-dev libhdf5-serial-dev
+          clang libatlas-base-dev libhdf5-serial-dev libomp-dev swig
       fi
     ;;
 

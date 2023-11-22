@@ -5,6 +5,7 @@ import logging.handlers
 import multiprocessing
 import os
 import time
+from math import ceil, sqrt
 from multiprocessing import Manager, Process
 from multiprocessing.managers import SyncManager
 from pathlib import Path
@@ -21,7 +22,7 @@ from ...store.read_from_hdf5 import read_result
 from ...store.save_to_hdf5 import write_result
 from ..optimize import Problem
 from .ess import ESSExitFlag, ESSOptimizer
-from .function_evaluator import FunctionEvaluatorMP, FunctionEvaluatorMT
+from .function_evaluator import create_function_evaluator
 from .refset import RefSet
 
 __all__ = ["SacessOptimizer", "get_default_ess_options"]
@@ -33,8 +34,8 @@ class SacessOptimizer:
     """SACESS optimizer.
 
     A shared-memory-based implementation of the SaCeSS algorithm presented in
-    [PenasGon2017]_. Multiple processes (`workers`) run consecutive ESSs in
-    parallel. After each ESS run, depending on the outcome, there is a chance
+    [PenasGon2017]_. Multiple processes (`workers`) run ESSs in parallel.
+    After each ESS iteration, depending on the outcome, there is a chance
     of exchanging good parameters, and changing ESS hyperparameters to those of
     the most promising worker.
 
@@ -125,7 +126,7 @@ class SacessOptimizer:
 
         start_time = time.time()
         logger.debug(
-            f"Running sacess with {self.num_workers} "
+            f"Running {self.__class__.__name__} with {self.num_workers} "
             f"workers: {self.ess_init_args}"
         )
         ess_init_args = self.ess_init_args or get_default_ess_options(
@@ -141,7 +142,6 @@ class SacessOptimizer:
         logging_thread = logging.handlers.QueueListener(
             multiprocessing.Queue(-1), logging_handler
         )
-        logging_thread.start()
 
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
@@ -169,7 +169,7 @@ class SacessOptimizer:
             # launch worker processes
             worker_processes = [
                 Process(
-                    name=f"sacess-worker-{i:02d}",
+                    name=f"{self.__class__.__name__}-worker-{i:02d}",
                     target=_run_worker,
                     args=(
                         worker,
@@ -182,19 +182,26 @@ class SacessOptimizer:
             ]
             for p in worker_processes:
                 p.start()
+
+            # start logging thread only AFTER starting the worker processes
+            #  to prevent deadlocks
+            logging_thread.start()
+
             # wait for finish
             for p in worker_processes:
                 p.join()
 
-            logging_thread.stop()
+        logging_thread.stop()
 
-            walltime = time.time() - start_time
-            logger.info(
-                f"sacess stopping after {walltime:3g}s with global best "
-                f"{sacess_manager.get_best_solution()[1]}."
-            )
+        result = self._create_result(problem)
 
-        return self._create_result(problem)
+        walltime = time.time() - start_time
+        logger.info(
+            f"{self.__class__.__name__} stopped after {walltime:3g}s with global best "
+            f"{result.optimize_result[0].fval}."
+        )
+
+        return result
 
     def _create_result(self, problem: Problem) -> pypesto.Result:
         """Create result object.
@@ -304,9 +311,15 @@ class SacessManager:
         the top of the scoreboard and returns those settings.
         """
         with self._lock:
-            leader_options = self._ess_options[np.argmax(self._worker_scores)]
-            self._ess_options[worker_idx] = leader_options
-            return leader_options
+            leader_options = self._ess_options[
+                np.argmax(self._worker_scores)
+            ].copy()
+            for setting in ["local_n2", "balance", "dim_refset"]:
+                if setting in leader_options:
+                    self._ess_options[worker_idx][setting] = leader_options[
+                        setting
+                    ]
+            return self._ess_options[worker_idx].copy()
 
     def submit_solution(
         self,
@@ -326,6 +339,7 @@ class SacessManager:
         sender_idx: Index of the worker submitting the results.
         elapsed_time_s: Elapsed time since the beginning of the sacess run.
         """
+        abs_change = fx - self._best_known_fx.value
         with self._lock:
             # cooperation step
             # solution improves best value by at least a factor of ...
@@ -340,10 +354,7 @@ class SacessManager:
                 or (self._best_known_fx.value == 0 and fx < 0)
                 or (
                     fx < self._best_known_fx.value
-                    and abs(
-                        (self._best_known_fx.value - fx)
-                        / self._best_known_fx.value
-                    )
+                    and abs(abs_change / self._best_known_fx.value)
                     > self._rejection_threshold.value
                 )
             ):
@@ -352,8 +363,14 @@ class SacessManager:
                     f"Accepted solution from worker {sender_idx}: {fx}."
                 )
                 # accept
+                if len(x) != len(self._best_known_x):
+                    raise AssertionError(
+                        f"Received solution with {len(x)} parameters, "
+                        f"but expected {len(self._best_known_x)}."
+                    )
+                for i, xi in enumerate(x):
+                    self._best_known_x[i] = xi
                 self._best_known_fx.value = fx
-                self._best_known_x.value = x
                 self._worker_comms[sender_idx] += 1
                 self._worker_scores[sender_idx] = (
                     self._worker_comms[sender_idx] * elapsed_time_s
@@ -361,10 +378,12 @@ class SacessManager:
             else:
                 # reject solution
                 self._rejections.value += 1
+
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
-                    f"rel change: {abs((self._best_known_fx.value - fx) / self._best_known_fx.value)} "
-                    f" < {self._rejection_threshold.value} "
+                    f"abs change: {abs_change} "
+                    f"rel change: {abs(abs_change / self._best_known_fx.value):.4g} "
+                    f"(threshold: {self._rejection_threshold.value}) "
                     f"(total rejections: {self._rejections.value})."
                 )
                 # adapt acceptance threshold if too many solutions have been
@@ -381,7 +400,7 @@ class SacessManager:
 class SacessWorker:
     """A SACESS worker.
 
-    Repeatedly runs ESSs and exchanges information with a SacessManager.
+    Runs ESSs and exchanges information with a SacessManager.
     Corresponds to a worker process in [PenasGon2017]_.
 
     Attributes
@@ -431,56 +450,55 @@ class SacessWorker:
         self._ess_loglevel = ess_loglevel
         self._logger = None
         self._tmp_result_file = tmp_result_file
+        self._refset = None
 
     def run(
         self,
         problem: Problem,
         startpoint_method: StartpointMethod,
     ):
+        self._start_time = time.time()
+
         self._logger.setLevel(self._loglevel)
         # Set the manager logger to one created within the current process
         self._manager._logger = self._logger
 
-        """Start the worker."""
         self._logger.debug(
             f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
         )
 
-        if n_procs := self._ess_kwargs.get('n_procs'):
-            evaluator = FunctionEvaluatorMP(
-                problem=problem,
-                startpoint_method=startpoint_method,
-                n_procs=n_procs,
-            )
-        else:
-            evaluator = FunctionEvaluatorMT(
-                problem=problem,
-                startpoint_method=startpoint_method,
-                n_threads=self._ess_kwargs.get('n_threads', 1),
-            )
-        self._start_time = time.time()
-        # create refset from ndiverse
-        refset = RefSet(
+        evaluator = create_function_evaluator(
+            problem,
+            startpoint_method,
+            n_procs=self._ess_kwargs.get('n_procs'),
+            n_threads=self._ess_kwargs.get('n_threads'),
+        )
+
+        # create initial refset
+        self._refset = RefSet(
             dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
         )
-        refset.initialize_random(
+        self._refset.initialize_random(
             n_diverse=max(
-                self._ess_kwargs.get('n_diverse', 10 * problem.dim), refset.dim
+                self._ess_kwargs.get('n_diverse', 10 * problem.dim),
+                self._refset.dim,
             )
         )
-        i_iter = 0
+
         ess_results = pypesto.Result(problem=problem)
+        ess = self._setup_ess(startpoint_method)
 
-        while self._keep_going():
-            # run standard ESS
-            ess, cur_ess_results = self._run_ess(
-                refset=refset,
-            )
+        # run ESS until exit criteria are met, but start at least one iteration
+        while self._keep_going() or ess.n_iter == 0:
+            # perform one ESS iteration
+            ess._do_iteration()
 
+            # TODO maybe not in every iteration?
             # drop all but the 50 best results
+            cur_ess_results = ess._create_result()
             ess_results.optimize_result.append(
                 cur_ess_results.optimize_result,
-                prefix=f"{self._worker_idx}_{i_iter}_",
+                prefix=f"{self._worker_idx}_{ess.n_iter}_",
             )
             ess_results.optimize_result.list = (
                 ess_results.optimize_result.list[:50]
@@ -497,51 +515,17 @@ class SacessWorker:
             self.maybe_update_best(ess.x_best, ess.fx_best)
             self._best_known_fx = min(ess.fx_best, self._best_known_fx)
 
-            # cooperation step
-            # try to obtain a new solution from manager
-            recv_x, recv_fx = self._manager.get_best_solution()
-            self._logger.log(
-                logging.DEBUG - 1,
-                f"Worker {self._worker_idx} received solution {recv_fx} "
-                f"(known best: {self._best_known_fx}).",
-            )
-            if recv_fx < self._best_known_fx or (
-                not np.isfinite(self._best_known_fx) and np.isfinite(recv_x)
-            ):
-                self._logger.debug(
-                    f"Worker {self._worker_idx} received better solution."
-                )
-                self._best_known_fx = recv_fx
-                self._n_received_solutions += 1
-                self.replace_solution(refset, x=recv_x, fx=recv_fx)
-
-            # Adaptive step
-            # Update ESS settings if we received way more solutions than we
-            # sent
-            # Magic numbers from [PenasGon2017]_ algorithm 5
-            if (
-                self._n_received_solutions > 10 * self._n_sent_solutions + 20
-                and self._neval > problem.dim * 5000
-            ):
-                self._ess_kwargs = self._manager.reconfigure_worker(
-                    self._worker_idx
-                )
-                self._logger.debug(
-                    f"Updated settings on worker {self._worker_idx} to "
-                    f"{self._ess_kwargs}"
-                )
+            self._cooperate()
+            self._maybe_adapt(problem)
 
             self._logger.info(
-                f"sacess worker {self._worker_idx} iteration {i_iter} "
+                f"sacess worker {self._worker_idx} iteration {ess.n_iter} "
                 f"(best: {self._best_known_fx})."
             )
 
-            i_iter += 1
+        ess._report_final()
 
-    def _run_ess(
-        self,
-        refset: RefSet,
-    ) -> Tuple[ESSOptimizer, pypesto.Result]:
+    def _setup_ess(self, startpoint_method: StartpointMethod) -> ESSOptimizer:
         """Run ESS."""
         ess_kwargs = self._ess_kwargs.copy()
         # account for sacess walltime limit
@@ -556,21 +540,61 @@ class SacessWorker:
         )
         ess.logger.setLevel(self._ess_loglevel)
 
-        cur_ess_results = ess.minimize(
-            refset=refset,
+        ess._initialize_minimize(
+            startpoint_method=startpoint_method, refset=self._refset
         )
-        self._logger.debug(
-            f"#{self._worker_idx}: ESS finished with best "
-            f"f(x)={ess.fx_best}"
+
+        return ess
+
+    def _cooperate(self):
+        """Cooperation step."""
+        # try to obtain a new solution from manager
+        recv_x, recv_fx = self._manager.get_best_solution()
+        self._logger.log(
+            logging.DEBUG - 1,
+            f"Worker {self._worker_idx} received solution {recv_fx} "
+            f"(known best: {self._best_known_fx}).",
         )
-        return ess, cur_ess_results
+        if recv_fx < self._best_known_fx or (
+            not np.isfinite(self._best_known_fx) and np.isfinite(recv_fx)
+        ):
+            if not np.isfinite(recv_x).all():
+                raise AssertionError(
+                    f"Received non-finite parameters {recv_x}."
+                )
+            self._logger.debug(
+                f"Worker {self._worker_idx} received better solution {recv_fx}."
+            )
+            self._best_known_fx = recv_fx
+            self._n_received_solutions += 1
+            self.replace_solution(self._refset, x=recv_x, fx=recv_fx)
+
+    def _maybe_adapt(self, problem: Problem):
+        """Perform adaptation step.
+
+        Update ESS settings if conditions are met.
+        """
+        # Update ESS settings if we received way more solutions than we  sent
+        # Magic numbers from [PenasGon2017]_ algorithm 5
+        if (
+            self._n_received_solutions > 10 * self._n_sent_solutions + 20
+            and self._neval > problem.dim * 5000
+        ):
+            self._ess_kwargs = self._manager.reconfigure_worker(
+                self._worker_idx
+            )
+            self._refset.resize(self._ess_kwargs['dim_refset'])
+            self._logger.debug(
+                f"Updated settings on worker {self._worker_idx} to "
+                f"{self._ess_kwargs}"
+            )
 
     def maybe_update_best(self, x: np.array, fx: float):
         """Maybe update the best known solution and send it to the manager."""
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
             f"best known: {self._best_known_fx}, "
-            f"rel change: {(self._best_known_fx - fx) / fx}, "
+            f"rel change: {(fx - self._best_known_fx) / fx:.4g}, "
             f"threshold: {self._acceptance_threshold}"
         )
 
@@ -608,12 +632,21 @@ class SacessWorker:
         if "cooperative_solution" not in refset.attributes:
             label = np.zeros(shape=refset.dim)
             # on first call, mark the worst solution as "cooperative solution"
-            label[np.argmax(refset.fx)] = 1
+            cooperative_solution_idx = np.argmax(refset.fx)
+            label[cooperative_solution_idx] = 1
             refset.add_attribute("cooperative_solution", label)
+        elif (
+            cooperative_solution_idx := np.argwhere(
+                refset.attributes["cooperative_solution"]
+            )
+        ).size == 0:
+            # the attribute exists, but no member is marked as cooperative
+            # solution. this may happen if we shrink the refset.
+            cooperative_solution_idx = np.argmax(refset.fx)
 
         # replace the cooperative solution
         refset.update(
-            i=np.argwhere(refset.attributes["cooperative_solution"]),
+            i=cooperative_solution_idx,
             x=x,
             fx=fx,
         )
@@ -672,87 +705,163 @@ def get_default_ess_options(num_workers: int, dim: int) -> List[Dict]:
     Setting appropriate values for ``n_threads`` and ``local_optimizer`` is
     left to the user. Defaults to single-threaded and no local optimizer.
 
+    Based on https://bitbucket.org/DavidPenas/sacess-library/src/508e7ac15579104731cf1f8c3969960c6e72b872/src/method_module_fortran/eSS/parallelscattersearchfunctions.f90#lines-929
+
     Parameters
     ----------
     num_workers: Number of configurations to return.
     dim: Problem dimension.
     """
-    min_dimrefset = 3
+    min_dimrefset = 5
+
+    def dim_refset(x):
+        return max(min_dimrefset, ceil((1 + sqrt(4 * dim * x)) / 2))
+
     settings = [
         # settings for first worker
         {
-            'dim_refset': 10 * dim,
+            'dim_refset': dim_refset(10),
             'balance': 0.5,
             'local_n2': 10,
         },
         # for the remaining workers, cycle through these settings
         # 1
         {
-            'dim_refset': max(min_dimrefset, dim),
+            'dim_refset': dim_refset(1),
             'balance': 0.0,
             'local_n1': 1,
             'local_n2': 1,
         },
         # 2
         {
-            'dim_refset': 3 * dim,
+            'dim_refset': dim_refset(3),
             'balance': 0.0,
-            'local_n1': 4,
-            'local_n2': 4,
+            'local_n1': 1000,
+            'local_n2': 1000,
         },
         # 3
         {
-            'dim_refset': 5 * dim,
+            'dim_refset': dim_refset(5),
             'balance': 0.25,
             'local_n1': 10,
             'local_n2': 10,
         },
         # 4
         {
-            'dim_refset': 10 * dim,
+            'dim_refset': dim_refset(10),
             'balance': 0.5,
             'local_n1': 20,
             'local_n2': 20,
         },
         # 5
         {
-            'dim_refset': 15 * dim,
+            'dim_refset': dim_refset(15),
             'balance': 0.25,
             'local_n1': 100,
             'local_n2': 100,
         },
         # 6
         {
-            'dim_refset': 12 * dim,
+            'dim_refset': dim_refset(12),
             'balance': 0.25,
-            'local_n1': 50,
-            'local_n2': 50,
+            'local_n1': 1000,
+            'local_n2': 1000,
         },
         # 7
         {
-            'dim_refset': int(7.5 * dim),
+            'dim_refset': dim_refset(7.5),
             'balance': 0.25,
             'local_n1': 15,
             'local_n2': 15,
         },
         # 8
         {
-            'dim_refset': 5 * dim,
+            'dim_refset': dim_refset(5),
             'balance': 0.25,
             'local_n1': 7,
             'local_n2': 7,
         },
         # 9
         {
-            'dim_refset': max(min_dimrefset, 2 * dim),
+            'dim_refset': dim_refset(2),
             'balance': 0.0,
-            'local_n1': 2,
-            'local_n2': 2,
+            'local_n1': 1000,
+            'local_n2': 1000,
         },
         # 10
         {
-            'dim_refset': max(min_dimrefset, int(0.5 * dim)),
+            'dim_refset': dim_refset(0.5),
             'balance': 0.0,
+            'local_n1': 1,
+            'local_n2': 1,
+        },
+        # 11
+        {
+            'dim_refset': dim_refset(1.5),
+            'balance': 1.0,
+            'local_n1': 1,
+            'local_n2': 1,
+        },
+        # 12
+        {
+            'dim_refset': dim_refset(3.5),
+            'balance': 1.0,
+            'local_n1': 4,
+            'local_n2': 4,
+        },
+        # 13
+        {
+            'dim_refset': dim_refset(5.5),
+            'balance': 0.1,
+            'local_n1': 10,
+            'local_n2': 10,
+        },
+        # 14
+        {
+            'dim_refset': dim_refset(10.5),
+            'balance': 0.3,
+            'local_n1': 20,
+            'local_n2': 20,
+        },
+        # 15
+        {
+            'dim_refset': dim_refset(15.5),
+            'balance': 0.2,
+            'local_n1': 1000,
+            'local_n2': 1000,
+        },
+        # 16
+        {
+            'dim_refset': dim_refset(12.5),
+            'balance': 0.2,
+            'local_n1': 10,
+            'local_n2': 10,
+        },
+        # 17
+        {
+            'dim_refset': dim_refset(8),
+            'balance': 0.75,
+            'local_n1': 15,
+            'local_n2': 15,
+        },
+        # 18
+        {
+            'dim_refset': dim_refset(5.5),
+            'balance': 0.75,
+            'local_n1': 1000,
+            'local_n2': 1000,
+        },
+        # 19
+        {
+            'dim_refset': dim_refset(2.2),
+            'balance': 1.0,
+            'local_n1': 2,
+            'local_n2': 2,
+        },
+        # 20
+        {
+            'dim_refset': dim_refset(1),
+            'balance': 1.0,
             'local_n1': 1,
             'local_n2': 1,
         },

@@ -4,7 +4,6 @@ from typing import Any, Callable, Dict, List, Optional
 
 from petab_select import Criterion, Model
 
-from ..C import TYPE_POSTPROCESSOR
 from ..objective import ObjectiveBase
 from ..optimize import minimize
 from ..problem import Problem
@@ -12,7 +11,7 @@ from ..result import OptimizerResult, Result
 from .misc import model_to_pypesto_problem
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
-POSTPROCESSOR_TYPE = Callable[["ModelProblem"], None]
+TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
 
 
 class ModelProblem:
@@ -32,7 +31,7 @@ class ModelProblem:
         calibrated.
     minimize_options:
         Keyword argument options that will be passed on to
-        `pypesto.optimize.minimize`.
+        :func:`pypesto.optimize.minimize`.
     minimize_result:
         A pyPESTO result with an optimize result.
     model:
@@ -40,13 +39,13 @@ class ModelProblem:
     model_id:
         The ID of the PEtab Select model.
     objective_customizer:
-        A method that takes a `pypesto.objective.AmiciObjective` as
+        A method that takes a :class:`pypesto.objective.AmiciObjective` as
         input, and makes changes to the objective in-place.
     postprocessor:
-        A method that takes a `ModelSelectionProblem` as input. For
+        A method that takes a :class:`ModelSelectionProblem` as input. For
         example, this can be a function that generates a waterfall
         plot. This postprocessor is applied at the end of the
-        `ModelProblem.set_result` method.
+        :meth:`ModelProblem.set_result` method.
     pypesto_problem:
         The pyPESTO problem for the model.
     valid:
@@ -65,7 +64,7 @@ class ModelProblem:
         x_guess: List[float] = None,
         minimize_options: Dict = None,
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
-        postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
     ):
         """Construct then calibrate a model problem.
@@ -75,9 +74,9 @@ class ModelProblem:
         Parameters
         ----------
         autorun:
-            If `False`, the model parameters will not be estimated. Allows
-            users to manually call pypesto.minimize with custom options,
-            then`set_result()`.
+            If ``False``, the model parameters will not be estimated. Allows
+            users to manually call ``pypesto.minimize`` with custom options,
+            then :meth:`set_result()`.
 
         TODO: constraints
         """

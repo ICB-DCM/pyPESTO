@@ -32,7 +32,7 @@ def read_hdf5_profile(
         specifies the profile index that is read
         from the HDF5 file
     """
-    result = ProfilerResult(np.array([]), np.array([]), np.array([]))
+    result = ProfilerResult(np.empty((0, 0)), np.array([]), np.array([]))
 
     for profile_key in result.keys():
         if profile_key in f[f'/profiling/{profile_id}/{parameter_id}']:

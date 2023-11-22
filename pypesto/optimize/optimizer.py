@@ -5,6 +5,7 @@ import logging
 import re
 import time
 import warnings
+from functools import wraps
 from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
@@ -46,6 +47,7 @@ def history_decorator(minimize):
     Default decorator for the minimize() method.
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -93,8 +95,13 @@ def history_decorator(minimize):
                 message=result.message, exitflag=result.exitflag
             )
         except Exception as err:
-            if optimize_options.allow_failed_starts:
-                logger.error(f'start {id} failed: {err}')
+            if optimize_options and optimize_options.allow_failed_starts:
+                import sys
+                import traceback
+
+                trace = "\n".join(traceback.format_exception(*sys.exc_info()))
+
+                logger.error(f'start {id} failed:\n{trace}')
                 result = OptimizerResult(
                     x0=x0, exitflag=-1, message=str(err), id=id
                 )
@@ -124,6 +131,7 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -155,6 +163,7 @@ def fix_decorator(minimize):
     derivatives).
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -608,7 +617,7 @@ class DlibOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The Dlib optimizer does not support x0.")
+            logger.warning("The Dlib optimizer does not support x0.")
         return False
 
 
@@ -666,7 +675,7 @@ class PyswarmOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The pyswarm optimizer does not support x0.")
+            logger.warning("The pyswarm optimizer does not support x0.")
         return False
 
 
@@ -940,7 +949,7 @@ class PyswarmsOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The pyswarms optimizer does not support x0.")
+            logger.warning("The pyswarms optimizer does not support x0.")
         return False
 
 
@@ -1186,7 +1195,7 @@ class NLoptOptimizer(Optimizer):
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ):
             if x_guesses is not None and x_guesses.size > 0:
-                logger.warn(
+                logger.warning(
                     f"The NLopt optimizer method {self.method} does "
                     "not support x0."
                 )
@@ -1215,10 +1224,11 @@ class FidesOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Optimizer options.
+            Optimizer options. See :meth:`fides.minimize.Optimizer.minimize`
+            and :class:`fides.constants.Options` for details.
         hessian_update:
-            Hessian update strategy. If this is None, a hybrid approximation
-            that switches from the problem.objective provided Hessian (
+            Hessian update strategy. If this is ``None``, a hybrid approximation
+            that switches from the ``problem.objective`` provided Hessian (
             approximation) to a BFGS approximation will be used.
         """
         super().__init__()

@@ -4,27 +4,27 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 import petab_select
 from petab_select import Model
 
-from ..C import TYPE_POSTPROCESSOR
 from .method import MethodCaller
+from .model_problem import TYPE_POSTPROCESSOR, ModelProblem  # noqa: F401
 
 
 class Problem:
     """Handles use of a model selection algorithm.
 
     Handles model selection. Usage involves initialisation with a model
-    specifications file, and then calling the `select()` method to perform
+    specifications file, and then calling the :meth:`select` method to perform
     model selection with a specified algorithm and criterion.
 
     Attributes
     ----------
     calibrated_models:
         Storage for all calibrated models. A dictionary, where keys are
-        model hashes, and values are `petab_select.Model` objects.
+        model hashes, and values are :class:`petab_select.Model` objects.
     newly_calibrated_models:
         Storage for models that were calibrated in the previous iteration of
-        model selection. Same type as `calibrated_models`.
+        model selection. Same type as ``calibrated_models``.
     method_caller:
-        A `MethodCaller`, used to run a single iteration of a model
+        A :class:`MethodCaller`, used to run a single iteration of a model
         selection method.
     model_postprocessor:
         A method that is applied to each model after calibration.
@@ -53,7 +53,7 @@ class Problem:
     def create_method_caller(self, **kwargs) -> MethodCaller:
         """Create a method caller.
 
-        `args` and `kwargs` are passed to the `MethodCaller` constructor.
+        ``kwargs`` are passed to the :class:`MethodCaller` constructor.
 
         Returns
         -------
@@ -117,7 +117,7 @@ class Problem:
         The result is the selected model for the current run, independent of
         previous selected models.
 
-        `kwargs` are passed to the `MethodCaller` constructor.
+        ``kwargs`` are passed to the :class:`MethodCaller` constructor.
 
         Returns
         -------
@@ -162,10 +162,10 @@ class Problem:
     ) -> List[Model]:
         """Run an algorithm until an exception `StopIteration` is raised.
 
-        `kwargs` are passed to the `MethodCaller` constructor.
+        ``kwargs`` are passed to the :class:`MethodCaller` constructor.
 
-        An exception `StopIteration` is raised by
-        `pypesto.select.method.MethodCaller.__call__` when no candidate models
+        An exception ``StopIteration`` is raised by
+        :meth:`pypesto.select.method.MethodCaller.__call__` when no candidate models
         are found.
 
         Returns
@@ -218,7 +218,7 @@ class Problem:
         (but then the same model could be repeatedly calibrated, if the
         calibrations start before any have stopped).
 
-        `kwargs` are passed to the `MethodCaller` constructor.
+        ``kwargs`` are passed to the :class:`MethodCaller` constructor.
 
         Parameters
         ----------

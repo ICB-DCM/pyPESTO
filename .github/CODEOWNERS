@@ -15,32 +15,32 @@
 /docker/ @dweindl
 /pypesto/engine/ @PaulJonasJost
 /pypesto/engine/mpi_pool.py @PaulJonasJost
-/pypesto/ensemble/ @dilpath
-/pypesto/hierarchical/ @dilpath @dweindl
+/pypesto/ensemble/ @dilpath @PaulJonasJost
+/pypesto/hierarchical/ @dweindl @doresic
 /pypesto/hierarchical/optimal_scaling_approach/ @doresic
 /pypesto/history/ @PaulJonasJost
 /pypesto/objective/ @PaulJonasJost
-/pypesto/objective/amici/ @PaulJonasJost @dweindl @FFroehlich
+/pypesto/objective/amici/ @dweindl @FFroehlich
 /pypesto/objective/jax/ @FFroehlich
 /pypesto/objective/aesara/ @FFroehlich
 /pypesto/optimize/ @PaulJonasJost
 /pypesto/petab/ @dweindl @FFroehlich
-/pypesto/predict/ @PaulJonasJost @dilpath
-/pypesto/problem/ @PaulJonasJost
+/pypesto/predict/ @dilpath
+/pypesto/problem/ @PaulJonasJost @m-philipps
 /pypesto/profile/ @PaulJonasJost
 /pypesto/result/ @PaulJonasJost
-/pypesto/sample/ @dilpath
+/pypesto/sample/ @dilpath @vwiela
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
-/pypesto/visualize/ @plakrisenko @stephanmg
-/test/base/ @PaulJonasJost
+/pypesto/visualize/@stephanmg @m-philipps
+/test/base/ @PaulJonasJost @m-philipps
 /test/doc/ @PaulJonasJost
-/test/hierarchical/ @dilpath @dweindl
+/test/hierarchical/ @dweindl @doresic
 /test/julia/ @PaulJonasJost
 /test/optimize/ @PaulJonasJost
 /test/petab/ @dweindl @FFroehlich
 /test/profile/ @PaulJonasJost
 /test/sample/ @dilpath
 /test/select/ @dilpath
-/test/visualize/ @plakrisenko @stephanmg
+/test/visualize/ @stephanmg @m-philipps
