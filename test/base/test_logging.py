@@ -9,7 +9,6 @@ import pypesto.optimize
 
 def test_optimize():
     # logging
-    pypesto.logging.log_to_console(logging.WARN)
     filename = ".test_logging.tmp"
     pypesto.logging.log_to_file(logging.DEBUG, filename)
     logger = logging.getLogger('pypesto')
@@ -17,27 +16,33 @@ def test_optimize():
         os.remove(filename)
     fh = logging.FileHandler(filename)
     fh.setLevel(logging.DEBUG)
-    logger.addHandler(fh)
-    logger.info("start test")
 
-    # problem definition
-    def fun(_):
-        raise Exception("This function cannot be called.")
+    old_handlers = logger.handlers
+    logger.handlers = []
+    try:
+        logger.addHandler(fh)
+        logger.info("start test")
 
-    objective = pypesto.Objective(fun=fun)
-    problem = pypesto.Problem(objective, -1, 1)
+        # problem definition
+        def fun(_):
+            raise Exception("This function cannot be called.")
 
-    optimizer = pypesto.optimize.ScipyOptimizer()
-    options = {'allow_failed_starts': True}
+        objective = pypesto.Objective(fun=fun)
+        problem = pypesto.Problem(objective, -1, 1)
 
-    # optimization
-    pypesto.optimize.minimize(
-        problem=problem,
-        optimizer=optimizer,
-        n_starts=5,
-        options=options,
-        progress_bar=False,
-    )
+        optimizer = pypesto.optimize.ScipyOptimizer()
+        options = {'allow_failed_starts': True}
+
+        # optimization
+        pypesto.optimize.minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=5,
+            options=options,
+            progress_bar=False,
+        )
+    finally:
+        logger.handlers = old_handlers
 
     # assert logging worked
     assert os.path.exists(filename)

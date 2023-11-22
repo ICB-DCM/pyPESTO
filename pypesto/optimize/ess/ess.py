@@ -36,11 +36,7 @@ import pypesto.optimize
 from pypesto import OptimizerResult, Problem
 from pypesto.startpoint import StartpointMethod
 
-from .function_evaluator import (
-    FunctionEvaluator,
-    FunctionEvaluatorMP,
-    FunctionEvaluatorMT,
-)
+from .function_evaluator import FunctionEvaluator, create_function_evaluator
 from .refset import RefSet
 
 logger = logging.getLogger(__name__)
@@ -147,9 +143,7 @@ class ESSOptimizer:
         self.max_iter: int = max_iter
         self.max_eval: int = max_eval
         self.dim_refset: int = dim_refset
-        self.local_optimizer: Optional[
-            'pypesto.optimize.Optimizer'
-        ] = local_optimizer
+        self.local_optimizer = local_optimizer
         self.n_diverse: int = n_diverse
         if n_procs is not None and n_threads is not None:
             raise ValueError(
@@ -189,6 +183,61 @@ class ESSOptimizer:
         self.evaluator: Optional[FunctionEvaluator] = None
         self.starttime: Optional[float] = None
 
+    def _initialize_minimize(
+        self,
+        problem: Problem = None,
+        startpoint_method: StartpointMethod = None,
+        refset: Optional[RefSet] = None,
+    ):
+        """Initialize for optimizations.
+
+        Create initial refset, start timer, ... .
+        """
+        if startpoint_method is not None:
+            warn(
+                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                DeprecationWarning,
+            )
+
+        self._initialize()
+        self.starttime = time.time()
+
+        if (refset is None and problem is None) or (
+            refset is not None and problem is not None
+        ):
+            raise ValueError(
+                "Exactly one of `problem` or `refset` has to be provided."
+            )
+
+        # generate initial RefSet if not provided
+        if refset is None:
+            if self.dim_refset is None:
+                raise ValueError(
+                    "Either refset or dim_refset have to be provided."
+                )
+            # [EgeaMar2010]_ 2.1
+            self.n_diverse = self.n_diverse or 10 * problem.dim
+            self.evaluator = create_function_evaluator(
+                problem,
+                startpoint_method,
+                n_threads=self.n_threads,
+                n_procs=self.n_procs,
+            )
+
+            self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
+            # Initial RefSet generation
+            self.refset.initialize_random(n_diverse=self.n_diverse)
+        else:
+            self.refset = refset
+
+        self.evaluator = self.refset.evaluator
+        self.x_best = np.full(
+            shape=(self.evaluator.problem.dim,), fill_value=np.nan
+        )
+        # initialize global best from initial refset
+        for x, fx in zip(self.refset.x, self.refset.fx):
+            self._maybe_update_global_best(x, fx)
+
     def minimize(
         self,
         problem: Problem = None,
@@ -207,89 +256,46 @@ class ESSOptimizer:
         refset:
             The initial RefSet or ``None`` to auto-generate.
         """
-        if startpoint_method is not None:
-            warn(
-                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
-                DeprecationWarning,
-            )
-
-        self._initialize()
-        self.starttime = time.time()
-
-        if (refset is None and problem is None) or (
-            refset is not None and problem is not None
-        ):
-            raise ValueError(
-                "Either `refset` or `problem` has to be provided."
-            )
-        # generate initial RefSet if not provided
-        if refset is None:
-            if self.dim_refset is None:
-                raise ValueError(
-                    "Either refset or dim_refset have to be provided."
-                )
-            # [EgeaMar2010]_ 2.1
-            self.n_diverse = self.n_diverse or 10 * problem.dim
-            if self.n_procs:
-                self.evaluator = FunctionEvaluatorMP(
-                    problem=problem,
-                    startpoint_method=startpoint_method,
-                    n_procs=self.n_procs,
-                )
-            else:
-                self.evaluator = FunctionEvaluatorMT(
-                    problem=problem,
-                    startpoint_method=startpoint_method,
-                    n_threads=self.n_threads or 1,
-                )
-
-            self.refset = RefSet(dim=self.dim_refset, evaluator=self.evaluator)
-            # Initial RefSet generation
-            self.refset.initialize_random(n_diverse=self.n_diverse)
-            refset = self.refset
-        else:
-            self.refset = refset
-
-        self.evaluator = refset.evaluator
-        self.x_best = np.full(
-            shape=(self.evaluator.problem.dim,), fill_value=np.nan
+        self._initialize_minimize(
+            problem=problem, startpoint_method=startpoint_method, refset=refset
         )
-        # initialize global best from initial refset
-        for x, fx in zip(refset.x, refset.fx):
-            self._maybe_update_global_best(x, fx)
 
         # [PenasGon2017]_ Algorithm 1
         while self._keep_going():
-            self.x_best_has_changed = False
-
-            refset.sort()
-            self._report_iteration()
-            refset.prune_too_close()
-
-            # Apply combination method to update the RefSet
-            x_best_children, fx_best_children = self._combine_solutions()
-
-            # Go-beyond strategy to further improve the new combinations
-            self._go_beyond(x_best_children, fx_best_children)
-
-            # Maybe perform a local search
-            if self.local_optimizer is not None and self._keep_going():
-                self._do_local_search(x_best_children, fx_best_children)
-
-            # Replace RefSet members by best children where an improvement
-            #  was made. replace stuck members by random points.
-            for i in range(refset.dim):
-                if fx_best_children[i] < refset.fx[i]:
-                    refset.update(i, x_best_children[i], fx_best_children[i])
-                else:
-                    refset.n_stuck[i] += 1
-                    if refset.n_stuck[i] > self.n_change:
-                        refset.replace_by_random(i)
-
-            self.n_iter += 1
+            self._do_iteration()
 
         self._report_final()
         return self._create_result()
+
+    def _do_iteration(self):
+        """Perform an ESS iteration."""
+        self.x_best_has_changed = False
+
+        self.refset.sort()
+        self._report_iteration()
+        self.refset.prune_too_close()
+
+        # Apply combination method to update the RefSet
+        x_best_children, fx_best_children = self._combine_solutions()
+
+        # Go-beyond strategy to further improve the new combinations
+        self._go_beyond(x_best_children, fx_best_children)
+
+        # Maybe perform a local search
+        if self.local_optimizer is not None and self._keep_going():
+            self._do_local_search(x_best_children, fx_best_children)
+
+        # Replace RefSet members by best children where an improvement
+        #  was made. replace stuck members by random points.
+        for i in range(self.refset.dim):
+            if fx_best_children[i] < self.refset.fx[i]:
+                self.refset.update(i, x_best_children[i], fx_best_children[i])
+            else:
+                self.refset.n_stuck[i] += 1
+                if self.refset.n_stuck[i] > self.n_change:
+                    self.refset.replace_by_random(i)
+
+        self.n_iter += 1
 
     def _create_result(self) -> pypesto.Result:
         """Create the result object.
@@ -455,16 +461,14 @@ class ESSOptimizer:
         """
         if self.local_only_best_sol and self.x_best_has_changed:
             self.logger.debug("Local search only from best point.")
-            local_search_x0 = self.x_best
-            local_search_fx0 = self.fx_best
+            local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         # first local search?
         elif not self.local_solutions and self.n_iter >= self.local_n1:
             self.logger.debug(
                 "First local search from best point due to "
                 f"local_n1={self.local_n1}."
             )
-            local_search_x0 = self.x_best
-            local_search_fx0 = self.fx_best
+            local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         elif (
             self.local_solutions
             and self.n_iter - self.last_local_search_niter >= self.local_n2
@@ -486,43 +490,56 @@ class ESSOptimizer:
             priority = (
                 1 - self.balance
             ) * quality_order + self.balance * diversity_order
-            chosen_child_idx = np.argmin(priority)
-            local_search_x0 = x_best_children[chosen_child_idx]
-            local_search_fx0 = fx_best_children[chosen_child_idx]
+            local_search_x0_fx0_candidates = (
+                (x_best_children[i], fx_best_children[i])
+                for i in np.argsort(priority)
+            )
         else:
             return
 
         # actual local search
-        # TODO DW: try alternatives if it fails on initial point?
-        optimizer = (
-            self.local_optimizer
-            if isinstance(self.local_optimizer, pypesto.optimize.Optimizer)
-            else self.local_optimizer(
-                max_eval=self._get_remaining_eval(),
-                max_walltime_s=self._get_remaining_time(),
+        # repeat until a finite value is found, or we don't have any startpoints left
+        for (
+            local_search_x0,
+            local_search_fx0,
+        ) in local_search_x0_fx0_candidates:
+            optimizer = (
+                self.local_optimizer
+                if isinstance(self.local_optimizer, pypesto.optimize.Optimizer)
+                else self.local_optimizer(
+                    max_eval=self._get_remaining_eval(),
+                    max_walltime_s=self._get_remaining_time(),
+                )
             )
-        )
-        optimizer_result: OptimizerResult = optimizer.minimize(
-            problem=self.evaluator.problem,
-            x0=local_search_x0,
-            id="0",
-        )
-        # add function evaluations during local search to our function
-        #  evaluation counter (NOTE: depending on the setup, we might neglect
-        #  gradient evaluations).
-        self.evaluator.n_eval += optimizer_result.n_fval
-        self.evaluator.n_eval_round += optimizer_result.n_fval
+            optimizer_result: OptimizerResult = optimizer.minimize(
+                problem=self.evaluator.problem,
+                x0=local_search_x0,
+                id="0",
+            )
+            # add function evaluations during local search to our function
+            #  evaluation counter (NOTE: depending on the setup, we might neglect
+            #  gradient evaluations).
+            self.evaluator.n_eval += optimizer_result.n_fval
+            self.evaluator.n_eval_round += optimizer_result.n_fval
 
-        self.logger.info(
-            f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
-            f" took {optimizer_result.time:.3g}s, finished with "
-            f"{optimizer_result.exitflag}: {optimizer_result.message}"
-        )
-        self.local_solutions.append(optimizer_result.x)
+            self.logger.info(
+                f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
+                f"took {optimizer_result.time:.3g}s, finished with "
+                f"{optimizer_result.exitflag}: {optimizer_result.message}"
+            )
+            if np.isfinite(optimizer_result.fval):
+                local_solution_x = optimizer_result.x[
+                    optimizer_result.free_indices
+                ]
+                local_solution_fx = optimizer_result.fval
 
-        self._maybe_update_global_best(
-            optimizer_result.x, optimizer_result.fval
-        )
+                self.local_solutions.append(local_solution_x)
+
+                self._maybe_update_global_best(
+                    local_solution_x, local_solution_fx
+                )
+                break
+
         self.last_local_search_niter = self.n_iter
         self.evaluator.reset_round_counter()
 

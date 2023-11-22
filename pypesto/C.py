@@ -5,7 +5,7 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Callable, Literal, Tuple, Union
+from typing import Literal, Tuple, Union
 
 ###############################################################################
 # ENSEMBLE
@@ -274,13 +274,6 @@ CONDITION_IDS = 'condition_ids'
 
 CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format
-
-
-###############################################################################
-# SELECT
-
-TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
-
 
 ###############################################################################
 # VISUALIZE

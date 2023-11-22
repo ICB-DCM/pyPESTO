@@ -53,7 +53,8 @@ def inner_options(request):
 def test_optimization(inner_options: Dict):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_nonlinear_monotone_yaml)
-
+    # Set seed for reproducibility.
+    np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",
         options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
