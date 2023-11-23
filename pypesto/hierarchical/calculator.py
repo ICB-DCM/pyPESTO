@@ -30,6 +30,8 @@ from .problem import AmiciInnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
 
 
+#ToDo: ...
+
 class HierarchicalAmiciCalculator(AmiciCalculator):
     """A calculator that is passed as `calculator` to the pypesto.AmiciObjective."""
 
