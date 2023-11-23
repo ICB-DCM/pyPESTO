@@ -402,6 +402,7 @@ class AmiciObjective(ObjectiveBase):
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
         amici_reporting: Optional['amici.RDataReporting'] = None,
+        simulation_edatas: Optional[Sequence['amici.ExpData']] = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -452,6 +453,7 @@ class AmiciObjective(ObjectiveBase):
             x_ids=self.x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=self.fim_for_hess,
+            simulation_edatas=simulation_edatas,
         )
 
         nllh = ret[FVAL]

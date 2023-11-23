@@ -164,6 +164,38 @@ class AmiciInnerProblem(InnerProblem):
 
         return True
 
+    def check_simulation_edatas(self, edatas: List[amici.ExpData]) -> bool:
+        """Check for consistency in data.
+
+        Currently only checks for the actual data values. i.e. number of timepoints with nan-values are
+        not compared.
+
+        Parameters
+        ----------
+        edatas:
+            A data set. Will be checked against the data set provided to the
+            constructor.
+
+        Returns
+        -------
+        Whether the data sets are consistent.
+        """
+        data = [
+            amici.numpy.ExpDataView(edata)['observedData'][
+                ~np.isnan(amici.numpy.ExpDataView(edata)['observedData'])
+            ]
+            for edata in edatas
+        ]
+
+        if len(self.data) != len(data):
+            return False
+
+        for data0, data1 in zip(self.data, data):
+            if not np.array_equal(data0, data1, equal_nan=True):
+                return False
+
+        return True
+
 
 def scale_value_dict(
     dct: Dict[str, float], problem: InnerProblem

@@ -79,6 +79,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
+        simulation_edatas: List[amici.ExpData] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -95,6 +96,18 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 'the experimental data used to setup the hierarchical '
                 'optimizer.'
             )
+
+        if simulation_edatas is None:
+            simulation_edatas = edatas
+
+        # ToDo: implement this check
+        # else:
+        #     if not self.inner_problem.check_simulation_edatas(edatas=simulation_edatas):
+        #         raise ValueError(
+        #             'The experimental data provided to this call for simulation differs from '
+        #             'the experimental data used to setup the hierarchical '
+        #             'optimizer. Only different timepoints are allowed.'
+        #         )
 
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
@@ -151,7 +164,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             mode=mode,
             amici_model=amici_model,
             amici_solver=amici_solver,
-            edatas=edatas,
+            edatas=simulation_edatas,
             n_threads=n_threads,
             x_ids=x_ids,
             parameter_mapping=parameter_mapping,
