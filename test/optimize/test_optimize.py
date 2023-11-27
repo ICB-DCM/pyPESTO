@@ -21,9 +21,9 @@ import pypesto.optimize as optimize
 from pypesto.optimize.ess import (
     CESSOptimizer,
     ESSOptimizer,
+    SacessFidesFactory,
     SacessOptimizer,
     get_default_ess_options,
-    sacess_fides_wrapper,
 )
 from pypesto.optimize.util import assign_ids
 from pypesto.store import read_result
@@ -454,7 +454,7 @@ def test_history_beats_optimizer():
 @pytest.mark.parametrize("ess_type", ["ess", "cess", "sacess"])
 @pytest.mark.parametrize(
     "local_optimizer",
-    [None, optimize.FidesOptimizer(), sacess_fides_wrapper()],
+    [None, optimize.FidesOptimizer(), SacessFidesFactory()],
 )
 @pytest.mark.flaky(reruns=3)
 def test_ess(problem, local_optimizer, ess_type, request):

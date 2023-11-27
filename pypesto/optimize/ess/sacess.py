@@ -28,7 +28,7 @@ from .refset import RefSet
 __all__ = [
     "SacessOptimizer",
     "get_default_ess_options",
-    "sacess_fides_wrapper",
+    "SacessFidesFactory",
 ]
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class SacessOptimizer:
             the duration of a local search. Defaults to no limit.
             Note that in order to impose the wall time limit also on the local
             optimizer, the user has to provide a wrapper function similar to
-            :func:`sacess_fides_wrapper`.
+            :meth:`SacessFidesFactory.__call__`.
         ess_loglevel:
             Loglevel for ESS runs.
         sacess_loglevel:
@@ -905,7 +905,7 @@ def get_default_ess_options(
     # Set local optimizer
     for cur_settings in settings:
         if local_optimizer is True:
-            cur_settings['local_optimizer'] = sacess_fides_wrapper()
+            cur_settings['local_optimizer'] = SacessFidesFactory()
         elif local_optimizer is not False:
             cur_settings['local_optimizer'] = local_optimizer
 
@@ -915,16 +915,13 @@ def get_default_ess_options(
     ]
 
 
-def sacess_fides_wrapper(
-    fides_options: Optional[dict[str, Any]] = None,
-    fides_kwargs: Optional[dict[str, Any]] = None,
-) -> Callable[..., "pypesto.optimize.Optimizer"]:
-    """Return a function that creates a :class:`FidesOptimizer` instance.
+class SacessFidesFactory:
+    """Factory for :class:`FidesOptimizer` instances for use with :class:`SacessOptimizer`.
 
-    To be used with :class:`SacessOptimizer`. The returned optimizer factory
-    will forward the walltime limit and function evaluation limit imposed on
-    :class:`SacessOptimizer` to :class:`FidesOptimizer`. Besides that, default
-    options are used.
+    :meth:`__call__` will forward the walltime limit and function evaluation
+    limit imposed on :class:`SacessOptimizer` to :class:`FidesOptimizer`.
+    Besides that, default options are used.
+
 
     Parameters
     ----------
@@ -935,30 +932,45 @@ def sacess_fides_wrapper(
         Keyword arguments for the :class:`FidesOptimizer`. See
         :meth:`FidesOptimizer.__init__`. Must not include ``options``.
 
-    Returns
-    -------
-    A function to be passed as ``local_optimizer`` to :meth:`ESSOptimizer.__init__`.
     """
-    from ..optimizer import OptimizerImportError
 
-    try:
+    def __init__(
+        self,
+        fides_options: Optional[dict[str, Any]] = None,
+        fides_kwargs: Optional[dict[str, Any]] = None,
+    ):
+        if fides_options is None:
+            fides_options = {}
+        if fides_kwargs is None:
+            fides_kwargs = {}
+
+        self._fides_options = fides_options
+        self._fides_kwargs = fides_kwargs
+
+        # Check if fides is installed
+        try:
+            import fides  # noqa F401
+        except ImportError:
+            from ..optimizer import OptimizerImportError
+
+            raise OptimizerImportError("fides")
+
+    def __call__(
+        self, max_walltime_s: int, max_eval: int
+    ) -> ["pypesto.optimize.FidesOptimizer"]:
+        """Create a :class:`FidesOptimizer` instance."""
+
         from fides.constants import Options as FidesOptions
-    except ImportError:
-        raise OptimizerImportError("fides")
 
-    if fides_options is None:
-        fides_options = {}
-    if fides_kwargs is None:
-        fides_kwargs = {}
-
-    def optimizer_factory(max_walltime_s: int, max_eval: int):
-        fides_options[FidesOptions.MAXTIME] = max_walltime_s
+        options = self._fides_options.copy()
+        options[FidesOptions.MAXTIME] = max_walltime_s
 
         # only accepts int
         if np.isfinite(max_eval):
-            fides_options[FidesOptions.MAXITER] = int(max_eval)
+            options[FidesOptions.MAXITER] = int(max_eval)
         return pypesto.optimize.FidesOptimizer(
-            **fides_kwargs, options=fides_options
+            **self._fides_kwargs, options=options
         )
 
-    return optimizer_factory
+    def __repr__(self):
+        return f"{self.__class__.__name__}(fides_options={self._fides_options}, fides_kwargs={self._fides_kwargs})"

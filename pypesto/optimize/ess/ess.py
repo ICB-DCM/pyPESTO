@@ -88,7 +88,7 @@ class ESSOptimizer:
             In case of a callable, it will be called with the keyword arguments
             `max_walltime_s` and `max_eval`, which should be passed to the optimizer
             (if supported) to honor the overall budget.
-            See :func:`sacess_fides_wrapper` for an example.
+            See :class:`SacessFidesFactory` for an example.
         n_diverse:
             Number of samples to choose from to construct the initial RefSet
         max_eval:
