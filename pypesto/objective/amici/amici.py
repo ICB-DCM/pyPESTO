@@ -603,7 +603,7 @@ class AmiciObjective(ObjectiveBase):
                 for _ in range(len(amici_objective.edatas))
             ]
 
-        if type(amici_objective.calculator) is HierarchicalAmiciCalculator:
+        if isinstance(amici_objective.calculator, HierarchicalAmiciCalculator):
             amici_objective.calculator.set_simulation_edatas(
                 amici_objective.edatas, custom_timepoints
             )
