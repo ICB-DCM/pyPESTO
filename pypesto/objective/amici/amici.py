@@ -453,7 +453,6 @@ class AmiciObjective(ObjectiveBase):
             x_ids=self.x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=self.fim_for_hess,
-            simulation_edatas=simulation_edatas,
         )
 
         nllh = ret[FVAL]
