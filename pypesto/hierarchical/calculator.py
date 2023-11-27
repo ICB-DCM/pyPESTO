@@ -101,15 +101,14 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             simulation_edatas = edatas
         else:
             simulation_edatas = self.simulation_edatas
-
-        # ToDo: implement this check
-        # else:
-        #     if not self.inner_problem.check_simulation_edatas(edatas=simulation_edatas):
-        #         raise ValueError(
-        #             'The experimental data provided to this call for simulation differs from '
-        #             'the experimental data used to setup the hierarchical '
-        #             'optimizer. Only different timepoints are allowed.'
-        #         )
+            if not self.inner_problem.check_simulation_edatas(
+                edatas=simulation_edatas
+            ):
+                raise ValueError(
+                    'The experimental data provided to this call for simulation differs from '
+                    'the experimental data used to setup the hierarchical '
+                    'optimizer. Only more timepoints are allowed.'
+                )
 
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
