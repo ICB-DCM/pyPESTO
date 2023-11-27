@@ -57,7 +57,6 @@ class AmiciCalculator:
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        simulation_edatas: List[amici.ExpData] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -109,15 +108,11 @@ class AmiciCalculator:
             amici_model=amici_model,
         )
 
-        # TODO: Implement check for the simulation edatas
-        if simulation_edatas is None:
-            simulation_edatas = edatas
-
         # run amici simulation
         rdatas = amici.runAmiciSimulations(
             amici_model,
             amici_solver,
-            simulation_edatas,
+            edatas,
             num_threads=min(n_threads, len(edatas)),
         )
         if (

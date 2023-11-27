@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -57,6 +57,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         if inner_solver is None:
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
+        self.simulation_edatas = None
 
     def initialize(self):
         """Initialize."""
@@ -79,7 +80,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        simulation_edatas: List[amici.ExpData] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -97,8 +97,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 'optimizer.'
             )
 
-        if simulation_edatas is None:
+        if self.simulation_edatas is None:
             simulation_edatas = edatas
+        else:
+            simulation_edatas = self.simulation_edatas
 
         # ToDo: implement this check
         # else:
@@ -174,3 +176,30 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         result[INNER_RDATAS] = inner_rdatas
 
         return result
+
+    def set_simulation_edatas(
+        self,
+        simulation_timepoints: Sequence[Sequence[Union[float, int]]] = None,
+    ):
+        """Set the experimental data used for simulation.
+
+        This is required to simulate model trajectories at more timepoints than the
+        measurement timepoints. Checks ensure that the experimental data used for
+        simulation is a subset of the experimental data used for the inner problem.
+
+        Parameters
+        ----------
+        simulation_timepoints:
+            The outer sequence should contain a sequence of timepoints for each
+            experimental condition.
+        """
+
+        if simulation_timepoints is None:
+            self.simulation_edatas = None
+            return
+        else:
+            simulation_edatas = copy.deepcopy(self.inner_problem.edatas)
+            for i, edata in enumerate(simulation_edatas):
+                edata.setTimepoints(simulation_timepoints[i])
+
+        self.simulation_edatas = simulation_edatas

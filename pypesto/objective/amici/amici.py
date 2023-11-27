@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from ...C import FVAL, INNER_PARAMETERS, MODE_FUN, MODE_RES, RDATAS, ModeType
+from ...hierarchical.calculator import HierarchicalAmiciCalculator
 from ..base import ObjectiveBase, ResultDict
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
@@ -601,8 +602,11 @@ class AmiciObjective(ObjectiveBase):
                 for _ in range(len(amici_objective.edatas))
             ]
 
-        amici_objective.custom_timepoints = custom_timepoints
-        amici_objective.apply_custom_timepoints()
+        if type(amici_objective.calculator) is HierarchicalAmiciCalculator:
+            amici_objective.calculator.set_simulation_edatas(custom_timepoints)
+        else:
+            amici_objective.custom_timepoints = custom_timepoints
+            amici_objective.apply_custom_timepoints()
         return amici_objective
 
     def check_gradients_match_finite_differences(

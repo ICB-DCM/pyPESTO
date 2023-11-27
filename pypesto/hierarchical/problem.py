@@ -180,6 +180,7 @@ class AmiciInnerProblem(InnerProblem):
         -------
         Whether the data sets are consistent.
         """
+        # TODO: change self.data as well by removing Nan values. What happens with partially NaN values (in matrices).
         data = [
             amici.numpy.ExpDataView(edata)['observedData'][
                 ~np.isnan(amici.numpy.ExpDataView(edata)['observedData'])
