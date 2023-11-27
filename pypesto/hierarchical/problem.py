@@ -184,7 +184,7 @@ class AmiciInnerProblem(InnerProblem):
         """
         # TODO: refine check to check for data positions, not only ordering and value of data.
         original_data = [
-            amici.numpy.ExpDataView(edata)['observedData'][
+            amici.numpy.ExpDataView(edata).observedData[
                 ~np.isnan(amici.numpy.ExpDataView(edata)['observedData'])
             ]
             for edata in self.data
