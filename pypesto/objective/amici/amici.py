@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from ...C import FVAL, INNER_PARAMETERS, MODE_FUN, MODE_RES, RDATAS, ModeType
-from ...hierarchical.calculator import HierarchicalAmiciCalculator
 from ..base import ObjectiveBase, ResultDict
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
@@ -581,6 +580,9 @@ class AmiciObjective(ObjectiveBase):
         -------
         The customized copy of this objective.
         """
+        # import here to avoid circular imports
+        from ...hierarchical.calculator import HierarchicalAmiciCalculator
+
         if timepoints is None and timepoints_global is None:
             raise KeyError('Timepoints were not specified.')
 
@@ -603,7 +605,9 @@ class AmiciObjective(ObjectiveBase):
             ]
 
         if type(amici_objective.calculator) is HierarchicalAmiciCalculator:
-            amici_objective.calculator.set_simulation_edatas(custom_timepoints)
+            amici_objective.calculator.set_simulation_edatas(
+                amici_objective.edatas, custom_timepoints
+            )
         else:
             amici_objective.custom_timepoints = custom_timepoints
             amici_objective.apply_custom_timepoints()

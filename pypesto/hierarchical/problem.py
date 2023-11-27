@@ -182,12 +182,12 @@ class AmiciInnerProblem(InnerProblem):
         -------
         Whether the data sets are consistent.
         """
-        # TODO: change self.data as well by removing Nan values. What happens with partially NaN values (in matrices).
+        # TODO: refine check to check for data positions, not only ordering and value of data.
         original_data = [
             amici.numpy.ExpDataView(edata)['observedData'][
                 ~np.isnan(amici.numpy.ExpDataView(edata)['observedData'])
             ]
-            for edata in self.edatas
+            for edata in self.data
         ]
 
         simulation_data = [

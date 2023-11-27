@@ -179,6 +179,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
 
     def set_simulation_edatas(
         self,
+        edatas,
         simulation_timepoints: Sequence[Sequence[Union[float, int]]] = None,
     ):
         """Set the experimental data used for simulation.
@@ -198,7 +199,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             self.simulation_edatas = None
             return
         else:
-            simulation_edatas = copy.deepcopy(self.inner_problem.edatas)
+            simulation_edatas = copy.deepcopy(edatas)
             for i, edata in enumerate(simulation_edatas):
                 edata.setTimepoints(simulation_timepoints[i])
 
