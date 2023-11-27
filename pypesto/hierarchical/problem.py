@@ -164,7 +164,9 @@ class AmiciInnerProblem(InnerProblem):
 
         return True
 
-    def check_simulation_edatas(self, edatas: List[amici.ExpData]) -> bool:
+    def check_simulation_edatas(
+        self, simulation_edatas: List[amici.ExpData]
+    ) -> bool:
         """Check for consistency in data.
 
         Currently only checks for the actual data values. i.e. number of timepoints with nan-values are
@@ -172,7 +174,7 @@ class AmiciInnerProblem(InnerProblem):
 
         Parameters
         ----------
-        edatas:
+        simulation_edatas:
             A data set. Will be checked against the data set provided to the
             constructor.
 
@@ -181,17 +183,24 @@ class AmiciInnerProblem(InnerProblem):
         Whether the data sets are consistent.
         """
         # TODO: change self.data as well by removing Nan values. What happens with partially NaN values (in matrices).
-        data = [
+        original_data = [
             amici.numpy.ExpDataView(edata)['observedData'][
                 ~np.isnan(amici.numpy.ExpDataView(edata)['observedData'])
             ]
-            for edata in edatas
+            for edata in self.edatas
         ]
 
-        if len(self.data) != len(data):
+        simulation_data = [
+            amici.numpy.ExpDataView(edata)['observedData'][
+                ~np.isnan(amici.numpy.ExpDataView(edata)['observedData'])
+            ]
+            for edata in simulation_edatas
+        ]
+
+        if len(original_data) != len(simulation_data):
             return False
 
-        for data0, data1 in zip(self.data, data):
+        for data0, data1 in zip(original_data, simulation_data):
             if not np.array_equal(data0, data1, equal_nan=True):
                 return False
 
