@@ -252,7 +252,7 @@ def get_optimizer(library, solver):
     options = {'maxiter': 100}
 
     if library == 'scipy':
-        if solver == "TNC":
+        if solver == "TNC" or solver.startswith("ls_"):
             options['maxfun'] = options.pop('maxiter')
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
     elif library == 'ipopt':
