@@ -142,7 +142,10 @@ optimizers = [
 
 @pytest.fixture(
     params=optimizers,
-    ids=[f"{i}-{o[0]}" for i, o in enumerate(optimizers)],
+    ids=[
+        f"{i}-{o[0]}{'-' + str(o[1]) if isinstance(o[1], str) and o[1] else ''}"
+        for i, o in enumerate(optimizers)
+    ],
 )
 def optimizer(request):
     return request.param
@@ -249,7 +252,8 @@ def get_optimizer(library, solver):
     options = {'maxiter': 100}
 
     if library == 'scipy':
-        options['maxfun'] = options.pop('maxiter')
+        if solver == "TNC":
+            options['maxfun'] = options.pop('maxiter')
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
     elif library == 'ipopt':
         optimizer = optimize.IpoptOptimizer()
