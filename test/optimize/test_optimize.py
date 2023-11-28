@@ -54,11 +54,13 @@ optimizers = [
             'Powell',
             'CG',
             'BFGS',
+            'dogleg',
             'Newton-CG',
             'L-BFGS-B',
             'TNC',
             'COBYLA',
             'SLSQP',
+            'trust-constr',
             'trust-ncg',
             'trust-exact',
             'trust-krylov',
@@ -66,7 +68,7 @@ optimizers = [
             'ls_dogbox',
         ]
     ],
-    # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
+    # disabled: 'ls_lm' (ValueError when passing bounds)
     ('ipopt', ''),
     ('dlib', ''),
     ('pyswarm', ''),
