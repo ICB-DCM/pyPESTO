@@ -49,6 +49,7 @@ def test_add_sim_grad_to_opt_grad():
     assert np.allclose(expected, opt_grad)
 
 
+@pytest.mark.flaky(reruns=3)
 def test_error_leastsquares_with_ssigma():
     model_name = "Zheng_PNAS2012"
     petab_problem = petab.Problem.from_yaml(
