@@ -18,7 +18,7 @@ from ..history import (
     OptimizerHistory,
     create_history,
 )
-from ..objective import Objective, NegLogParameterPriors, NegLogPriors
+from ..objective import NegLogParameterPriors, NegLogPriors, Objective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
