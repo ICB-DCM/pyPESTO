@@ -49,6 +49,11 @@ class SacessOptimizer:
 
     .. footbibliography::
 
+    Attributes
+    ----------
+    histories:
+        List of the histories of the best values/parameters
+        found by each worker. (Monotonously decreasing objective values.)
     """
 
     def __init__(
@@ -124,7 +129,9 @@ class SacessOptimizer:
                 self._tmpdir = Path(f"SacessOptimizerTemp-{str(uuid1())[:8]}")
         self._tmpdir = Path(self._tmpdir).absolute()
         self._tmpdir.mkdir(parents=True, exist_ok=True)
-        self.histories = None
+        self.histories: Optional[
+            list["pypesto.history.memory.MemoryHistory"]
+        ] = None
 
     def minimize(
         self,
@@ -212,11 +219,11 @@ class SacessOptimizer:
 
             # wait for finish
             # collect results
-            results = [
+            histories = [
                 sacess_manager._result_queue.get()
                 for _ in range(self.num_workers)
             ]
-            self.histories = results
+            self.histories = histories
             for p in worker_processes:
                 p.join()
 

@@ -110,6 +110,9 @@ class ESSOptimizer:
         n_threads:
             Number of parallel threads to use for parallel function evaluation.
             Mutually exclusive with `n_procs`.
+        history:
+            History of the best values/parameters found so far.
+            (Monotonously decreasing objective values.)
         """
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
@@ -168,7 +171,7 @@ class ESSOptimizer:
         self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
         self.evaluator: Optional[FunctionEvaluator] = None
         self.starttime: Optional[float] = None
-        self.history = MemoryHistory()
+        self.history: MemoryHistory = MemoryHistory()
 
     def _initialize_minimize(
         self,
