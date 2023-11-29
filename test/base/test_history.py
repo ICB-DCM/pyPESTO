@@ -729,11 +729,9 @@ def test_hd5_history_from_other(history: pypesto.HistoryBase):
         pypesto.Hdf5History.from_history(
             history, hdf5_file, id_="0", overwrite=False
         )
-    pypesto.Hdf5History.from_history(
+    copied = pypesto.Hdf5History.from_history(
         history, hdf5_file, id_="0", overwrite=True
     )
-
-    copied = pypesto.Hdf5History(file=hdf5_file, id="0")
 
     assert copied.n_fval == history.n_fval
     assert copied.n_grad == history.n_grad
