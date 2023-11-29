@@ -471,10 +471,13 @@ class ScipyOptimizer(Optimizer):
 
     def get_default_options(self):
         """Create default options specific for the optimizer."""
+        options = {'disp': False}
         if self.is_least_squares():
-            options = {'max_nfev': 1000, 'disp': False}
-        else:
-            options = {'maxfun': 1000, 'disp': False}
+            options['max_nfev'] = 1000
+        elif self.method.lower() in ('l-bfgs-b', 'tnc'):
+            options['maxfun'] = 1000
+        elif self.method.lower() in ('nelder-mead', 'powell'):
+            options['maxfev'] = 1000
         return options
 
 
