@@ -1,5 +1,5 @@
 """Utility function for profile module."""
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Iterable
 
 import numpy as np
 import scipy.stats
@@ -35,11 +35,11 @@ def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
 
 def calculate_approximate_ci(
     xs: np.ndarray, ratios: np.ndarray, confidence_ratio: float
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Calculate approximate confidence interval based on profile.
 
-    Interval bounds are linerly interpolated.
+    Interval bounds are linearly interpolated.
 
     Parameters
     ----------
@@ -147,7 +147,7 @@ def initialize_profile(
 
 def fill_profile_list(
     profile_result: ProfileResult,
-    optimizer_result: Dict[str, Any],
+    optimizer_result: dict[str, Any],
     profile_index: Iterable[int],
     profile_list: int,
     problem_dimension: int,

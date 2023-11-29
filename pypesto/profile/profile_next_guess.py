@@ -1,5 +1,4 @@
-import copy
-from typing import Callable, List, Literal, Tuple, Union
+from typing import Callable, Literal
 
 import numpy as np
 
@@ -175,13 +174,13 @@ def adaptive_step(
 
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
-        return clip(
+        return np.clip(
             step_size_proposal, options.min_step_size, options.max_step_size
         )
 
     # restrict step proposal to bounds
     def clip_to_bounds(step_proposal):
-        return clip(step_proposal, problem.lb_full, problem.ub_full)
+        return np.clip(step_proposal, problem.lb_full, problem.ub_full)
 
     # check if this is the first step
     n_profile_points = len(current_profile.fval_path)
@@ -280,18 +279,29 @@ def adaptive_step(
 def handle_profile_history(
     x: np.ndarray,
     par_index: int,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     n_profile_points: int,
     global_opt: float,
     order: int,
     current_profile: ProfilerResult,
     problem: Problem,
     options: ProfileOptions,
-) -> Tuple:
+) -> tuple[float, np.array, list[float], float]:
     """Compute the very first step direction update guesses.
 
     Check whether enough steps have been taken for applying regression,
     computes regression or simple extrapolation.
+
+    Returns
+    -------
+    step_size_guess:
+        Guess for the step size.
+    delta_x_dir:
+        Parameter update direction.
+    reg_par:
+        The regression polynomial for profile extrapolation.
+    delta_obj_value:
+        The difference of the objective function value between the last point and `global_opt`.
     """
     # set the update direction
     delta_x_dir = np.zeros(len(x))
@@ -320,7 +330,6 @@ def handle_profile_history(
             delta_x_dir = last_delta_x / step_size_guess
         elif np.isnan(order):
             # compute the regression polynomial for parameter extrapolation
-
             reg_par = get_reg_polynomial(
                 n_profile_points, par_index, current_profile, problem, options
             )
@@ -334,15 +343,15 @@ def get_reg_polynomial(
     current_profile: ProfilerResult,
     problem: Problem,
     options: ProfileOptions,
-) -> List[float]:
+) -> list[float]:
     """Compute the regression polynomial.
 
     Used to step proposal extrapolation from the last profile points
     """
     # determine interpolation order
     reg_max_order = np.floor(n_profile_points / 2)
-    reg_order = np.min([reg_max_order, options.reg_order])
-    reg_points = np.min([n_profile_points, options.reg_points])
+    reg_order = min(reg_max_order, options.reg_order)
+    reg_points = min(n_profile_points, options.reg_points)
 
     # set up matrix of regression parameters
     reg_par = []
@@ -402,10 +411,9 @@ def do_line_search(
         adapt_factor = 1 / options.step_size_factor
 
     # Loop until correct step size was found
-    stop_search = False
-    while not stop_search:
+    while True:
         # Adapt step size of guess
-        last_x = copy.copy(next_x)
+        last_x = next_x
         step_size_guess = clip_to_minmax(step_size_guess * adapt_factor)
         next_x = clip_to_bounds(par_extrapol(step_size_guess))
 
@@ -423,7 +431,7 @@ def do_line_search(
 
         # compute new objective value
         problem.fix_parameters(par_index, next_x[par_index])
-        last_obj = copy.copy(next_obj)
+        last_obj = next_obj
         next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
         # check for root crossing and compute correct step size in case
@@ -448,22 +456,3 @@ def next_x_interpolate(
 
     # fix final guess and return
     return last_x + add_x
-
-
-def clip(
-    vector_guess: Union[float, np.ndarray],
-    lower: Union[float, np.ndarray],
-    upper: Union[float, np.ndarray],
-) -> Union[float, np.ndarray]:
-    """Restrict a scalar or a vector to given bounds.
-
-    ``vector_guess`` is modified in-place if it is an array.
-    """
-    if isinstance(vector_guess, float):
-        return np.max([np.min([vector_guess, upper]), lower])
-
-    for i_par, i_guess in enumerate(vector_guess):
-        vector_guess[i_par] = np.max(
-            [np.min([i_guess, upper[i_par]]), lower[i_par]]
-        )
-    return vector_guess
