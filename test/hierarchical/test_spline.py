@@ -23,15 +23,21 @@ from pypesto.hierarchical.spline_approximation.solver import (
     extract_expdata_using_mask,
     get_monotonicity_measure,
     get_spline_mapped_simulations,
+    _calculate_regularization_for_group,
+    _calculate_regularization_gradient_for_group,
 )
 
 inner_options = [
     {
         'spline_ratio': spline_ratio,
         'min_diff_factor': min_diff_factor,
+        'regularize_spline': regularize_spline,
+        'regularization_factor': regularization_factor,
     }
-    for spline_ratio in [1.0, 1 / 2, 1 / 3, 1 / 4]
-    for min_diff_factor in [1.0, 1 / 2, 1 / 3, 1 / 4, 0.0]
+    for spline_ratio in [1.0, 1 / 4]
+    for min_diff_factor in [1.0, 1 / 2, 0.0]
+    for regularize_spline in [True, False]
+    for regularization_factor in [1.0, 0.0]
 ]
 
 example_nonlinear_monotone_yaml = (
@@ -343,3 +349,51 @@ def test_calculate_nllh_for_group():
     )
     nllh = _calculate_nllh_for_group(inner_result, sigma, n_datapoints)
     assert nllh[SCIPY_FUN] == expected_nllh
+
+
+def test_calculate_regularization_for_group():
+    """Test the calculation of the regularization for a group."""
+    spline_parameters = np.array([2, 1, 1, 1, 0, 2])
+    n_spline_parameters = len(spline_parameters)
+    spline_bases = np.array([1, 2, 3, 4, 5, 5])
+    regularization_factor = 1.0
+
+    lower_trian = np.tril(np.ones((n_spline_parameters, n_spline_parameters)))
+    xi = np.dot(lower_trian, spline_parameters)
+
+    expected_beta = 1
+    expected_alpha = 1
+
+    expected_regularization = regularization_factor * np.sum(
+        (
+            xi - expected_alpha * spline_bases - expected_beta
+        ) ** 2
+    ) / (2*n_spline_parameters)
+
+    expected_regularization_gradient = (
+        regularization_factor
+        * np.dot(
+            xi - expected_alpha * spline_bases - expected_beta,
+            lower_trian,
+        )
+        / n_spline_parameters
+    )
+
+    regularization = _calculate_regularization_for_group(
+        spline_parameters,
+        n_spline_parameters, 
+        spline_bases, 
+        regularization_factor,
+    )
+    regularization_gradient = _calculate_regularization_gradient_for_group(
+        spline_parameters,
+        n_spline_parameters, 
+        spline_bases, 
+        regularization_factor,
+    )
+
+    assert regularization == expected_regularization
+    assert np.allclose(
+        regularization_gradient,
+        expected_regularization_gradient,
+    )

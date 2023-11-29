@@ -56,7 +56,7 @@ class SplineInnerSolver(InnerSolver):
         if type(self.options[MIN_DIFF_FACTOR]) is not float:
             raise TypeError(f"{MIN_DIFF_FACTOR} must be of type float.")
         elif self.options[MIN_DIFF_FACTOR] < 0:
-            raise ValueError(f"{MIN_DIFF_FACTOR} must be greater than zero.")
+            raise ValueError(f"{MIN_DIFF_FACTOR} must not be negative.")
 
         elif type(self.options[REGULARIZE_SPLINE]) is not bool:
             raise TypeError(f"{REGULARIZE_SPLINE} must be of type bool.")
@@ -67,7 +67,7 @@ class SplineInnerSolver(InnerSolver):
                 )
             elif self.options[REGULARIZATION_FACTOR] < 0:
                 raise ValueError(
-                    f"{REGULARIZATION_FACTOR} must be greater than zero."
+                    f"{REGULARIZATION_FACTOR} must not be negative."
                 )
 
         for key in self.options:

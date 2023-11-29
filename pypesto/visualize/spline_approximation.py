@@ -512,4 +512,3 @@ def _obtain_regularization_for_start(
             reg_term_sum += reg_term
     
     return reg_term_sum
-            
