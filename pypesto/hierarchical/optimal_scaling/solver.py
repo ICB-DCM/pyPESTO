@@ -1227,7 +1227,7 @@ def calculate_censored_grad(
     surrogate_all = np.array(surrogate_all)
 
     # Calculate the negative log likelihood gradient for censored data.
-    gradient = 0.5 * np.nansum(
+    gradient = np.nansum(
         (
             np.full(len(sim_all), 1)
             - (surrogate_all - sim_all) ** 2 / sigma_all**2
@@ -1265,7 +1265,7 @@ def calculate_censored_grad(
     )
 
     # Calculate the negative log likelihood gradient for uncensored, quantitative data.
-    gradient += 0.5 * np.nansum(
+    gradient += np.nansum(
         (
             np.full(len(quantitative_sim), 1)
             - (quantitative_data - quantitative_sim) ** 2
