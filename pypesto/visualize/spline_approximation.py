@@ -4,9 +4,6 @@ from typing import Dict, List, Optional, Sequence, Union
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
-
-import pypesto
-
 import pypesto
 
 from ..C import (
