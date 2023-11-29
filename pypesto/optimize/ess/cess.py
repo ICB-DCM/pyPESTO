@@ -23,25 +23,21 @@ class CESSOptimizer:
     r"""
     Cooperative Enhanced Scatter Search Optimizer (CESS).
 
-    A cooperative scatter search algorithm based on [VillaverdeEge2012]_.
+    A cooperative scatter search algorithm based on :footcite:t:`VillaverdeEge2012`.
     In short, multiple scatter search instances with different hyperparameters
     are running in different threads/processes, and exchange information.
     Some instances focus on diversification while others focus on
     intensification. Communication happens at fixed time intervals.
 
-    Proposed hyperparameter values in [VillaverdeEge2012]_:
+    Proposed hyperparameter values in :footcite:t:`VillaverdeEge2012`:
 
     * ``dim_refset``: ``[0.5 n_parameter, 20 n_parameters]``
     * ``local_n2``: ``[0, 100]``
     * ``balance``: ``[0, 0.5]``
     * ``n_diverse``: ``[5 n_par, 20 n_par]``
-    * ``max_eval``: such that :math:`\tau = log10(max_eval / n_par)` is in
-      [2.5, 3.5], with a recommended default value of 2.5.
-
-    .. [VillaverdeEge2012] 'A cooperative strategy for parameter estimation in
-       large scale systems biology models', Villaverde, A.F., Egea,
-       J.A. & Banga, J.R. BMC Syst Biol 2012, 6, 75.
-       https://doi.org/10.1186/1752-0509-6-75
+    * ``max_eval``: such that
+      :math:`\tau = log10(max\_eval / n\_par) \in [2.5, 3.5]`
+      with a recommended default value of :math:`\tau = 2.5`.
 
     Attributes
     ----------
@@ -65,6 +61,10 @@ class CESSOptimizer:
         Starting time of the most recent optimization.
     i_iter:
         Current iteration number.
+
+    References
+    ----------
+    .. footbibliography::
     """
 
     def __init__(

@@ -61,9 +61,16 @@ def preprocess_hdf5_history(
         return False
 
     # create directory with same name as original file stem
-    template_path = (
-        path.parent / path.stem / (path.stem + "_{id}" + path.suffix)
-    )
+    if "{id}" in path.stem:
+        template_path = (
+            path.parent
+            / path.stem.replace("{id}", "")
+            / (path.stem + path.suffix)
+        )
+    else:
+        template_path = (
+            path.parent / path.stem / (path.stem + "_{id}" + path.suffix)
+        )
     template_path.parent.mkdir(parents=True, exist_ok=True)
     # set history file to template path
     history_options.storage_file = str(template_path)
@@ -92,6 +99,8 @@ def postprocess_hdf5_history(
         History options used in the optimization.
     """
     # create hdf5 file that gathers the others within history group
+    if "{id}" in storage_file:
+        storage_file = storage_file.replace("{id}", "")
     with h5py.File(storage_file, mode='w') as f:
         # create file and group
         f.require_group("history")

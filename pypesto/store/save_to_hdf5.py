@@ -8,7 +8,7 @@ from typing import Union
 import h5py
 import numpy as np
 
-from ..result import Result, SampleResult
+from ..result import ProfilerResult, Result, SampleResult
 from .hdf5 import write_array, write_float_array
 
 logger = logging.getLogger(__name__)
@@ -138,7 +138,7 @@ class OptimizationResultHDF5Writer:
                     if key == 'history':
                         continue
                     if isinstance(start[key], np.ndarray):
-                        write_float_array(start_grp, key, start[key])
+                        write_array(start_grp, key, start[key])
                     elif start[key] is not None:
                         start_grp.attrs[key] = start[key]
                 f.flush()
@@ -234,19 +234,34 @@ class ProfileResultHDF5Writer:
                 profile_grp = profiling_grp.require_group(str(profile_id))
                 for parameter_id, parameter_profile in enumerate(profile):
                     result_grp = profile_grp.require_group(str(parameter_id))
+                    self._write_profiler_result(parameter_profile, result_grp)
 
-                    if parameter_profile is None:
-                        result_grp.attrs['IsNone'] = True
-                        continue
-                    result_grp.attrs['IsNone'] = False
-                    for key in parameter_profile.keys():
-                        if isinstance(parameter_profile[key], np.ndarray):
-                            write_float_array(
-                                result_grp, key, parameter_profile[key]
-                            )
-                        elif parameter_profile[key] is not None:
-                            result_grp.attrs[key] = parameter_profile[key]
             f.flush()
+
+    @staticmethod
+    def _write_profiler_result(
+        parameter_profile: Union[ProfilerResult, None], result_grp: h5py.Group
+    ) -> None:
+        """Write a single ProfilerResult to hdf5.
+
+        Writes a single profile for a single parameter to the provided HDF5 group.
+        """
+        if parameter_profile is None:
+            result_grp.attrs['IsNone'] = True
+            return
+
+        result_grp.attrs['IsNone'] = False
+
+        for key, value in parameter_profile.items():
+            try:
+                if isinstance(value, np.ndarray):
+                    write_float_array(result_grp, key, value)
+                elif value is not None:
+                    result_grp.attrs[key] = value
+            except Exception as e:
+                raise ValueError(
+                    f"Error writing {key} ({value}) to {result_grp}."
+                ) from e
 
 
 def write_result(

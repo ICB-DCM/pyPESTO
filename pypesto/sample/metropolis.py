@@ -11,7 +11,30 @@ from .sampler import InternalSample, InternalSampler
 
 
 class MetropolisSampler(InternalSampler):
-    """Simple Metropolis-Hastings sampler with fixed proposal variance."""
+    """Simple Metropolis-Hastings sampler with fixed proposal variance.
+
+    The Metropolis-Hastings sampler is a Markov chain Monte Carlo (MCMC)
+    method generating a sequence of samples from a probability
+    distribution.
+
+    This class implements a simple Metropolis algorithm with fixed
+    symmetric Gaussian proposal distribution.
+
+    For the underlying original publication, see:
+
+    * Metropolis et al. 1953.
+      Equation of State Calculations by Fast Computing Machines
+      (https://doi.org/10.1063/1.1699114)
+    * Hastings 1970.
+      Monte Carlo sampling methods using Markov chains and their
+      applications
+      (https://doi.org/10.1093/biomet/57.1.97)
+
+    For reference matlab implementations see:
+
+    * https://en.wikipedia.org/wiki/Metropolis%E2%80%93Hastings_algorithm
+    * https://github.com/ICB-DCM/PESTO/blob/master/private/performPT.m
+    """
 
     def __init__(self, options: Dict = None):
         super().__init__(options)

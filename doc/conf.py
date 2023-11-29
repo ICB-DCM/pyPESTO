@@ -56,6 +56,8 @@ extensions = [
     'sphinxcontrib.bibtex',
     # ensure that jQuery is installed
     'sphinxcontrib.jquery',
+    # type hint formatting
+    'sphinx_autodoc_typehints',
 ]
 
 # default autodoc options
@@ -69,6 +71,8 @@ autodoc_default_options = {
     'autodoc_inherit_docstrings': True,
 }
 autodoc_mock_imports = ["amici"]
+autodoc_class_signature = "separated"
+
 
 # links for intersphinx
 intersphinx_mapping = {
@@ -81,9 +85,14 @@ intersphinx_mapping = {
         None,
     ),
     'amici': ('https://amici.readthedocs.io/en/latest/', None),
+    'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
 }
 
-bibtex_bibfiles = ["using_pypesto.bib"]
+
+typehints_document_rtype = True
+autodoc_typehints = "description"
+
+bibtex_bibfiles = ["using_pypesto.bib", "references.bib"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

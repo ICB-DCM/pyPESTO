@@ -5,6 +5,10 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
+import pypesto
+
+import pypesto
+
 from ..C import (
     AMICI_SIGMAY,
     AMICI_Y,
@@ -22,7 +26,6 @@ try:
     from ..hierarchical.spline_approximation.calculator import (
         SplineAmiciCalculator,
     )
-    from ..hierarchical.spline_approximation.problem import SplineInnerProblem
     from ..hierarchical.spline_approximation.solver import (
         SplineInnerSolver,
         get_spline_mapped_simulations,
@@ -122,8 +125,8 @@ def plot_splines_from_pypesto_result(
 
 
 def plot_splines_from_inner_result(
-    inner_problem: 'SplineInnerProblem',
-    inner_solver: 'SplineInnerSolver',
+    inner_problem: 'pypesto.hierarchical.spline_approximation.problem.SplineInnerProblem',
+    inner_solver: 'pypesto.hierarchical.spline_approximation.solver.SplineInnerSolver',
     results: List[Dict],
     observable_ids=None,
     **kwargs,

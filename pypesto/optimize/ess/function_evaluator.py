@@ -115,9 +115,8 @@ class FunctionEvaluator:
         """
         fxs = np.full(shape=n, fill_value=np.nan)
         xs = np.full(shape=(n, self.problem.dim), fill_value=np.nan)
-
         while not np.isfinite(fxs).all():
-            retry_indices = np.argwhere(~np.isfinite(fxs)).squeeze()
+            retry_indices = np.argwhere(~np.isfinite(fxs)).flatten()
             xs[retry_indices] = self.startpoint_method(
                 n_starts=retry_indices.size, problem=self.problem
             )
@@ -262,3 +261,35 @@ class FunctionEvaluatorMP(FunctionEvaluator):
         self.n_eval += len(xs)
         self.n_eval_round += len(xs)
         return res
+
+
+def create_function_evaluator(
+    problem: Problem = None,
+    startpoint_method: StartpointMethod = None,
+    n_procs: int = None,
+    n_threads: int = None,
+):
+    """Create a FunctionEvaluator.
+
+    Based on multiprocessing or multithreading, depending on whether
+    ``n_procs`` (number of processes) or ``n_threads`` (number of threads)
+    is specified. If neither is specified, a single-threaded evaluator is
+    returned.
+    """
+    if n_procs and n_threads:
+        raise ValueError(
+            "Only one of `n_procs` and `n_threads` may be specified."
+        )
+
+    if n_procs:
+        return FunctionEvaluatorMP(
+            problem=problem,
+            startpoint_method=startpoint_method,
+            n_procs=n_procs,
+        )
+
+    return FunctionEvaluatorMT(
+        problem=problem,
+        startpoint_method=startpoint_method,
+        n_threads=n_threads or 1,
+    )

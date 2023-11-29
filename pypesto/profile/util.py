@@ -183,11 +183,11 @@ def fill_profile_list(
 
     # create blank profile
     new_profile = ProfilerResult(
-        x_path=optimizer_result["x"],
+        x_path=optimizer_result["x"][..., np.newaxis],
         fval_path=np.array([optimizer_result["fval"]]),
         ratio_path=np.array([np.exp(global_opt - optimizer_result["fval"])]),
-        gradnorm_path=gradnorm,
-        exitflag_path=optimizer_result["exitflag"],
+        gradnorm_path=np.array([gradnorm]),
+        exitflag_path=np.array([optimizer_result["exitflag"]]),
         time_path=np.array([0.0]),
         time_total=0.0,
         n_fval=0,

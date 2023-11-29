@@ -2,12 +2,100 @@ Release notes
 =============
 
 
+0.4 series
+..........
+
+
+0.4.0 (2023-11-22)
+-------------------
+
+* General
+    * Documentation (#1140, #1146, #1152, #1149, #1192)
+    * Updated Jupyter Notebooks (#1141)
+    * Update code to avoid deprecations/warnings (#1158, #1184)
+    * Updated maintainers and codeownership (#1171, #1170)
+    * Improve tests and GHA (#1178, #1185, #1188, #1190, #1193, #1199, #1198, #1197, #1208)
+* Profile:
+    * Fix problem overwrite of profiling (#1153)
+    * Add warning, trying to profile fixed parameter (#1155)
+    * ProfileOptions: add some basic integrity checking (#1163)
+    * Fix pypesto.profile.parameter_profile incorrectly assuming symmetric bounds (#1166)
+    * Improve pypesto/profile/profile_next_guess.py (#1167)
+    * Parameter profile: retry optimization in case of failure (#1168)
+    * Fix incorrect types in pypesto.result.profile.ProfilerResult (#1210)
+* Problem:
+    * Add/forward startpoint_kwargs in PetabImporter.create_problem (#1135)
+    * Support valid AMICI noise distributions that are invalid in PEtab (#1157)
+    * Fix startpoint sampling for PEtab-derived problems with fixed parameters (#1169)
+* Optimize
+    * Log traceback in case of exceptions during optimizations (#1156)
+    * Saccess optimizer improvements (#1177, #1187, #1194, #1195, #1201, #1202, #1204)
+    * ESS optimizer improvements (#1176, #1181, #1182)
+    * Fix check for allow_failed_starts (#1180)
+    * Handle message and exitflag in histories (#1203)
+    * Fix indexing error for 0-dimensional HDF5 datasets (#1206)
+* Hierarchical:
+    * Fix HierarchicalAmiciCalculator.__call__ not setting 'hess' in result (#1161)
+* Visualization:
+    * Fix legend argument checking for waterfall/parameter/history plots (#1139)
+    * Fix waterfall start indices for multiple results (#1200)
+
+
 0.3 series
 ..........
 
 
-0.3.1 (2023-06-22)
+0.3.3 (2023-10-19)
 -------------------
+
+* Visualize:
+    * Get optimization result by id (#1116)
+* Storage:
+    * allow "{id}" in history storage filename (#1118)
+* Objective:
+    * adjusted PEtab.jl syntax to new release (#1128, #1131)
+    * Documentation on PEtab importer updated (#1126)
+* Ensembles
+    * Additional option for cutoff calculation (#1124)
+    * Ensembles from optimization endpoints now only takes free parameters (#1130)
+* General
+    * Added How to Cite (#1125)
+    * Additional summary option (#1134)
+    * Speed up base tests (#1127)
+
+
+0.3.2 (2023-10-02)
+-------------------
+
+* Visualize:
+    * Restrict fval magnitude in waterfall with order_by_id (#1090)
+    * Hierarchical parameter plot fix (#1106)
+    * Fix y-limits on waterfall (#1109)
+* Sampling:
+    * Use cloudpickle for pickling dynesty sampler (#1094)
+* Optimize
+    * Small fix on hierarchical initialise (#1095)
+    * Fix startpoint sampling for hierarchical optimization (#1105)
+    * SacessOptimizer: retry reading, delay deleting (#1110)
+    * SacessOptimizer: Fix logging with multiprocessing (#1112)
+    * SacessOptimizer: tmpdir option (#1115)
+* Storage:
+    * fix storage (#1099)
+* Examples
+    * Notebook on differences (#1098)
+* Problem
+    * Add startpoint_method to Problem (#1093)
+* General
+    * Added new entry to bib (#1100)
+    * PetabJL integration (#1089)
+    * Other platform tests (#1113)
+    * Dokumentation fixes (#1120)
+    * Updated CODEOWNER (#1123)
+
+
+0.3.1 (2023-06-22)
+------------------
+
 * Visualize:
     * Parameter plot w/ hier. pars, noise estimation for splines (#1061)
 * Sampling:
@@ -34,7 +122,7 @@ Release notes
 
 
 0.3.0 (2023-05-02)
--------------------
+------------------
 
 New functionalities compared to 0.2.0:
 
@@ -59,8 +147,6 @@ Not supported functionalities and versions compared to 0.2.0:
 * **Pymc (v3)**
 * **Removed Theano objective**
 * **Changed parameter indexing from boolean to int in profiling routines**
-
-
 
 
 0.2 series
