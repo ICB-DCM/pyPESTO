@@ -433,7 +433,6 @@ def _obtain_regularization_for_start(
     amici_model = pypesto_result.problem.objective.amici_model
     amici_solver = pypesto_result.problem.objective.amici_solver
     n_threads = pypesto_result.problem.objective.n_threads
-    observable_ids = amici_model.getObservableIds()
 
     # Fill in the parameters.
     amici.parameter_mapping.fill_in_parameters(
@@ -481,7 +480,6 @@ def _obtain_regularization_for_start(
 
     # for each result and group, plot the inner solution
     for result, group in zip(inner_results, inner_problem.groups):
-        group_idx = list(inner_problem.groups.keys()).index(group)
 
         # For each group get the inner parameters and simulation
         xs = inner_problem.get_xs_for_group(group)
@@ -489,7 +487,6 @@ def _obtain_regularization_for_start(
         s = result[SCIPY_X]
 
         inner_parameters = np.array([x.value for x in xs])
-        measurements = inner_problem.groups[group][DATAPOINTS]
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases

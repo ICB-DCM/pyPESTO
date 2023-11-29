@@ -265,7 +265,6 @@ class SplineInnerSolver(InnerSolver):
                     delta_c_dot, c_dot = calculate_spline_bases_gradient(
                         sim_all=sim_all, sy_all=sy_all, N=N
                     )
-                    C = np.diag(-np.ones(N))
 
                     # For the reformulated problem, mu can be calculated
                     # as the inner gradient at the optimal point s.
