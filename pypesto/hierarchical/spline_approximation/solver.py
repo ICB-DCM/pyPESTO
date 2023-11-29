@@ -164,6 +164,7 @@ class SplineInnerSolver(InnerSolver):
         parameter_mapping: ParameterMapping,
         par_opt_ids: List,
         par_sim_ids: List,
+        par_edatas_indices: List,
         snllh: Dict,
     ):
         """Calculate gradients of the inner objective function.
@@ -224,11 +225,16 @@ class SplineInnerSolver(InnerSolver):
                 grad = 0.0
 
                 sy_for_outer_parameter = [
-                    sy_cond[:, par_sim_idx, :] for sy_cond in sy
+                    sy_cond[:, par_edata_indices.index(par_sim_idx), :] 
+                    if par_sim_idx in par_edata_indices
+                    else np.zeros(sy_cond[:, 0, :].shape)
+                    for sy_cond, par_edata_indices in zip(sy, par_edatas_indices)
                 ]
                 ssigma_for_outer_parameter = [
-                    ssigma_cond[:, par_sim_idx, :]
-                    for ssigma_cond in amici_ssigma
+                    ssigma_cond[:, par_edata_indices.index(par_sim_idx), :] 
+                    if par_sim_idx in par_edata_indices
+                    else np.zeros(ssigma_cond[:, 0, :].shape)
+                    for ssigma_cond, par_edata_indices in zip(amici_ssigma, par_edatas_indices)
                 ]
 
                 for group_idx, group in enumerate(
