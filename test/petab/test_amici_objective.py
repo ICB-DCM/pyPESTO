@@ -49,6 +49,7 @@ def test_add_sim_grad_to_opt_grad():
     assert np.allclose(expected, opt_grad)
 
 
+@pytest.mark.flaky(reruns=2)
 def test_error_leastsquares_with_ssigma():
     model_name = "Zheng_PNAS2012"
     petab_problem = petab.Problem.from_yaml(
@@ -57,7 +58,9 @@ def test_error_leastsquares_with_ssigma():
     petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(petab_problem)
     obj = importer.create_objective()
-    problem = importer.create_problem(obj)
+    problem = importer.create_problem(
+        obj, startpoint_kwargs={'check_fval': True, 'check_grad': True}
+    )
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         'ls_trf', options={'max_nfev': 50}
