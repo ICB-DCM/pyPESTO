@@ -264,7 +264,6 @@ def adaptive_step(
     return do_line_search(
         next_x,
         step_size_guess,
-        "decrease" if next_obj_target < next_obj else "increase",
         par_extrapol,
         next_obj,
         next_obj_target,
@@ -389,7 +388,6 @@ def get_reg_polynomial(
 def do_line_search(
     next_x: np.ndarray,
     step_size_guess: float,
-    direction: Literal['increase', 'decrease'],
     par_extrapol: Callable,
     next_obj: float,
     next_obj_target: float,
@@ -403,8 +401,37 @@ def do_line_search(
 
     Based on the objective function we want to reach, based on the current
     position in parameter space and on the first guess for the proposal.
+
+    Parameters
+    ----------
+    next_x:
+        Starting parameters for the line search.
+    step_size_guess:
+        First guess for the step size.
+    par_extrapol:
+        Parameter extrapolation function.
+    next_obj:
+        Objective function value at `next_x`.
+    next_obj_target:
+        Objective function value we want to reach.
+    clip_to_minmax:
+        Function to clip the step size to minimum and maximum step size.
+    clip_to_bounds:
+        Function to clip the parameters to the bounds.
+    par_index:
+        Index of the parameter we are profiling.
+    problem:
+        The parameter estimation problem.
+    options:
+        Profile likelihood options.
+
+    Returns
+    -------
+    Parameter vector that is expected to yield the objective function value
+    closest to `next_obj_target`.
     """
     # Was the initial step too big or too small?
+    direction = "decrease" if next_obj_target < next_obj else "increase"
     if direction == 'increase':
         adapt_factor = options.step_size_factor
     else:
