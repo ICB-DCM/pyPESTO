@@ -41,10 +41,12 @@ def next_guess(
     profile_options:
         Various options applied to the profile optimization.
     update_type:
-        Type of update for next profile point:
-        ``fixed_step`` (see :func:`fixed_step`),
-        ``adaptive_step_order_0``, ``adaptive_step_order_1``, or ``adaptive_step_regression``
-        (see :func:`adaptive_step`).
+        Type of update for next profile point. Available options are:
+
+        * ``fixed_step`` (see :func:`fixed_step`)
+        * ``adaptive_step_order_0`` (see :func:`adaptive_step`).
+        * ``adaptive_step_order_1`` (see :func:`adaptive_step`).
+        * ``adaptive_step_regression`` (see :func:`adaptive_step`).
     current_profile:
         The profile which should be computed.
     problem:
@@ -95,16 +97,16 @@ def fixed_step(
     """Most simple method to create the next guess.
 
     Computes the next point based on the fixed step size given by
-    ``default_step_size`` in :class:`ProfileOptions`.
+    :attr:`pypesto.profile.ProfileOptions.default_step_size`.
 
     Parameters
     ----------
     x:
        The current position of the profiler, size `dim_full`.
     par_index:
-        The index of the parameter of the current profile
+        The index of the parameter of the current profile.
     par_direction:
-        The direction, in which the profiling is done (``1`` or ``-1``)
+        The direction, in which the profiling is done (``1`` or ``-1``).
     options:
         Various options applied to the profile optimization.
     problem:
@@ -112,8 +114,7 @@ def fixed_step(
 
     Returns
     -------
-    x_new:
-        The updated parameter vector, of size `dim_full`.
+    The updated parameter vector, of size `dim_full`.
     """
     delta_x = np.zeros(len(x))
     delta_x[par_index] = par_direction * options.default_step_size
@@ -149,27 +150,28 @@ def adaptive_step(
     x:
         The current position of the profiler, size `dim_full`.
     par_index:
-        The index of the parameter of the current profile
+        The index of the parameter of the current profile.
     par_direction:
-        The direction, in which the profiling is done (1 or -1)
+        The direction, in which the profiling is done (``1`` or ``-1``).
     options:
         Various options applied to the profile optimization.
     current_profile:
-        The profile which should be computed
+        The profile which should be computed.
     problem:
         The problem to be solved.
     global_opt:
-        log-posterior value of the global optimum
+        Log-posterior value of the global optimum.
     order:
-        Specifies the precise algorithm for extrapolation: can be ``0`` (
-        just one parameter is updated), ``1`` (last two points used to
-        extrapolate all parameters), and ``np.nan`` (indicates that a more
-        complex regression should be used)
+        Specifies the precise algorithm for extrapolation.
+        Available options are:
+
+        * ``0`` (just one parameter is updated)
+        * ``1`` (last two points used to extrapolate all parameters)
+        * ``np.nan`` (indicates that a more complex regression should be used)
 
     Returns
     -------
-    x_new:
-        The updated parameter vector, of size `dim_full`.
+    The updated parameter vector, of size `dim_full`.
     """
 
     # restrict step proposal to minimum and maximum step size
