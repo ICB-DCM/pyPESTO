@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy as np
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def walk_along_profile(
     current_profile: ProfilerResult,
     problem: Problem,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     optimizer: Optimizer,
     options: ProfileOptions,
     create_next_guess: Callable,
@@ -54,8 +54,7 @@ def walk_along_profile(
 
     Returns
     -------
-    current_profile:
-        The current profile, modified in-place.
+    The current profile, modified in-place.
     """
     if par_direction not in (-1, 1):
         raise AssertionError("par_direction must be -1 or 1")

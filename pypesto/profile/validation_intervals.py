@@ -33,8 +33,8 @@ def validation_profile_significance(
 
     The reasoning behind their approach is, that a validation data set
     is outside the validation interval, if fitting the full data set
-    would lead to a fit $\theta_{new}$, that does not contain the old
-    fit $\theta_{train}$ in their (Profile-Likelihood) based
+    would lead to a fit :math:`\theta_{new}`, that does not contain the old
+    fit :math:`\theta_{train}` in their (Profile-Likelihood) based
     parameter-confidence intervals. (I.e. the old fit would be rejected by
     the fit of the full data.)
 
@@ -50,34 +50,28 @@ def validation_profile_significance(
     problem_full_data:
         pypesto.problem, such that the objective is the
         negative-log-likelihood of the training and validation data set.
-
     result_training_data:
         result object from the fitting of the training data set only.
-
     result_full_data
-        pypesto.result object that contains the result of fitting
+        Result object that contains the result of fitting
         training and validation data combined.
-
     n_starts
         number of starts for fitting the full data set
-        (if result_full_data is not provided).
-
+        (if `result_full_data` is not provided).
     optimizer:
-        optimizer used for refitting the data (if result_full_data is not
+        optimizer used for refitting the data (if `result_full_data` is not
         provided).
-
-    engine
-        engine for refitting (if result_full_data is not provided).
-
+    engine:
+        engine for refitting (if `result_full_data` is not provided).
     lsq_objective:
-        indicates if the objective of problem_full_data corresponds to a nllh
-        (False), or a chi^2 value (True).
+        indicates if the objective of `problem_full_data` corresponds to a nllh
+        (``False``), or a :math:`\chi^2` value (``True``).
     return_significance:
-        indicates, if the function should return the significance (True) (i.e.
+        indicates, if the function should return the significance (``True``) (i.e.
         the  probability, that the new data set lies outside the Confidence
         Interval for the validation experiment, as given by the method), or
         the largest alpha, such that the validation experiment still lies
-        within the Confidence Interval (False). I.e. alpha = 1-significance.
+        within the Confidence Interval (``False``). I.e. :math:`\alpha = 1-significance`.
 
 
     .. [#Kreutz] Kreutz, Clemens, Raue, Andreas and Timmer, Jens.

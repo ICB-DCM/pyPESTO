@@ -56,8 +56,7 @@ def next_guess(
 
     Returns
     -------
-    next_guess:
-        The next initial guess as base for the next profile point.
+    The next initial guess as base for the next profile point.
     """
     if update_type == 'fixed_step':
         return fixed_step(
@@ -165,9 +164,11 @@ def adaptive_step(
         Specifies the precise algorithm for extrapolation.
         Available options are:
 
-        * ``0`` (just one parameter is updated)
-        * ``1`` (last two points used to extrapolate all parameters)
-        * ``np.nan`` (indicates that a more complex regression should be used)
+        * ``0``: just one parameter is updated
+        * ``1``: the last two points used to extrapolate all parameters
+        * ``np.nan``: indicates that a more complex regression should be used
+          as determined by :attr:`pypesto.profile.ProfileOptions.reg_order`.
+
 
     Returns
     -------
@@ -348,7 +349,7 @@ def get_reg_polynomial(
 ) -> list[float]:
     """Compute the regression polynomial.
 
-    Used to step proposal extrapolation from the last profile points
+    Used to step proposal extrapolation from the last profile points.
     """
     # determine interpolation order
     n_profile_points = len(current_profile.fval_path)

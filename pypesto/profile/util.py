@@ -25,8 +25,7 @@ def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
 
     Returns
     -------
-    ratio:
-        Corresponds to a likelihood ratio.
+    The computed likelihood ratio threshold.
     """
     quantile = scipy.stats.chi2.ppf(alpha, df=df)
     ratio = np.exp(-quantile / 2)
@@ -50,12 +49,11 @@ def calculate_approximate_ci(
         The likelihood ratios corresponding to the parameter values.
     confidence_ratio:
         Minimum confidence ratio to base the confidence interval upon, as
-        obtained via `pypesto.profile.chi2_quantile_to_ratio`.
+        obtained via :func:`pypesto.profile.chi2_quantile_to_ratio`.
 
     Returns
     -------
-    lb, ub:
-        Bounds of the approximate confidence interval.
+    Bounds of the approximate confidence interval.
     """
     # extract indices where the ratio is larger than the minimum ratio
     (indices,) = np.where(ratios >= confidence_ratio)
