@@ -3,7 +3,7 @@
 import numbers
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, Sequence, Tuple, Union
+from typing import Sequence, Union
 
 import numpy as np
 
@@ -38,7 +38,7 @@ class HistoryBase(ABC):
     # all possible history entries
     ALL_KEYS = (X, *RESULT_KEYS, TIME)
 
-    def __init__(self, options: HistoryOptions = None):
+    def __init__(self, options: Union[HistoryOptions, None] = None):
         if options is None:
             options = HistoryOptions()
         options = HistoryOptions.assert_instance(options)
@@ -48,7 +48,7 @@ class HistoryBase(ABC):
     def update(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
@@ -70,8 +70,8 @@ class HistoryBase(ABC):
 
     def finalize(
         self,
-        message: str = None,
-        exitflag: str = None,
+        message: Union[str, None] = None,
+        exitflag: Union[str, None] = None,
     ) -> None:
         """
         Finalize history. Called after a run. Default: Do nothing.
@@ -79,9 +79,9 @@ class HistoryBase(ABC):
         Parameters
         ----------
         message:
-            Optimizer message to be saved.
+            Optimizer message to be saved. Defaults to ``None``.
         exitflag:
-            Optimizer exitflag to be saved.
+            Optimizer exitflag to be saved. Defaults to ``None``.
         """
 
     @abstractmethod
@@ -281,7 +281,7 @@ class NoHistory(HistoryBase):
     def update(  # noqa: D102
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
@@ -364,7 +364,7 @@ class CountHistoryBase(HistoryBase):
     Needs a separate implementation of trace.
     """
 
-    def __init__(self, options: Union[HistoryOptions, Dict] = None):
+    def __init__(self, options: Union[HistoryOptions, dict] = None):
         super().__init__(options)
         self._n_fval: int = 0
         self._n_grad: int = 0
@@ -378,7 +378,7 @@ class CountHistoryBase(HistoryBase):
     def update(  # noqa: D102
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
@@ -386,7 +386,7 @@ class CountHistoryBase(HistoryBase):
 
     def _update_counts(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
     ):
         """Update the counters."""
@@ -499,8 +499,7 @@ def add_fun_from_res(result: ResultDict) -> ResultDict:
 
     Returns
     -------
-    full_result:
-        Result dicionary, adding whatever is possible to calculate.
+    Result dicionary, adding whatever is possible to calculate.
     """
     result = result.copy()
 
@@ -529,8 +528,7 @@ def reduce_result_via_options(
 
     Returns
     -------
-    result:
-        Result reduced to what is intended to be stored in history.
+    Result reduced to what is intended to be stored in history.
     """
     result = result.copy()
 

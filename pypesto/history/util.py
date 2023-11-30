@@ -2,13 +2,13 @@
 
 import numbers
 from functools import wraps
-from typing import Dict, Sequence, Union
+from typing import Sequence, Union
 
 import numpy as np
 
 from ..C import SUFFIXES
 
-ResultDict = Dict[str, Union[float, np.ndarray]]
+ResultDict = dict[str, Union[float, np.ndarray]]
 MaybeArray = Union[np.ndarray, 'np.nan']
 
 
