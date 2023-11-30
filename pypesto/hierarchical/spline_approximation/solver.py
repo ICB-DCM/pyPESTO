@@ -595,7 +595,7 @@ def _calculate_nllh_for_group(
     regularization_factor: float,
     regularize_spline: bool,
     group_dict: Dict,
-):
+) -> float:
     """Calculate the negative log-likelihood for the group.
 
     Combines the sum of squared residuals, the noise parameter,
@@ -603,31 +603,30 @@ def _calculate_nllh_for_group(
 
     Parameters
     ----------
-    s : np.ndarray
+    s:
         Reformulated inner spline parameters.
-    sim_all : np.ndarray
+    sim_all:
         Simulations for the group.
-    measurements : np.ndarray
+    measurements:
         Measurements for the group.
-    N : int
+    N:
         Number of spline bases.
-    delta_c : float
+    delta_c:
         Distance between two spline bases.
-    c : np.ndarray
+    c:
         Spline bases.
-    n : np.ndarray
+    n:
         Indices of the spline bases.
-    regularization_factor : float
+    regularization_factor:
         Regularization factor.
-    regularize_spline : bool
+    regularize_spline:
         Whether to regularize the spline.
-    group_dict : Dict
+    group_dict:
         Dictionary containing the group information.
 
     Returns
     -------
-    nllh : float
-        Negative log-likelihood.
+    Negative log-likelihood.
     """
     # Calculate residuals
     residuals_squared = _calculate_residuals_for_group(
@@ -682,7 +681,7 @@ def _calculate_nllh_gradient_for_group(
     regularization_factor: float,
     regularize_spline: bool,
     group_dict: Dict,
-):
+) -> np.ndarray:
     """Calculate the gradient of the nllh wrt. spline differences s for the group.
 
     Combines the gradient of the sum of squared residuals and the gradient of the
@@ -690,31 +689,30 @@ def _calculate_nllh_gradient_for_group(
 
     Parameters
     ----------
-    s : np.ndarray
+    s:
         Reformulated inner spline parameters.
-    sim_all : np.ndarray
+    sim_all:
         Simulations for the group.
-    measurements : np.ndarray
+    measurements:
         Measurements for the group.
-    N : int
+    N:
         Number of spline bases.
-    delta_c : float
+    delta_c:
         Distance between two spline bases.
-    c : np.ndarray
+    c:
         Spline bases.
-    n : np.ndarray
+    n:
         Indices of the spline bases.
-    regularization_factor : float
+    regularization_factor:
         Regularization factor.
-    regularize_spline : bool
+    regularize_spline:
         Whether to regularize the spline.
-    group_dict : Dict
+    group_dict:
         Dictionary containing the group information.
 
     Returns
     -------
-    nllh_gradient : np.ndarray
-        Gradient of the negative log-likelihood wrt. spline differences s.
+    Gradient of the negative log-likelihood wrt. spline differences s.
     """
     # Calculate gradient of residuals
     residuals_squared_gradient = _calculate_residuals_gradient_for_group(

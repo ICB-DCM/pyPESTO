@@ -423,7 +423,7 @@ def test_calculate_regularization_for_group():
         regularization_factor,
     )
 
-    assert regularization == expected_regularization
+    assert np.isclose(regularization, expected_regularization)
     assert np.allclose(
         regularization_gradient,
         expected_regularization_gradient,

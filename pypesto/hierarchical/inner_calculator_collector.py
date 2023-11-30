@@ -520,10 +520,7 @@ def calculate_quantitative_result(
                 if not isinstance(par_opt, str):
                     continue
 
-                if (
-                    par_sim.startswith('noiseParameter')
-                    and par_opt not in par_opt_ids
-                ):
+                if par_opt not in par_opt_ids:
                     continue
 
                 par_opt_idx = par_opt_ids.index(par_opt)

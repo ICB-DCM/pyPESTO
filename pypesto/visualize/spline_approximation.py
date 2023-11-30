@@ -246,6 +246,24 @@ def _calculate_optimal_regularization(
     N: int,
     c: np.ndarray,
 ):
+    """Calculate the optimal linear regularization for the spline approximation.
+
+    Parameters
+    ----------
+    s:
+        The spline parameters.
+    N:
+        The number of inner parameters.
+    c:
+        The spline bases.
+
+    Returns
+    -------
+    alpha_opt:
+        The optimal slope of the linear function.
+    beta_opt:
+        The optimal offset of the linear function.
+    """
     lower_trian = np.tril(np.ones((N, N)))
     xi = np.dot(lower_trian, s)
 
@@ -413,8 +431,24 @@ def _add_spline_mapped_simulations_to_model_fit(
 
 
 def _obtain_regularization_for_start(
-    pypesto_result: Result, start_index=0, **kwargs
-):
+    pypesto_result: Result, start_index=0
+) -> Optional[float]:
+    """Obtain the regularization for the start index.
+
+    Calculates and returns the spline linear regularization
+    term of the objective function for the start index.
+
+    Parameters
+    ----------
+    pypesto_result:
+        The pypesto result.
+    start_index:
+        The start index for which to calculate the regularization.
+
+    Returns
+    -------
+    The regularization term of the objective function for the start index.
+    """
     # Get the parameters from the pypesto result for the start_index.
     x_dct = dict(
         zip(
