@@ -37,9 +37,9 @@ class MultiProcessEngine(Engine):
     """
 
     def __init__(
-            self,
-            n_procs: Union[int, None] = None,
-            method: Union[str, None] = None,
+        self,
+        n_procs: Union[int, None] = None,
+        method: Union[str, None] = None,
     ):
         super().__init__()
 
