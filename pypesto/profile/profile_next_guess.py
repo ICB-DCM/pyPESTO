@@ -418,15 +418,15 @@ def do_line_search(
         next_x = clip_to_bounds(par_extrapol(step_size_guess))
 
         # Check if we hit the bounds
-        hit_bounds = (
+        if (
             direction == 'decrease'
             and step_size_guess == options.min_step_size
-        ) or (
+        ):
+            return next_x
+        if (
             direction == 'increase'
             and step_size_guess == options.max_step_size
-        )
-
-        if hit_bounds:
+        ):
             return next_x
 
         # compute new objective value
