@@ -8,7 +8,7 @@ class Task(abc.ABC):
     Abstract Task class.
 
     A task is one of a list of independent execution tasks that are
-    submitted to the execution engine to be executed using the execute()
+    submitted to the execution engine to be executed using the :func:`execute`
     method, commonly in parallel.
     """
 

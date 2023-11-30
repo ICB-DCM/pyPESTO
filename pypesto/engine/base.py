@@ -1,6 +1,6 @@
 """Abstract engine base class."""
 import abc
-from typing import Any, List
+from typing import Any
 
 from .task import Task
 
@@ -13,8 +13,8 @@ class Engine(abc.ABC):
 
     @abc.abstractmethod
     def execute(
-        self, tasks: List[Task], progress_bar: bool = True
-    ) -> List[Any]:
+        self, tasks: list[Task], progress_bar: bool = True
+    ) -> list[Any]:
         """Execute tasks.
 
         Parameters
@@ -22,6 +22,6 @@ class Engine(abc.ABC):
         tasks:
             List of tasks to execute.
         progress_bar:
-            Whether to display a progress bar.
+            Whether to display a progress bar. Defaults to ``True``.
         """
         raise NotImplementedError("This engine is not intended to be called.")

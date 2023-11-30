@@ -2,7 +2,7 @@
 import logging
 import multiprocessing
 import os
-from typing import Any, List
+from typing import Any, Union
 
 import cloudpickle as pickle
 from tqdm import tqdm
@@ -30,13 +30,17 @@ class MultiProcessEngine(Engine):
         Defaults to the number of CPUs available on the system according to
         `os.cpu_count()`.
         The effectively used number of processes will be the minimum of
-        `n_procs` and the number of tasks submitted.
+        `n_procs` and the number of tasks submitted. Defaults to ``None``.
     method:
         Start method, any of "fork", "spawn", "forkserver", or None,
-        giving the system specific default context.
+        giving the system specific default context. Defaults to ``None``.
     """
 
-    def __init__(self, n_procs: int = None, method: str = None):
+    def __init__(
+            self,
+            n_procs: Union[int, None] = None,
+            method: Union[str, None] = None,
+    ):
         super().__init__()
 
         if n_procs is None:
@@ -48,16 +52,20 @@ class MultiProcessEngine(Engine):
         self.method: str = method
 
     def execute(
-        self, tasks: List[Task], progress_bar: bool = True
-    ) -> List[Any]:
+        self, tasks: list[Task], progress_bar: bool = True
+    ) -> list[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
         Parameters
         ----------
         tasks:
-            List of tasks to execute.
+            List of :class:`pypesto.engine.Task` to execute.
         progress_bar:
-            Whether to display a progress bar.
+            Whether to display a progress bar. Defaults to ``True``.
+
+        Returns
+        -------
+        A list of results.
         """
         n_tasks = len(tasks)
 
