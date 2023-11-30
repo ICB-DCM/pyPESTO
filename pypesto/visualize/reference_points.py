@@ -1,4 +1,4 @@
-from typing import List
+from typing import Optional, Sequence, Union
 
 import numpy as np
 
@@ -14,7 +14,7 @@ class ReferencePoint(dict):
 
     Attributes
     ----------
-    x: ndarray
+    x:
         Reference parameters.
     fval: float
         Function value, fun(x), for reference parameters.
@@ -28,7 +28,12 @@ class ReferencePoint(dict):
     """
 
     def __init__(
-        self, reference=None, x=None, fval=None, color=None, legend=None
+        self,
+        reference: Union[None, dict, tuple, "ReferencePoint"] = None,
+        x: Optional[Sequence] = None,
+        fval: Optional[float] = None,
+        color=None,
+        legend: Optional[str] = None,
     ):
         super().__init__()
 
@@ -104,19 +109,18 @@ class ReferencePoint(dict):
     __delattr__ = dict.__delitem__
 
 
-def assign_colors(ref):
+def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
     """
     Assign colors to reference points, depending on user settings.
 
     Parameters
     ----------
-    ref: list of ReferencePoint
+    ref:
         Reference points, which need to get their color property filled
 
     Returns
     -------
-    ref: list of ReferencePoint
-        Reference points, which got their color property filled
+    Reference points, which got their color property filled
     """
     # loop over reference points
     auto_color_count = 0
@@ -141,7 +145,7 @@ def assign_colors(ref):
 
 def create_references(
     references=None, x=None, fval=None, color=None, legend=None
-) -> List[ReferencePoint]:
+) -> list[ReferencePoint]:
     """
     Create a list of reference point objects from user inputs.
 
