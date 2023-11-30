@@ -70,12 +70,12 @@ class PetabImporter(AmiciObjectBuilder):
     """
     Importer for PEtab files.
 
-    Create an `amici.Model`, an `objective.AmiciObjective` or a
-    `pypesto.Problem` from PEtab files. The created objective function is a
+    Create an :class:`amici.amici.Model`, an :class:`pypesto.objective.AmiciObjective` or a
+    :class:`pypesto.problem.Problem` from PEtab files. The created objective function is a
     negative log-likelihood function and can thus be negative. The actual
     form of the likelihood depends on the noise model specified in the provided PEtab problem.
-    For more information, see
-    [the PEtab documentation](https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions)
+    For more information, see the
+    `PEtab documentation <https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions>`_.
     """  # noqa
 
     MODEL_BASE_DIR = "amici_models"
@@ -354,8 +354,8 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         kwargs:
-            Extra arguments passed to :meth:`amici.SbmlImporter.sbml2amici`
-            or :meth:`amici.pysb_import.pysb2amici`.
+            Extra arguments passed to :meth:`amici.sbml_import.SbmlImporter.sbml2amici`
+            or :func:`amici.pysb_import.pysb2amici`.
         """
         # delete output directory
         if os.path.exists(self.output_folder):
@@ -380,7 +380,7 @@ class PetabImporter(AmiciObjectBuilder):
     def create_edatas(
         self, model: amici.Model = None, simulation_conditions=None
     ) -> List[amici.ExpData]:
-        """Create list of amici.ExpData objects."""
+        """Create list of :class:`amici.amici.ExpData` objects."""
         # create model
         if model is None:
             model = self.create_model()
@@ -399,7 +399,7 @@ class PetabImporter(AmiciObjectBuilder):
         force_compile: bool = False,
         **kwargs,
     ) -> AmiciObjective:
-        """Create a :class:`pypesto.AmiciObjective`.
+        """Create a :class:`pypesto.objective.AmiciObjective`.
 
         Parameters
         ----------
@@ -419,8 +419,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        objective:
-            A :class:`pypesto.AmiciObjective` for the model and the data.
+        A :class:`pypesto.AmiciObjective` for the model and the data.
         """
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
@@ -568,10 +567,8 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        predictor:
-            A :class:`pypesto.predict.AmiciPredictor` for the model, using
-            the outputs of the AMICI model and the timepoints from the
-            PEtab data
+        A :class:`pypesto.predict.AmiciPredictor` for the model, using
+        the outputs of the AMICI model and the timepoints from the PEtab data.
         """
         # if the user didn't pass an objective function, we create it first
         if objective is None:
@@ -689,8 +686,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        problem:
-            A :class:`pypesto.Problem` for the objective.
+        A :class:`pypesto.Problem` for the objective.
         """
         if objective is None:
             objective = self.create_objective(**kwargs)
@@ -779,15 +775,14 @@ class PetabImporter(AmiciObjectBuilder):
         ----------
         rdatas:
             A list of rdatas as produced by
-            pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas'].
+            ``pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas']``.
         model:
             The amici model.
 
         Returns
         -------
-        measurement_df:
-            A dataframe built from the rdatas in the format as in
-            self.petab_problem.measurement_df.
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
         """
         # create model
         if model is None:
@@ -805,7 +800,7 @@ class PetabImporter(AmiciObjectBuilder):
         model: amici.Model = None,
     ) -> pd.DataFrame:
         """
-        See `rdatas_to_measurement_df`.
+        See :obj:`rdatas_to_measurement_df`.
 
         Execpt a petab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
