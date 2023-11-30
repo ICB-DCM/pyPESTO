@@ -18,7 +18,7 @@ from ..history import (
     OptimizerHistory,
     create_history,
 )
-from ..objective import NegLogParameterPriors, NegLogPriors, Objective
+from ..objective import Objective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
@@ -253,10 +253,12 @@ class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
 
-    Find details on the optimizer and configuration options at:
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
-        optimize.minimize.html#scipy.optimize.minimize
-    """
+    Find details on the optimizer and configuration options at the `Scipy
+    documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize>`_.
+
+    .. warning:: Least squares optimizers may face errors in case of non
+    continuous differentiable objective functions (e.g. Laplace priors)
+    """  # noqa
 
     def __init__(
         self,
@@ -308,14 +310,6 @@ class ScipyOptimizer(Optimizer):
                 raise Exception(
                     "For least squares optimization, the objective "
                     "must be able to compute residuals."
-                )
-            # raise a warning, if priors are used in least squares
-            if isinstance(objective, (NegLogParameterPriors, NegLogPriors)):
-                logger.warning(
-                    "Priors are used together with SciPy least squares. "
-                    "This can result in errors in the optimization if the "
-                    "prior is not continuously differentiable (e.g. Laplace "
-                    "prior)."
                 )
 
             ls_method = self.method[3:]
