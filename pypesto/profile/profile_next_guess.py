@@ -368,8 +368,8 @@ def get_reg_polynomial(
             # Do polynomial interpolation of profile path
             # Determine rank of polynomial interpolation
             regression_tmp = np.polyfit(
-                current_profile.x_path[par_index, -1:-reg_points:-1],
-                current_profile.x_path[i_par, -1:-reg_points:-1],
+                current_profile.x_path[par_index, -reg_points:],
+                current_profile.x_path[i_par, -reg_points:],
                 reg_order,
                 full=True,
             )
@@ -378,8 +378,8 @@ def get_reg_polynomial(
             if regression_tmp[2] < reg_order:
                 reg_order = regression_tmp[2]
                 regression_tmp = np.polyfit(
-                    current_profile.x_path[par_index, -reg_points:-1],
-                    current_profile.x_path[i_par, -reg_points:-1],
+                    current_profile.x_path[par_index, -reg_points:],
+                    current_profile.x_path[i_par, -reg_points:],
                     int(reg_order),
                     full=True,
                 )
