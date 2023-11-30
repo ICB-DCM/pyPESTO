@@ -73,6 +73,8 @@ autodoc_default_options = {
 autodoc_mock_imports = ["amici"]
 autodoc_class_signature = "separated"
 
+# napoleon options
+napoleon_use_rtype = False
 
 # links for intersphinx
 intersphinx_mapping = {
