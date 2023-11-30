@@ -182,8 +182,6 @@ def adaptive_step(
     def clip_to_bounds(step_proposal):
         return np.clip(step_proposal, problem.lb_full, problem.ub_full)
 
-    # check if this is the first step
-    n_profile_points = len(current_profile.fval_path)
     problem.fix_parameters(par_index, x[par_index])
 
     # Get update directions and first step size guesses
@@ -196,7 +194,6 @@ def adaptive_step(
         x,
         par_index,
         par_direction,
-        n_profile_points,
         global_opt,
         order,
         current_profile,
@@ -215,6 +212,8 @@ def adaptive_step(
         return x + step_length * delta_x_dir
 
     # parameter extrapolation function
+    n_profile_points = len(current_profile.fval_path)
+
     def par_extrapol(step_length):
         # Do we have enough points to do a regression?
         if np.isnan(order) and n_profile_points > 2:
@@ -279,7 +278,6 @@ def handle_profile_history(
     x: np.ndarray,
     par_index: int,
     par_direction: Literal[1, -1],
-    n_profile_points: int,
     global_opt: float,
     order: int,
     current_profile: ProfilerResult,
@@ -302,6 +300,8 @@ def handle_profile_history(
     delta_obj_value:
         The difference of the objective function value between the last point and `global_opt`.
     """
+    n_profile_points = len(current_profile.fval_path)
+
     # set the update direction
     delta_x_dir = np.zeros(len(x))
     delta_x_dir[par_index] = par_direction
@@ -330,14 +330,13 @@ def handle_profile_history(
         elif np.isnan(order):
             # compute the regression polynomial for parameter extrapolation
             reg_par = get_reg_polynomial(
-                n_profile_points, par_index, current_profile, problem, options
+                par_index, current_profile, problem, options
             )
 
     return step_size_guess, delta_x_dir, reg_par, delta_obj_value
 
 
 def get_reg_polynomial(
-    n_profile_points: int,
     par_index: int,
     current_profile: ProfilerResult,
     problem: Problem,
@@ -348,6 +347,7 @@ def get_reg_polynomial(
     Used to step proposal extrapolation from the last profile points
     """
     # determine interpolation order
+    n_profile_points = len(current_profile.fval_path)
     reg_max_order = np.floor(n_profile_points / 2)
     reg_order = min(reg_max_order, options.reg_order)
     reg_points = min(n_profile_points, options.reg_points)

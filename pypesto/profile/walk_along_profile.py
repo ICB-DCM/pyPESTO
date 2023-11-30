@@ -92,7 +92,7 @@ def walk_along_profile(
 
         # fix current profiling parameter to current value and set start point
         problem.fix_parameters(i_par, x_next[i_par])
-        startpoint = np.array([x_next[i] for i in problem.x_free_indices])
+        startpoint = x_next[problem.x_free_indices]
 
         # run optimization
         if startpoint.size > 0:
