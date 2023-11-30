@@ -665,18 +665,18 @@ class PetabImporter(AmiciObjectBuilder):
         startpoint_kwargs: Dict[str, Any] = None,
         **kwargs,
     ) -> Problem:
-        """Create a :class:`pypesto.Problem`.
+        """Create a :class:`pypesto.problem.Problem`.
 
         Parameters
         ----------
         objective:
-            Objective as created by `create_objective`.
+            Objective as created by :meth:`create_objective`.
         x_guesses:
             Guesses for the parameter values, shape (g, dim), where g denotes
             the number of guesses. These are used as start points in the
             optimization.
         problem_kwargs:
-            Passed to the `pypesto.Problem` constructor.
+            Passed to :meth:`pypesto.problem.Problem.__init__`.
         startpoint_kwargs:
             Keyword arguments forwarded to
             :meth:`PetabImporter.create_startpoint_method`.
@@ -686,7 +686,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        A :class:`pypesto.Problem` for the objective.
+        A :class:`pypesto.problem.Problem` for the objective.
         """
         if objective is None:
             objective = self.create_objective(**kwargs)
@@ -800,9 +800,9 @@ class PetabImporter(AmiciObjectBuilder):
         model: amici.Model = None,
     ) -> pd.DataFrame:
         """
-        See :obj:`rdatas_to_measurement_df`.
+        See :meth:`rdatas_to_measurement_df`.
 
-        Execpt a petab simulation dataframe is created, i.e. the measurement
+        Except a petab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
         """
         return self.rdatas_to_measurement_df(rdatas, model).rename(
@@ -823,15 +823,14 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         prediction:
-            A prediction result as produced by an AmiciPredictor
+            A prediction result as produced by an :class:`pypesto.predict.AmiciPredictor`.
         predictor:
-            The AmiciPredictor function
+            The :class:`pypesto.predict.AmiciPredictor` instance.
 
         Returns
         -------
-        measurement_df:
-            A dataframe built from the rdatas in the format as in
-            self.petab_problem.measurement_df.
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
         """
 
         # create rdata-like dicts from the prediction result
@@ -858,7 +857,7 @@ class PetabImporter(AmiciObjectBuilder):
         predictor: AmiciPredictor = None,
     ) -> pd.DataFrame:
         """
-        See `prediction_to_petab_measurement_df`.
+        See :meth:`prediction_to_petab_measurement_df`.
 
         Except a PEtab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
@@ -878,7 +877,7 @@ def _find_output_folder_name(
     If available, use the model name from the ``petab_problem`` or the
     provided ``model_name`` (latter is given priority), otherwise create a
     unique name. The folder will be located in the
-    ``PetabImporter.MODEL_BASE_DIR`` subdirectory of the current directory.
+    :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(
