@@ -165,7 +165,7 @@ def adaptive_step(
         Available options are:
 
         * ``0``: just one parameter is updated
-        * ``1``: the last two points used to extrapolate all parameters
+        * ``1``: the last two points are used to extrapolate all parameters
         * ``np.nan``: indicates that a more complex regression should be used
           as determined by :attr:`pypesto.profile.ProfileOptions.reg_order`.
 
