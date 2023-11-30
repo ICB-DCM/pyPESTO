@@ -257,7 +257,7 @@ class ScipyOptimizer(Optimizer):
 
     .. note::
         Least-squares optimizers may face errors in case of non-continuous
-        differentiable objective functions (e.g. Laplace priors)
+        differentiable objective functions (e.g. Laplace priors).
     """  # noqa
 
     def __init__(
