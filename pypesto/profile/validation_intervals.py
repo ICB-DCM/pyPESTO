@@ -51,7 +51,7 @@ def validation_profile_significance(
         pypesto.problem, such that the objective is the
         negative-log-likelihood of the training and validation data set.
     result_training_data:
-        result object from the fitting of the training data set only.
+        Result object from the fitting of the training data set only.
     result_full_data
         Result object that contains the result of fitting
         training and validation data combined.
