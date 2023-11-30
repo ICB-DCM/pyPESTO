@@ -957,7 +957,7 @@ class SacessFidesFactory:
 
     def __call__(
         self, max_walltime_s: int, max_eval: int
-    ) -> ["pypesto.optimize.FidesOptimizer"]:
+    ) -> "pypesto.optimize.FidesOptimizer":
         """Create a :class:`FidesOptimizer` instance."""
 
         from fides.constants import Options as FidesOptions
