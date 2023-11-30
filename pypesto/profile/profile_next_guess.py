@@ -204,45 +204,47 @@ def adaptive_step(
     # check whether we must make a minimum step anyway, since we're close to
     # the next bound
     min_delta_x = x[par_index] + par_direction * options.min_step_size
+
     if par_direction == -1 and (min_delta_x < problem.lb_full[par_index]):
         step_length = problem.lb_full[par_index] - x[par_index]
         return x + step_length * delta_x_dir
-    elif par_direction == 1 and (min_delta_x > problem.ub_full[par_index]):
+
+    if par_direction == 1 and (min_delta_x > problem.ub_full[par_index]):
         step_length = problem.ub_full[par_index] - x[par_index]
         return x + step_length * delta_x_dir
 
     # parameter extrapolation function
     n_profile_points = len(current_profile.fval_path)
 
-    def par_extrapol(step_length):
-        # Do we have enough points to do a regression?
-        if np.isnan(order) and n_profile_points > 2:
-            x_step_tmp = []
+    # Do we have enough points to do a regression?
+    if np.isnan(order) and n_profile_points > 2:
+
+        def par_extrapol(step_length):
+            x_step = []
             # loop over parameters, extrapolate each one
             for i_par in range(problem.dim_full):
                 if i_par == par_index:
                     # if we meet the profiling parameter, just increase,
                     # don't extrapolate
-                    x_step_tmp.append(
-                        x[par_index] + step_length * par_direction
-                    )
+                    x_step.append(x[par_index] + step_length * par_direction)
                 elif i_par in problem.x_fixed_indices:
                     # common fixed parameter: will be ignored anyway later
-                    x_step_tmp.append(np.nan)
+                    x_step.append(np.nan)
                 else:
                     # extrapolate
                     cur_par_extrapol = np.poly1d(reg_par[i_par])
-                    x_step_tmp.append(
+                    x_step.append(
                         cur_par_extrapol(
                             x[par_index] + step_length * par_direction
                         )
                     )
-            x_step = np.array(x_step_tmp)
-        else:
-            # if we do simple extrapolation
-            x_step = x + step_length * delta_x_dir
+            return clip_to_bounds(x_step)
 
-        return clip_to_bounds(x_step)
+    else:
+        # if not, we do simple extrapolation
+        def par_extrapol(step_length):
+            x_step = x + step_length * delta_x_dir
+            return clip_to_bounds(x_step)
 
     # compute proposal
     next_x = par_extrapol(step_size_guess)
