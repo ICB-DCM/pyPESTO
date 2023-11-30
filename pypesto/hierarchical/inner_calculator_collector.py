@@ -496,20 +496,34 @@ def calculate_quantitative_result(
                 ]
             )
             # calculate the gradient for the condition
-            gradient_for_condition = np.nansum(np.multiply(ssigma_i, (
-                (
-                    np.full(len(data_i), 1)
-                    - (data_i - sim_i) ** 2 / sigma_i**2
-                )
-                / sigma_i)), axis=1
-            ) + np.nansum(np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)), axis=1)
+            gradient_for_condition = np.nansum(
+                np.multiply(
+                    ssigma_i,
+                    (
+                        (
+                            np.full(len(data_i), 1)
+                            - (data_i - sim_i) ** 2 / sigma_i**2
+                        )
+                        / sigma_i
+                    ),
+                ),
+                axis=1,
+            ) + np.nansum(
+                np.multiply(
+                    sensitivities_i, ((sim_i - data_i) / sigma_i**2)
+                ),
+                axis=1,
+            )
 
             # add gradient to correct index of snllh
             for par_sim, par_opt in condition_map_sim_var.items():
                 if not isinstance(par_opt, str):
                     continue
 
-                if par_sim.startswith('noiseParameter') and par_opt not in par_opt_ids:
+                if (
+                    par_sim.startswith('noiseParameter')
+                    and par_opt not in par_opt_ids
+                ):
                     continue
 
                 par_opt_idx = par_opt_ids.index(par_opt)

@@ -26,8 +26,8 @@ try:
     )
     from ..hierarchical.spline_approximation.solver import (
         SplineInnerSolver,
-        get_spline_mapped_simulations,
         _calculate_regularization_for_group,
+        get_spline_mapped_simulations,
     )
 except ImportError:
     pass
@@ -480,7 +480,6 @@ def _obtain_regularization_for_start(
 
     # for each result and group, plot the inner solution
     for result, group in zip(inner_results, inner_problem.groups):
-
         # For each group get the inner parameters and simulation
         xs = inner_problem.get_xs_for_group(group)
 
@@ -507,5 +506,5 @@ def _obtain_regularization_for_start(
                 ],
             )
             reg_term_sum += reg_term
-    
+
     return reg_term_sum

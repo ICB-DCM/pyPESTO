@@ -225,16 +225,20 @@ class SplineInnerSolver(InnerSolver):
                 grad = 0.0
 
                 sy_for_outer_parameter = [
-                    sy_cond[:, par_edata_indices.index(par_sim_idx), :] 
+                    sy_cond[:, par_edata_indices.index(par_sim_idx), :]
                     if par_sim_idx in par_edata_indices
                     else np.zeros(sy_cond[:, 0, :].shape)
-                    for sy_cond, par_edata_indices in zip(sy, par_edatas_indices)
+                    for sy_cond, par_edata_indices in zip(
+                        sy, par_edatas_indices
+                    )
                 ]
                 ssigma_for_outer_parameter = [
-                    ssigma_cond[:, par_edata_indices.index(par_sim_idx), :] 
+                    ssigma_cond[:, par_edata_indices.index(par_sim_idx), :]
                     if par_sim_idx in par_edata_indices
                     else np.zeros(ssigma_cond[:, 0, :].shape)
-                    for ssigma_cond, par_edata_indices in zip(amici_ssigma, par_edatas_indices)
+                    for ssigma_cond, par_edata_indices in zip(
+                        amici_ssigma, par_edatas_indices
+                    )
                 ]
 
                 for group_idx, group in enumerate(
@@ -341,10 +345,7 @@ class SplineInnerSolver(InnerSolver):
                         dsigma_grad_term = 0.0
 
                     # Combine all terms to get the complete gradient contribution
-                    grad += (
-                        dy_grad_term / sigma**2
-                        + dsigma_grad_term
-                    )
+                    grad += dy_grad_term / sigma**2 + dsigma_grad_term
 
                 snllh[par_opt_idx] = grad
 
@@ -354,7 +355,7 @@ class SplineInnerSolver(InnerSolver):
     def get_default_options() -> Dict:
         """Return default options for solving the inner problem."""
         options = {
-            MIN_DIFF_FACTOR: 1 / 2,
+            MIN_DIFF_FACTOR: 0.0,
             REGULARIZE_SPLINE: False,
             REGULARIZATION_FACTOR: 0.0,
         }

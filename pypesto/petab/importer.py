@@ -498,7 +498,7 @@ class PetabImporter(AmiciObjectBuilder):
             inner_parameter_ids = calculator.get_inner_parameter_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
-        max_sensi_order = None
+        max_sensi_order = kwargs.pop('max_sensi_order', None)
         if self._non_quantitative_data_types:
             max_sensi_order = 1
 

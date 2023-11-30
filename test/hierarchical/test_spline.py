@@ -9,7 +9,13 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
-from pypesto.C import LIN, MODE_FUN, SCIPY_FUN, InnerParameterType, OPTIMIZE_NOISE, INNER_NOISE_PARS
+from pypesto.C import (
+    INNER_NOISE_PARS,
+    LIN,
+    MODE_FUN,
+    OPTIMIZE_NOISE,
+    InnerParameterType,
+)
 from pypesto.hierarchical.spline_approximation import (
     SplineInnerProblem,
     SplineInnerSolver,
@@ -19,12 +25,12 @@ from pypesto.hierarchical.spline_approximation.parameter import (
 )
 from pypesto.hierarchical.spline_approximation.solver import (
     _calculate_nllh_for_group,
+    _calculate_regularization_for_group,
+    _calculate_regularization_gradient_for_group,
     _calculate_sigma_for_group,
     extract_expdata_using_mask,
     get_monotonicity_measure,
     get_spline_mapped_simulations,
-    _calculate_regularization_for_group,
-    _calculate_regularization_gradient_for_group,
 )
 
 inner_options = [
@@ -334,6 +340,7 @@ def test_calculate_sigma_for_group():
     sigma = _calculate_sigma_for_group(residuals_squared, n_datapoints=8)
     assert sigma == expected_sigma
 
+
 def test_calculate_nllh_for_group():
     """Test the calculation of the nllh for a group."""
     n_timepoints = 11
@@ -356,11 +363,9 @@ def test_calculate_nllh_for_group():
     group_dict = {
         OPTIMIZE_NOISE: False,
         INNER_NOISE_PARS: 1,
-    } 
+    }
 
-    expected_nllh = (
-        np.log(2 * np.pi) * n_timepoints / 2
-    )
+    expected_nllh = np.log(2 * np.pi) * n_timepoints / 2
 
     nllh = _calculate_nllh_for_group(
         spline_parameters,
@@ -376,6 +381,7 @@ def test_calculate_nllh_for_group():
     )
     assert nllh == expected_nllh
 
+
 def test_calculate_regularization_for_group():
     """Test the calculation of the regularization for a group."""
     spline_parameters = np.array([2, 1, 1, 1, 0, 2])
@@ -389,11 +395,11 @@ def test_calculate_regularization_for_group():
     expected_beta = 1
     expected_alpha = 1
 
-    expected_regularization = regularization_factor * np.sum(
-        (
-            xi - expected_alpha * spline_bases - expected_beta
-        ) ** 2
-    ) / (2*n_spline_parameters)
+    expected_regularization = (
+        regularization_factor
+        * np.sum((xi - expected_alpha * spline_bases - expected_beta) ** 2)
+        / (2 * n_spline_parameters)
+    )
 
     expected_regularization_gradient = (
         regularization_factor
@@ -406,14 +412,14 @@ def test_calculate_regularization_for_group():
 
     regularization = _calculate_regularization_for_group(
         spline_parameters,
-        n_spline_parameters, 
-        spline_bases, 
+        n_spline_parameters,
+        spline_bases,
         regularization_factor,
     )
     regularization_gradient = _calculate_regularization_gradient_for_group(
         spline_parameters,
-        n_spline_parameters, 
-        spline_bases, 
+        n_spline_parameters,
+        spline_bases,
         regularization_factor,
     )
 
