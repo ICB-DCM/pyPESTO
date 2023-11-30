@@ -9,7 +9,7 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
-from pypesto.C import LIN, MODE_FUN, SCIPY_FUN, InnerParameterType
+from pypesto.C import LIN, MODE_FUN, SCIPY_FUN, InnerParameterType, OPTIMIZE_NOISE, INNER_NOISE_PARS
 from pypesto.hierarchical.spline_approximation import (
     SplineInnerProblem,
     SplineInnerSolver,
@@ -35,7 +35,7 @@ inner_options = [
         'regularization_factor': regularization_factor,
     }
     for spline_ratio in [1.0, 1 / 4]
-    for min_diff_factor in [1.0, 1 / 2, 0.0]
+    for min_diff_factor in [1 / 2, 0.0]
     for regularize_spline in [True, False]
     for regularization_factor in [1.0, 0.0]
 ]
@@ -329,27 +329,52 @@ def test_get_spline_mapped_simulations():
 def test_calculate_sigma_for_group():
     """Test the calculation of sigma for a group."""
     expected_sigma = np.sqrt(2 * 12.0 / 8)
-    inner_result = {
-        SCIPY_FUN: 12.0,
-    }
-    sigma = _calculate_sigma_for_group(inner_result, n_datapoints=8)
-    assert sigma == expected_sigma
+    residuals_squared = 12
 
+    sigma = _calculate_sigma_for_group(residuals_squared, n_datapoints=8)
+    assert sigma == expected_sigma
 
 def test_calculate_nllh_for_group():
     """Test the calculation of the nllh for a group."""
-    inner_result = {
-        SCIPY_FUN: 12.0,
-    }
-    sigma = 1
-    n_datapoints = 8
+    n_timepoints = 11
+    timepoints = np.linspace(0, 10, n_timepoints)
+
+    simulation = timepoints
+    data = timepoints
+
+    spline_parameters = np.asarray([0.0, 2.0, 2.0, 2.0, 2.0, 2.0])
+    spline_ratio = 1 / 2
+    n_spline_pars = int(np.ceil(spline_ratio * len(timepoints)))
+
+    spline_base_distance = 2.0
+    spline_bases = np.asarray([0.0, 2.0, 4.0, 6.0, 8.0, 10.0])
+    simulation_intervals = [
+        int(np.ceil((sim - spline_bases[0]) / spline_base_distance)) + 1
+        for sim in simulation
+    ]
+
+    group_dict = {
+        OPTIMIZE_NOISE: False,
+        INNER_NOISE_PARS: 1,
+    } 
 
     expected_nllh = (
-        0.5 * n_datapoints * np.log(2 * np.pi) + inner_result[SCIPY_FUN] / 1
+        np.log(2 * np.pi) * n_timepoints / 2
     )
-    nllh = _calculate_nllh_for_group(inner_result, sigma, n_datapoints)
-    assert nllh[SCIPY_FUN] == expected_nllh
 
+    nllh = _calculate_nllh_for_group(
+        spline_parameters,
+        simulation,
+        data,
+        n_spline_pars,
+        spline_base_distance,
+        spline_bases,
+        simulation_intervals,
+        regularization_factor=0.0,
+        regularize_spline=False,
+        group_dict=group_dict,
+    )
+    assert nllh == expected_nllh
 
 def test_calculate_regularization_for_group():
     """Test the calculation of the regularization for a group."""

@@ -638,6 +638,7 @@ def _calculate_nllh_for_group(
         c=c,
         n=n,
     )
+    K = len(sim_all)
 
     # Calculate sigma
     if group_dict[OPTIMIZE_NOISE]:
@@ -662,7 +663,7 @@ def _calculate_nllh_for_group(
 
     # Combine all terms into the negative log-likelihood
     nllh = (
-        0.5 * np.log(2 * np.pi * sigma**2) * N
+        0.5 * np.log(2 * np.pi * sigma**2) * K
         + residuals_squared / (sigma**2)
         + regularization_term
     )
