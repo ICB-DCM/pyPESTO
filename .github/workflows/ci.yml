@@ -196,8 +196,16 @@ jobs:
     - name: Install PEtabJL dependencies
       run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"), Pkg.add("Sundials")'
 
-    - name: Cache
+    - name: Cache Julia
       uses: julia-actions/cache@v1
+
+    - name: Cache tox and cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache
+          .tox/
+        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
     - name: Run tests
       timeout-minutes: 25
