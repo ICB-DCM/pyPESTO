@@ -3,6 +3,8 @@
 
 import contextlib
 import time
+from functools import wraps
+from pathlib import Path
 from typing import Dict, Sequence, Tuple, Union
 
 import h5py
@@ -53,6 +55,7 @@ def with_h5_file(mode: str):
         raise ValueError(f"Mode must be one of {modes}")
 
     def decorator(fun):
+        @wraps(fun)
         def wrapper(self, *args, **kwargs):
             # file already opened
             if self._f is not None and (
@@ -76,6 +79,7 @@ def with_h5_file(mode: str):
 def check_editable(fun):
     """Check if the history is editable."""
 
+    @wraps(fun)
     def wrapper(self, *args, **kwargs):
         if not self.editable:
             raise ValueError(
@@ -104,12 +108,12 @@ class Hdf5History(HistoryBase):
     def __init__(
         self,
         id: str,
-        file: str,
+        file: Union[str, Path],
         options: Union[HistoryOptions, Dict] = None,
     ):
         super().__init__(options=options)
         self.id: str = id
-        self.file: str = file
+        self.file: str = str(file)
 
         # filled during file access
         self._f: Union[h5py.File, None] = None
@@ -139,10 +143,7 @@ class Hdf5History(HistoryBase):
         super().finalize()
 
         # add message and exitflag to trace
-        f = self._f
-        if f'{HISTORY}/{self.id}/{MESSAGES}/' not in f:
-            f.create_group(f'{HISTORY}/{self.id}/{MESSAGES}/')
-        grp = f[f'{HISTORY}/{self.id}/{MESSAGES}/']
+        grp = self._f.require_group(f'{HISTORY}/{self.id}/{MESSAGES}/')
         if message is not None:
             grp.attrs[MESSAGE] = message
         if exitflag is not None:
@@ -454,11 +455,6 @@ class Hdf5History(HistoryBase):
         """
         Check whether the id is already existent in the file.
 
-        Parameters
-        ----------
-        file:
-            HDF5 file name.
-
         Returns
         -------
         True if the file is editable, False otherwise.
@@ -472,3 +468,68 @@ class Hdf5History(HistoryBase):
         except OSError:
             # if something goes wrong, we assume the file is not editable
             return False
+
+    @staticmethod
+    def from_history(
+        other: HistoryBase,
+        file: Union[str, Path],
+        id_: str,
+        overwrite: bool = False,
+    ) -> "Hdf5History":
+        """Write some History to HDF5.
+
+        Parameters
+        ----------
+        other:
+            History to be copied to HDF5.
+        file:
+            HDF5 file to write to (append or create).
+        id_:
+            ID of the history.
+        overwrite:
+            Whether to overwrite an existing history with the same id.
+        """
+        history = Hdf5History(file=file, id=id_)
+        history._f = h5py.File(history.file, mode="a")
+
+        try:
+            if f"{HISTORY}/{history.id}" in history._f:
+                if overwrite:
+                    del history._f[f"{HISTORY}/{history.id}"]
+                else:
+                    raise RuntimeError(
+                        f"ID {history.id} already exists in file {file}."
+                    )
+
+            trace_group = history._require_group()
+            trace_group.attrs[N_FVAL] = other.n_fval
+            trace_group.attrs[N_GRAD] = other.n_grad
+            trace_group.attrs[N_HESS] = other.n_hess
+            trace_group.attrs[N_RES] = other.n_res
+            trace_group.attrs[N_SRES] = other.n_sres
+            trace_group.attrs[START_TIME] = other.start_time
+            trace_group.attrs[N_ITERATIONS] = (
+                len(other.get_time_trace()) if other.implements_trace() else 0
+            )
+
+            group = trace_group.parent.require_group(MESSAGES)
+            if other.message is not None:
+                group.attrs[MESSAGE] = other.message
+            if other.exitflag is not None:
+                group.attrs[EXITFLAG] = other.exitflag
+
+            if not other.implements_trace():
+                return history
+
+            for trace_key in (X, FVAL, GRAD, HESS, RES, SRES, TIME):
+                getter = getattr(other, f"get_{trace_key}_trace")
+                trace = getter()
+                for iteration, value in enumerate(trace):
+                    trace_group.require_group(str(iteration))[
+                        trace_key
+                    ] = value
+        finally:
+            history._f.close()
+            history._f = None
+
+        return history

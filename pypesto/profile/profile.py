@@ -30,7 +30,7 @@ def parameter_profile(
     overwrite: bool = False,
 ) -> Result:
     """
-    Call to do parameter profiling.
+    Compute parameter profiles.
 
     Parameters
     ----------
@@ -45,6 +45,7 @@ def parameter_profile(
         The optimizer to be used along each profile.
     engine:
         The engine to be used.
+        Defaults to :class:`pypesto.engine.SingleCoreEngine`.
     profile_index:
         List with the parameter indices to be profiled
         (by default all free indices).
@@ -61,12 +62,13 @@ def parameter_profile(
         :func:`pypesto.profile.profile_next_guess.next_guess`.
     profile_options:
         Various options applied to the profile optimization.
+        See :class:`pypesto.profile.options.ProfileOptions`.
     progress_bar:
         Whether to display a progress bar.
     filename:
         Name of the hdf5 file, where the result will be saved. Default is
         None, which deactivates automatic saving. If set to
-        "Auto" it will automatically generate a file named
+        ``Auto`` it will automatically generate a file named
         ``year_month_day_profiling_result.hdf5``.
         Optionally a method, see docs for :func:`pypesto.store.auto.autosave`.
     overwrite:
@@ -75,8 +77,7 @@ def parameter_profile(
 
     Returns
     -------
-    result:
-        The profile results are filled into `result.profile_result`.
+    The profile results are filled into `result.profile_result`.
     """
     # Copy the problem to avoid side effects
     problem = copy.deepcopy(problem)
