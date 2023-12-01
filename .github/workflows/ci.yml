@@ -190,12 +190,6 @@ jobs:
       with:
         version: 1.9
 
-    - name: Install dependencies
-      run: .github/workflows/install_deps.sh
-
-    - name: Install PEtabJL dependencies
-      run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"), Pkg.add("Sundials")'
-
     - name: Cache Julia
       uses: julia-actions/cache@v1
 
@@ -206,6 +200,12 @@ jobs:
           ~/.cache
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+
+    - name: Install dependencies
+      run: .github/workflows/install_deps.sh
+
+    - name: Install PEtabJL dependencies
+      run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"), Pkg.add("Sundials")'
 
     - name: Run tests
       timeout-minutes: 25
