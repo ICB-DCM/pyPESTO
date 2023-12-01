@@ -27,7 +27,7 @@ class SingleCoreEngine(Engine):
         tasks:
             List of tasks to execute.
         progress_bar:
-            Whether to display a progress bar. Defaults to ``True``.
+            Whether to display a progress bar.
 
         Returns
         -------

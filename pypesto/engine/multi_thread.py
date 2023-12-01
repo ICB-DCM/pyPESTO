@@ -29,7 +29,7 @@ class MultiThreadEngine(Engine):
         Defaults to the number of CPUs available on the system according to
         `os.cpu_count()`.
         The effectively used number of threads will be the minimum of
-        `n_threads` and the number of tasks submitted. Defaults to ``None``.
+        `n_threads` and the number of tasks submitted.
     """
 
     def __init__(self, n_threads: Union[int, None] = None):
@@ -52,7 +52,7 @@ class MultiThreadEngine(Engine):
         tasks:
             List of tasks to execute.
         progress_bar:
-            Whether to display a progress bar. Defaults to ``True``.
+            Whether to display a progress bar.
 
         Returns
         -------
