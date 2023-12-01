@@ -41,7 +41,7 @@ class MemoryHistory(CountHistoryBase):
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """See :class:`History` docstring."""
+        """See :meth:`HistoryBase.update`."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
@@ -71,7 +71,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_x_trace`."""
         return [self._trace[X][i] for i in ix]
 
     @trace_wrap
@@ -80,7 +80,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[float], float]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_fval_trace`."""
         return [self._trace[FVAL][i] for i in ix]
 
     @trace_wrap
@@ -89,7 +89,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_grad_trace`."""
         return [self._trace[GRAD][i] for i in ix]
 
     @trace_wrap
@@ -98,7 +98,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_hess_trace`."""
         return [self._trace[HESS][i] for i in ix]
 
     @trace_wrap
@@ -107,7 +107,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_res_trace`."""
         return [self._trace[RES][i] for i in ix]
 
     @trace_wrap
@@ -116,7 +116,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_sres_trace`."""
         return [self._trace[SRES][i] for i in ix]
 
     @trace_wrap
@@ -125,5 +125,5 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[float], float]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_time_trace`."""
         return [self._trace[TIME][i] for i in ix]

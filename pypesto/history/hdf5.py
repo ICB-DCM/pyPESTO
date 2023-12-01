@@ -130,7 +130,7 @@ class Hdf5History(HistoryBase):
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """See :class:`History` docstring."""
+        """See :meth:`HistoryBase.update`."""
         # check whether the file was marked as editable upon initialization
         super().update(x, sensi_orders, mode, result)
         self._update_counts(sensi_orders, mode)
@@ -139,7 +139,7 @@ class Hdf5History(HistoryBase):
     @with_h5_file("a")
     @check_editable
     def finalize(self, message: str = None, exitflag: str = None) -> None:
-        """See :class:`HistoryBase` docstring."""
+        """See :class:`HistoryBase.finalize`."""
         super().finalize()
 
         # add message and exitflag to trace
@@ -221,7 +221,7 @@ class Hdf5History(HistoryBase):
     @property
     @with_h5_file("r")
     def n_fval(self) -> int:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.n_fval`."""
         try:
             return self._get_group().attrs[N_FVAL]
         except KeyError:
@@ -230,7 +230,7 @@ class Hdf5History(HistoryBase):
     @property
     @with_h5_file("r")
     def n_grad(self) -> int:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.n_grad`."""
         try:
             return self._get_group().attrs[N_GRAD]
         except KeyError:
@@ -239,7 +239,7 @@ class Hdf5History(HistoryBase):
     @property
     @with_h5_file("r")
     def n_hess(self) -> int:
-        """See `:class:HistoryBase` docstring."""
+        """See :meth:`HistoryBase.n_hess`."""
         try:
             return self._get_group().attrs[N_HESS]
         except KeyError:
@@ -248,7 +248,7 @@ class Hdf5History(HistoryBase):
     @property
     @with_h5_file("r")
     def n_res(self) -> int:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.n_res`."""
         try:
             return self._get_group().attrs[N_RES]
         except KeyError:
@@ -257,7 +257,7 @@ class Hdf5History(HistoryBase):
     @property
     @with_h5_file("r")
     def n_sres(self) -> int:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.n_sres`."""
         try:
             return self._get_group().attrs[N_SRES]
         except KeyError:
@@ -275,7 +275,7 @@ class Hdf5History(HistoryBase):
     @property
     @with_h5_file("r")
     def start_time(self) -> float:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.start_time`."""
         # TODO Y This should also be saved in and recovered from the hdf5 file
         try:
             return self._get_group().attrs[START_TIME]
@@ -406,49 +406,49 @@ class Hdf5History(HistoryBase):
     def get_x_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_x_trace`."""
         return self._get_hdf5_entries(X, ix)
 
     @trace_wrap
     def get_fval_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_fval_trace`."""
         return self._get_hdf5_entries(FVAL, ix)
 
     @trace_wrap
     def get_grad_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_grad_trace`."""
         return self._get_hdf5_entries(GRAD, ix)
 
     @trace_wrap
     def get_hess_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_hess_trace`."""
         return self._get_hdf5_entries(HESS, ix)
 
     @trace_wrap
     def get_res_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_res_trace`."""
         return self._get_hdf5_entries(RES, ix)
 
     @trace_wrap
     def get_sres_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_sres_trace`."""
         return self._get_hdf5_entries(SRES, ix)
 
     @trace_wrap
     def get_time_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_time_trace`."""
         return self._get_hdf5_entries(TIME, ix)
 
     def _editable(self) -> bool:

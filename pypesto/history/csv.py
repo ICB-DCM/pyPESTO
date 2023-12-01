@@ -91,12 +91,12 @@ class CsvHistory(CountHistoryBase):
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """See :meth:`History.update`."""
+        """See :meth:`HistoryBase.update`."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
     def finalize(self, message: str = None, exitflag: str = None):
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.finalize`."""
         super().finalize(message=message, exitflag=exitflag)
         self._save_trace(finalize=True)
 
@@ -243,49 +243,49 @@ class CsvHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_x_trace`."""
         return list(self._trace[X].values[ix])
 
     @trace_wrap
     def get_fval_trace(
         self, ix: Union[int, Sequence[int], None], trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_fval_trace`."""
         return list(self._trace[(FVAL, np.nan)].values[ix])
 
     @trace_wrap
     def get_grad_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_grad_trace`."""
         return list(self._trace[GRAD].values[ix])
 
     @trace_wrap
     def get_hess_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_hess_trace`."""
         return list(self._trace[(HESS, np.nan)].values[ix])
 
     @trace_wrap
     def get_res_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_res_trace`."""
         return list(self._trace[(RES, np.nan)].values[ix])
 
     @trace_wrap
     def get_sres_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_sres_trace`."""
         return list(self._trace[(SRES, np.nan)].values[ix])
 
     @trace_wrap
     def get_time_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See :class:`HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_time_trace`."""
         return list(self._trace[(TIME, np.nan)].values[ix])
 
 
