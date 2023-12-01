@@ -254,7 +254,11 @@ class ScipyOptimizer(Optimizer):
     Use the SciPy optimizers.
 
     Find details on the optimizer and configuration options at: :func:`scipy.optimize.minimize`.
-    """
+
+    .. note::
+        Least-squares optimizers may face errors in case of non-continuous
+        differentiable objective functions (e.g. Laplace priors).
+    """  # noqa
 
     def __init__(
         self,
