@@ -79,9 +79,9 @@ class HistoryBase(ABC):
         Parameters
         ----------
         message:
-            Optimizer message to be saved. Defaults to ``None``.
+            Optimizer message to be saved.
         exitflag:
-            Optimizer exitflag to be saved. Defaults to ``None``.
+            Optimizer exitflag to be saved.
         """
 
     @abstractmethod
@@ -499,7 +499,7 @@ def add_fun_from_res(result: ResultDict) -> ResultDict:
 
     Returns
     -------
-    Result dicionary, adding whatever is possible to calculate.
+    Result dictionary, adding whatever is possible to calculate.
     """
     result = result.copy()
 

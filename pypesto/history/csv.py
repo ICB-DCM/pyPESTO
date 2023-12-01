@@ -37,12 +37,11 @@ class CsvHistory(CountHistoryBase):
     file:
         CSV file name.
     x_names:
-        Parameter names. Defaults to ``None``.
+        Parameter names.
     options:
-        History options. Defaults to ``None``.
+        History options.
     load_from_file:
         If True, history will be initialized from data in the specified file.
-        Defaults to ``False``.
     """
 
     def __init__(
@@ -92,7 +91,7 @@ class CsvHistory(CountHistoryBase):
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """See :class:`History` docstring."""
+        """See :meth:`History.update`."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
