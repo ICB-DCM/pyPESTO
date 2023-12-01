@@ -1,7 +1,7 @@
 """History options."""
 
 from pathlib import Path
-from typing import Dict, Union
+from typing import Union
 
 from ..C import SUFFIXES, SUFFIXES_CSV
 from .util import CsvHistoryTemplateError, HistoryTypeError
@@ -18,25 +18,27 @@ class HistoryOptions(dict):
     trace_record:
         Flag indicating whether to record the trace of function calls.
         The trace_record_* flags only become effective if
-        trace_record is True.
+        trace_record is True. Defaults to ``False``.
     trace_record_grad:
-        Flag indicating whether to record the gradient in the trace.
+        Flag indicating whether to record the gradient in the trace. Defaults
+        to ``True``.
     trace_record_hess:
-        Flag indicating whether to record the Hessian in the trace.
+        Flag indicating whether to record the Hessian in the trace. Defaults
+        to ``True``.
     trace_record_res:
         Flag indicating whether to record the residual in
-        the trace.
+        the trace. Defaults to ``True``.
     trace_record_sres:
         Flag indicating whether to record the residual sensitivities in
-        the trace.
+        the trace. Defaults to ``True``.
     trace_save_iter:
-        After how many iterations to store the trace.
+        After how many iterations to store the trace. Defaults to ``10``.
     storage_file:
         File to save the history to. Can be any of None, a
         "{filename}.csv", or a "{filename}.hdf5" file. Depending on the values,
-        the `create_history` method creates the appropriate object.
+        the :func:`create_history` method creates the appropriate object.
         Occurrences of "{id}" in the file name are replaced by the `id`
-        upon creation of a history, if applicable.
+        upon creation of a history, if applicable. Defaults to ``None``.
     """
 
     def __init__(
@@ -47,7 +49,7 @@ class HistoryOptions(dict):
         trace_record_res: bool = True,
         trace_record_sres: bool = True,
         trace_save_iter: int = 10,
-        storage_file: str = None,
+        storage_file: Union[str, None] = None,
     ):
         super().__init__()
 
@@ -89,14 +91,14 @@ class HistoryOptions(dict):
 
     @staticmethod
     def assert_instance(
-        maybe_options: Union['HistoryOptions', Dict],
+        maybe_options: Union['HistoryOptions', dict],
     ) -> 'HistoryOptions':
         """
         Return a valid options object.
 
         Parameters
         ----------
-        maybe_options: HistoryOptions or dict
+        maybe_options: :class:`HistoryOptions` or dict
         """
         if isinstance(maybe_options, HistoryOptions):
             return maybe_options
