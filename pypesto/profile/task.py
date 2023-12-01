@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from typing import Any, Callable
 
 import pypesto.optimize
 
@@ -55,7 +55,7 @@ class ProfilerTask(Task):
         self.i_par = i_par
         self.options = options
 
-    def execute(self) -> 'pypesto.profile.ProfilerResult':
+    def execute(self) -> dict[str, Any]:
         """Compute profile in descending and ascending direction."""
         logger.debug(f"Executing task {self.i_par}.")
 

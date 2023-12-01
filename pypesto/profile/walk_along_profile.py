@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy as np
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def walk_along_profile(
     current_profile: ProfilerResult,
     problem: Problem,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     optimizer: Optimizer,
     options: ProfileOptions,
     create_next_guess: Callable,
@@ -54,11 +54,10 @@ def walk_along_profile(
 
     Returns
     -------
-    current_profile:
-        The current profile, modified in-place.
+    The current profile, modified in-place.
     """
-    # create variables which are needed during iteration
-    stop_profile = False
+    if par_direction not in (-1, 1):
+        raise AssertionError("par_direction must be -1 or 1")
 
     # while loop for profiling (will be exited by break command)
     while True:
@@ -67,18 +66,16 @@ def walk_along_profile(
 
         # check if the next profile point needs to be computed
         # ... check bounds
-        if par_direction == -1:
-            stop_profile = x_now[i_par] <= problem.lb_full[[i_par]]
-        elif par_direction == 1:
-            stop_profile = x_now[i_par] >= problem.ub_full[[i_par]]
-        else:
-            raise AssertionError("par_direction must be -1 or 1")
+        if par_direction == -1 and x_now[i_par] <= problem.lb_full[[i_par]]:
+            break
+        if par_direction == 1 and x_now[i_par] >= problem.ub_full[[i_par]]:
+            break
 
         # ... check likelihood ratio
-        if not options.whole_path:
-            stop_profile |= current_profile.ratio_path[-1] < options.ratio_min
-
-        if stop_profile:
+        if (
+            not options.whole_path
+            and current_profile.ratio_path[-1] < options.ratio_min
+        ):
             break
 
         # compute the new start point for optimization
@@ -92,10 +89,9 @@ def walk_along_profile(
             global_opt,
         )
 
-        # fix current profiling parameter to current value and set
-        # start point
+        # fix current profiling parameter to current value and set start point
         problem.fix_parameters(i_par, x_next[i_par])
-        startpoint = np.array([x_next[i] for i in problem.x_free_indices])
+        startpoint = x_next[problem.x_free_indices]
 
         # run optimization
         if startpoint.size > 0:
@@ -113,12 +109,8 @@ def walk_along_profile(
                 if np.isfinite(optimizer_result.fval):
                     break
 
-                profiled_par_id = problem.x_names[i_par]
-                profiled_par_value = startpoint[
-                    problem.x_free_indices.index(i_par)
-                ]
                 logger.warning(
-                    f"Optimization at {profiled_par_id}={profiled_par_value} failed."
+                    f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed."
                 )
                 # sample a new starting point for another attempt
                 #  might be preferable to stay close to the previous point, at least initially,
