@@ -15,6 +15,11 @@ env:
   # use all available cores for compiling amici models
   AMICI_PARALLEL_COMPILE: ""
 
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 # jobs
 jobs:
   base:
@@ -185,20 +190,14 @@ jobs:
       with:
         version: 1.9
 
-    - name: Cache
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache
-          .tox/
-          ~/.julia/artifacts
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
-
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
 
     - name: Install PEtabJL dependencies
       run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"), Pkg.add("Sundials")'
+
+    - name: Cache
+      uses: julia-actions/cache@v1
 
     - name: Run tests
       timeout-minutes: 25
