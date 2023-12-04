@@ -185,14 +185,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install julia
-      uses: julia-actions/setup-julia@v1
-      with:
-        version: 1.9
-
-    - name: Cache Julia
-      uses: julia-actions/cache@v1
-
     - name: Cache tox and cache
       uses: actions/cache@v3
       with:
@@ -201,11 +193,19 @@ jobs:
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
+    - name: Install julia
+      uses: julia-actions/setup-julia@v1
+      with:
+        version: 1.9
+
+    - name: Cache Julia
+      uses: julia-actions/cache@v1
+
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
 
     - name: Install PEtabJL dependencies
-      run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials"); Pkg.add("PyCall")'
+      run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials")'
 
     - name: Run tests
       timeout-minutes: 25
