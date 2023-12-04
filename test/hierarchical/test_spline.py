@@ -144,12 +144,31 @@ def test_spline_calculator_and_objective():
             fim_for_hess=False,
         )
 
+    def inner_calculate(problem, x_dct):
+        return problem.objective.calculator.inner_calculators[0](
+            x_dct=x_dct,
+            sensi_orders=(0, 1),
+            mode=MODE_FUN,
+            amici_model=problem.objective.amici_model,
+            amici_solver=problem.objective.amici_solver,
+            edatas=problem.objective.edatas,
+            n_threads=1,
+            x_ids=petab_problem.x_ids,
+            parameter_mapping=problem.objective.parameter_mapping,
+            fim_for_hess=False,
+        )
+
     x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
 
     calculator_results = {
         minimal_diff: calculate(problems[minimal_diff], x_dct=x_dct)
         for minimal_diff in options.keys()
     }
+    inner_calculator_results = {
+        minimal_diff: inner_calculate(problems[minimal_diff], x_dct=x_dct)
+        for minimal_diff in options.keys()
+    }
+
     finite_differences = pypesto.objective.FD(problem.objective)
     FD_results = finite_differences(
         x=petab_problem.x_nominal_scaled,
@@ -159,6 +178,19 @@ def test_spline_calculator_and_objective():
 
     atol = 1e-3
     grad_atol = 1e-2
+
+    # Check the inner calculator and the inner calculator collector
+    # give the same results.
+    assert np.allclose(
+        inner_calculator_results['minimal_diff_on']['fval'],
+        calculator_results['minimal_diff_on']['fval'],
+        atol=atol,
+    )
+    assert np.allclose(
+        inner_calculator_results['minimal_diff_on']['grad'],
+        calculator_results['minimal_diff_on']['grad'],
+        atol=atol,
+    )
 
     # For nominal parameters, the objective function and gradient
     # will not depend on whether we constrain minimal difference.
