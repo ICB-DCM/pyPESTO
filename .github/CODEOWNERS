@@ -33,7 +33,7 @@
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
-/pypesto/visualize/@stephanmg @m-philipps
+/pypesto/visualize/ @stephanmg @m-philipps
 /test/base/ @PaulJonasJost @m-philipps
 /test/doc/ @PaulJonasJost
 /test/hierarchical/ @dweindl @doresic
