@@ -135,6 +135,8 @@ def plot_splines_from_inner_result(
     ----------
     inner_problem:
         The inner problem.
+    inner_solver:
+        The inner solver.
     results:
         The results from the inner solver.
     kwargs:

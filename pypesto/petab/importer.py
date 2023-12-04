@@ -499,6 +499,10 @@ class PetabImporter(AmiciObjectBuilder):
 
         max_sensi_order = kwargs.pop('max_sensi_order', None)
         if self._non_quantitative_data_types:
+            if max_sensi_order is not None and max_sensi_order > 1:
+                raise warnings.warn(
+                    "Higher order sensitivities are not supported for ordinal, censored and nonlinear-monotone data. Setting `max_sensi_order` to 1."
+                )
             max_sensi_order = 1
 
         # create objective
