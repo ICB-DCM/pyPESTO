@@ -12,7 +12,7 @@ Release notes
 * General
     * Documentation (#1214, #1227, #1223, #1230, #1229)
     * Update code to avoid deprecations and warnings (#1217, #1219)
-    * Updated codeownership (#1232)
+    * Updated codeownership (#1232, #1233)
     * Update Citation (#1221)
     * Improved Testing (#1218, #1216, #1231)
 * History:
