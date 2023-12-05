@@ -30,8 +30,7 @@ def create_history(
 
     Returns
     -------
-    history:
-        A history object corresponding to the inputs.
+    A history object corresponding to the inputs.
     """
     # create different history types based on the inputs
     if options.storage_file is None:

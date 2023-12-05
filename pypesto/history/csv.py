@@ -3,7 +3,7 @@
 import copy
 import os
 import time
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -41,14 +41,14 @@ class CsvHistory(CountHistoryBase):
     options:
         History options.
     load_from_file:
-        If True, history will be initialized from data in the specified file
+        If True, history will be initialized from data in the specified file.
     """
 
     def __init__(
         self,
         file: str,
         x_names: Sequence[str] = None,
-        options: Union[HistoryOptions, Dict] = None,
+        options: Union[HistoryOptions, dict] = None,
         load_from_file: bool = False,
     ):
         super().__init__(options=options)
@@ -87,16 +87,16 @@ class CsvHistory(CountHistoryBase):
     def update(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """See `History` docstring."""
+        """See :meth:`HistoryBase.update`."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
     def finalize(self, message: str = None, exitflag: str = None):
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.finalize`."""
         super().finalize(message=message, exitflag=exitflag)
         self._save_trace(finalize=True)
 
@@ -167,7 +167,7 @@ class CsvHistory(CountHistoryBase):
         if self.x_names is None:
             self.x_names = [f'x{i}' for i, _ in enumerate(x)]
 
-        columns: List[Tuple] = [
+        columns: list[tuple] = [
             (c, np.nan)
             for c in [
                 TIME,
@@ -213,7 +213,7 @@ class CsvHistory(CountHistoryBase):
 
     def _save_trace(self, finalize: bool = False):
         """
-        Save to file via pd.DataFrame.to_csv().
+        Save to file via :meth:`pandas.DataFrame.to_csv`.
 
         Only done, if `self.storage_file` is not None and other conditions.
         apply.
@@ -243,49 +243,49 @@ class CsvHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_x_trace`."""
         return list(self._trace[X].values[ix])
 
     @trace_wrap
     def get_fval_trace(
         self, ix: Union[int, Sequence[int], None], trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_fval_trace`."""
         return list(self._trace[(FVAL, np.nan)].values[ix])
 
     @trace_wrap
     def get_grad_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_grad_trace`."""
         return list(self._trace[GRAD].values[ix])
 
     @trace_wrap
     def get_hess_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_hess_trace`."""
         return list(self._trace[(HESS, np.nan)].values[ix])
 
     @trace_wrap
     def get_res_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_res_trace`."""
         return list(self._trace[(RES, np.nan)].values[ix])
 
     @trace_wrap
     def get_sres_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_sres_trace`."""
         return list(self._trace[(SRES, np.nan)].values[ix])
 
     @trace_wrap
     def get_time_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_time_trace`."""
         return list(self._trace[(TIME, np.nan)].values[ix])
 
 
@@ -301,7 +301,7 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
 
     Returns
     -------
-    x: array as string.
+    Array as string.
     """
     if not isinstance(x, np.ndarray):
         return x
@@ -320,7 +320,7 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
 
     Returns
     -------
-    x: array as np.ndarray.
+    Array as :class:`numpy.ndarray`.
     """
     if not isinstance(x, str):
         return x
