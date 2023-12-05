@@ -351,7 +351,9 @@ def inner_problem_exp():
     ]
 
     inner_parameters[0].coupled = True
+    inner_parameters[0].coupled_parameter = inner_parameters[1]
     inner_parameters[1].coupled = True
+    inner_parameters[1].coupled_parameter = inner_parameters[0]
 
     inner_problem = InnerProblem(xs=inner_parameters, data=[data])
 
