@@ -24,6 +24,8 @@ Release notes
     * Warnings for scipy together with laplace prior (#1228)
 * Visualization:
     * Skip the history trace, if trace is empty. Occurs for infinite initial values. (#1234)
+* Ensemble
+    * Fix Ensemble.from_optimization_endpoints (#1237)
 
 
 0.4.0 (2023-11-22)
