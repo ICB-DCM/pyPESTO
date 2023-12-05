@@ -26,6 +26,8 @@ class InnerParameter:
     coupled:
         Whether the inner parameter is part of an observable that has both
         an offset and scaling inner parameter.
+    coupled_parameter:
+        The coupled parameter, if any.
     dummy_value:
         Value to be used when the optimal parameter is not yet known
         (in particular to simulate unscaled observables).
@@ -63,6 +65,7 @@ class InnerParameter:
         """
         self.inner_parameter_id: str = inner_parameter_id
         self.coupled = False
+        self.coupled_parameter: InnerParameter = None
         self.inner_parameter_type: str = inner_parameter_type
 
         if scale not in {LIN, LOG, LOG10}:
@@ -82,7 +85,12 @@ class InnerParameter:
 
         self.lb: float = lb
         self.ub: float = ub
-        self.check_bounds()
+        # Scaling and offset parameters can be bounded arbitrarily
+        if inner_parameter_type not in (
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        ):
+            self.check_bounds()
         self.ixs: Any = ixs
 
         if dummy_value is None:
@@ -114,3 +122,21 @@ class InnerParameter:
                 f"`[{expected_lb}, {expected_ub}]`. "
                 f"All expected parameter bounds:\n{INNER_PARAMETER_BOUNDS}"
             )
+
+    def check_within_bounds(self, value):
+        """Check whether a value is within the bounds."""
+        if value < self.lb or value > self.ub:
+            return False
+        return True
+
+    def get_unsatisfied_bound_index(self, value):
+        """Get the unsatisfied bound index, if any."""
+        if value < self.lb:
+            return 0
+        elif value > self.ub:
+            return 1
+        return None
+
+    def get_bounds(self):
+        """Get the bounds."""
+        return (self.lb, self.ub)

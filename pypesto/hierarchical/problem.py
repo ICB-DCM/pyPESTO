@@ -224,10 +224,10 @@ def inner_problem_from_petab_problem(
         par.ixs = ix_matrices[par.inner_parameter_id]
 
     par_group_types = {
-        tuple(obs_pars.split(';')): {
+        tuple(obs_pars.split(';')): (
             petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
             for obs_par in obs_pars.split(';')
-        }
+        )
         for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby(
             [petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS], dropna=True
         )
@@ -235,23 +235,33 @@ def inner_problem_from_petab_problem(
     }
 
     coupled_pars = {
-        par
+        group
         for group, types in par_group_types.items()
         if (
             (InnerParameterType.SCALING in types)
             and (InnerParameterType.OFFSET in types)
         )
-        for par in group
     }
 
+    id_to_par = {par.inner_parameter_id: par for par in inner_parameters}
+
+    # assign coupling
     for par in inner_parameters:
         if par.inner_parameter_type not in [
             InnerParameterType.SCALING,
             InnerParameterType.OFFSET,
         ]:
             continue
-        if par.inner_parameter_id in coupled_pars:
-            par.coupled = True
+        for group in coupled_pars:
+            if par.inner_parameter_id in group:
+                par.coupled = True
+                coupled_parameter_id = group[
+                    group.index(par.inner_parameter_id) - 1
+                ]
+                # NOTE: this will work with only at most 2 observable parameters
+                # for scaling and offset, there will never be more than 2
+                par.coupled_parameter = id_to_par[coupled_parameter_id]
+                break
 
     return AmiciInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
 
