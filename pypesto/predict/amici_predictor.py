@@ -46,11 +46,11 @@ class AmiciPredictor:
     post-processed. There are no checks here to ensure that the sensitivities
     are correctly post-processed, this is explicitly left to the user.
     There are also no safeguards if the postprocessor routines fail. This may
-    happen if, e.g., a call to Amici fails, and no timepoints, states or
+    happen if, e.g., a call to AMICI fails, and no timepoints, states or
     observables are returned. As the AmiciPredictor is agnostic about the
     dimension of the postprocessor and also the dimension of the postprocessed
     output, these checks are also left to the user. An example for such a check
-    is provided in the default output (see _default_output()).
+    is provided in the default output (see :meth:`_default_output()`).
     """
 
     def __init__(
@@ -117,7 +117,7 @@ class AmiciPredictor:
             the AMICI model (defaults to AMICI observables).
         condition_ids:
             List of identifiers for the conditions of the edata objects of the
-            amici objective, will be passed to the PredictionResult at call.
+            amici objective, will be passed to the :class:`PredictionResult` at call.
         """
         # save settings and objective
         self.amici_objective = amici_objective
@@ -165,7 +165,7 @@ class AmiciPredictor:
         Call the predictor.
 
         Simulate a model for a certain prediction function.
-        This method relies on the AmiciObjective, which is underlying, but
+        This method relies on the :class:`AmiciObjective`, which is underlying, but
         allows the user to apply any post-processing of the results, the
         sensitivities, and the timepoints.
 
@@ -180,7 +180,7 @@ class AmiciPredictor:
         output_file:
             Path to an output file.
         output_format:
-            Either 'csv', 'h5'. If an output file is specified, this routine
+            Either ``'csv'`` or ``'h5'``. If an output file is specified, this routine
             will return a csv file, created from a DataFrame, or an h5 file,
             created from a dict.
         include_llh_weights:
@@ -193,9 +193,8 @@ class AmiciPredictor:
 
         Returns
         -------
-        results:
-            PredictionResult object containing timepoints, outputs, and
-            output_sensitivities if requested
+        PredictionResult object containing timepoints, outputs, and
+        output_sensitivities if requested.
         """
         # sanity check for output
         if 2 in sensi_orders:
@@ -257,7 +256,7 @@ class AmiciPredictor:
             elif output_format == H5:
                 results.write_to_h5(output_file=output_file)
             else:
-                raise Exception(
+                raise ValueError(
                     f'Call to unknown format {output_format} for '
                     f'output of pyPESTO prediction.'
                 )
@@ -358,7 +357,7 @@ class AmiciPredictor:
             Create default output of prediction.
 
             Equals to observables of AMICI model. We need to check that call
-            to AMICI was successful (status == 0), before writing the output.
+            to AMICI was successful (``status == 0``), before writing the output.
             """
             amici_nt = [
                 len(edata.getTimepoints())

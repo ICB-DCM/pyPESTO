@@ -215,9 +215,8 @@ class EnsemblePrediction:
 
         Returns
         -------
-        summary:
-            dictionary of predictions results with the keys mean, std, median,
-            percentiles, ...
+        dictionary of predictions results with the keys mean, std, median,
+        percentiles, ...
         """
         # check if prediction results are available
         if not self.prediction_results:
@@ -229,7 +228,7 @@ class EnsemblePrediction:
         if weighting:
             if not self.prediction_results[0].conditions[0].output_weight:
                 raise ValueError(
-                    'There are no weights in the ' 'prediction results.'
+                    'There are no weights in the prediction results.'
                 )
 
         n_conditions = len(self.prediction_results[0].conditions)
@@ -503,15 +502,16 @@ class Ensemble:
             (sampling_chain, sampling_step) if the ensemble is created from a
             sampling result.
         ensemble_type:
-            Type of ensemble: Ensemble (default), sample, or unprocessed_chain
+            Type of ensemble: :obj:`EnsembleType.ensemble` (default), :obj:`EnsembleType.sample`,
+            or :obj:`EnsembleType.unprocessed_chain`.
             Samples are meant to be representative, ensembles can be any
-            ensemble of parameters, and unprocessed chains still have burn-ins
+            ensemble of parameters, and unprocessed chains still have burn-ins.
         predictions:
-            List of EnsemblePrediction objects
+            List of :class:`EnsemblePrediction` objects.
         lower_bound:
-            array of potential lower bounds for the parameters
+            Array of potential lower bounds for the parameters.
         upper_bound:
-            array of potential upper bounds for the parameters
+            Array of potential upper bounds for the parameters.
         """
         # Do we have a representative sample or just random ensemble?
         self.ensemble_type = EnsembleType.ensemble
@@ -990,8 +990,7 @@ class Ensemble:
 
         Returns
         -------
-        summary:
-            Dict with mean, std, median, and percentiles of parameter vectors
+        Dict with mean, std, median, and percentiles of parameter vectors
         """
         # compute summaries based on parameters
         summary = {
