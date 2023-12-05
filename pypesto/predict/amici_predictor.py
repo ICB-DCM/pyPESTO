@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, List, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Sequence, Union
 
 import numpy as np
 
@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
 from ..result import PredictionResult
 
+PostProcessor = Callable[[list[dict[str, np.array]]], list[np.ndarray]]
+
 
 class AmiciPredictor:
     """
@@ -55,9 +57,9 @@ class AmiciPredictor:
         self,
         amici_objective: AmiciObjective,
         amici_output_fields: Union[Sequence[str], None] = None,
-        post_processor: Union[Callable, None] = None,
-        post_processor_sensi: Union[Callable, None] = None,
-        post_processor_time: Union[Callable, None] = None,
+        post_processor: Union[PostProcessor, None] = None,
+        post_processor_sensi: Union[PostProcessor, None] = None,
+        post_processor_time: Union[PostProcessor, None] = None,
         max_chunk_size: Union[int, None] = None,
         output_ids: Union[Sequence[str], None] = None,
         condition_ids: Union[Sequence[str], None] = None,
@@ -152,7 +154,7 @@ class AmiciPredictor:
     def __call__(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...] = (0,),
+        sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
         output_file: str = '',
         output_format: str = CSV,
@@ -266,11 +268,17 @@ class AmiciPredictor:
     def _get_outputs(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType = MODE_FUN,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
-    ) -> Tuple[List, List, List]:
+    ) -> tuple[
+        list[np.array],
+        list[np.array],
+        list[np.array],
+        list[np.array],
+        list[np.array],
+    ]:
         """
         Split the calls to amici into smaller chunks.
 
@@ -337,7 +345,15 @@ class AmiciPredictor:
                 mode=mode,
             )
 
-        def _default_output(amici_outputs):
+        def _default_output(
+            amici_outputs: list[dict[str, np.array]]
+        ) -> tuple[
+            list[np.array],
+            list[np.array],
+            list[np.array],
+            list[np.array],
+            list[np.array],
+        ]:
             """
             Create default output of prediction.
 
@@ -432,8 +448,14 @@ class AmiciPredictor:
         )
 
     def _wrap_call_to_amici(
-        self, amici_outputs, x, sensi_orders, mode, parameter_mapping, edatas
-    ):
+        self,
+        amici_outputs: list,
+        x: np.array,
+        sensi_orders: tuple[int, ...],
+        mode: ModeType,
+        parameter_mapping,
+        edatas,
+    ) -> None:
         """
         Encapsulate the call to amici.
 

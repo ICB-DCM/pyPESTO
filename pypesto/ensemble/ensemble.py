@@ -2,16 +2,7 @@ from __future__ import annotations
 
 import logging
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Callable, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -71,7 +62,7 @@ class EnsemblePrediction:
 
     An ensemble prediction consists of an ensemble, i.e., a set of parameter
     vectors and their identifiers such as a sample, and a prediction function.
-    It can be attached to a ensemble-type object
+    It can be attached to an ensemble-type object.
     """
 
     def __init__(
@@ -204,7 +195,7 @@ class EnsemblePrediction:
         percentiles_list: Sequence[int] = (5, 20, 80, 95),
         weighting: bool = False,
         compute_weighted_sigma: bool = False,
-    ) -> Dict:
+    ) -> dict:
         """
         Compute summary from the ensemble prediction results.
 
@@ -243,7 +234,7 @@ class EnsemblePrediction:
 
         n_conditions = len(self.prediction_results[0].conditions)
 
-        def _stack_outputs(ic: int):
+        def _stack_outputs(ic: int) -> np.array:
             """
             Stack outputs.
 
@@ -262,7 +253,7 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_list, axis=-1)
 
-        def _stack_outputs_sensi(ic: int):
+        def _stack_outputs_sensi(ic: int) -> np.array:
             """
             Stack output sensitivities.
 
@@ -270,7 +261,7 @@ class EnsemblePrediction:
             ensemble together, if they belong to the same simulation condition,
             and stack them in one array.
             """
-            # Were output sensitivitiess computed
+            # Were output sensitivities computed
             if self.prediction_results[0].conditions[ic].output_sensi is None:
                 return None
             # stack predictions
@@ -281,7 +272,7 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_sensi_list, axis=-1)
 
-        def _stack_weights(ic: int) -> np.ndarray:
+        def _stack_weights(ic: int) -> Union[np.ndarray, None]:
             """
             Stack weights.
 
@@ -365,7 +356,7 @@ class EnsemblePrediction:
 
         # iterate over conditions, compute summary
         for i_cond in range(n_conditions):
-            # use some short hand
+            # use some shorthand
             current_cond = self.prediction_results[0].conditions[i_cond]
 
             # create a temporary array with all the outputs needed and wanted
@@ -422,7 +413,7 @@ class EnsemblePrediction:
         # also return the object
         return self.prediction_summary
 
-    def compute_chi2(self, amici_objective: AmiciObjective):
+    def compute_chi2(self, amici_objective: AmiciObjective) -> float:
         """
         Compute the chi^2 error of the weighted mean trajectory.
 
@@ -489,7 +480,7 @@ class Ensemble:
         self,
         x_vectors: np.ndarray,
         x_names: Sequence[str] = None,
-        vector_tags: Sequence[Tuple[int, int]] = None,
+        vector_tags: Sequence[tuple[int, int]] = None,
         ensemble_type: EnsembleType = None,
         predictions: Sequence[EnsemblePrediction] = None,
         lower_bound: np.ndarray = None,
@@ -506,7 +497,7 @@ class Ensemble:
         x_names:
             Names or identifiers of the parameters
         vector_tags:
-            Additional tag, which adds information about the the parameter
+            Additional tag, which adds information about the parameter
             vectors of the form (optimization_run, optimization_step) if the
             ensemble is created from an optimization result or
             (sampling_chain, sampling_step) if the ensemble is created from a
@@ -568,7 +559,7 @@ class Ensemble:
         lower_bound: np.ndarray = None,
         upper_bound: np.ndarray = None,
         **kwargs,
-    ):
+    ) -> Ensemble:
         """
         Construct an ensemble from a sample.
 
@@ -625,7 +616,7 @@ class Ensemble:
         max_size: int = np.inf,
         percentile: float = None,
         **kwargs,
-    ):
+    ) -> Ensemble:
         """
         Construct an ensemble from an optimization result.
 
@@ -717,7 +708,7 @@ class Ensemble:
         distribute: bool = True,
         percentile: float = None,
         **kwargs,
-    ):
+    ) -> Ensemble:
         """
         Construct an ensemble from the history of an optimization.
 
@@ -741,7 +732,7 @@ class Ensemble:
             start should be taken or whether the indices should be
             more evenly distributed.
         percentile:
-            Percentile of a chi^2 distribution. Used to determinie the
+            Percentile of a chi^2 distribution. Used to determine the
             cutoff value.
 
         Returns
@@ -854,9 +845,9 @@ class Ensemble:
         self,
         predictor: Callable,
         default_value: float = None,
-    ):
+    ) -> list[Union[int, float]]:
         """
-        Create mapping for parameters from ensebmle to predictor.
+        Create mapping for parameters from ensemble to predictor.
 
         The parameters of the ensemble don't need to have the same ordering as
         in the predictor.
@@ -880,7 +871,7 @@ class Ensemble:
         self,
         predictor: Callable,
         prediction_id: str = None,
-        sensi_orders: Tuple = (0,),
+        sensi_orders: tuple = (0,),
         default_value: float = None,
         mode: ModeType = MODE_FUN,
         include_llh_weights: bool = False,
@@ -892,7 +883,7 @@ class Ensemble:
         Run predictions for a full ensemble.
 
         User needs to hand over a predictor function and settings, then all
-        results are grouped as EnsemblePrediction for the whole ensemble
+        results are grouped as :class:`EnsemblePrediction` for the whole ensemble.
 
         Parameters
         ----------
@@ -927,7 +918,7 @@ class Ensemble:
         if engine is None:
             engine = SingleCoreEngine()
 
-        # Vectors are chunked to improve parallization performance.
+        # Vectors are chunked to improve parallelization performance.
         n_chunks = self.n_vectors  # Default is no chunking.
         if isinstance(engine, MultiProcessEngine):
             n_chunks = engine.n_procs
@@ -950,7 +941,7 @@ class Ensemble:
             default_value=default_value,
         )
 
-        # Setup the tasks with the prediction method and chunked vectors.
+        # Set up the tasks with the prediction method and chunked vectors.
         method = partial(
             predictor,
             sensi_orders=sensi_orders,
@@ -962,7 +953,7 @@ class Ensemble:
             EnsembleTask(
                 method=method,
                 vectors=self.x_vectors[mapping, chunk_start:chunk_end],
-                id=chunk_i,
+                id=str(chunk_i),
             )
             for chunk_i, (chunk_start, chunk_end) in enumerate(chunks)
         ]
@@ -984,7 +975,7 @@ class Ensemble:
 
     def compute_summary(
         self, percentiles_list: Sequence[int] = (5, 20, 80, 95)
-    ):
+    ) -> dict[str, np.array]:
         """
         Compute summary for the parameters of the ensemble.
 
@@ -1021,8 +1012,8 @@ class Ensemble:
         Check identifiability of ensemble.
 
         Use ensemble mean and standard deviation to assess (in a rudimentary
-        way) whether or not parameters are identifiable. Returns a dataframe
-        with tuples, which specify whether or not the lower and the upper
+        way) whether parameters are identifiable. Returns a dataframe
+        with tuples, which specify whether the lower and the upper
         bounds are violated.
 
         Returns
@@ -1088,11 +1079,11 @@ class Ensemble:
 
 
 def entries_per_start(
-    fval_traces: List['np.ndarray'],
+    fval_traces: list['np.ndarray'],
     cutoff: float,
     max_size: int,
     max_per_start: int,
-):
+) -> list[int]:
     """
     Create the indices of each start that will be included in the ensemble.
 
@@ -1111,8 +1102,8 @@ def entries_per_start(
 
     Returns
     -------
-        A list of number of candidates per start that are to
-        be included in the ensemble.
+    A list of number of candidates per start that are to
+    be included in the ensemble.
     """
     # choose possible candidates
     ens_ind = [np.flatnonzero(fval <= cutoff) for fval in fval_traces]
@@ -1120,7 +1111,7 @@ def entries_per_start(
     # count the number of candidates per start
     n_theo = np.array([len(start) for start in ens_ind])
 
-    # trimm down starts that exceed the limit:
+    # trim down starts that exceed the limit:
     n_per_start = [min(n, max_per_start) for n in n_theo]
 
     # if all possible indices can be included, return
@@ -1166,7 +1157,7 @@ def get_vector_indices(
 
     Returns
     -------
-        The indices to include in the ensemble.
+    The indices to include in the ensemble.
     """
     candidates = np.flatnonzero(trace_start <= cutoff)
 
@@ -1213,7 +1204,7 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
 
 def calculate_cutoff(
     result: Result,
-    percentile: float = 0.95,
+    percentile: float = 95,
     cr_option: str = SIMULTANEOUS,
 ):
     """
@@ -1221,7 +1212,7 @@ def calculate_cutoff(
 
     Based on the number of parameters of the problem. Based on the
     assumption that the difference of the nllh's of the true and optimal
-    parameter is chi^2 distributed with n_theta degress of freedom.
+    parameter is chi^2 distributed with n_theta degrees of freedom.
 
     Parameters
     ----------
