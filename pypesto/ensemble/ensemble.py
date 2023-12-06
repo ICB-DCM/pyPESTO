@@ -260,7 +260,7 @@ class EnsemblePrediction:
             ensemble together, if they belong to the same simulation condition,
             and stack them in one array.
             """
-            # Were output sensitivities computed
+            # Were output sensitivities computed?
             if self.prediction_results[0].conditions[ic].output_sensi is None:
                 return None
             # stack predictions
