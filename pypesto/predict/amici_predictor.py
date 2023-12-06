@@ -194,7 +194,7 @@ class AmiciPredictor:
         Returns
         -------
         PredictionResult object containing timepoints, outputs, and
-        output_sensitivities if requested.
+        output sensitivities if requested.
         """
         # sanity check for output
         if 2 in sensi_orders:
