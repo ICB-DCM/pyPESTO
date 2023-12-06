@@ -49,6 +49,11 @@ class SacessOptimizer:
 
     .. footbibliography::
 
+    Attributes
+    ----------
+    histories:
+        List of the histories of the best values/parameters
+        found by each worker. (Monotonously decreasing objective values.)
     """
 
     def __init__(
@@ -124,6 +129,9 @@ class SacessOptimizer:
                 self._tmpdir = Path(f"SacessOptimizerTemp-{str(uuid1())[:8]}")
         self._tmpdir = Path(self._tmpdir).absolute()
         self._tmpdir.mkdir(parents=True, exist_ok=True)
+        self.histories: Optional[
+            list["pypesto.history.memory.MemoryHistory"]
+        ] = None
 
     def minimize(
         self,
@@ -210,11 +218,16 @@ class SacessOptimizer:
             logging_thread.start()
 
             # wait for finish
+            # collect results
+            histories = [
+                sacess_manager._result_queue.get()
+                for _ in range(self.num_workers)
+            ]
+            self.histories = histories
             for p in worker_processes:
                 p.join()
 
         logging_thread.stop()
-
         result = self._create_result(problem)
 
         walltime = time.time() - start_time
@@ -320,6 +333,7 @@ class SacessManager:
         self._worker_comms = shmem_manager.Array("i", [0] * self._num_workers)
         self._lock = shmem_manager.RLock()
         self._logger = logging.getLogger()
+        self._result_queue = shmem_manager.Queue()
 
     def get_best_solution(self) -> Tuple[np.array, float]:
         """Get the best objective value and corresponding parameters."""
@@ -544,7 +558,8 @@ class SacessWorker:
                 f"sacess worker {self._worker_idx} iteration {ess.n_iter} "
                 f"(best: {self._best_known_fx})."
             )
-
+        ess.history.finalize(exitflag=ess.exit_flag.name)
+        self._manager._result_queue.put(ess.history)
         ess._report_final()
 
     def _setup_ess(self, startpoint_method: StartpointMethod) -> ESSOptimizer:
