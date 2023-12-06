@@ -1,4 +1,5 @@
 """Tests for hierarchical optimization."""
+import copy
 import time
 
 import amici
@@ -405,6 +406,58 @@ def test_numerical_inner_solver():
         result['scaling_'], expected_values['scaling_'], rtol=rtol
     )
     assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
+
+
+def test_constrained_inner_solver():
+    inner_problem, expected_values, simulation = inner_problem_exp()
+
+    all_lb = [(6, 3), (3, 0), (3, 1), (4, 3)]
+    all_ub = [(7, 4), (4, 1), (4, 3), (6, 4)]
+
+    all_expected_values = [
+        {'scaling_': 6, 'offset_': 3},
+        {'scaling_': 4, 'offset_': 1},
+        {'scaling_': 4, 'offset_': 3},
+        {'scaling_': 5, 'offset_': 3},
+    ]
+
+    for lb, ub, expected_values in zip(all_lb, all_ub, all_expected_values):
+        inner_problem.get_for_id('scaling_').lb = lb[0]
+        inner_problem.get_for_id('scaling_').ub = ub[0]
+        inner_problem.get_for_id('offset_').lb = lb[1]
+        inner_problem.get_for_id('offset_').ub = ub[1]
+
+        dummy_sigma = np.ones(simulation.shape)
+        copied_sim = copy.deepcopy(simulation)
+        rtol = 1e-3
+
+        solver = AnalyticalInnerSolver()
+        ana_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        copied_sim = copy.deepcopy(simulation)
+        solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
+        num_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        assert np.isclose(ana_res['offset_'], num_res['offset_'], rtol=rtol)
+        assert np.isclose(ana_res['scaling_'], num_res['scaling_'], rtol=rtol)
+        assert np.isclose(ana_res['sigma_'], num_res['sigma_'], rtol=rtol)
+
+        assert np.isclose(
+            ana_res['offset_'], expected_values['offset_'], rtol=rtol
+        )
+        assert np.isclose(
+            ana_res['scaling_'], expected_values['scaling_'], rtol=rtol
+        )
 
 
 def at_least_as_good_as(v, v0) -> bool:
