@@ -295,6 +295,10 @@ def get_trace(
         else:  # trace_x == TRACE_X_STEPS:
             x_vals = np.array(list(range(len(indices))))
 
+        # if the trace is empty, skip
+        if len(x_vals) == 0:
+            continue
+
         # write down values
         vals.append(np.vstack([x_vals, y_vals]))
 

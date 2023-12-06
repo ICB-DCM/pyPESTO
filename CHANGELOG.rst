@@ -6,6 +6,28 @@ Release notes
 ..........
 
 
+0.4.1 (2023-12-05)
+-------------------
+
+* General
+    * Documentation (#1214, #1227, #1223, #1230, #1229)
+    * Update code to avoid deprecations and warnings (#1217, #1219)
+    * Updated codeownership (#1232, #1233)
+    * Update Citation (#1221)
+    * Improved Testing (#1218, #1216, #1231)
+* History:
+    * Enable converting MemoryHistory to Hdf5History (#1211)
+* Profile:
+    * Code simplification and other clean up (#1225)
+    * Fix incorrect indexing in `pypesto.profile.profile_next_guess.get_reg_polynomial` (#1226)
+* Optimize
+    * Warnings for scipy together with laplace prior (#1228)
+* Visualization:
+    * Skip the history trace, if trace is empty. Occurs for infinite initial values. (#1234)
+* Ensemble
+    * Fix Ensemble.from_optimization_endpoints (#1237)
+
+
 0.4.0 (2023-11-22)
 -------------------
 

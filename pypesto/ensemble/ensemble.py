@@ -669,7 +669,12 @@ class Ensemble:
             # add the parameters from the next start as long as we
             # did not reach maximum size and the next value is still
             # lower than the cutoff value
-            if start['fval'] <= abs_cutoff and len(x_vectors) < max_size:
+            if (
+                start['fval'] <= abs_cutoff
+                and len(x_vectors) < max_size
+                # 'x' can be None if optimization failed at the startpoint
+                and start['x'] is not None
+            ):
                 x_vectors.append(start['x'][result.problem.x_free_indices])
 
                 # the vector tag will be a -1 to indicate it is the last step
