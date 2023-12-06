@@ -497,10 +497,9 @@ class Ensemble:
             Names or identifiers of the parameters
         vector_tags:
             Additional tag, which adds information about the parameter
-            vectors of the form (optimization_run, optimization_step) if the
-            ensemble is created from an optimization result or
-            (sampling_chain, sampling_step) if the ensemble is created from a
-            sampling result.
+            vectors. For example, `(optimization_run, optimization_step)` if the
+            ensemble is created from an optimization result or history
+            (see :meth:`from_optimization_endpoints`, :meth:`from_optimization_history`).
         ensemble_type:
             Type of ensemble: :obj:`EnsembleType.ensemble` (default), :obj:`EnsembleType.sample`,
             or :obj:`EnsembleType.unprocessed_chain`.
