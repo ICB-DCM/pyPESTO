@@ -1,3 +1,5 @@
+import logging
+import math
 from copy import deepcopy
 from typing import Callable, Dict, List, Sequence, Tuple, Union
 
@@ -7,6 +9,8 @@ from .. import C
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
+
+logger = logging.getLogger(__name__)
 
 
 class NegLogPriors(AggregatedObjective):
@@ -490,6 +494,11 @@ def _prior_densities(
             return np.sqrt(abs(x - mean) / scale)
 
         def d_res_dx(x):
+            if x == mean:
+                logger.warning(
+                    "x == mean in d_res_dx of Laplace prior. Returning NaN."
+                )
+                return math.nan
             return 1 / 2 * (x - mean) / np.sqrt(scale * abs(x - mean) ** 3)
 
         return log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx
