@@ -113,7 +113,7 @@ def correct_x_guesses(
     x_guesses: Iterable[Dict[str, float]],
     model: Model,
     petab_problem: petab.Problem = None,
-    hierarchical: bool = False
+    hierarchical: bool = False,
 ):
     """Fix startpoint guesses passed between models of different sizes.
 
