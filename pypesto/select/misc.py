@@ -2,6 +2,8 @@
 import logging
 from typing import Dict, Iterable
 
+import pandas as pd
+
 import petab
 import petab_select.ui
 from petab.C import ESTIMATE, NOMINAL_VALUE
