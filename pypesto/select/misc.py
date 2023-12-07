@@ -3,12 +3,11 @@ import logging
 from typing import Dict, Iterable
 
 import pandas as pd
+import petab
 import petab_select.ui
 from petab.C import ESTIMATE, NOMINAL_VALUE
 from petab_select import Model, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
-
-import petab
 
 from ..objective import Objective
 from ..petab import PetabImporter
@@ -59,7 +58,7 @@ def model_to_pypesto_problem(
         )
 
     importer = PetabImporter(
-        petab_problem, 
+        petab_problem,
         hierarchical=hierarchical,
     )
     if objective is None:
@@ -75,9 +74,10 @@ def model_to_pypesto_problem(
     )
     return pypesto_problem
 
+
 def model_to_hierarchical_pypesto_problem(*args, **kwargs) -> Problem:
     """Create a hierarchical pyPESTO problem from a PEtab Select model.
-    
+
     See `model_to_pypesto_problem`.
     """
     pypesto_problem = model_to_pypesto_problem(
@@ -86,6 +86,7 @@ def model_to_hierarchical_pypesto_problem(*args, **kwargs) -> Problem:
         hierarchical=True,
     )
     return pypesto_problem
+
 
 def correct_x_guesses(
     x_guesses: Iterable[Dict[str, float]],
@@ -120,7 +121,11 @@ def correct_x_guesses(
             corrected_x_guess = []
             for parameter_id in petab_problem.parameter_df.index:
                 if hierarchical:
-                    if not pd.isna(petab_problem.parameter_df.loc[parameter_id, "parameterType"]):
+                    if not pd.isna(
+                        petab_problem.parameter_df.loc[
+                            parameter_id, "parameterType"
+                        ]
+                    ):
                         continue
 
                 # Use the `x_guess` value, if the parameter is to be estimated.
