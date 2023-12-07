@@ -111,6 +111,14 @@ DUMMY_INNER_VALUE = {
 }
 
 INNER_PARAMETER_BOUNDS = {
+    InnerParameterType.OFFSET: {
+        LOWER_BOUND: -float('inf'),
+        UPPER_BOUND: float('inf'),
+    },
+    InnerParameterType.SCALING: {
+        LOWER_BOUND: -float('inf'),
+        UPPER_BOUND: float('inf'),
+    },
     InnerParameterType.SIGMA: {
         LOWER_BOUND: 0,
         UPPER_BOUND: float('inf'),
