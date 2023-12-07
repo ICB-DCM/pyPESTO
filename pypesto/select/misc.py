@@ -73,39 +73,15 @@ def model_to_pypesto_problem(
     )
     return pypesto_problem
 
-def hier_model_to_pypesto_problem(
-    model: Model,
-    objective: Objective = None,
-    x_guesses: Iterable[Dict[str, float]] = None,
-    hierarchical: bool = True,
-) -> Problem:
-    """Create a pyPESTO problem from a PEtab Select model.
-
-    Parameters
-    ----------
-    model:
-        The model.
-    objective:
-        The pyPESTO objective.
-    x_guesses:
-        Startpoints to be used in the multi-start optimization. For example,
-        this could be the maximum likelihood estimate from another model.
-        Each dictionary has parameter IDs as keys, and parameter values as
-        values.
-        Values in `x_guess` for parameters that are not estimated will be
-        ignored and replaced with their value from the PEtab Select model, if
-        defined, else their nominal value in the PEtab parameters table.
-
-    Returns
-    -------
-    Problem
-        The pyPESTO select problem.
+def model_to_hierarchical_pypesto_problem(*args, **kwargs) -> Problem:
+    """Create a hierarchical pyPESTO problem from a PEtab Select model.
+    
+    See `model_to_pypesto_problem`.
     """
     pypesto_problem = model_to_pypesto_problem(
-        model=model,
-        objective=objective,
-        x_guesses=x_guesses,
-        hierarchical=hierarchical
+        *args,
+        **kwargs,
+        hierarchical=True,
     )
     return pypesto_problem
 
