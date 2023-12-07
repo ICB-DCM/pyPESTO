@@ -3,12 +3,12 @@ import logging
 from typing import Dict, Iterable
 
 import pandas as pd
-
-import petab
 import petab_select.ui
 from petab.C import ESTIMATE, NOMINAL_VALUE
 from petab_select import Model, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
+
+import petab
 
 from ..objective import Objective
 from ..petab import PetabImporter
