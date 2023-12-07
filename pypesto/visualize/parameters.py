@@ -381,14 +381,13 @@ def handle_inputs(
         res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
     ]
     if any(inner_xs):
-        # search for first non-empty inner_xs to obtain inner_xs_names
-        for inner_xs_idx in inner_xs:
-            if inner_xs_idx is not None:
-                inner_xs_names = list(inner_xs_idx.keys())
-                break
-        # fill inner_xs with nan if no inner_xs are available
+        inner_xs_names = next(
+            list(inner_xs_idx.keys())
+            for inner_xs_idx in inner_xs
+            if inner_xs_idx is not None
+        )
         inner_xs = [
-            np.full(len(inner_xs_names), np.nan)
+            [np.nan for i in range(len(inner_xs_names))]
             if inner_xs_idx is None
             else list(inner_xs_idx.values())
             for inner_xs_idx in inner_xs

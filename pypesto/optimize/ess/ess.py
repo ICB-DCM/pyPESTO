@@ -1,28 +1,7 @@
 """Enhanced Scatter Search.
 
-See papers on ESS [EgeaBal2009]_ [EgeaMar2010]_, CESS [VillaverdeEge2012]_ and
-saCeSS [PenasGon2017]_.
-
-References
-==========
-
-.. [EgeaBal2009] 'Dynamic Optimization of Nonlinear Processes with an Enhanced
-   Scatter Search Method', Jose A. Egea, Eva Balsa-Canto,
-   María-Sonia G. García, and Julio R. Banga, Ind. Eng. Chem. Res.
-   2009, 48, 9, 4388–4401. https://doi.org/10.1021/ie801717t
-
-.. [EgeaMar2010] 'An evolutionary method for complex-process optimization',
-   Jose A. Egea, Rafael Martí, Julio R. Banga, Computers & Operations Research,
-   2010, 37, 2, 315-324. https://doi.org/10.1016/j.cor.2009.05.003
-
-.. [VillaverdeEge2012] 'A cooperative strategy for parameter estimation in
-   large scale systems biology models', Villaverde, A.F., Egea, J.A. & Banga,
-   J.R. BMC Syst Biol 2012, 6, 75. https://doi.org/10.1186/1752-0509-6-75
-
-.. [PenasGon2017] 'Parameter estimation in large-scale systems biology models:
-   a parallel and self-adaptive cooperative strategy', David R. Penas,
-   Patricia González, Jose A. Egea, Ramón Doallo and Julio R. Banga,
-   BMC Bioinformatics 2017, 18, 52. https://doi.org/10.1186/s12859-016-1452-4
+See papers on ESS :footcite:p:`EgeaBal2009,EgeaMar2010`,
+CESS :footcite:p:`VillaverdeEge2012`, and saCeSS :footcite:p:`PenasGon2017`.
 """
 import enum
 import logging
@@ -34,6 +13,7 @@ import numpy as np
 
 import pypesto.optimize
 from pypesto import OptimizerResult, Problem
+from pypesto.history import MemoryHistory
 from pypesto.startpoint import StartpointMethod
 
 from .function_evaluator import FunctionEvaluator, create_function_evaluator
@@ -60,6 +40,11 @@ class ESSExitFlag(int, enum.Enum):
 class ESSOptimizer:
     """Enhanced Scatter Search (ESS) global optimization.
 
+    See papers on ESS :footcite:p:`EgeaBal2009,EgeaMar2010`,
+    CESS :footcite:p:`VillaverdeEge2012`, and saCeSS :footcite:p:`PenasGon2017`.
+
+    .. footbibliography::
+
     .. note: Does not implement any constraint handling beyond box constraints
     """
 
@@ -83,7 +68,7 @@ class ESSOptimizer:
     ):
         """Construct new ESS instance.
 
-        For plausible values of hyperparameters, see VillaverdeEge2012.
+        For plausible values of hyperparameters, see :footcite:t:`VillaverdeEge2012`.
 
         Parameters
         ----------
@@ -104,6 +89,7 @@ class ESSOptimizer:
             In case of a callable, it will be called with the keyword arguments
             `max_walltime_s` and `max_eval`, which should be passed to the optimizer
             (if supported) to honor the overall budget.
+            See :class:`SacessFidesFactory` for an example.
         n_diverse:
             Number of samples to choose from to construct the initial RefSet
         max_eval:
@@ -124,6 +110,9 @@ class ESSOptimizer:
         n_threads:
             Number of parallel threads to use for parallel function evaluation.
             Mutually exclusive with `n_procs`.
+        history:
+            History of the best values/parameters found so far.
+            (Monotonously decreasing objective values.)
         """
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
@@ -182,6 +171,7 @@ class ESSOptimizer:
         self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
         self.evaluator: Optional[FunctionEvaluator] = None
         self.starttime: Optional[float] = None
+        self.history: MemoryHistory = MemoryHistory()
 
     def _initialize_minimize(
         self,
@@ -265,6 +255,7 @@ class ESSOptimizer:
             self._do_iteration()
 
         self._report_final()
+        self.history.finalize(exitflag=self.exit_flag.name)
         return self._create_result()
 
     def _do_iteration(self):
@@ -549,6 +540,12 @@ class ESSOptimizer:
             self.x_best = x[:]
             self.fx_best = fx
             self.x_best_has_changed = True
+            self.history.update(
+                self.x_best,
+                (0,),
+                pypesto.C.MODE_FUN,
+                {pypesto.C.FVAL: self.fx_best},
+            )
 
     def _go_beyond(self, x_best_children, fx_best_children):
         """Apply go-beyond strategy.

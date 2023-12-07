@@ -70,12 +70,12 @@ class PetabImporter(AmiciObjectBuilder):
     """
     Importer for PEtab files.
 
-    Create an `amici.Model`, an `objective.AmiciObjective` or a
-    `pypesto.Problem` from PEtab files. The created objective function is a
+    Create an :class:`amici.amici.Model`, an :class:`pypesto.objective.AmiciObjective` or a
+    :class:`pypesto.problem.Problem` from PEtab files. The created objective function is a
     negative log-likelihood function and can thus be negative. The actual
     form of the likelihood depends on the noise model specified in the provided PEtab problem.
-    For more information, see
-    [the PEtab documentation](https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions)
+    For more information, see the
+    `PEtab documentation <https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions>`_.
     """  # noqa
 
     MODEL_BASE_DIR = "amici_models"
@@ -354,8 +354,8 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         kwargs:
-            Extra arguments passed to :meth:`amici.SbmlImporter.sbml2amici`
-            or :meth:`amici.pysb_import.pysb2amici`.
+            Extra arguments passed to :meth:`amici.sbml_import.SbmlImporter.sbml2amici`
+            or :func:`amici.pysb_import.pysb2amici`.
         """
         # delete output directory
         if os.path.exists(self.output_folder):
@@ -380,7 +380,7 @@ class PetabImporter(AmiciObjectBuilder):
     def create_edatas(
         self, model: amici.Model = None, simulation_conditions=None
     ) -> List[amici.ExpData]:
-        """Create list of amici.ExpData objects."""
+        """Create list of :class:`amici.amici.ExpData` objects."""
         # create model
         if model is None:
             model = self.create_model()
@@ -399,7 +399,7 @@ class PetabImporter(AmiciObjectBuilder):
         force_compile: bool = False,
         **kwargs,
     ) -> AmiciObjective:
-        """Create a :class:`pypesto.AmiciObjective`.
+        """Create a :class:`pypesto.objective.AmiciObjective`.
 
         Parameters
         ----------
@@ -419,8 +419,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        objective:
-            A :class:`pypesto.AmiciObjective` for the model and the data.
+        A :class:`pypesto.objective.AmiciObjective` for the model and the data.
         """
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
@@ -498,6 +497,14 @@ class PetabImporter(AmiciObjectBuilder):
             inner_parameter_ids = calculator.get_inner_parameter_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
+        max_sensi_order = kwargs.pop('max_sensi_order', None)
+        if self._non_quantitative_data_types:
+            if max_sensi_order is not None and max_sensi_order > 1:
+                raise warnings.warn(
+                    "Higher order sensitivities are not supported for ordinal, censored and nonlinear-monotone data. Setting `max_sensi_order` to 1."
+                )
+            max_sensi_order = 1
+
         # create objective
         obj = AmiciObjective(
             amici_model=model,
@@ -509,6 +516,7 @@ class PetabImporter(AmiciObjectBuilder):
             amici_object_builder=self,
             calculator=calculator,
             amici_reporting=amici_reporting,
+            max_sensi_order=max_sensi_order,
             **kwargs,
         )
 
@@ -568,10 +576,8 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        predictor:
-            A :class:`pypesto.predict.AmiciPredictor` for the model, using
-            the outputs of the AMICI model and the timepoints from the
-            PEtab data
+        A :class:`pypesto.predict.AmiciPredictor` for the model, using
+        the outputs of the AMICI model and the timepoints from the PEtab data.
         """
         # if the user didn't pass an objective function, we create it first
         if objective is None:
@@ -668,18 +674,18 @@ class PetabImporter(AmiciObjectBuilder):
         startpoint_kwargs: Dict[str, Any] = None,
         **kwargs,
     ) -> Problem:
-        """Create a :class:`pypesto.Problem`.
+        """Create a :class:`pypesto.problem.Problem`.
 
         Parameters
         ----------
         objective:
-            Objective as created by `create_objective`.
+            Objective as created by :meth:`create_objective`.
         x_guesses:
             Guesses for the parameter values, shape (g, dim), where g denotes
             the number of guesses. These are used as start points in the
             optimization.
         problem_kwargs:
-            Passed to the `pypesto.Problem` constructor.
+            Passed to :meth:`pypesto.problem.Problem.__init__`.
         startpoint_kwargs:
             Keyword arguments forwarded to
             :meth:`PetabImporter.create_startpoint_method`.
@@ -689,8 +695,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        problem:
-            A :class:`pypesto.Problem` for the objective.
+        A :class:`pypesto.problem.Problem` for the objective.
         """
         if objective is None:
             objective = self.create_objective(**kwargs)
@@ -779,15 +784,14 @@ class PetabImporter(AmiciObjectBuilder):
         ----------
         rdatas:
             A list of rdatas as produced by
-            pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas'].
+            ``pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas']``.
         model:
             The amici model.
 
         Returns
         -------
-        measurement_df:
-            A dataframe built from the rdatas in the format as in
-            self.petab_problem.measurement_df.
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
         """
         # create model
         if model is None:
@@ -805,9 +809,9 @@ class PetabImporter(AmiciObjectBuilder):
         model: amici.Model = None,
     ) -> pd.DataFrame:
         """
-        See `rdatas_to_measurement_df`.
+        See :meth:`rdatas_to_measurement_df`.
 
-        Execpt a petab simulation dataframe is created, i.e. the measurement
+        Except a petab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
         """
         return self.rdatas_to_measurement_df(rdatas, model).rename(
@@ -828,15 +832,14 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         prediction:
-            A prediction result as produced by an AmiciPredictor
+            A prediction result as produced by an :class:`pypesto.predict.AmiciPredictor`.
         predictor:
-            The AmiciPredictor function
+            The :class:`pypesto.predict.AmiciPredictor` instance.
 
         Returns
         -------
-        measurement_df:
-            A dataframe built from the rdatas in the format as in
-            self.petab_problem.measurement_df.
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
         """
 
         # create rdata-like dicts from the prediction result
@@ -863,7 +866,7 @@ class PetabImporter(AmiciObjectBuilder):
         predictor: AmiciPredictor = None,
     ) -> pd.DataFrame:
         """
-        See `prediction_to_petab_measurement_df`.
+        See :meth:`prediction_to_petab_measurement_df`.
 
         Except a PEtab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
@@ -883,7 +886,7 @@ def _find_output_folder_name(
     If available, use the model name from the ``petab_problem`` or the
     provided ``model_name`` (latter is given priority), otherwise create a
     unique name. The folder will be located in the
-    ``PetabImporter.MODEL_BASE_DIR`` subdirectory of the current directory.
+    :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(

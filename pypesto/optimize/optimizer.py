@@ -253,10 +253,12 @@ class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
 
-    Find details on the optimizer and configuration options at:
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
-        optimize.minimize.html#scipy.optimize.minimize
-    """
+    Find details on the optimizer and configuration options at: :func:`scipy.optimize.minimize`.
+
+    .. note::
+        Least-squares optimizers may face errors in case of non-continuous
+        differentiable objective functions (e.g. Laplace priors).
+    """  # noqa
 
     def __init__(
         self,
@@ -471,10 +473,13 @@ class ScipyOptimizer(Optimizer):
 
     def get_default_options(self):
         """Create default options specific for the optimizer."""
+        options = {'disp': False}
         if self.is_least_squares():
-            options = {'max_nfev': 1000, 'disp': False}
-        else:
-            options = {'maxfun': 1000, 'disp': False}
+            options['max_nfev'] = 1000
+        elif self.method.lower() in ('l-bfgs-b', 'tnc'):
+            options['maxfun'] = 1000
+        elif self.method.lower() in ('nelder-mead', 'powell'):
+            options['maxfev'] = 1000
         return options
 
 
@@ -764,22 +769,20 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     """
     Global optimization using scipy's differential evolution optimizer.
 
-    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
-        /scipy.optimize.differential_evolution.html
+    See: :func:`scipy.optimize.differential_evolution`.
 
     Parameters
     ----------
     options:
         Optimizer options that are directly passed on to scipy's optimizer.
 
-
     Examples
     --------
     Arguments that can be passed to options:
 
     maxiter:
-        used to calculate the maximal number of funcion evaluations by
-        maxfevals = (maxiter + 1) * popsize * len(x)
+        used to calculate the maximal number of function evaluations by
+        ``maxfevals = (maxiter + 1) * popsize * len(x)``
         Default: 100
     popsize:
         population size, default value 15
@@ -810,7 +813,10 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
-        """Perform optimization. Parameters: see `Optimizer` documentation."""
+        """Perform optimization.
+
+        See :meth:`Optimizer.minimize`.
+        """
         bounds = list(zip(problem.lb, problem.ub))
 
         result = scipy.optimize.differential_evolution(

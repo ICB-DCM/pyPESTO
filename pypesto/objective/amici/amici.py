@@ -630,5 +630,5 @@ class AmiciObjective(ObjectiveBase):
             x = self.amici_object_builder.petab_problem.x_nominal_scaled
             x_free = self.amici_object_builder.petab_problem.x_free_indices
         return super().check_gradients_match_finite_differences(
-            x=x, x_free=x_free, *args, **kwargs
+            *args, x=x, x_free=x_free, **kwargs
         )

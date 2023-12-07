@@ -6,7 +6,13 @@ Optimize
 Multistart optimization with support for various optimizers.
 """
 
-from .ess import CESSOptimizer, ESSOptimizer, SacessOptimizer
+from .ess import (
+    CESSOptimizer,
+    ESSOptimizer,
+    SacessFidesFactory,
+    SacessOptimizer,
+    get_default_ess_options,
+)
 from .load import (
     fill_result_from_history,
     optimization_result_from_history,
