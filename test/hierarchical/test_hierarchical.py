@@ -403,7 +403,7 @@ def test_numerical_inner_solver():
 
     rtol = 1e-3
 
-    solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
+    solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 1})
     result = solver.solve(
         problem=inner_problem,
         sim=[simulation],
@@ -493,7 +493,7 @@ def test_constrained_inner_solver():
         )
 
         copied_sim = copy.deepcopy(simulation)
-        solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
+        solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 1})
         num_res = solver.solve(
             problem=inner_problem,
             sim=[copied_sim],
@@ -546,7 +546,7 @@ def test_non_coupled_constrained_inner_solver():
         )
 
         copied_sim = copy.deepcopy(simulation)
-        solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
+        solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 1})
         num_res = solver.solve(
             problem=inner_problem,
             sim=[copied_sim],
