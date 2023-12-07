@@ -3,6 +3,7 @@ Visualization of the model fit after optimization.
 
 Currently only for PEtab problems.
 """
+import copy
 from typing import Sequence, Union
 
 import amici
@@ -15,6 +16,7 @@ from amici.petab_objective import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
 from ..C import CENSORED, NONLINEAR_MONOTONE, ORDINAL, RDATAS
+from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import Problem
 from ..result import Result
@@ -174,24 +176,72 @@ def time_trajectory_model(
     if timepoints is None:
         end_time = max(problem.objective.edatas[0].getTimepoints())
         timepoints = np.linspace(start=0, stop=end_time, num=n_timepoints)
-    obj = problem.objective.set_custom_timepoints(timepoints_global=timepoints)
 
-    # evaluate objective with return dic = True to get data
+    # get optimization result
     parameters = result.optimize_result.list[start_index]['x']
+
     # reduce vector to only include free indices. Needed downstream.
     parameters = problem.get_reduced_vector(parameters)
-    ret = obj(parameters, mode='mode_fun', sensi_orders=(0,), return_dict=True)
+
+    # simulate with custom timepoints for hierarchical model
+    if isinstance(problem.objective.calculator, HierarchicalAmiciCalculator):
+        # get parameter dictionary
+        x_dct = dict(
+            zip(problem.x_names, result.optimize_result.list[start_index].x)
+        )
+
+        # evaluate objective with return dict = True to get inner parameters
+        ret = problem.objective(
+            parameters, mode='mode_fun', sensi_orders=(0,), return_dict=True
+        )
+
+        # update parameter dictionary with inner parameters
+        inner_parameters = ret['inner_parameters']
+        x_dct.update(inner_parameters)
+
+        parameter_mapping = problem.objective.parameter_mapping
+        edatas = copy.deepcopy(problem.objective.edatas)
+        amici_model = problem.objective.amici_model
+        amici_solver = problem.objective.amici_solver
+
+        for j in range(len(edatas)):
+            edatas[j].setTimepoints(timepoints)
+
+        amici.parameter_mapping.fill_in_parameters(
+            edatas=edatas,
+            problem_parameters=x_dct,
+            scaled_parameters=True,
+            parameter_mapping=parameter_mapping,
+            amici_model=amici_model,
+        )
+
+        rdatas = amici.runAmiciSimulations(
+            amici_model,
+            amici_solver,
+            edatas,
+        )
+    else:
+        # set custom timepoints
+        obj = problem.objective.set_custom_timepoints(
+            timepoints_global=timepoints
+        )
+
+        # evaluate objective with return dict = True to get data
+        ret = obj(
+            parameters, mode='mode_fun', sensi_orders=(0,), return_dict=True
+        )
+        rdatas = ret['rdatas']
 
     if state_ids == [] and state_names == []:
         axes = _time_trajectory_model_without_states(
             model=problem.objective.amici_model,
-            rdatas=ret['rdatas'],
+            rdatas=rdatas,
             observable_ids=observable_ids,
         )
     else:
         axes = _time_trajectory_model_with_states(
             model=problem.objective.amici_model,
-            rdatas=ret['rdatas'],
+            rdatas=rdatas,
             state_ids=state_ids,
             state_names=state_names,
             observable_ids=observable_ids,

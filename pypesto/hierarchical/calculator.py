@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -55,7 +55,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         if inner_solver is None:
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
-        self.simulation_edatas = None
 
     def initialize(self):
         """Initialize."""
@@ -94,19 +93,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 'the experimental data used to setup the hierarchical '
                 'optimizer.'
             )
-
-        if self.simulation_edatas is None:
-            simulation_edatas = edatas
-        else:
-            simulation_edatas = self.simulation_edatas
-            if not self.inner_problem.check_simulation_edatas(
-                edatas=simulation_edatas
-            ):
-                raise ValueError(
-                    'The experimental data provided to this call for simulation differs from '
-                    'the experimental data used to setup the hierarchical '
-                    'optimizer. Only more timepoints are allowed.'
-                )
 
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
@@ -163,7 +149,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             mode=mode,
             amici_model=amici_model,
             amici_solver=amici_solver,
-            edatas=simulation_edatas,
+            edatas=edatas,
             n_threads=n_threads,
             x_ids=x_ids,
             parameter_mapping=parameter_mapping,
@@ -173,31 +159,3 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         result[INNER_RDATAS] = inner_rdatas
 
         return result
-
-    def set_simulation_edatas(
-        self,
-        edatas,
-        simulation_timepoints: Sequence[Sequence[Union[float, int]]] = None,
-    ):
-        """Set the experimental data used for simulation.
-
-        This is required to simulate model trajectories at more timepoints than the
-        measurement timepoints. Checks ensure that the experimental data used for
-        simulation is a subset of the experimental data used for the inner problem.
-
-        Parameters
-        ----------
-        simulation_timepoints:
-            The outer sequence should contain a sequence of timepoints for each
-            experimental condition.
-        """
-
-        if simulation_timepoints is None:
-            self.simulation_edatas = None
-            return
-        else:
-            simulation_edatas = copy.deepcopy(edatas)
-            for i, edata in enumerate(simulation_edatas):
-                edata.setTimepoints(simulation_timepoints[i])
-
-        self.simulation_edatas = simulation_edatas

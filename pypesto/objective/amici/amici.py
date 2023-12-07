@@ -402,7 +402,6 @@ class AmiciObjective(ObjectiveBase):
         edatas: Sequence['amici.ExpData'] = None,
         parameter_mapping: 'ParameterMapping' = None,
         amici_reporting: Optional['amici.RDataReporting'] = None,
-        simulation_edatas: Optional[Sequence['amici.ExpData']] = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -579,9 +578,6 @@ class AmiciObjective(ObjectiveBase):
         -------
         The customized copy of this objective.
         """
-        # import here to avoid circular imports
-        from ...hierarchical.calculator import HierarchicalAmiciCalculator
-
         if timepoints is None and timepoints_global is None:
             raise KeyError('Timepoints were not specified.')
 
@@ -603,13 +599,8 @@ class AmiciObjective(ObjectiveBase):
                 for _ in range(len(amici_objective.edatas))
             ]
 
-        if isinstance(amici_objective.calculator, HierarchicalAmiciCalculator):
-            amici_objective.calculator.set_simulation_edatas(
-                amici_objective.edatas, custom_timepoints
-            )
-        else:
-            amici_objective.custom_timepoints = custom_timepoints
-            amici_objective.apply_custom_timepoints()
+        amici_objective.custom_timepoints = custom_timepoints
+        amici_objective.apply_custom_timepoints()
         return amici_objective
 
     def check_gradients_match_finite_differences(
@@ -630,5 +621,5 @@ class AmiciObjective(ObjectiveBase):
             x = self.amici_object_builder.petab_problem.x_nominal_scaled
             x_free = self.amici_object_builder.petab_problem.x_free_indices
         return super().check_gradients_match_finite_differences(
-            x=x, x_free=x_free, *args, **kwargs
+            *args, x=x, x_free=x_free, **kwargs
         )
