@@ -39,6 +39,8 @@ def model_to_pypesto_problem(
         Values in `x_guess` for parameters that are not estimated will be
         ignored and replaced with their value from the PEtab Select model, if
         defined, else their nominal value in the PEtab parameters table.
+    hierarchical:
+        Whether the problem involves hierarchical optimization.
 
     Returns
     -------
