@@ -853,12 +853,13 @@ class Ensemble:
         """
         # create short hands
         parameter_ids_objective = predictor.amici_objective.x_names
-        parameter_ids_ensemble = self.x_names
+        parameter_ids_ensemble = list(self.x_names)
         # map, and fill with `default_value` if not found and `default_value`
         # is specified.
         mapping = []
         for parameter_id_objective in parameter_ids_objective:
             if parameter_id_objective in parameter_ids_ensemble:
+                # Append index of parameter in ensemble.
                 mapping.append(
                     parameter_ids_ensemble.index(parameter_id_objective)
                 )
