@@ -43,22 +43,22 @@ def minimize(
     problem:
         The problem to be solved.
     optimizer:
-        The optimizer to be used n_starts times.
+        The optimizer to be used `n_starts` times.
     n_starts:
         Number of starts of the optimizer.
     ids:
         Ids assigned to the startpoints.
     startpoint_method:
-        Method for how to choose start points. False means the optimizer does
-        not require start points, e.g. for the 'PyswarmOptimizer'.
+        Method for how to choose start points. ``False`` means the optimizer does
+        not require start points, e.g. for the :class:`pypesto.optimize.PyswarmOptimizer`.
         **Deprecated. Use ``problem.startpoint_method`` instead.**
     result:
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
         a new object is created.
     engine:
-        Parallelization engine. Defaults to sequential execution on a
-        SingleCoreEngine.
+        Parallelization engine. Defaults to sequential execution using
+        :class:`pypesto.engine.SingleCoreEngine`.
     progress_bar:
         Whether to display a progress bar.
     options:
@@ -68,18 +68,17 @@ def minimize(
     filename:
         Name of the hdf5 file, where the result will be saved. Default is
         None, which deactivates automatic saving. If set to
-        "Auto" it will automatically generate a file named
-        `year_month_day_profiling_result.hdf5`.
-        Optionally a method, see docs for `pypesto.store.auto.autosave`.
+        ``Auto`` it will automatically generate a file named
+        ``year_month_day_profiling_result.hdf5``.
+        Optionally a method, see docs for :func:`pypesto.store.auto.autosave`.
     overwrite:
         Whether to overwrite `result/optimization` in the autosave file
         if it already exists.
 
     Returns
     -------
-    result:
-        Result object containing the results of all multistarts in
-        `result.optimize_result`.
+    Result object containing the results of all multistarts in
+    `result.optimize_result`.
     """
     # optimizer
     if optimizer is None:

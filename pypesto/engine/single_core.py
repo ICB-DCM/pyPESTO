@@ -1,5 +1,5 @@
 """Engines without parallelization."""
-from typing import Any, List
+from typing import Any
 
 from tqdm import tqdm
 
@@ -11,15 +11,15 @@ class SingleCoreEngine(Engine):
     """
     Dummy engine for sequential execution on one core.
 
-    Note that the objective itself may be multithreaded.
+    .. note:: The objective itself may be multithreaded.
     """
 
     def __init__(self):
         super().__init__()
 
     def execute(
-        self, tasks: List[Task], progress_bar: bool = True
-    ) -> List[Any]:
+        self, tasks: list[Task], progress_bar: bool = True
+    ) -> list[Any]:
         """Execute all tasks in a simple for loop sequentially.
 
         Parameters
@@ -28,6 +28,10 @@ class SingleCoreEngine(Engine):
             List of tasks to execute.
         progress_bar:
             Whether to display a progress bar.
+
+        Returns
+        -------
+        A list of results.
         """
         results = []
         for task in tqdm(tasks, disable=not progress_bar):

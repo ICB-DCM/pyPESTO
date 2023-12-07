@@ -18,6 +18,13 @@ from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
+from pypesto.optimize.ess import (
+    CESSOptimizer,
+    ESSOptimizer,
+    SacessFidesFactory,
+    SacessOptimizer,
+    get_default_ess_options,
+)
 from pypesto.optimize.util import assign_ids
 from pypesto.store import read_result
 
@@ -47,11 +54,13 @@ optimizers = [
             'Powell',
             'CG',
             'BFGS',
+            'dogleg',
             'Newton-CG',
             'L-BFGS-B',
             'TNC',
             'COBYLA',
             'SLSQP',
+            'trust-constr',
             'trust-ncg',
             'trust-exact',
             'trust-krylov',
@@ -59,7 +68,7 @@ optimizers = [
             'ls_dogbox',
         ]
     ],
-    # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
+    # disabled: 'ls_lm' (ValueError when passing bounds)
     ('ipopt', ''),
     ('dlib', ''),
     ('pyswarm', ''),
@@ -135,7 +144,10 @@ optimizers = [
 
 @pytest.fixture(
     params=optimizers,
-    ids=[f"{i}-{o[0]}" for i, o in enumerate(optimizers)],
+    ids=[
+        f"{i}-{o[0]}{'-' + str(o[1]) if isinstance(o[1], str) and o[1] else ''}"
+        for i, o in enumerate(optimizers)
+    ],
 )
 def optimizer(request):
     return request.param
@@ -242,7 +254,8 @@ def get_optimizer(library, solver):
     options = {'maxiter': 100}
 
     if library == 'scipy':
-        options['maxfun'] = options.pop('maxiter')
+        if solver == "TNC" or solver.startswith("ls_"):
+            options['maxfun'] = options.pop('maxiter')
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
     elif library == 'ipopt':
         optimizer = optimize.IpoptOptimizer()
@@ -445,16 +458,12 @@ def test_history_beats_optimizer():
     "ignore:Passing `startpoint_method` directly is deprecated.*:DeprecationWarning"
 )
 @pytest.mark.parametrize("ess_type", ["ess", "cess", "sacess"])
-@pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
+@pytest.mark.parametrize(
+    "local_optimizer",
+    [None, optimize.FidesOptimizer(), SacessFidesFactory()],
+)
 @pytest.mark.flaky(reruns=3)
 def test_ess(problem, local_optimizer, ess_type, request):
-    from pypesto.optimize.ess import (
-        CESSOptimizer,
-        ESSOptimizer,
-        SacessOptimizer,
-        get_default_ess_options,
-    )
-
     if ess_type == "ess":
         ess = ESSOptimizer(
             dim_refset=10,

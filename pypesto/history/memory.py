@@ -1,7 +1,7 @@
 """In-memory history."""
 
 import time
-from typing import Any, Dict, Sequence, Tuple, Union
+from typing import Any, Sequence, Union
 
 import numpy as np
 
@@ -26,21 +26,22 @@ class MemoryHistory(CountHistoryBase):
     Parameters
     ----------
     options:
-        History options.
+        History options, see :class:`pypesto.history.HistoryOptions`. Defaults
+        to `None`, which implies default options.
     """
 
-    def __init__(self, options: Union[HistoryOptions, Dict] = None):
+    def __init__(self, options: Union[HistoryOptions, dict, None] = None):
         super().__init__(options=options)
-        self._trace: Dict[str, Any] = {key: [] for key in HistoryBase.ALL_KEYS}
+        self._trace: dict[str, Any] = {key: [] for key in HistoryBase.ALL_KEYS}
 
     def update(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """See `History` docstring."""
+        """See :meth:`HistoryBase.update`."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
@@ -70,7 +71,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_x_trace`."""
         return [self._trace[X][i] for i in ix]
 
     @trace_wrap
@@ -79,7 +80,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_fval_trace`."""
         return [self._trace[FVAL][i] for i in ix]
 
     @trace_wrap
@@ -88,7 +89,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_grad_trace`."""
         return [self._trace[GRAD][i] for i in ix]
 
     @trace_wrap
@@ -97,7 +98,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_hess_trace`."""
         return [self._trace[HESS][i] for i in ix]
 
     @trace_wrap
@@ -106,7 +107,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_res_trace`."""
         return [self._trace[RES][i] for i in ix]
 
     @trace_wrap
@@ -115,7 +116,7 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_sres_trace`."""
         return [self._trace[SRES][i] for i in ix]
 
     @trace_wrap
@@ -124,5 +125,5 @@ class MemoryHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_time_trace`."""
         return [self._trace[TIME][i] for i in ix]
