@@ -58,7 +58,7 @@ def model_to_pypesto_problem(
 
     importer = PetabImporter(
         petab_problem, 
-        hierarchical=hierarchical
+        hierarchical=hierarchical,
     )
     if objective is None:
         amici_model = importer.create_model(
