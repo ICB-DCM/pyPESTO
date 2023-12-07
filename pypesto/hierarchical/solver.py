@@ -7,6 +7,7 @@ from ..C import InnerParameterType
 from ..objective import Objective
 from ..optimize import minimize
 from ..problem import Problem
+from .parameter import InnerParameter
 from .problem import InnerProblem, scale_value_dict
 from .util import (
     apply_offset,
@@ -269,16 +270,8 @@ class NumericalInnerSolver(InnerSolver):
             ``problem``.
         """
         pars = problem.xs.values()
-        # We currently cannot handle constraints on inner parameters correctly,
-        # and would have to assume [-inf, inf]. However, this may not be
-        # supported by all inner optimizers, so we go for some (arbitrary)
-        # large value.
-        # lb = np.array(
-        #     [x.lb if x.lb != -np.inf else self.dummy_lb for x in pars]
-        # )
-        # ub = np.array(
-        #     [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
-        # )
+
+        x_guesses = self.sample_startpoints(problem, pars)
 
         lb = np.array([x.lb for x in pars])
         ub = np.array([x.ub for x in pars])
@@ -314,22 +307,12 @@ class NumericalInnerSolver(InnerSolver):
         pypesto_problem = Problem(
             objective, lb=lb, ub=ub, x_names=x_names, **self.problem_kwargs
         )
-
-        if self.x_guesses is not None:
-            pypesto_problem.set_x_guesses(
-                self.x_guesses[:, pypesto_problem.x_free_indices]
-            )
-        else:
-            pypesto_problem.set_x_guesses(
-                [list(problem.get_dummy_values(scaled=False).values())]
-            )
+        pypesto_problem.set_x_guesses(
+            x_guesses[:, pypesto_problem.x_free_indices]
+        )
 
         # perform the actual optimization
         result = minimize(pypesto_problem, **self.minimize_kwargs)
-
-        if np.isclose(20.496395920219133, result.optimize_result.list[0].x[1]):
-            assert False, f'{objective([0,1])}, {result.optimize_result.list}'
-
         best_par = result.optimize_result.list[0]['x']
 
         # Check if any optimized parameter is on the dummy bound
@@ -356,3 +339,58 @@ class NumericalInnerSolver(InnerSolver):
             x_opt = scale_value_dict(x_opt, problem)
 
         return x_opt
+
+    def sample_startpoints(
+        self, problem: InnerProblem, pars: List[InnerParameter]
+    ):
+        """Sample startpoints for the numerical optimization.
+
+        Parameters
+        ----------
+        pars:
+            The inner parameters to sample startpoints for.
+
+        Returns
+        -------
+        The sampled startpoints appended to the cached startpoints.
+        """
+        if self.minimize_kwargs['n_starts'] == 1 and self.x_guesses is None:
+            return np.array(
+                [list(problem.get_dummy_values(scaled=False).values())]
+            )
+        elif self.x_guesses is not None:
+            n_samples = self.minimize_kwargs['n_starts'] - len(self.x_guesses)
+        else:
+            n_samples = self.minimize_kwargs['n_starts'] - 1
+
+        if n_samples <= 0:
+            return self.x_guesses
+
+        sampling_lb = np.array(
+            [x.lb if x.lb != -np.inf else self.dummy_lb for x in pars]
+        )
+        sampling_ub = np.array(
+            [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
+        )
+
+        startpoints = np.random.uniform(
+            sampling_lb, sampling_ub, size=(n_samples, len(pars))
+        )
+
+        if self.x_guesses is not None:
+            startpoints = np.vstack(
+                (
+                    self.x_guesses,
+                    startpoints,
+                )
+            )
+        else:
+            startpoints = np.vstack(
+                (
+                    np.array(
+                        [list(problem.get_dummy_values(scaled=False).values())]
+                    ),
+                    startpoints,
+                )
+            )
+        return startpoints
