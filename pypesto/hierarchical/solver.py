@@ -325,7 +325,7 @@ class NumericalInnerSolver(InnerSolver):
         result = minimize(pypesto_problem, **self.minimize_kwargs)
 
         if np.isclose(20.496395920219133, result.optimize_result.list[0].x[1]):
-            assert False, f'{result.optimize_result.list[0]}'
+            assert False, f'{objective([0,1])}, {result.optimize_result.list}'
 
         best_par = result.optimize_result.list[0]['x']
 
