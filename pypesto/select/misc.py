@@ -19,7 +19,7 @@ def model_to_pypesto_problem(
     model: Model,
     objective: Objective = None,
     x_guesses: Iterable[Dict[str, float]] = None,
-    hierarchical: Bool = False
+    hierarchical: bool = False
 ) -> Problem:
     """Create a pyPESTO problem from a PEtab Select model.
 
@@ -75,7 +75,7 @@ def hier_model_to_pypesto_problem(
     model: Model,
     objective: Objective = None,
     x_guesses: Iterable[Dict[str, float]] = None,
-    hierarchical = True,
+    hierarchical: bool = True,
 ) -> Problem:
     """Create a pyPESTO problem from a PEtab Select model.
 
@@ -111,7 +111,7 @@ def correct_x_guesses(
     x_guesses: Iterable[Dict[str, float]],
     model: Model,
     petab_problem: petab.Problem = None,
-    hierarchical = False
+    hierarchical: bool = False
 ):
     """Fix startpoint guesses passed between models of different sizes.
 
