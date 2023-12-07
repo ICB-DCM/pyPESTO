@@ -53,7 +53,7 @@ def model_to_pypesto_problem(
             x_guesses=x_guesses,
             model=model,
             petab_problem=petab_problem,
-            hierarchical=hierarchical
+            hierarchical=hierarchical,
         )
 
     importer = PetabImporter(
