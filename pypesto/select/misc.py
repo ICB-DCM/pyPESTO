@@ -19,6 +19,7 @@ def model_to_pypesto_problem(
     model: Model,
     objective: Objective = None,
     x_guesses: Iterable[Dict[str, float]] = None,
+    hierarchical: Bool = False
 ) -> Problem:
     """Create a pyPESTO problem from a PEtab Select model.
 
@@ -50,9 +51,13 @@ def model_to_pypesto_problem(
             x_guesses=x_guesses,
             model=model,
             petab_problem=petab_problem,
+            hierarchical=hierarchical
         )
 
-    importer = PetabImporter(petab_problem)
+    importer = PetabImporter(
+        petab_problem, 
+        hierarchical=hierarchical
+    )
     if objective is None:
         amici_model = importer.create_model(
             non_estimated_parameters_as_constants=False,
@@ -66,11 +71,47 @@ def model_to_pypesto_problem(
     )
     return pypesto_problem
 
+def hier_model_to_pypesto_problem(
+    model: Model,
+    objective: Objective = None,
+    x_guesses: Iterable[Dict[str, float]] = None,
+    hierarchical = True,
+) -> Problem:
+    """Create a pyPESTO problem from a PEtab Select model.
+
+    Parameters
+    ----------
+    model:
+        The model.
+    objective:
+        The pyPESTO objective.
+    x_guesses:
+        Startpoints to be used in the multi-start optimization. For example,
+        this could be the maximum likelihood estimate from another model.
+        Each dictionary has parameter IDs as keys, and parameter values as
+        values.
+        Values in `x_guess` for parameters that are not estimated will be
+        ignored and replaced with their value from the PEtab Select model, if
+        defined, else their nominal value in the PEtab parameters table.
+
+    Returns
+    -------
+    Problem
+        The pyPESTO select problem.
+    """
+    pypesto_problem = model_to_pypesto_problem(
+        model=model,
+        objective=objective,
+        x_guesses=x_guesses,
+        hierarchical=hierarchical
+    )
+    return pypesto_problem
 
 def correct_x_guesses(
     x_guesses: Iterable[Dict[str, float]],
     model: Model,
     petab_problem: petab.Problem = None,
+    hierarchical = False
 ):
     """Fix startpoint guesses passed between models of different sizes.
 
@@ -98,6 +139,10 @@ def correct_x_guesses(
         for x_guess in x_guesses:
             corrected_x_guess = []
             for parameter_id in petab_problem.parameter_df.index:
+                if hierarchical:
+                    if not pd.isna(petab_problem.parameter_df.loc[parameter_id, "parameterType"]):
+                        continue
+
                 # Use the `x_guess` value, if the parameter is to be estimated.
                 if (
                     petab_problem.parameter_df[ESTIMATE].loc[parameter_id] == 1
