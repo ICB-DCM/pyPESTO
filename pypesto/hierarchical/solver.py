@@ -350,13 +350,14 @@ class NumericalInnerSolver(InnerSolver):
         """Sample startpoints for the numerical optimization.
 
         Samples the startpoints for the numerical optimization from a
-        log-uniform distribution.
+        log-uniform distribution using the symmetric logarithmic scale.
 
         Parameters
         ----------
+        problem:
+            The inner problem to solve.
         pars:
             The inner parameters to sample startpoints for.
-
         Returns
         -------
         The sampled startpoints appended to the cached startpoints.
@@ -380,19 +381,19 @@ class NumericalInnerSolver(InnerSolver):
             [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
         )
 
-        def log_transformation_function(x):
+        def symlog(x):
             return np.sign(x) * np.log10(np.abs(x) + 1)
 
-        def inverse_log_transformation_function(x):
-            return np.sign(x) * (10 ** np.abs(x) - 1)
+        def inverse_symlog(x):
+            return np.sign(x) * (np.power(10, np.abs(x)) - 1)
 
         # Sample startpoints from a log-uniform distribution
         startpoints = np.random.uniform(
-            low=log_transformation_function(lb),
-            high=log_transformation_function(ub),
+            low=symlog(lb),
+            high=symlog(ub),
             size=(n_samples, len(pars)),
         )
-        startpoints = inverse_log_transformation_function(startpoints)
+        startpoints = inverse_symlog(startpoints)
 
         # Stack the sampled startpoints with the cached startpoints
         if self.x_guesses is not None:

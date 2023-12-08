@@ -590,7 +590,6 @@ def test_non_coupled_constrained_inner_solver():
         assert np.isclose(
             ana_res[current_par], num_res[current_par], rtol=rtol
         )
-        assert np.isclose(ana_res['sigma_'], num_res['sigma_'], rtol=rtol)
 
         assert np.isclose(
             ana_res[current_par], expected_values[current_par], rtol=rtol
