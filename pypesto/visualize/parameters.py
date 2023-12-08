@@ -396,8 +396,11 @@ def handle_inputs(
         # set bounds for inner parameters
         from ..hierarchical.calculator import HierarchicalAmiciCalculator
 
-        inner_calculator = result.problem.objective.calculator
-        if isinstance(inner_calculator, HierarchicalAmiciCalculator):
+        # Check if objective has a calculator attribute
+        if hasattr(result.problem.objective, 'calculator') and isinstance(
+            inner_calculator := result.problem.objective.calculator,
+            HierarchicalAmiciCalculator,
+        ):
             inner_bounds = np.array(
                 [
                     inner_calculator.inner_problem.xs[inner_name].get_bounds()
