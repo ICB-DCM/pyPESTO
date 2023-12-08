@@ -276,6 +276,9 @@ def delete_nan_inf(
         if np.isfinite(fvals).any():
             finite_indices = np.where(finite_fvals)[0]
             x = np.array(itemgetter(*finite_indices)(x))
+            # itemgetter does not return list for single element
+            if len(x.shape) == 1:
+                x = x.reshape((1, x.shape[0]))
         else:
             # If none of the fvals are finite we try to construct an
             # empty np.ndarray with the correct dimension (other functions rely
