@@ -273,8 +273,12 @@ class NumericalInnerSolver(InnerSolver):
 
         x_guesses = self.sample_startpoints(problem, pars)
 
-        lb = np.array([x.lb for x in pars])
-        ub = np.array([x.ub for x in pars])
+        lb = np.array(
+            [x.lb if x.lb != -np.inf else self.dummy_lb for x in pars]
+        )
+        ub = np.array(
+            [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
+        )
 
         x_names = [x.inner_parameter_id for x in pars]
         data = problem.data
