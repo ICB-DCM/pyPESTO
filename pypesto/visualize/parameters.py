@@ -11,6 +11,7 @@ from matplotlib.ticker import MaxNLocator
 from pypesto.util import delete_nan_inf
 
 from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
+from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -394,8 +395,19 @@ def handle_inputs(
             for inner_xs_idx in inner_xs
         ]
         # set bounds for inner parameters
-        inner_lb = np.full(len(inner_xs_names), -np.inf)
-        inner_ub = np.full(len(inner_xs_names), np.inf)
+        inner_calculator = result.problem.objective.calculator
+        if isinstance(inner_calculator, HierarchicalAmiciCalculator):
+            inner_bounds = np.array(
+                [
+                    inner_calculator.inner_problem.xs[inner_name].get_bounds()
+                    for inner_name in inner_xs_names
+                ]
+            )
+            inner_lb = inner_bounds[:, 0]
+            inner_ub = inner_bounds[:, 1]
+        else:
+            inner_lb = np.full(len(inner_xs_names), -np.inf)
+            inner_ub = np.full(len(inner_xs_names), np.inf)
     else:
         inner_xs = None
     # parse indices which should be plotted

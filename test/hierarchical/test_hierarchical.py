@@ -399,7 +399,7 @@ def test_numerical_inner_solver():
     """Test numerically-solved hierarchical inner parameters."""
     inner_problem, expected_values, simulation = inner_problem_exp()
     # Set seed for reproducibility
-    np.random.seed(0)
+    np.random.seed(1)
 
     dummy_sigma = np.ones(simulation.shape)
 
