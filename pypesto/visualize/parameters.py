@@ -269,7 +269,6 @@ def parameters_lowlevel(
         The plot axes.
     """
     # parse input
-    xs = np.array(xs)
     fvals = np.array(fvals)
     # remove nan or inf values in fvals and xs
     xs, fvals = delete_nan_inf(

@@ -6,7 +6,8 @@ Package-wide utilities.
 
 """
 from numbers import Number
-from typing import Any, Callable, Optional, Tuple, Union
+from operator import itemgetter
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from scipy import cluster
@@ -241,7 +242,7 @@ def assign_clusters(vals):
 
 def delete_nan_inf(
     fvals: np.ndarray,
-    x: Optional[np.ndarray] = None,
+    x: Optional[Sequence[Union[np.ndarray, list[float]]]] = None,
     xdim: Optional[int] = 1,
     magnitude_bound: Optional[float] = np.inf,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -272,16 +273,14 @@ def delete_nan_inf(
     fvals = np.asarray(fvals)
     finite_fvals = np.isfinite(fvals) & (np.absolute(fvals) < magnitude_bound)
     if x is not None:
-        # if we start out with a list of x, the x corresponding
-        # to finite fvals may be None, so we cannot stack the x before taking
-        # subindexing
-        # If none of the fvals are finite, np.vstack will fail and np.take
-        # will not yield the correct dimension, so we try to construct an
-        # empty np.ndarray with the correct dimension (other functions rely
-        # on x.shape[1] to be of correct dimension)
         if np.isfinite(fvals).any():
-            x = np.vstack(np.take(x, np.where(finite_fvals)[0], axis=0))
+            finite_indices = np.where(finite_fvals)[0]
+            x = np.array(itemgetter(*finite_indices)(x))
         else:
+            # If none of the fvals are finite we try to construct an
+            # empty np.ndarray with the correct dimension (other functions rely
+            # on x.shape[1] to be of correct dimension)
+            x = np.array(x)
             x = np.empty(
                 (
                     0,
