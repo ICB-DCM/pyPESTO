@@ -345,6 +345,9 @@ class NumericalInnerSolver(InnerSolver):
     ):
         """Sample startpoints for the numerical optimization.
 
+        Samples the startpoints for the numerical optimization from a
+        log-uniform distribution.
+
         Parameters
         ----------
         pars:
@@ -366,17 +369,28 @@ class NumericalInnerSolver(InnerSolver):
         if n_samples <= 0:
             return self.x_guesses
 
-        sampling_lb = np.array(
+        lb = np.array(
             [x.lb if x.lb != -np.inf else self.dummy_lb for x in pars]
         )
-        sampling_ub = np.array(
+        ub = np.array(
             [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
         )
 
-        startpoints = np.random.uniform(
-            sampling_lb, sampling_ub, size=(n_samples, len(pars))
-        )
+        def log_transformation_function(x):
+            return np.sign(x) * np.log10(np.abs(x) + 1)
 
+        def inverse_log_transformation_function(x):
+            return np.sign(x) * (10 ** np.abs(x) - 1)
+
+        # Sample startpoints from a log-uniform distribution
+        startpoints = np.random.uniform(
+            low=log_transformation_function(lb),
+            high=log_transformation_function(ub),
+            size=(n_samples, len(pars)),
+        )
+        startpoints = inverse_log_transformation_function(startpoints)
+
+        # Stack the sampled startpoints with the cached startpoints
         if self.x_guesses is not None:
             startpoints = np.vstack(
                 (
