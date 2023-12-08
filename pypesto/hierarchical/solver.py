@@ -7,6 +7,7 @@ from ..C import InnerParameterType
 from ..objective import Objective
 from ..optimize import minimize
 from ..problem import Problem
+from .parameter import InnerParameter
 from .problem import InnerProblem, scale_value_dict
 from .util import (
     apply_offset,
@@ -231,6 +232,8 @@ class NumericalInnerSolver(InnerSolver):
 
         ub = np.full(shape=len(pars), fill_value=self.dummy_ub)
 
+        x_guesses = self.sample_startpoints(problem, pars)
+
         x_names = [x.inner_parameter_id for x in pars]
         data = problem.data
 
@@ -263,14 +266,9 @@ class NumericalInnerSolver(InnerSolver):
             objective, lb=lb, ub=ub, x_names=x_names, **self.problem_kwargs
         )
 
-        if self.x_guesses is not None:
-            pypesto_problem.set_x_guesses(
-                self.x_guesses[:, pypesto_problem.x_free_indices]
-            )
-        else:
-            pypesto_problem.set_x_guesses(
-                [list(problem.get_dummy_values(scaled=False).values())]
-            )
+        pypesto_problem.set_x_guesses(
+            x_guesses[:, pypesto_problem.x_free_indices]
+        )
 
         # perform the actual optimization
         result = minimize(pypesto_problem, **self.minimize_kwargs)
@@ -298,3 +296,71 @@ class NumericalInnerSolver(InnerSolver):
             x_opt = scale_value_dict(x_opt, problem)
 
         return x_opt
+
+    def sample_startpoints(
+        self, problem: InnerProblem, pars: List[InnerParameter]
+    ):
+        """Sample startpoints for the numerical optimization.
+
+        Samples the startpoints for the numerical optimization from a
+        log-uniform distribution.
+
+        Parameters
+        ----------
+        pars:
+            The inner parameters to sample startpoints for.
+        Returns
+        -------
+        The sampled startpoints appended to the cached startpoints.
+        """
+        if self.minimize_kwargs['n_starts'] == 1 and self.x_guesses is None:
+            return np.array(
+                [list(problem.get_dummy_values(scaled=False).values())]
+            )
+        elif self.x_guesses is not None:
+            n_samples = self.minimize_kwargs['n_starts'] - len(self.x_guesses)
+        else:
+            n_samples = self.minimize_kwargs['n_starts'] - 1
+
+        if n_samples <= 0:
+            return self.x_guesses
+
+        lb = np.array(
+            [x.lb if x.lb != -np.inf else self.dummy_lb for x in pars]
+        )
+        ub = np.array(
+            [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
+        )
+
+        def log_transformation_function(x):
+            return np.sign(x) * np.log10(np.abs(x) + 1)
+
+        def inverse_log_transformation_function(x):
+            return np.sign(x) * (10 ** np.abs(x) - 1)
+
+        # Sample startpoints from a log-uniform distribution
+        startpoints = np.random.uniform(
+            low=log_transformation_function(lb),
+            high=log_transformation_function(ub),
+            size=(n_samples, len(pars)),
+        )
+        startpoints = inverse_log_transformation_function(startpoints)
+
+        # Stack the sampled startpoints with the cached startpoints
+        if self.x_guesses is not None:
+            startpoints = np.vstack(
+                (
+                    self.x_guesses,
+                    startpoints,
+                )
+            )
+        else:
+            startpoints = np.vstack(
+                (
+                    np.array(
+                        [list(problem.get_dummy_values(scaled=False).values())]
+                    ),
+                    startpoints,
+                )
+            )
+        return startpoints
