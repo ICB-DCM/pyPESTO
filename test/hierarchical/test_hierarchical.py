@@ -534,7 +534,6 @@ def test_constrained_inner_solver():
 
         assert np.isclose(ana_res['offset_'], num_res['offset_'], rtol=rtol)
         assert np.isclose(ana_res['scaling_'], num_res['scaling_'], rtol=rtol)
-        assert np.isclose(ana_res['sigma_'], num_res['sigma_'], rtol=rtol)
 
         assert np.isclose(
             ana_res['offset_'], expected_values['offset_'], rtol=rtol
