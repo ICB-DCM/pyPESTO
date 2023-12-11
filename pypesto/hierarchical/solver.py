@@ -272,6 +272,8 @@ class NumericalInnerSolver(InnerSolver):
         lb = [x.lb for x in pars]
         ub = [x.ub for x in pars]
 
+        x_guesses = self.sample_startpoints(problem, pars)
+
         x_names = [x.inner_parameter_id for x in pars]
         data = problem.data
 
@@ -338,7 +340,7 @@ class NumericalInnerSolver(InnerSolver):
 
     def sample_startpoints(
         self, problem: InnerProblem, pars: List[InnerParameter]
-    ):
+    ) -> np.ndarray:
         """Sample startpoints for the numerical optimization.
 
         Samples the startpoints for the numerical optimization from a
@@ -350,6 +352,7 @@ class NumericalInnerSolver(InnerSolver):
             The inner problem to solve.
         pars:
             The inner parameters to sample startpoints for.
+
         Returns
         -------
         The sampled startpoints appended to the cached startpoints.
@@ -366,26 +369,22 @@ class NumericalInnerSolver(InnerSolver):
         if n_samples <= 0:
             return self.x_guesses
 
-        lb = np.array(
-            [x.lb if x.lb != -np.inf else self.dummy_lb for x in pars]
-        )
-        ub = np.array(
-            [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
-        )
+        lb = np.nan_to_num([x.lb for x in pars], neginf=self.dummy_lb)
+        ub = np.nan_to_num([x.ub for x in pars], posinf=self.dummy_ub)
 
-        def symlog(x):
+        def symlog10(x):
             return np.sign(x) * np.log10(np.abs(x) + 1)
 
-        def inverse_symlog(x):
+        def inverse_symlog10(x):
             return np.sign(x) * (np.power(10, np.abs(x)) - 1)
 
         # Sample startpoints from a log-uniform distribution
         startpoints = np.random.uniform(
-            low=symlog(lb),
-            high=symlog(ub),
+            low=symlog10(lb),
+            high=symlog10(ub),
             size=(n_samples, len(pars)),
         )
-        startpoints = inverse_symlog(startpoints)
+        startpoints = inverse_symlog10(startpoints)
 
         # Stack the sampled startpoints with the cached startpoints
         if self.x_guesses is not None:
