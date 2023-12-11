@@ -96,13 +96,13 @@ class AnalyticalInnerSolver(InnerSolver):
 
         # compute optimal offsets
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
-            if x.coupled:
+            if x.coupled is not None:
                 x_opt[x.inner_parameter_id] = compute_optimal_offset_coupled(
                     data=data, sim=sim, sigma=sigma, mask=x.ixs
                 )
 
                 # calculate the optimal coupled scaling
-                coupled_scaling = x.coupled_parameter
+                coupled_scaling = x.coupled
                 x_opt[
                     coupled_scaling.inner_parameter_id
                 ] = compute_optimal_scaling(
@@ -114,9 +114,9 @@ class AnalyticalInnerSolver(InnerSolver):
                 )
 
                 # check whether they both satisfy their bounds
-                if x.check_within_bounds(
+                if x.is_within_bounds(
                     x_opt[x.inner_parameter_id]
-                ) and coupled_scaling.check_within_bounds(
+                ) and coupled_scaling.is_within_bounds(
                     x_opt[coupled_scaling.inner_parameter_id]
                 ):
                     continue
@@ -139,13 +139,11 @@ class AnalyticalInnerSolver(InnerSolver):
                 x_opt[x.inner_parameter_id] = compute_optimal_offset(
                     data=data, sim=sim, sigma=sigma, mask=x.ixs
                 )
-                # check whether it doesn't satisfy its bound
+                # check if the solution is within bounds
                 # if not, we set it to the unsatisfied bound
-                if not x.check_within_bounds(x_opt[x.inner_parameter_id]):
+                if not x.is_within_bounds(x_opt[x.inner_parameter_id]):
                     x_opt[x.inner_parameter_id] = x.get_bounds()[
-                        x.get_unsatisfied_bound_index(
-                            x_opt[x.inner_parameter_id]
-                        )
+                        x.get_unsatisfied_bound(x_opt[x.inner_parameter_id])
                     ]
 
         # apply offsets
@@ -156,17 +154,15 @@ class AnalyticalInnerSolver(InnerSolver):
 
         # compute non-coupled optimal scalings
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
-            if not x.coupled:
+            if x.coupled is None:
                 x_opt[x.inner_parameter_id] = compute_optimal_scaling(
                     data=data, sim=sim, sigma=sigma, mask=x.ixs
                 )
-                # check whether it doesn't satisfy its bound
+                # check if the solution is within bounds
                 # if not, we set it to the unsatisfied bound
-                if not x.check_within_bounds(x_opt[x.inner_parameter_id]):
+                if not x.is_within_bounds(x_opt[x.inner_parameter_id]):
                     x_opt[x.inner_parameter_id] = x.get_bounds()[
-                        x.get_unsatisfied_bound_index(
-                            x_opt[x.inner_parameter_id]
-                        )
+                        x.get_unsatisfied_bound(x_opt[x.inner_parameter_id])
                     ]
         # apply scalings
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
@@ -321,7 +317,7 @@ class NumericalInnerSolver(InnerSolver):
             raise RuntimeError(
                 "An optimal inner parameter is on the dummy bound of numerical optimization. "
                 "This means the optimal inner parameter is either "
-                f"extremely large ({self.dummy_ub}) or extremely small ({self.dummy_lb})."
+                f"extremely large (>={self.dummy_ub}) or extremely small (<={self.dummy_lb})."
             )
 
         x_opt = dict(zip(pypesto_problem.x_names, best_par))

@@ -4,7 +4,7 @@ from typing import List
 
 import numpy as np
 
-from ..C import DUMMY_INNER_VALUE, InnerParameterType
+from ..C import DUMMY_INNER_VALUE, LOWER_BOUND, UPPER_BOUND, InnerParameterType
 from .parameter import InnerParameter
 
 
@@ -135,9 +135,6 @@ def compute_optimal_offset(
         # update statistics
         num += np.nansum((data_x - sim_x) / sigma_x**2)
         den += np.nansum(1 / sigma_x**2)
-    # NOTE: Changing `compute_optimal...` functions was necessary so that the
-    # the data doesn't need to be constantly copied when calculating the
-    # optimal scaling and offset multiple times. # TODO remove
     return get_finite_quotient(
         numerator=num,
         denominator=den,
@@ -299,11 +296,13 @@ def compute_bounded_optimal_scaling_offset_coupled(
     Computes the optimal scaling and offset of a constrained optimization in
     case the unconstrained optimization yields a value outside the bounds.
     We know the optimal solution then lies on the boundary of the bounds.
-    If both parameters are unsatisfied, we need to check 2 unconstrained
-    problems, and evaluate at 3 edge points. Otherwise, if only one parameter
-    is unsatisfied, we need to check 1 unconstrained problem, and evaluate at
-    2 edge points. We then return the candidate point with the lowest objective
-    value.
+    In the 2D offset-scaling bounded (rectangular) space, after unconstrained
+    optimization, if only one parameter is outside the bounds, then there is
+    one active edge (constraint) of the rectangle. We perform optimization on
+    this edge that is unconstrained in the other parameter. If this new optimum
+    is outside the bounds of the other parameter, the nearest vertex is chosen
+    as the optimum. If both parameters are outside the bounds, then there are
+    two active edges, which are optimized independently as above, then compared.
 
     Parameters
     ----------
@@ -339,93 +338,83 @@ def compute_bounded_optimal_scaling_offset_coupled(
     b_bounds = b.get_bounds()
 
     # Get unsatisfied bounds
-    s_unsatisfied = s.get_unsatisfied_bound_index(s_opt_value)
-    b_unsatisfied = b.get_unsatisfied_bound_index(b_opt_value)
+    s_unsatisfied = s.get_unsatisfied_bound(s_opt_value)
+    b_unsatisfied = b.get_unsatisfied_bound(b_opt_value)
 
     # If both parameters are unsatisfied, we need to check 2
-    # unconstrained problems, and evaluate at 3 boundary points
+    # unconstrained problems, clip the solutions to the bounds, and
+    # choose the one with the lowest objective value
     if s_unsatisfied is not None and b_unsatisfied is not None:
-        candidate_points = [
-            (s_bounds[s_unsatisfied], b_bounds[b_unsatisfied]),
-            (s_bounds[s_unsatisfied], b_bounds[1 - b_unsatisfied]),
-            (s_bounds[1 - s_unsatisfied], b_bounds[b_unsatisfied]),
-        ]
-
         # Solve the two unconstrained problems
-        candidate_optimal_solutions = [
+        candidate_points = [
             (
                 s_bounds[s_unsatisfied],
-                compute_optimal_offset(
-                    data, sim, sigma, s.ixs, s_bounds[s_unsatisfied]
+                np.clip(
+                    compute_optimal_offset(
+                        data, sim, sigma, s.ixs, s_bounds[s_unsatisfied]
+                    ),
+                    b_bounds[LOWER_BOUND],
+                    b_bounds[UPPER_BOUND],
                 ),
             ),
             (
-                compute_optimal_scaling(
-                    data, sim, sigma, s.ixs, b_bounds[b_unsatisfied]
+                np.clip(
+                    compute_optimal_scaling(
+                        data, sim, sigma, s.ixs, b_bounds[b_unsatisfied]
+                    ),
+                    s_bounds[LOWER_BOUND],
+                    s_bounds[UPPER_BOUND],
                 ),
                 b_bounds[b_unsatisfied],
             ),
         ]
 
-        # Check if the unconstrained solutions are in the bounds
-        # if so, add then to the candidate points
-        for candidate_optimal_solution in candidate_optimal_solutions:
-            if s.check_within_bounds(
-                candidate_optimal_solution[0]
-            ) and b.check_within_bounds(candidate_optimal_solution[1]):
-                candidate_points.append(candidate_optimal_solution)
-    # If only one parameter is unsatisfied, we need to check 1
-    # unconstrained problem, and evaluate at 2 boundary points
-    elif s_unsatisfied is not None:
-        candidate_points = [
-            (s_bounds[s_unsatisfied], b_bounds[0]),
-            (s_bounds[s_unsatisfied], b_bounds[1]),
+        # Evaluate the objective function at the candidate points
+        candidate_objective_values = [
+            compute_nllh(
+                data=relevant_data,
+                sim=[
+                    sim_i * candidate_point[0] + candidate_point[1]
+                    for sim_i in relevant_sim
+                ],
+                sigma=sigma,
+            )
+            for candidate_point in candidate_points
+        ]
+        # The constrained solution is the candidate point with the lowest
+        # objective value
+        constrained_solution = candidate_points[
+            np.argmin(candidate_objective_values)
         ]
 
+    # If only one parameter is unsatisfied, we need to solve a
+    # unconstrained problem, clipped to its boundary
+    elif s_unsatisfied is not None:
         # Solve the unconstrained problem
-        candidate_optimal_solution = (
+        constrained_solution = (
             s_bounds[s_unsatisfied],
-            compute_optimal_offset(
-                data, sim, sigma, s.ixs, s_bounds[s_unsatisfied]
+            np.clip(
+                compute_optimal_offset(
+                    data, sim, sigma, s.ixs, s_bounds[s_unsatisfied]
+                ),
+                b_bounds[LOWER_BOUND],
+                b_bounds[UPPER_BOUND],
             ),
         )
-        # Check if the unconstrained solution is in the bounds
-        # if so, add then to the candidate points
-        if b.check_within_bounds(candidate_optimal_solution[1]):
-            candidate_points.append(candidate_optimal_solution)
     elif b_unsatisfied is not None:
-        candidate_points = [
-            (s_bounds[0], b_bounds[b_unsatisfied]),
-            (s_bounds[1], b_bounds[b_unsatisfied]),
-        ]
-
         # Solve the unconstrained problem
-        candidate_optimal_solution = (
-            compute_optimal_scaling(
-                data, sim, sigma, s.ixs, b_bounds[b_unsatisfied]
+        constrained_solution = (
+            np.clip(
+                compute_optimal_scaling(
+                    data, sim, sigma, s.ixs, b_bounds[b_unsatisfied]
+                ),
+                s_bounds[LOWER_BOUND],
+                s_bounds[UPPER_BOUND],
             ),
             b_bounds[b_unsatisfied],
         )
-        # Check if the unconstrained solution is in the bounds
-        # if so, add then to the candidate points
-        if s.check_within_bounds(candidate_optimal_solution[0]):
-            candidate_points.append(candidate_optimal_solution)
 
-    # Evaluate the objective function at the candidate points
-    candidate_objective_values = [
-        compute_nllh(
-            data=relevant_data,
-            sim=[
-                sim_i * candidate_point[0] + candidate_point[1]
-                for sim_i in relevant_sim
-            ],
-            sigma=sigma,
-        )
-        for candidate_point in candidate_points
-    ]
-
-    # Return the candidate point with the lowest objective value
-    return candidate_points[np.argmin(candidate_objective_values)]
+    return constrained_solution
 
 
 def compute_nllh(

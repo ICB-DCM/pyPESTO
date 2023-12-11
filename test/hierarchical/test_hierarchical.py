@@ -361,10 +361,8 @@ def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
     ]
 
     if add_scaling and add_offset:
-        inner_parameters[0].coupled = True
-        inner_parameters[0].coupled_parameter = inner_parameters[1]
-        inner_parameters[1].coupled = True
-        inner_parameters[1].coupled_parameter = inner_parameters[0]
+        inner_parameters[0].coupled = inner_parameters[1]
+        inner_parameters[1].coupled = inner_parameters[0]
 
     inner_problem = InnerProblem(xs=inner_parameters, data=[data])
 
@@ -473,7 +471,7 @@ def test_constrained_inner_solver():
         {'scaling_': 6, 'offset_': 3},
         {'scaling_': 4, 'offset_': 1},
         {
-            'scaling_': 4,
+            'scaling_': 4,  # all_lb[2][0],
             'offset_': np.clip(
                 compute_optimal_offset(
                     data=inner_problem.data,
@@ -482,8 +480,8 @@ def test_constrained_inner_solver():
                     mask=[np.full(simulation.shape, True)],
                     optimal_scaling=4.0,
                 ),
-                1,
-                3,
+                1,  # all_lb[2][1],
+                3,  # all_ub[2][1],
             ),
         },
         {
@@ -495,10 +493,10 @@ def test_constrained_inner_solver():
                     mask=[np.full(simulation.shape, True)],
                     optimal_offset=3.0,
                 ),
-                4,
-                6,
+                4,  # all_lb[3][0],
+                6,  # all_ub[3][0],
             ),
-            'offset_': 3,
+            'offset_': 3,  # all_lb[3][1],
         },
     ]
 

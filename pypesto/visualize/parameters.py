@@ -10,7 +10,13 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
+from ..C import (
+    INNER_PARAMETERS,
+    LOWER_BOUND,
+    RGBA,
+    UPPER_BOUND,
+    WATERFALL_MAX_VALUE,
+)
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -382,16 +388,16 @@ def handle_inputs(
     ]
     if any(inner_xs):
         # search for first non-empty inner_xs to obtain inner_xs_names
-        for inner_xs_idx in inner_xs:
-            if inner_xs_idx is not None:
-                inner_xs_names = list(inner_xs_idx.keys())
+        for inner_x in inner_xs:
+            if inner_x is not None:
+                inner_xs_names = list(inner_x.keys())
                 break
         # fill inner_xs with nan if no inner_xs are available
         inner_xs = [
             np.full(len(inner_xs_names), np.nan)
-            if inner_xs_idx is None
-            else list(inner_xs_idx.values())
-            for inner_xs_idx in inner_xs
+            if inner_x is None
+            else list(inner_x.values())
+            for inner_x in inner_xs
         ]
         # set bounds for inner parameters
         from ..hierarchical.calculator import HierarchicalAmiciCalculator
@@ -401,14 +407,18 @@ def handle_inputs(
             inner_calculator := result.problem.objective.calculator,
             HierarchicalAmiciCalculator,
         ):
-            inner_bounds = np.array(
+            all_inner_bounds = np.array(
                 [
                     inner_calculator.inner_problem.xs[inner_name].get_bounds()
                     for inner_name in inner_xs_names
                 ]
             )
-            inner_lb = inner_bounds[:, 0]
-            inner_ub = inner_bounds[:, 1]
+            inner_lb = [
+                inner_bounds[LOWER_BOUND] for inner_bounds in all_inner_bounds
+            ]
+            inner_ub = [
+                inner_bounds[UPPER_BOUND] for inner_bounds in all_inner_bounds
+            ]
         else:
             inner_lb = np.full(len(inner_xs_names), -np.inf)
             inner_ub = np.full(len(inner_xs_names), np.inf)

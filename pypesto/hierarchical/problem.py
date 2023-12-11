@@ -243,6 +243,14 @@ def inner_problem_from_petab_problem(
         )
     }
 
+    # Check each group is of length 2
+    for group in coupled_pars:
+        if len(group) != 2:
+            raise ValueError(
+                f"Expected exactly 2 parameters in group {group}: a scaling "
+                f"and an offset parameter."
+            )
+
     id_to_par = {par.inner_parameter_id: par for par in inner_parameters}
 
     # assign coupling
@@ -254,13 +262,10 @@ def inner_problem_from_petab_problem(
             continue
         for group in coupled_pars:
             if par.inner_parameter_id in group:
-                par.coupled = True
                 coupled_parameter_id = group[
                     group.index(par.inner_parameter_id) - 1
                 ]
-                # NOTE: this will work with only at most 2 observable parameters
-                # for scaling and offset, there will never be more than 2
-                par.coupled_parameter = id_to_par[coupled_parameter_id]
+                par.coupled = id_to_par[coupled_parameter_id]
                 break
 
     return AmiciInnerProblem(xs=inner_parameters, data=data, edatas=edatas)

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import numpy as np
 
@@ -24,10 +24,9 @@ class InnerParameter:
     Attributes
     ----------
     coupled:
-        Whether the inner parameter is part of an observable that has both
-        an offset and scaling inner parameter.
-    coupled_parameter:
-        The coupled parameter, if any.
+        If the inner parameter is part of an observable that has both
+        an offset and scaling inner parameter, this attribute points to
+        the other inner parameter. Otherwise, it is None.
     dummy_value:
         Value to be used when the optimal parameter is not yet known
         (in particular to simulate unscaled observables).
@@ -64,8 +63,7 @@ class InnerParameter:
         See class attributes.
         """
         self.inner_parameter_id: str = inner_parameter_id
-        self.coupled = False
-        self.coupled_parameter: InnerParameter = None
+        self.coupled: InnerParameter = None
         self.inner_parameter_type: str = inner_parameter_type
 
         if scale not in {LIN, LOG, LOG10}:
@@ -123,20 +121,20 @@ class InnerParameter:
                 f"All expected parameter bounds:\n{INNER_PARAMETER_BOUNDS}"
             )
 
-    def check_within_bounds(self, value):
+    def is_within_bounds(self, value):
         """Check whether a value is within the bounds."""
         if value < self.lb or value > self.ub:
             return False
         return True
 
-    def get_unsatisfied_bound_index(self, value):
+    def get_unsatisfied_bound(self, value) -> Optional[str]:
         """Get the unsatisfied bound index, if any."""
         if value < self.lb:
-            return 0
+            return LOWER_BOUND
         elif value > self.ub:
-            return 1
+            return UPPER_BOUND
         return None
 
-    def get_bounds(self):
+    def get_bounds(self) -> dict:
         """Get the bounds."""
-        return (self.lb, self.ub)
+        return {LOWER_BOUND: self.lb, UPPER_BOUND: self.ub}
