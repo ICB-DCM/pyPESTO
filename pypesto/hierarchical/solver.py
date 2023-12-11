@@ -235,6 +235,8 @@ class NumericalInnerSolver(InnerSolver):
         self.x_guesses = None
         self.dummy_lb = -1e20
         self.dummy_ub = +1e20
+        self.user_specified_lb = None
+        self.user_specified_ub = None
 
     def initialize(self):
         """(Re-)initialize the solver."""
@@ -265,9 +267,16 @@ class NumericalInnerSolver(InnerSolver):
             Whether to scale the results to the parameter scale specified in
             ``problem``.
         """
-        pars = problem.xs.values()
+        pars = list(problem.xs.values())
 
-        x_guesses = self.sample_startpoints(problem, pars)
+        # This has to be done only once
+        if self.user_specified_lb is None or self.user_specified_ub is None:
+            self.user_specified_lb = [
+                i for i in range(len(pars)) if pars[i].lb != -np.inf
+            ]
+            self.user_specified_ub = [
+                i for i in range(len(pars)) if pars[i].ub != np.inf
+            ]
 
         lb = [x.lb for x in pars]
         ub = [x.ub for x in pars]
@@ -313,13 +322,25 @@ class NumericalInnerSolver(InnerSolver):
         result = minimize(pypesto_problem, **self.minimize_kwargs)
         best_par = result.optimize_result.list[0]['x']
 
-        # Check if any optimized parameter is on the dummy bound
-        # If so, raise an error
-        if any(best_par == self.dummy_lb) or any(best_par == self.dummy_ub):
+        # Check if the index of an optimized parameter on the dummy bound
+        # is not in the list of specified bounds. If so, raise an error.
+        if any(
+            (
+                i not in self.user_specified_lb
+                for i, x in enumerate(best_par)
+                if x == self.dummy_lb
+            )
+        ) or any(
+            (
+                i not in self.user_specified_ub
+                for i, x in enumerate(best_par)
+                if x == self.dummy_ub
+            )
+        ):
             raise RuntimeError(
-                "An optimal inner parameter is on the dummy bound of numerical optimization. "
-                "This means the optimal inner parameter is either "
-                f"extremely large (>={self.dummy_ub}) or extremely small (<={self.dummy_lb})."
+                f"An optimal inner parameter is on the defualt dummy bound of numerical optimization. "
+                f"This means the optimal inner parameter is either extremely large (>={self.dummy_ub})"
+                f"or extremely small (<={self.dummy_lb}). Consider changing the inner parameter bounds."
             )
 
         x_opt = dict(zip(pypesto_problem.x_names, best_par))
