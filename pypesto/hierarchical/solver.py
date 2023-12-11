@@ -328,12 +328,8 @@ class NumericalInnerSolver(InnerSolver):
         if n_samples <= 0:
             return self.x_guesses
 
-        lb = np.array(
-            [x.lb if x.lb != -np.inf else self.dummy_lb for x in pars]
-        )
-        ub = np.array(
-            [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
-        )
+        lb = np.nan_to_num([x.lb for x in pars], neginf=self.dummy_lb)
+        ub = np.nan_to_num([x.ub for x in pars], posinf=self.dummy_ub)
 
         def symlog10(x):
             return np.sign(x) * np.log10(np.abs(x) + 1)
