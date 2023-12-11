@@ -391,7 +391,8 @@ def handle_inputs(
             HierarchicalAmiciCalculator,
         )
     ):
-        inner_xs_names = inner_calculator.inner_problem.get_x_names()
+        inner_xs_names = inner_calculator.inner_problem.get_x_ids()
+        # replace None with a list of nans
         inner_xs = [
             [np.nan for i in range(len(inner_xs_names))]
             if inner_xs_idx is None
@@ -399,8 +400,7 @@ def handle_inputs(
             for inner_xs_idx in inner_xs
         ]
         # set bounds for inner parameters
-        inner_lb = np.full(len(inner_xs_names), -np.inf)
-        inner_ub = np.full(len(inner_xs_names), np.inf)
+        inner_lb, inner_ub = inner_calculator.inner_problem.get_bounds()
     else:
         inner_xs = None
 
