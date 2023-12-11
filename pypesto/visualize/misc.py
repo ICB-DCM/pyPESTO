@@ -34,9 +34,7 @@ def get_simulation_rdatas(
     simulation_timepoints: np.ndarray = None,
 ) -> List[amici.ReturnData]:
     """
-    Visualize the time trajectory of the model with given timepoints.
-
-    It does this by calling the amici plotting routines.
+    Get simulation results for a given optimization result and timepoints.
 
     Parameters
     ----------
