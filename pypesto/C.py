@@ -91,10 +91,6 @@ INNER_RDATAS = 'inner_rdatas'
 PARAMETER_TYPE = 'parameterType'
 X_INNER_OPT = 'x_inner_opt'
 
-# Constants for the result object
-INNER_PARAMETER_NAMES = 'inner_parameter_names'
-INNER_PARAMETER_VALUES = 'inner_parameter_values'
-
 
 class InnerParameterType(str, Enum):
     """Specifies different inner parameter types."""

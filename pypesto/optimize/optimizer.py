@@ -11,15 +11,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 import numpy as np
 import scipy.optimize
 
-from ..C import (
-    FVAL,
-    GRAD,
-    INNER_PARAMETER_NAMES,
-    INNER_PARAMETER_VALUES,
-    INNER_PARAMETERS,
-    MODE_FUN,
-    MODE_RES,
-)
+from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES
 from ..history import (
     HistoryOptions,
     NoHistory,
@@ -471,10 +463,7 @@ class ScipyOptimizer(Optimizer):
             message=res.message,
         )
         if hasattr(objective, INNER_PARAMETERS) and objective.inner_parameters:
-            optimizer_result[INNER_PARAMETER_NAMES] = list(
-                problem.objective.inner_parameters.keys()
-            )
-            optimizer_result[INNER_PARAMETER_VALUES] = list(
+            optimizer_result[INNER_PARAMETERS] = list(
                 problem.objective.inner_parameters.values()
             )
 
@@ -1381,10 +1370,7 @@ class FidesOptimizer(Optimizer):
             hasattr(problem.objective, INNER_PARAMETERS)
             and problem.objective.inner_parameters
         ):
-            optimizer_result[INNER_PARAMETER_NAMES] = list(
-                problem.objective.inner_parameters.keys()
-            )
-            optimizer_result[INNER_PARAMETER_VALUES] = list(
+            optimizer_result[INNER_PARAMETERS] = list(
                 problem.objective.inner_parameters.values()
             )
 

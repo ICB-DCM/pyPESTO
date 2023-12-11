@@ -123,10 +123,6 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 inner_result[HESS] = np.full(
                     shape=(dim, dim), fill_value=np.nan
                 )
-            if 2 in sensi_orders:
-                inner_result[HESS] = np.full(
-                    shape=(len(x_ids), len(x_ids)), fill_value=np.nan
-                )
             return inner_result
 
         inner_parameters = self.inner_solver.solve(

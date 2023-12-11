@@ -10,12 +10,7 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import (
-    INNER_PARAMETER_NAMES,
-    INNER_PARAMETER_VALUES,
-    RGBA,
-    WATERFALL_MAX_VALUE,
-)
+from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -383,15 +378,20 @@ def handle_inputs(
     xs = result.optimize_result.x
     # retrieve inner parameters if available
     inner_xs = [
-        res.get(INNER_PARAMETER_VALUES, None)
-        for res in result.optimize_result.list
+        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
     ]
-    if any(inner_xs):
-        inner_xs_names = next(
-            list(res[INNER_PARAMETER_NAMES])
-            for res in result.optimize_result.list
-            if res[INNER_PARAMETER_NAMES] is not None
+
+    from ..hierarchical.calculator import HierarchicalAmiciCalculator
+
+    if (
+        any(inner_xs)
+        and hasattr(result.problem.objective, 'calculator')
+        and isinstance(
+            inner_calculator := result.problem.objective.calculator,
+            HierarchicalAmiciCalculator,
         )
+    ):
+        inner_xs_names = inner_calculator.inner_problem.get_x_names()
         inner_xs = [
             [np.nan for i in range(len(inner_xs_names))]
             if inner_xs_idx is None
@@ -403,6 +403,7 @@ def handle_inputs(
         inner_ub = np.full(len(inner_xs_names), np.inf)
     else:
         inner_xs = None
+
     # parse indices which should be plotted
     if start_indices is not None:
         start_indices = process_start_indices(result, start_indices)

@@ -117,6 +117,10 @@ class InnerProblem:
         """
         return len(self.xs) == 0
 
+    def get_x_names(self) -> List[str]:
+        """Get names of inner parameters."""
+        return [x.inner_parameter_id for x in self.xs.values()]
+
 
 class AmiciInnerProblem(InnerProblem):
     """
