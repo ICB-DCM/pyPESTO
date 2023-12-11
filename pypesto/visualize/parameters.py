@@ -388,15 +388,13 @@ def handle_inputs(
     ]
     if any(inner_xs):
         inner_xs_names = next(
-            list(inner_xs_idx.keys())
-            for inner_xs_idx in inner_xs
-            if inner_xs_idx is not None
+            list(inner_x.keys()) for inner_x in inner_xs if inner_x is not None
         )
         inner_xs = [
             [np.nan for i in range(len(inner_xs_names))]
-            if inner_xs_idx is None
-            else list(inner_xs_idx.values())
-            for inner_xs_idx in inner_xs
+            if inner_x is None
+            else list(inner_x.values())
+            for inner_x in inner_xs
         ]
         # set bounds for inner parameters
         from ..hierarchical.calculator import HierarchicalAmiciCalculator
