@@ -202,7 +202,10 @@ def time_trajectory_model(
         parameter_mapping = problem.objective.parameter_mapping
         edatas = copy.deepcopy(problem.objective.edatas)
         amici_model = problem.objective.amici_model
-        amici_solver = problem.objective.amici_solver
+
+        # disable sensitivities to improve computation time
+        amici_solver = copy.deepcopy(problem.objective.amici_solver)
+        amici_solver.setSensitivityOrder(amici.SensitivityOrder.none)
 
         for j in range(len(edatas)):
             edatas[j].setTimepoints(timepoints)
