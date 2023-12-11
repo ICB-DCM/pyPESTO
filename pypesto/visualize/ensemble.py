@@ -19,9 +19,9 @@ def ensemble_identifiability(
     Visualize identifiablity of parameter ensemble.
 
     Plot an overview about how many parameters hit the parameter bounds based
-    on a ensemble of parameters. confidence intervals/credible ranges are
+    on an ensemble of parameters. confidence intervals/credible ranges are
     computed via the ensemble mean plus/minus 1 standard deviation.
-    This highlevel routine expects a ensemble object as input.
+    This highlevel routine expects an ensemble object as input.
 
     Parameters
     ----------
@@ -44,7 +44,7 @@ def ensemble_identifiability(
     # check how many bounds are actually hit and which ones
     none_hit, lb_hit, ub_hit, both_hit = _prepare_identifiability_plot(id_df)
 
-    # call lowlevel routine whick works with np arrays only
+    # call lowlevel routine which works with np arrays only
     ax = ensemble_identifiability_lowlevel(
         none_hit, lb_hit, ub_hit, both_hit, ax, size
     )
