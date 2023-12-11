@@ -311,6 +311,7 @@ class NumericalInnerSolver(InnerSolver):
             The inner problem to solve.
         pars:
             The inner parameters to sample startpoints for.
+
         Returns
         -------
         The sampled startpoints appended to the cached startpoints.
