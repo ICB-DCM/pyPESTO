@@ -1,7 +1,9 @@
+import copy
 import warnings
 from numbers import Number
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Sequence, Union
 
+import amici
 import numpy as np
 
 from ..C import (
@@ -18,9 +20,104 @@ from ..C import (
     RGBA_MIN,
     RGBA_WHITE,
 )
+from ..hierarchical.calculator import HierarchicalAmiciCalculator
+from ..problem import Problem
 from ..result import Result
 from ..util import assign_clusters, delete_nan_inf
 from .clust_color import assign_colors_for_list
+
+
+def get_simulation_rdatas(
+    result: Union[Result, Sequence[Result]],
+    problem: Problem,
+    start_index: int = 0,
+    simulation_timepoints: np.ndarray = None,
+) -> List[amici.ReturnData]:
+    """
+    Visualize the time trajectory of the model with given timepoints.
+
+    It does this by calling the amici plotting routines.
+
+    Parameters
+    ----------
+    result:
+        The result object from optimization.
+    problem:
+        A pypesto problem.
+    timepoints:
+        Array of timepoints, at which the trajectory will be stored..
+
+    start_index:
+        Index of Optimization run to be plotted. Default is best start.
+    Returns
+    -------
+    rdatas:
+        List of amici.ReturnData objects containing the simulation results.
+    """
+    # add timepoints as needed
+    if simulation_timepoints is None:
+        end_time = max(problem.objective.edatas[0].getTimepoints())
+        simulation_timepoints = np.linspace(start=0, stop=end_time, num=1000)
+
+    # get optimization result
+    parameters = result.optimize_result.list[start_index]['x']
+
+    # reduce vector to only include free indices. Needed downstream.
+    parameters = problem.get_reduced_vector(parameters)
+
+    # simulate with custom timepoints for hierarchical model
+    if isinstance(problem.objective.calculator, HierarchicalAmiciCalculator):
+        # get parameter dictionary
+        x_dct = dict(
+            zip(problem.x_names, result.optimize_result.list[start_index].x)
+        )
+
+        # evaluate objective with return dict = True to get inner parameters
+        ret = problem.objective(
+            parameters, mode='mode_fun', sensi_orders=(0,), return_dict=True
+        )
+
+        # update parameter dictionary with inner parameters
+        inner_parameters = ret['inner_parameters']
+        x_dct.update(inner_parameters)
+
+        parameter_mapping = problem.objective.parameter_mapping
+        edatas = copy.deepcopy(problem.objective.edatas)
+        amici_model = problem.objective.amici_model
+
+        # disable sensitivities to improve computation time
+        amici_solver = copy.deepcopy(problem.objective.amici_solver)
+        amici_solver.setSensitivityOrder(amici.SensitivityOrder.none)
+
+        for j in range(len(edatas)):
+            edatas[j].setTimepoints(simulation_timepoints)
+
+        amici.parameter_mapping.fill_in_parameters(
+            edatas=edatas,
+            problem_parameters=x_dct,
+            scaled_parameters=True,
+            parameter_mapping=parameter_mapping,
+            amici_model=amici_model,
+        )
+
+        rdatas = amici.runAmiciSimulations(
+            amici_model,
+            amici_solver,
+            edatas,
+        )
+    else:
+        # set custom timepoints
+        obj = problem.objective.set_custom_timepoints(
+            timepoints_global=simulation_timepoints
+        )
+
+        # evaluate objective with return dict = True to get data
+        ret = obj(
+            parameters, mode='mode_fun', sensi_orders=(0,), return_dict=True
+        )
+        rdatas = ret['rdatas']
+
+    return rdatas
 
 
 def process_result_list(
