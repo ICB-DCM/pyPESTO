@@ -27,6 +27,7 @@ Getting started
 
    example/getting_started.ipynb
    example/custom_objective_function.ipynb
+   example/workflow_comparison.ipynb
 
 PEtab and AMICI
 ---------------
@@ -51,9 +52,9 @@ Algorithms and features
    example/model_selection.ipynb
    example/julia.ipynb
    example/hierarchical.ipynb
-   example/example_ordinal.ipynb
-   example/example_censored.ipynb
-   example/example_nonlinear_monotone.ipynb
+   example/ordinal.ipynb
+   example/censored.ipynb
+   example/nonlinear_monotone.ipynb
 
 Application examples
 --------------------

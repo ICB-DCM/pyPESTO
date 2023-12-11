@@ -9,6 +9,7 @@ from typing import Sequence
 import numpy as np
 import pytest
 import scipy.optimize as so
+from numpy.testing import assert_array_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
@@ -200,6 +201,11 @@ class HistoryTest(unittest.TestCase):
                 'x_names',
                 'editable',
             ]
+            # exitflag and message are not stored in CsvHistory
+            and (
+                not isinstance(start.history, CsvHistory)
+                or a not in ["_exitflag", "_message", "exitflag", "message"]
+            )
         ]
         for attr in history_attributes:
             assert getattr(start.history, attr) == getattr(
@@ -528,7 +534,7 @@ def history(request) -> pypesto.HistoryBase:
     for _ in range(10):
         result = {FVAL: np.random.randn(), GRAD: np.random.randn(7)}
         history.update(np.random.randn(7), (0, 1), 'mode_fun', result)
-    history.finalize()
+    history.finalize(message="some message", exitflag="some flag")
 
     return history
 
@@ -539,6 +545,8 @@ def test_history_properties(history: pypesto.HistoryBase):
     assert history.n_hess == 0
     assert history.n_res == 0
     assert history.n_sres == 0
+    assert history.exitflag == "some flag"
+    assert history.message == "some message"
 
     if not history.implements_trace():
         with pytest.raises(NotImplementedError):
@@ -709,3 +717,51 @@ def test_trim_history():
             fval_trimmed_man.append(fval_i)
             fval_current = fval_i
     assert fval_trace_trimmed == fval_trimmed_man
+
+
+def test_hd5_history_from_other(history: pypesto.HistoryBase):
+    """Check that we can copy different histories to HDF5 and that the re-loaded history matches the original one."""
+    hdf5_file = tempfile.mkstemp(suffix='.h5')[1]
+    pypesto.Hdf5History.from_history(history, hdf5_file, id_="0")
+
+    # write a second time to test `overwrite` argument
+    with pytest.raises(RuntimeError, match="already exists"):
+        pypesto.Hdf5History.from_history(
+            history, hdf5_file, id_="0", overwrite=False
+        )
+    copied = pypesto.Hdf5History.from_history(
+        history, hdf5_file, id_="0", overwrite=True
+    )
+
+    assert copied.n_fval == history.n_fval
+    assert copied.n_grad == history.n_grad
+    assert copied.n_hess == history.n_hess
+    assert copied.n_res == history.n_res
+    assert copied.n_sres == history.n_sres
+    assert copied.exitflag == history.exitflag
+    assert copied.message == history.message
+    assert copied.start_time == history.start_time
+
+    if history.implements_trace():
+        assert_array_almost_equal(copied.get_x_trace(), history.get_x_trace())
+        assert_array_almost_equal(
+            copied.get_fval_trace(), history.get_fval_trace()
+        )
+        assert_array_almost_equal(
+            copied.get_grad_trace(), history.get_grad_trace()
+        )
+        assert_array_almost_equal(
+            copied.get_time_trace(), history.get_time_trace()
+        )
+        assert_array_almost_equal(
+            copied.get_res_trace(), history.get_res_trace()
+        )
+        assert_array_almost_equal(
+            copied.get_sres_trace(), history.get_sres_trace()
+        )
+        assert_array_almost_equal(
+            copied.get_chi2_trace(), history.get_chi2_trace()
+        )
+        assert_array_almost_equal(
+            copied.get_schi2_trace(), history.get_schi2_trace()
+        )

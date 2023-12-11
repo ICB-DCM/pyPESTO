@@ -1,5 +1,5 @@
 import logging
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy as np
 
@@ -15,12 +15,13 @@ logger = logging.getLogger(__name__)
 def walk_along_profile(
     current_profile: ProfilerResult,
     problem: Problem,
-    par_direction: int,
+    par_direction: Literal[1, -1],
     optimizer: Optimizer,
     options: ProfileOptions,
     create_next_guess: Callable,
     global_opt: float,
     i_par: int,
+    max_tries: int = 10,
 ) -> ProfilerResult:
     """
     Compute half a profile.
@@ -47,14 +48,16 @@ def walk_along_profile(
         Handle of the method which creates the next profile point proposal
     i_par:
         index for the current parameter
+    max_tries:
+        If optimization at a given profile point fails, retry optimization
+        ``max_tries`` times with randomly sampled starting points.
 
     Returns
     -------
-    current_profile:
-        The current profile, modified in-place.
+    The current profile, modified in-place.
     """
-    # create variables which are needed during iteration
-    stop_profile = False
+    if par_direction not in (-1, 1):
+        raise AssertionError("par_direction must be -1 or 1")
 
     # while loop for profiling (will be exited by break command)
     while True:
@@ -62,16 +65,17 @@ def walk_along_profile(
         x_now = current_profile.x_path[:, -1]
 
         # check if the next profile point needs to be computed
-        if options.whole_path:
-            stop_profile = (
-                x_now[i_par] * par_direction >= problem.ub_full[[i_par]]
-            )
-        else:
-            stop_profile = (
-                x_now[i_par] * par_direction >= problem.ub_full[[i_par]]
-            ) or (current_profile.ratio_path[-1] < options.ratio_min)
+        # ... check bounds
+        if par_direction == -1 and x_now[i_par] <= problem.lb_full[[i_par]]:
+            break
+        if par_direction == 1 and x_now[i_par] >= problem.ub_full[[i_par]]:
+            break
 
-        if stop_profile:
+        # ... check likelihood ratio
+        if (
+            not options.whole_path
+            and current_profile.ratio_path[-1] < options.ratio_min
+        ):
             break
 
         # compute the new start point for optimization
@@ -85,21 +89,40 @@ def walk_along_profile(
             global_opt,
         )
 
-        # fix current profiling parameter to current value and set
-        # start point
+        # fix current profiling parameter to current value and set start point
         problem.fix_parameters(i_par, x_next[i_par])
-        startpoint = np.array([x_next[i] for i in problem.x_free_indices])
+        startpoint = x_next[problem.x_free_indices]
 
         # run optimization
-        # IMPORTANT: This optimization will need a proper exception
-        # handling (coming soon)
         if startpoint.size > 0:
-            optimizer_result = optimizer.minimize(
-                problem=problem,
-                x0=startpoint,
-                id='0',
-                optimize_options=OptimizeOptions(allow_failed_starts=False),
-            )
+            # number of optimization attempts for the given value of i_par in case
+            #  no finite solution is found
+            for i_optimize_attempt in range(max_tries):
+                optimizer_result = optimizer.minimize(
+                    problem=problem,
+                    x0=startpoint,
+                    id=str(i_optimize_attempt),
+                    optimize_options=OptimizeOptions(
+                        allow_failed_starts=False
+                    ),
+                )
+                if np.isfinite(optimizer_result.fval):
+                    break
+
+                logger.warning(
+                    f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed."
+                )
+                # sample a new starting point for another attempt
+                #  might be preferable to stay close to the previous point, at least initially,
+                #  but for now, we just sample from anywhere within the parameter bounds
+                # alternatively, run multi-start optimization
+                startpoint = problem.startpoint_method(
+                    n_starts=1, problem=problem
+                )[0]
+            else:
+                raise RuntimeError(
+                    f"Computing profile point failed. Could not find a finite solution after {max_tries} attempts."
+                )
         else:
             # if too many parameters are fixed, there is nothing to do ...
             fval = problem.objective(np.array([]))

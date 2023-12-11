@@ -25,8 +25,9 @@ nbs_1=(
   'store.ipynb'
   'synthetic_data.ipynb'
   'hierarchical.ipynb'
-  'example_ordinal.ipynb'
-  'example_nonlinear_monotone.ipynb'
+  'ordinal.ipynb'
+  'censored.ipynb'
+  'nonlinear_monotone.ipynb'
 )
 
 # Sampling notebooks
@@ -52,7 +53,7 @@ fi
 
 run_notebook () {
   # Run a notebook
-  tempfile=$(tempfile)
+  tempfile=$(mktemp)
   jupyter nbconvert \
     --ExecutePreprocessor.timeout=-1 --debug --stdout --execute \
     --to markdown $@ &> $tempfile

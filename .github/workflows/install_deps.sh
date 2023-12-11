@@ -9,8 +9,14 @@ pip install wheel setuptools
 # Used to create local test environments
 pip install tox
 
-# Update apt
-sudo apt-get update
+# Update package lists
+if [ "$(uname)" == "Darwin" ]; then
+  # MacOS
+  :
+else
+  # Linux
+  sudo apt-get update
+fi
 
 # Check arguments
 for par in "$@"; do
@@ -22,8 +28,12 @@ for par in "$@"; do
 
     amici)
       # for amici
-      sudo apt-get install \
-        swig libatlas-base-dev libhdf5-serial-dev
+      if [ "$(uname)" == "Darwin" ]; then
+        brew install swig hdf5 libomp
+      else
+        sudo apt-get install \
+          clang libatlas-base-dev libhdf5-serial-dev libomp-dev swig
+      fi
     ;;
 
     ipopt)

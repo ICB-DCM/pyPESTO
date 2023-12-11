@@ -1,7 +1,7 @@
 """Track optimal values during an optimization."""
 
 import logging
-from typing import Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -46,7 +46,7 @@ class OptimizerHistory:
         Lower and upper bound. Used for checking validity of optimal points.
     generate_from_history:
         If set to true, this function will try to fill attributes of this
-        function based on the provided history.
+        function based on the provided history. Defaults to ``False``.
     """
 
     # optimal point values
@@ -84,25 +84,41 @@ class OptimizerHistory:
     def update(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int],
+        sensi_orders: tuple[int],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """Update history and best found value."""
+        """Update history and best found value.
+
+        Parameters
+        ----------
+        x:
+            Current parameter vector.
+        sensi_orders:
+            Sensitivity orders to be evaluated.
+        mode:
+            Mode of the evaluation.
+        result:
+            Current result.
+        """
         result = add_fun_from_res(result)
         self._update_vals(x, result)
         self.history.update(x, sensi_orders, mode, result)
 
-    def finalize(self, message: str = None, exitflag: int = None):
+    def finalize(
+        self,
+        message: Union[str, None] = None,
+        exitflag: Union[int, None] = None,
+    ):
         """
         Finalize history.
 
         Parameters
         ----------
         message:
-            Optimizer message to be saved.
+            Optimizer message to be saved. Defaults to ``None``.
         exitflag:
-            Optimizer exitflag to be saved.
+            Optimizer exitflag to be saved. Defaults to ``None``.
         """
         self.history.finalize(message=message, exitflag=exitflag)
 
@@ -134,9 +150,9 @@ class OptimizerHistory:
             and not allclose(result[X], self.x_min)
         ):
             # issue a warning, as if this happens, then something may be wrong
-            logger.warn(
+            logger.warning(
                 f"History has a better point {fval} than the current best "
-                "point {self.fval_min}."
+                f"point {self.fval_min}."
             )
             # update everything
             for key in self.MIN_KEYS:
@@ -189,7 +205,7 @@ class OptimizerHistory:
     def _maybe_compute_init_and_min_vals_from_trace(self) -> None:
         """Try to set initial and best function value from trace.
 
-        Only possible if history has a trace.
+        .. note:: Only possible if history has a trace.
         """
         if not len(self.history):
             # nothing to be computed from empty history
@@ -220,7 +236,7 @@ class OptimizerHistory:
 
         Returns
         -------
-        admissible: Whether the point fulfills the problem requirements.
+        Whether the point fulfills the problem requirements.
         """
         return np.all(x <= self.ub) and np.all(x >= self.lb)
 

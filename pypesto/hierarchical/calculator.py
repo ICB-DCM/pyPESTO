@@ -116,9 +116,12 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
         if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
             # if the gradient was requested, we need to provide some value
             # for it
+            dim = len(x_ids)
             if 1 in sensi_orders:
-                inner_result[GRAD] = np.full(
-                    shape=len(x_ids), fill_value=np.nan
+                inner_result[GRAD] = np.full(shape=dim, fill_value=np.nan)
+            if 2 in sensi_orders:
+                inner_result[HESS] = np.full(
+                    shape=(dim, dim), fill_value=np.nan
                 )
             if 2 in sensi_orders:
                 inner_result[HESS] = np.full(

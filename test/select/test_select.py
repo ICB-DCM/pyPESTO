@@ -27,7 +27,7 @@ from pypesto.select.misc import correct_x_guesses
 # Options sent to `pypesto.optimize.optimize.minimize`, to reduce run time.
 minimize_options = {
     'engine': pypesto.engine.MultiProcessEngine(),
-    'n_starts': 10,
+    'n_starts': 20,
     'filename': None,
     'progress_bar': False,
 }

@@ -382,21 +382,18 @@ def handle_inputs(
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
     # retrieve inner parameters if available
-    for res in result.optimize_result.list:
-        if (
-            INNER_PARAMETER_NAMES in res
-            and res[INNER_PARAMETER_NAMES] is not None
-        ):
-            inner_xs_names = list(res[INNER_PARAMETER_NAMES])
-            break
     inner_xs = [
         res.get(INNER_PARAMETER_VALUES, None)
         for res in result.optimize_result.list
     ]
-    if any(inner_xs_idx is not None for inner_xs_idx in inner_xs):
-        # fill inner_xs with nan if no inner_xs are available
+    if any(inner_xs):
+        inner_xs_names = next(
+            list(res[INNER_PARAMETER_NAMES])
+            for res in result.optimize_result.list
+            if res[INNER_PARAMETER_NAMES] is not None
+        )
         inner_xs = [
-            np.full(len(inner_xs_names), np.nan)
+            [np.nan for i in range(len(inner_xs_names))]
             if inner_xs_idx is None
             else np.asarray(inner_xs_idx)
             for inner_xs_idx in inner_xs
@@ -569,7 +566,7 @@ def optimization_scatter(
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
-    # remove all start indices, that encounter an inf value at the start
+    # remove all start indices that encounter an inf value at the start
     # resulting in optimize_result[start]["x"] being None
     start_indices_finite = start_indices[
         [
@@ -578,7 +575,7 @@ def optimization_scatter(
         ]
     ]
     # compare start_indices with start_indices_finite and log a warning
-    if not np.all(start_indices == start_indices_finite):
+    if len(start_indices) != len(start_indices_finite):
         logger.warning(
             'Some start indices were removed due to inf values at the start.'
         )

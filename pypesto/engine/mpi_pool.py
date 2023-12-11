@@ -1,6 +1,6 @@
 """Engines with multi-node parallelization."""
 import logging
-from typing import Any, List
+from typing import Any
 
 import cloudpickle as pickle
 from mpi4py import MPI
@@ -32,17 +32,21 @@ class MPIPoolEngine(Engine):
         super().__init__()
 
     def execute(
-        self, tasks: List[Task], progress_bar: bool = True
-    ) -> List[Any]:
+        self, tasks: list[Task], progress_bar: bool = True
+    ) -> list[Any]:
         """
         Pickle tasks and distribute work to workers.
 
         Parameters
         ----------
         tasks:
-            List of tasks to execute.
+            List of :class:`pypesto.engine.Task` to execute.
         progress_bar:
-            Whether to display a progress bar.
+            Whether to display a progress bar. Defaults to ``True``.
+
+        Returns
+        -------
+        A list of results.
         """
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 

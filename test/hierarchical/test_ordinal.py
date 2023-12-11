@@ -82,7 +82,8 @@ def test_evaluate_objective(inner_options: List[Dict]):
 def test_optimization(inner_options: List[Dict]):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
-
+    # Set seed for reproducibility.
+    np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
         method='L-BFGS-B', options={'maxiter': 10}
     )
@@ -152,10 +153,28 @@ def test_optimal_scaling_calculator_and_objective():
             fim_for_hess=False,
         )
 
+    def inner_calculate(problem, x_dct):
+        return problem.objective.calculator.inner_calculators[0](
+            x_dct=x_dct,
+            sensi_orders=(0, 1),
+            mode=MODE_FUN,
+            amici_model=problem.objective.amici_model,
+            amici_solver=problem.objective.amici_solver,
+            edatas=problem.objective.edatas,
+            n_threads=1,
+            x_ids=petab_problem.x_ids,
+            parameter_mapping=problem.objective.parameter_mapping,
+            fim_for_hess=False,
+        )
+
     x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
 
     calculator_results = {
         method: calculate(problems[method], x_dct=x_dct) for method in methods
+    }
+    inner_calculator_results = {
+        method: inner_calculate(problems[method], x_dct=x_dct)
+        for method in methods
     }
 
     finite_differences = pypesto.objective.FD(
@@ -168,6 +187,17 @@ def test_optimal_scaling_calculator_and_objective():
             1,
         ),
         MODE_FUN,
+    )
+
+    # Check the inner calculator and the inner calculator collector
+    # give the same results.
+    assert np.allclose(
+        inner_calculator_results[STANDARD]['fval'],
+        calculator_results[STANDARD]['fval'],
+    )
+    assert np.allclose(
+        inner_calculator_results[STANDARD]['grad'],
+        calculator_results[STANDARD]['grad'],
     )
 
     # The results of the objective gradient and function value

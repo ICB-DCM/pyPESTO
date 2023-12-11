@@ -9,7 +9,13 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
-from pypesto.C import LIN, MODE_FUN, SCIPY_FUN, InnerParameterType
+from pypesto.C import (
+    INNER_NOISE_PARS,
+    LIN,
+    MODE_FUN,
+    OPTIMIZE_NOISE,
+    InnerParameterType,
+)
 from pypesto.hierarchical.spline_approximation import (
     SplineInnerProblem,
     SplineInnerSolver,
@@ -19,6 +25,8 @@ from pypesto.hierarchical.spline_approximation.parameter import (
 )
 from pypesto.hierarchical.spline_approximation.solver import (
     _calculate_nllh_for_group,
+    _calculate_regularization_for_group,
+    _calculate_regularization_gradient_for_group,
     _calculate_sigma_for_group,
     extract_expdata_using_mask,
     get_monotonicity_measure,
@@ -29,9 +37,13 @@ inner_options = [
     {
         'spline_ratio': spline_ratio,
         'min_diff_factor': min_diff_factor,
+        'regularize_spline': regularize_spline,
+        'regularization_factor': regularization_factor,
     }
-    for spline_ratio in [1.0, 1 / 2, 1 / 3, 1 / 4]
-    for min_diff_factor in [1.0, 1 / 2, 1 / 3, 1 / 4, 0.0]
+    for spline_ratio in [1.0, 1 / 4]
+    for min_diff_factor in [1 / 2, 0.0]
+    for regularize_spline in [True, False]
+    for regularization_factor in [1.0, 0.0]
 ]
 
 example_nonlinear_monotone_yaml = (
@@ -53,7 +65,8 @@ def inner_options(request):
 def test_optimization(inner_options: Dict):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_nonlinear_monotone_yaml)
-
+    # Set seed for reproducibility.
+    np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",
         options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
@@ -131,12 +144,31 @@ def test_spline_calculator_and_objective():
             fim_for_hess=False,
         )
 
+    def inner_calculate(problem, x_dct):
+        return problem.objective.calculator.inner_calculators[0](
+            x_dct=x_dct,
+            sensi_orders=(0, 1),
+            mode=MODE_FUN,
+            amici_model=problem.objective.amici_model,
+            amici_solver=problem.objective.amici_solver,
+            edatas=problem.objective.edatas,
+            n_threads=1,
+            x_ids=petab_problem.x_ids,
+            parameter_mapping=problem.objective.parameter_mapping,
+            fim_for_hess=False,
+        )
+
     x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
 
     calculator_results = {
         minimal_diff: calculate(problems[minimal_diff], x_dct=x_dct)
         for minimal_diff in options.keys()
     }
+    inner_calculator_results = {
+        minimal_diff: inner_calculate(problems[minimal_diff], x_dct=x_dct)
+        for minimal_diff in options.keys()
+    }
+
     finite_differences = pypesto.objective.FD(problem.objective)
     FD_results = finite_differences(
         x=petab_problem.x_nominal_scaled,
@@ -146,6 +178,19 @@ def test_spline_calculator_and_objective():
 
     atol = 1e-3
     grad_atol = 1e-2
+
+    # Check the inner calculator and the inner calculator collector
+    # give the same results.
+    assert np.allclose(
+        inner_calculator_results['minimal_diff_on']['fval'],
+        calculator_results['minimal_diff_on']['fval'],
+        atol=atol,
+    )
+    assert np.allclose(
+        inner_calculator_results['minimal_diff_on']['grad'],
+        calculator_results['minimal_diff_on']['grad'],
+        atol=atol,
+    )
 
     # For nominal parameters, the objective function and gradient
     # will not depend on whether we constrain minimal difference.
@@ -322,23 +367,96 @@ def test_get_spline_mapped_simulations():
 def test_calculate_sigma_for_group():
     """Test the calculation of sigma for a group."""
     expected_sigma = np.sqrt(2 * 12.0 / 8)
-    inner_result = {
-        SCIPY_FUN: 12.0,
-    }
-    sigma = _calculate_sigma_for_group(inner_result, n_datapoints=8)
+    residuals_squared = 12
+
+    sigma = _calculate_sigma_for_group(residuals_squared, n_datapoints=8)
     assert sigma == expected_sigma
 
 
 def test_calculate_nllh_for_group():
     """Test the calculation of the nllh for a group."""
-    inner_result = {
-        SCIPY_FUN: 12.0,
-    }
-    sigma = 1
-    n_datapoints = 8
+    n_timepoints = 11
+    timepoints = np.linspace(0, 10, n_timepoints)
 
-    expected_nllh = (
-        0.5 * n_datapoints * np.log(2 * np.pi) + inner_result[SCIPY_FUN] / 1
+    simulation = timepoints
+    data = timepoints
+
+    spline_parameters = np.asarray([0.0, 2.0, 2.0, 2.0, 2.0, 2.0])
+    spline_ratio = 1 / 2
+    n_spline_pars = int(np.ceil(spline_ratio * len(timepoints)))
+
+    spline_base_distance = 2.0
+    spline_bases = np.asarray([0.0, 2.0, 4.0, 6.0, 8.0, 10.0])
+    simulation_intervals = [
+        int(np.ceil((sim - spline_bases[0]) / spline_base_distance)) + 1
+        for sim in simulation
+    ]
+
+    group_dict = {
+        OPTIMIZE_NOISE: False,
+        INNER_NOISE_PARS: 1,
+    }
+
+    expected_nllh = np.log(2 * np.pi) * n_timepoints / 2
+
+    nllh = _calculate_nllh_for_group(
+        spline_parameters,
+        simulation,
+        data,
+        n_spline_pars,
+        spline_base_distance,
+        spline_bases,
+        simulation_intervals,
+        regularization_factor=0.0,
+        regularize_spline=False,
+        group_dict=group_dict,
     )
-    nllh = _calculate_nllh_for_group(inner_result, sigma, n_datapoints)
-    assert nllh[SCIPY_FUN] == expected_nllh
+    assert nllh == expected_nllh
+
+
+def test_calculate_regularization_for_group():
+    """Test the calculation of the regularization for a group."""
+    spline_parameters = np.array([2, 1, 1, 1, 0, 2])
+    n_spline_parameters = len(spline_parameters)
+    spline_bases = np.array([1, 2, 3, 4, 5, 5])
+    regularization_factor = 1.0
+
+    lower_trian = np.tril(np.ones((n_spline_parameters, n_spline_parameters)))
+    xi = np.dot(lower_trian, spline_parameters)
+
+    expected_beta = 1
+    expected_alpha = 1
+
+    expected_regularization = (
+        regularization_factor
+        * np.sum((xi - expected_alpha * spline_bases - expected_beta) ** 2)
+        / (2 * n_spline_parameters)
+    )
+
+    expected_regularization_gradient = (
+        regularization_factor
+        * np.dot(
+            xi - expected_alpha * spline_bases - expected_beta,
+            lower_trian,
+        )
+        / n_spline_parameters
+    )
+
+    regularization = _calculate_regularization_for_group(
+        spline_parameters,
+        n_spline_parameters,
+        spline_bases,
+        regularization_factor,
+    )
+    regularization_gradient = _calculate_regularization_gradient_for_group(
+        spline_parameters,
+        n_spline_parameters,
+        spline_bases,
+        regularization_factor,
+    )
+
+    assert np.isclose(regularization, expected_regularization)
+    assert np.allclose(
+        regularization_gradient,
+        expected_regularization_gradient,
+    )

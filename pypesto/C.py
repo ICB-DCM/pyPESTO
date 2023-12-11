@@ -5,7 +5,7 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Callable, Literal, Tuple, Union
+from typing import Literal, Tuple, Union
 
 ###############################################################################
 # ENSEMBLE
@@ -34,6 +34,9 @@ NVECTORS = 'n_vectors'
 VECTOR_TAGS = 'vector_tags'
 ENSEMBLE_TYPE = 'ensemble_type'
 PREDICTIONS = 'predictions'
+
+SIMULTANEOUS = 'simultaneous'
+POINTWISE = 'pointwise'
 
 LOWER_BOUND = 'lower_bound'
 UPPER_BOUND = 'upper_bound'
@@ -195,7 +198,14 @@ NONLINEAR_MONOTONE = 'nonlinear_monotone'
 
 SPLINE_RATIO = 'spline_ratio'
 MIN_DIFF_FACTOR = 'min_diff_factor'
-SPLINE_APPROXIMATION_OPTIONS = [SPLINE_RATIO, MIN_DIFF_FACTOR]
+REGULARIZE_SPLINE = 'regularize_spline'
+REGULARIZATION_FACTOR = 'regularization_factor'
+SPLINE_APPROXIMATION_OPTIONS = [
+    SPLINE_RATIO,
+    MIN_DIFF_FACTOR,
+    REGULARIZE_SPLINE,
+    REGULARIZATION_FACTOR,
+]
 
 MIN_SIM_RANGE = 1e-16
 
@@ -275,13 +285,6 @@ CONDITION_IDS = 'condition_ids'
 
 CSV = 'csv'  # return file format
 H5 = 'h5'  # return file format
-
-
-###############################################################################
-# SELECT
-
-TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
-
 
 ###############################################################################
 # VISUALIZE

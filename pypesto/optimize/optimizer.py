@@ -5,6 +5,7 @@ import logging
 import re
 import time
 import warnings
+from functools import wraps
 from typing import TYPE_CHECKING, Dict, Optional
 
 import numpy as np
@@ -54,6 +55,7 @@ def history_decorator(minimize):
     Default decorator for the minimize() method.
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -101,8 +103,13 @@ def history_decorator(minimize):
                 message=result.message, exitflag=result.exitflag
             )
         except Exception as err:
-            if optimize_options.allow_failed_starts:
-                logger.error(f'start {id} failed: {err}')
+            if optimize_options and optimize_options.allow_failed_starts:
+                import sys
+                import traceback
+
+                trace = "\n".join(traceback.format_exception(*sys.exc_info()))
+
+                logger.error(f'start {id} failed:\n{trace}')
                 result = OptimizerResult(
                     x0=x0, exitflag=-1, message=str(err), id=id
                 )
@@ -132,6 +139,7 @@ def time_decorator(minimize):
     the wall-clock time.
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -163,6 +171,7 @@ def fix_decorator(minimize):
     derivatives).
     """
 
+    @wraps(minimize)
     def wrapped_minimize(
         self,
         problem: Problem,
@@ -252,10 +261,12 @@ class ScipyOptimizer(Optimizer):
     """
     Use the SciPy optimizers.
 
-    Find details on the optimizer and configuration options at:
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.\
-        optimize.minimize.html#scipy.optimize.minimize
-    """
+    Find details on the optimizer and configuration options at: :func:`scipy.optimize.minimize`.
+
+    .. note::
+        Least-squares optimizers may face errors in case of non-continuous
+        differentiable objective functions (e.g. Laplace priors).
+    """  # noqa
 
     def __init__(
         self,
@@ -475,10 +486,13 @@ class ScipyOptimizer(Optimizer):
 
     def get_default_options(self):
         """Create default options specific for the optimizer."""
+        options = {'disp': False}
         if self.is_least_squares():
-            options = {'max_nfev': 1000, 'disp': False}
-        else:
-            options = {'maxfun': 1000, 'disp': False}
+            options['max_nfev'] = 1000
+        elif self.method.lower() in ('l-bfgs-b', 'tnc'):
+            options['maxfun'] = 1000
+        elif self.method.lower() in ('nelder-mead', 'powell'):
+            options['maxfev'] = 1000
         return options
 
 
@@ -621,7 +635,7 @@ class DlibOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The Dlib optimizer does not support x0.")
+            logger.warning("The Dlib optimizer does not support x0.")
         return False
 
 
@@ -679,7 +693,7 @@ class PyswarmOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The pyswarm optimizer does not support x0.")
+            logger.warning("The pyswarm optimizer does not support x0.")
         return False
 
 
@@ -768,22 +782,20 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     """
     Global optimization using scipy's differential evolution optimizer.
 
-    Package homepage: https://docs.scipy.org/doc/scipy/reference/generated\
-        /scipy.optimize.differential_evolution.html
+    See: :func:`scipy.optimize.differential_evolution`.
 
     Parameters
     ----------
     options:
         Optimizer options that are directly passed on to scipy's optimizer.
 
-
     Examples
     --------
     Arguments that can be passed to options:
 
     maxiter:
-        used to calculate the maximal number of funcion evaluations by
-        maxfevals = (maxiter + 1) * popsize * len(x)
+        used to calculate the maximal number of function evaluations by
+        ``maxfevals = (maxiter + 1) * popsize * len(x)``
         Default: 100
     popsize:
         population size, default value 15
@@ -814,7 +826,10 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
-        """Perform optimization. Parameters: see `Optimizer` documentation."""
+        """Perform optimization.
+
+        See :meth:`Optimizer.minimize`.
+        """
         bounds = list(zip(problem.lb, problem.ub))
 
         result = scipy.optimize.differential_evolution(
@@ -953,7 +968,7 @@ class PyswarmsOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
         if x_guesses is not None and x_guesses.size > 0:
-            logger.warn("The pyswarms optimizer does not support x0.")
+            logger.warning("The pyswarms optimizer does not support x0.")
         return False
 
 
@@ -1199,7 +1214,7 @@ class NLoptOptimizer(Optimizer):
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ):
             if x_guesses is not None and x_guesses.size > 0:
-                logger.warn(
+                logger.warning(
                     f"The NLopt optimizer method {self.method} does "
                     "not support x0."
                 )
@@ -1228,10 +1243,11 @@ class FidesOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Optimizer options.
+            Optimizer options. See :meth:`fides.minimize.Optimizer.minimize`
+            and :class:`fides.constants.Options` for details.
         hessian_update:
-            Hessian update strategy. If this is None, a hybrid approximation
-            that switches from the problem.objective provided Hessian (
+            Hessian update strategy. If this is ``None``, a hybrid approximation
+            that switches from the ``problem.objective`` provided Hessian (
             approximation) to a BFGS approximation will be used.
         """
         super().__init__()

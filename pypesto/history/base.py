@@ -3,7 +3,7 @@
 import numbers
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, Sequence, Tuple, Union
+from typing import Sequence, Union
 
 import numpy as np
 
@@ -38,7 +38,7 @@ class HistoryBase(ABC):
     # all possible history entries
     ALL_KEYS = (X, *RESULT_KEYS, TIME)
 
-    def __init__(self, options: HistoryOptions = None):
+    def __init__(self, options: Union[HistoryOptions, None] = None):
         if options is None:
             options = HistoryOptions()
         options = HistoryOptions.assert_instance(options)
@@ -48,7 +48,7 @@ class HistoryBase(ABC):
     def update(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
@@ -70,8 +70,8 @@ class HistoryBase(ABC):
 
     def finalize(
         self,
-        message: str = None,
-        exitflag: str = None,
+        message: Union[str, None] = None,
+        exitflag: Union[str, None] = None,
     ) -> None:
         """
         Finalize history. Called after a run. Default: Do nothing.
@@ -117,6 +117,16 @@ class HistoryBase(ABC):
     @abstractmethod
     def start_time(self) -> float:
         """Return start time."""
+
+    @property
+    @abstractmethod
+    def message(self) -> str:
+        """Return message."""
+
+    @property
+    @abstractmethod
+    def exitflag(self) -> str:
+        """Return exitflag."""
 
     @abstractmethod
     def get_x_trace(
@@ -271,7 +281,7 @@ class NoHistory(HistoryBase):
     def update(  # noqa: D102
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
@@ -302,6 +312,14 @@ class NoHistory(HistoryBase):
 
     @property
     def start_time(self) -> float:  # noqa: D102
+        raise NotImplementedError()
+
+    @property
+    def message(self) -> float:  # noqa: D102
+        raise NotImplementedError()
+
+    @property
+    def exitflag(self) -> float:  # noqa: D102
         raise NotImplementedError()
 
     def get_x_trace(  # noqa: D102
@@ -346,7 +364,7 @@ class CountHistoryBase(HistoryBase):
     Needs a separate implementation of trace.
     """
 
-    def __init__(self, options: Union[HistoryOptions, Dict] = None):
+    def __init__(self, options: Union[HistoryOptions, dict] = None):
         super().__init__(options)
         self._n_fval: int = 0
         self._n_grad: int = 0
@@ -354,11 +372,13 @@ class CountHistoryBase(HistoryBase):
         self._n_res: int = 0
         self._n_sres: int = 0
         self._start_time: float = time.time()
+        self._exitflag = ""
+        self._message = ""
 
     def update(  # noqa: D102
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
@@ -366,7 +386,7 @@ class CountHistoryBase(HistoryBase):
 
     def _update_counts(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
     ):
         """Update the counters."""
@@ -406,6 +426,22 @@ class CountHistoryBase(HistoryBase):
     @property
     def start_time(self) -> float:  # noqa: D102
         return self._start_time
+
+    @property
+    def message(self) -> str:  # noqa: D102
+        return self._message
+
+    @property
+    def exitflag(self) -> str:  # noqa: D102
+        return self._exitflag
+
+    def finalize(  # noqa: D102
+        self,
+        message: str = None,
+        exitflag: str = None,
+    ) -> None:  # noqa: D102
+        self._message = message
+        self._exitflag = exitflag
 
 
 class CountHistory(CountHistoryBase):
@@ -463,8 +499,7 @@ def add_fun_from_res(result: ResultDict) -> ResultDict:
 
     Returns
     -------
-    full_result:
-        Result dicionary, adding whatever is possible to calculate.
+    Result dictionary, adding whatever is possible to calculate.
     """
     result = result.copy()
 
@@ -493,8 +528,7 @@ def reduce_result_via_options(
 
     Returns
     -------
-    result:
-        Result reduced to what is intended to be stored in history.
+    Result reduced to what is intended to be stored in history.
     """
     result = result.copy()
 

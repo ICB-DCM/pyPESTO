@@ -1,7 +1,7 @@
-Publications using pypesto
+Publications using pyPESTO
 ==========================
 
-pypesto was used in the following publications:
+pyPESTO was used in the following publications:
 
 .. bibliography:: using_pypesto.bib
    :list: enumerated
