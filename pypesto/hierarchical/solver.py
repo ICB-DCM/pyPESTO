@@ -335,19 +335,19 @@ class NumericalInnerSolver(InnerSolver):
             [x.ub if x.ub != np.inf else self.dummy_ub for x in pars]
         )
 
-        def symlog(x):
+        def symlog10(x):
             return np.sign(x) * np.log10(np.abs(x) + 1)
 
-        def inverse_symlog(x):
+        def inverse_symlog10(x):
             return np.sign(x) * (np.power(10, np.abs(x)) - 1)
 
         # Sample startpoints from a log-uniform distribution
         startpoints = np.random.uniform(
-            low=symlog(lb),
-            high=symlog(ub),
+            low=symlog10(lb),
+            high=symlog10(ub),
             size=(n_samples, len(pars)),
         )
-        startpoints = inverse_symlog(startpoints)
+        startpoints = inverse_symlog10(startpoints)
 
         # Stack the sampled startpoints with the cached startpoints
         if self.x_guesses is not None:
