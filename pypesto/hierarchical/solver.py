@@ -299,7 +299,7 @@ class NumericalInnerSolver(InnerSolver):
 
     def sample_startpoints(
         self, problem: InnerProblem, pars: List[InnerParameter]
-    ):
+    )  -> np.array:
         """Sample startpoints for the numerical optimization.
 
         Samples the startpoints for the numerical optimization from a
