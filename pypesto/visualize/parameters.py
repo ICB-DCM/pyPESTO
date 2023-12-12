@@ -384,7 +384,7 @@ def handle_inputs(
     from ..hierarchical.calculator import HierarchicalAmiciCalculator
 
     if (
-        any(inner_xs)
+        any(inner_x is not None for inner_x in inner_xs)
         and hasattr(result.problem.objective, 'calculator')
         and isinstance(
             inner_calculator := result.problem.objective.calculator,

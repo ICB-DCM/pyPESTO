@@ -212,7 +212,7 @@ class SplineAmiciCalculator(AmiciCalculator):
 
         inner_result[
             INNER_PARAMETERS
-        ] = self.inner_problem.get_inner_noise_parameter_dictionary()
+        ] = self.inner_problem.get_inner_noise_parameters()
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:
