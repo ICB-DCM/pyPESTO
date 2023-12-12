@@ -103,6 +103,12 @@ class InnerProblem:
         """
         return len(self.xs) == 0
 
+    def get_bounds(self) -> Tuple[List[float], List[float]]:
+        """Get bounds of inner parameters."""
+        lb = [x.lb for x in self.xs.values()]
+        ub = [x.ub for x in self.xs.values()]
+        return lb, ub
+
 
 class AmiciInnerProblem(InnerProblem):
     """
