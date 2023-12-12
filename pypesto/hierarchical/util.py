@@ -1,9 +1,11 @@
+import copy
 import warnings
 from typing import List
 
 import numpy as np
 
-from ..C import DUMMY_INNER_VALUE, InnerParameterType
+from ..C import DUMMY_INNER_VALUE, LOWER_BOUND, UPPER_BOUND, InnerParameterType
+from .parameter import InnerParameter
 
 
 def get_finite_quotient(
@@ -42,6 +44,7 @@ def compute_optimal_scaling(
     sim: List[np.ndarray],
     sigma: List[np.ndarray],
     mask: List[np.ndarray],
+    optimal_offset: float = None,
 ) -> float:
     """
     Compute optimal scaling.
@@ -63,7 +66,11 @@ def compute_optimal_scaling(
     for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
         # extract relevant values
         sim_x = sim_i[mask_i]  # \tilde{h}_i
-        data_x = data_i[mask_i]  # \bar{y}_i
+        data_x = (
+            data_i[mask_i] - optimal_offset
+            if optimal_offset is not None
+            else data_i[mask_i]
+        )  # \bar{y}_i
         sigma_x = sigma_i[mask_i]  # \sigma_i
         # update statistics
         num += np.nansum(sim_x * data_x / sigma_x**2)
@@ -100,6 +107,7 @@ def compute_optimal_offset(
     sim: List[np.ndarray],
     sigma: List[np.ndarray],
     mask: List[np.ndarray],
+    optimal_scaling: float = None,
 ) -> float:
     """Compute optimal offset.
 
@@ -117,13 +125,16 @@ def compute_optimal_offset(
     # iterate over conditions
     for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
         # extract relevant values
-        sim_x = sim_i[mask_i]  # \tilde{h}_i
+        sim_x = (
+            optimal_scaling * sim_i[mask_i]
+            if optimal_scaling is not None
+            else sim_i[mask_i]
+        )  # \tilde{h}_i
         data_x = data_i[mask_i]  # \bar{y}_i
         sigma_x = sigma_i[mask_i]  # \sigma_i
         # update statistics
         num += np.nansum((data_x - sim_x) / sigma_x**2)
         den += np.nansum(1 / sigma_x**2)
-
     return get_finite_quotient(
         numerator=num,
         denominator=den,
@@ -269,6 +280,141 @@ def apply_sigma(
     """
     for i in range(len(sigma)):
         sigma[i][mask[i]] = sigma_value
+
+
+def compute_bounded_optimal_scaling_offset_coupled(
+    data: List[np.ndarray],
+    sim: List[np.ndarray],
+    sigma: List[np.ndarray],
+    s: InnerParameter,
+    b: InnerParameter,
+    s_opt_value: float,
+    b_opt_value: float,
+):
+    """Compute optimal scaling and offset of a constrained optimization problem.
+
+    Computes the optimal scaling and offset of a constrained optimization in
+    case the unconstrained optimization yields a value outside the bounds.
+    We know the optimal solution then lies on the boundary of the bounds.
+    In the 2D offset-scaling bounded (rectangular) space, after unconstrained
+    optimization, if only one parameter is outside the bounds, then there is
+    one active edge (constraint) of the rectangle. We perform optimization on
+    this edge that is unconstrained in the other parameter. If this new optimum
+    is outside the bounds of the other parameter, the nearest vertex is chosen
+    as the optimum. If both parameters are outside the bounds, then there are
+    two active edges, which are optimized independently as above, then compared.
+
+    Parameters
+    ----------
+    data:
+        The data.
+    sim:
+        The simulation.
+    sigma:
+        The noise parameters.
+    s:
+        The scaling parameter.
+    b:
+        The offset parameter.
+    s_opt_value:
+        The optimal scaling value of the unconstrained problem.
+    b_opt_value:
+        The optimal offset value of the unconstrained problem.
+
+    Returns
+    -------
+    The optimal scaling and offset of the constrained problem.
+    """
+    # Define relevant data and sim
+    # Make all non-masked data and sim nan's in the original one
+    relevant_data = copy.deepcopy(data)
+    relevant_sim = copy.deepcopy(sim)
+    for i in range(len(data)):
+        relevant_data[i][~s.ixs[i]] = np.nan
+        relevant_sim[i][~s.ixs[i]] = np.nan
+
+    # Get bounds
+    s_bounds = s.get_bounds()
+    b_bounds = b.get_bounds()
+
+    # Get unsatisfied bounds
+    s_unsatisfied = s.get_unsatisfied_bound(s_opt_value)
+    b_unsatisfied = b.get_unsatisfied_bound(b_opt_value)
+
+    # If both parameters are unsatisfied, we need to check 2
+    # unconstrained problems, clip the solutions to the bounds, and
+    # choose the one with the lowest objective value
+    if s_unsatisfied is not None and b_unsatisfied is not None:
+        # Solve the two unconstrained problems
+        candidate_points = [
+            (
+                s_bounds[s_unsatisfied],
+                np.clip(
+                    compute_optimal_offset(
+                        data, sim, sigma, s.ixs, s_bounds[s_unsatisfied]
+                    ),
+                    b_bounds[LOWER_BOUND],
+                    b_bounds[UPPER_BOUND],
+                ),
+            ),
+            (
+                np.clip(
+                    compute_optimal_scaling(
+                        data, sim, sigma, s.ixs, b_bounds[b_unsatisfied]
+                    ),
+                    s_bounds[LOWER_BOUND],
+                    s_bounds[UPPER_BOUND],
+                ),
+                b_bounds[b_unsatisfied],
+            ),
+        ]
+
+        # Evaluate the objective function at the candidate points
+        candidate_objective_values = [
+            compute_nllh(
+                data=relevant_data,
+                sim=[
+                    sim_i * candidate_point[0] + candidate_point[1]
+                    for sim_i in relevant_sim
+                ],
+                sigma=sigma,
+            )
+            for candidate_point in candidate_points
+        ]
+        # The constrained solution is the candidate point with the lowest
+        # objective value
+        constrained_solution = candidate_points[
+            np.argmin(candidate_objective_values)
+        ]
+
+    # If only one parameter is unsatisfied, we need to solve a
+    # unconstrained problem, clipped to its boundary
+    elif s_unsatisfied is not None:
+        # Solve the unconstrained problem
+        constrained_solution = (
+            s_bounds[s_unsatisfied],
+            np.clip(
+                compute_optimal_offset(
+                    data, sim, sigma, s.ixs, s_bounds[s_unsatisfied]
+                ),
+                b_bounds[LOWER_BOUND],
+                b_bounds[UPPER_BOUND],
+            ),
+        )
+    elif b_unsatisfied is not None:
+        # Solve the unconstrained problem
+        constrained_solution = (
+            np.clip(
+                compute_optimal_scaling(
+                    data, sim, sigma, s.ixs, b_bounds[b_unsatisfied]
+                ),
+                s_bounds[LOWER_BOUND],
+                s_bounds[UPPER_BOUND],
+            ),
+            b_bounds[b_unsatisfied],
+        )
+
+    return constrained_solution
 
 
 def compute_nllh(
