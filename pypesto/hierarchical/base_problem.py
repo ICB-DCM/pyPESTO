@@ -118,7 +118,7 @@ class AmiciInnerProblem(InnerProblem):
 
     Attributes
     ----------
-    edataviews:
+    edatas:
         AMICI ``ExpDataView``s for each simulation condition.
     """
 

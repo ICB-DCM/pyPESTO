@@ -33,8 +33,8 @@ from ...C import (
     InnerParameterType,
 )
 from ..base_solver import InnerSolver
-from .parameter import OptimalScalingParameter
-from .problem import OptimalScalingProblem
+from .parameter import OrdinalParameter
+from .problem import OrdinalProblem
 
 try:
     from amici.parameter_mapping import ParameterMapping
@@ -42,7 +42,7 @@ except ImportError:
     pass
 
 
-class OptimalScalingInnerSolver(InnerSolver):
+class OrdinalInnerSolver(InnerSolver):
     """Solve the inner subproblem of the optimal scaling approach for ordinal data.
 
     Options
@@ -108,7 +108,7 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     def solve(
         self,
-        problem: OptimalScalingProblem,
+        problem: OrdinalProblem,
         sim: List[np.ndarray],
         sigma: List[np.ndarray],
     ) -> list:
@@ -199,7 +199,7 @@ class OptimalScalingInnerSolver(InnerSolver):
 
     def calculate_gradients(
         self,
-        problem: OptimalScalingProblem,
+        problem: OrdinalProblem,
         x_inner_opt: List[Dict],
         sim: List[np.ndarray],
         sy: List[np.ndarray],
@@ -391,7 +391,7 @@ class OptimalScalingInnerSolver(InnerSolver):
 
 def calculate_dxi_dtheta(
     group: int,
-    problem: OptimalScalingProblem,
+    problem: OrdinalProblem,
     xi: np.ndarray,
     mu: np.ndarray,
     dy_dtheta: np.ndarray,
@@ -448,16 +448,14 @@ def calculate_dxi_dtheta(
     return dxi_dtheta[: problem.groups[group][NUM_INNER_PARAMS]]
 
 
-def get_dy_dtheta(
-    group: int, problem: OptimalScalingProblem, sy_all: np.ndarray
-):
+def get_dy_dtheta(group: int, problem: OrdinalProblem, sy_all: np.ndarray):
     """Restructure sensitivities into a numpy matrix of right dimension."""
     return np.block(
         [sy_all, np.zeros(2 * problem.groups[group][NUM_CATEGORIES])]
     )
 
 
-def get_mu(group: int, problem: OptimalScalingProblem, residual: np.ndarray):
+def get_mu(group: int, problem: OrdinalProblem, residual: np.ndarray):
     """Calculate Lagrange multipliers of the inner optimization problem.
 
     Parameters
@@ -481,7 +479,7 @@ def get_mu(group: int, problem: OptimalScalingProblem, residual: np.ndarray):
 
 def get_xi(
     group: int,
-    problem: OptimalScalingProblem,
+    problem: OrdinalProblem,
     x_inner_opt: Dict,
     sim: List[np.ndarray],
     options: Dict,
@@ -517,8 +515,8 @@ def get_xi(
 
 
 def optimize_surrogate_data_per_group(
-    category_upper_bounds: List[OptimalScalingParameter],
-    category_lower_bounds: List[OptimalScalingParameter],
+    category_upper_bounds: List[OrdinalParameter],
+    category_lower_bounds: List[OrdinalParameter],
     sim: List[np.ndarray],
     options: Dict,
 ):
@@ -585,8 +583,8 @@ def optimize_surrogate_data_per_group(
 
 
 def get_inner_optimization_options(
-    category_upper_bounds: List[OptimalScalingParameter],
-    category_lower_bounds: List[OptimalScalingParameter],
+    category_upper_bounds: List[OrdinalParameter],
+    category_lower_bounds: List[OrdinalParameter],
     sim: List[np.ndarray],
     interval_range: float,
     interval_gap: float,
@@ -682,7 +680,7 @@ def get_inner_optimization_options(
 
 
 def get_min_max(
-    inner_parameters: List[OptimalScalingParameter], sim: List[np.ndarray]
+    inner_parameters: List[OrdinalParameter], sim: List[np.ndarray]
 ) -> Tuple[float, float]:
     """Return minimal and maximal simulation value."""
     sim_all = get_sim_all(inner_parameters, sim)
@@ -694,7 +692,7 @@ def get_min_max(
 
 
 def get_sy_all(
-    inner_parameters: List[OptimalScalingParameter],
+    inner_parameters: List[OrdinalParameter],
     sy: List[np.ndarray],
     par_edata_idx: List,
 ):
@@ -725,7 +723,7 @@ def get_sim_all(inner_parameters, sim: List[np.ndarray]) -> list:
 
 
 def get_surrogate_all(
-    inner_parameters: List[OptimalScalingParameter],
+    inner_parameters: List[OrdinalParameter],
     optimal_scaling_bounds: List,
     sim: List[np.ndarray],
     interval_range: float,
@@ -769,7 +767,7 @@ def get_surrogate_all(
 
 
 def get_weight_for_surrogate(
-    inner_parameters: List[OptimalScalingParameter], sim: List[np.ndarray]
+    inner_parameters: List[OrdinalParameter], sim: List[np.ndarray]
 ) -> float:
     """Calculate weights for objective function."""
     sim_x_all = get_sim_all(inner_parameters, sim)
@@ -781,7 +779,7 @@ def get_weight_for_surrogate(
 
 
 def compute_interval_constraints(
-    inner_parameters: List[OptimalScalingParameter],
+    inner_parameters: List[OrdinalParameter],
     sim: List[np.ndarray],
     options: Dict,
 ) -> Tuple[float, float]:
@@ -816,7 +814,7 @@ def compute_interval_constraints(
 
 def reparameterize_inner_parameters(
     original_inner_parameter_values: np.ndarray,
-    inner_parameters: List[OptimalScalingParameter],
+    inner_parameters: List[OrdinalParameter],
     interval_gap: float,
     interval_range: float,
 ) -> np.ndarray:
@@ -848,7 +846,7 @@ def reparameterize_inner_parameters(
 
 def undo_inner_parameter_reparameterization(
     reparameterized_inner_parameter_values: np.ndarray,
-    inner_parameters: List[OptimalScalingParameter],
+    inner_parameters: List[OrdinalParameter],
     interval_gap: float,
     interval_range: float,
 ) -> np.ndarray:
@@ -879,7 +877,7 @@ def undo_inner_parameter_reparameterization(
 
 
 def obj_surrogate_data(
-    xs: List[OptimalScalingParameter],
+    xs: List[OrdinalParameter],
     optimal_scaling_bounds: np.ndarray,
     sim: List[np.ndarray],
     interval_gap: float,
@@ -915,7 +913,7 @@ def obj_surrogate_data(
 
 
 def grad_surrogate_data(
-    xs: List[OptimalScalingParameter],
+    xs: List[OrdinalParameter],
     optimal_scaling_bounds: np.ndarray,
     sim: List[np.ndarray],
     interval_gap: float,
@@ -979,7 +977,7 @@ def grad_surrogate_data(
 
 def reparameterize_gradient(
     grad: np.ndarray,
-    xs: List[OptimalScalingParameter],
+    xs: List[OrdinalParameter],
 ) -> np.ndarray:
     """Transform gradient to reparameterized gradient."""
     reparameterized_grad = np.full(
@@ -995,7 +993,7 @@ def reparameterize_gradient(
 
 
 def get_bounds_for_category(
-    x: OptimalScalingParameter,
+    x: OrdinalParameter,
     optimal_scaling_bounds: np.ndarray,
     interval_gap: float,
     options: Dict,
@@ -1023,7 +1021,7 @@ def get_bounds_for_category(
 
 
 def get_constraints_for_optimization(
-    xs: List[OptimalScalingParameter], sim: List[np.ndarray], options: Dict
+    xs: List[OrdinalParameter], sim: List[np.ndarray], options: Dict
 ) -> Dict:
     """Return constraints for inner optimization."""
     num_categories = len(xs)
@@ -1053,9 +1051,9 @@ def get_constraints_for_optimization(
 
 
 def save_inner_parameters_to_inner_problem(
-    category_upper_bounds: List[OptimalScalingParameter],
+    category_upper_bounds: List[OrdinalParameter],
     group: int,
-    problem: OptimalScalingProblem,
+    problem: OrdinalProblem,
     x_inner_opt: Dict,
     sim: List[np.ndarray],
     options: Dict,
@@ -1082,8 +1080,8 @@ def save_inner_parameters_to_inner_problem(
 
 
 def calculate_censored_obj(
-    category_upper_bounds: List[OptimalScalingParameter],
-    category_lower_bounds: List[OptimalScalingParameter],
+    category_upper_bounds: List[OrdinalParameter],
+    category_lower_bounds: List[OrdinalParameter],
     sim: List[np.ndarray],
     sigma: List[np.ndarray],
     quantitative_data: np.ndarray,
@@ -1159,8 +1157,8 @@ def calculate_censored_obj(
 
 
 def calculate_censored_grad(
-    category_upper_bounds: List[OptimalScalingParameter],
-    category_lower_bounds: List[OptimalScalingParameter],
+    category_upper_bounds: List[OrdinalParameter],
+    category_lower_bounds: List[OrdinalParameter],
     sim: List[np.ndarray],
     sy: np.ndarray,
     sigma: List[np.ndarray],

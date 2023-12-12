@@ -46,7 +46,11 @@ except ImportError:
 
 
 class SemiquantitativeInnerProblem(AmiciInnerProblem):
-    """Inner optimization problem for spline approximation.
+    """Inner optimization problem for semi-quantitative data.
+
+    The inner problem for semi-quantitative data consists of spline parameters
+    and noise parameters for semi-quantitative observables. The unknown
+    nonlinear measurement mapping is estimated using a piece-wise linear spline.
 
     Attributes
     ----------
@@ -55,6 +59,8 @@ class SemiquantitativeInnerProblem(AmiciInnerProblem):
     data:
         Measurement data. One matrix (`num_timepoints` x `num_observables`)
         per simulation condition. Missing observations as NaN.
+    edatas:
+        AMICI ``ExpData``s for each simulation condition.
     groups:
         A dictionary of the groups of the subproblem.
     spline_ratio:

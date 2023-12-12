@@ -34,15 +34,17 @@ logger = logging.getLogger(__name__)
 
 
 class RelativeInnerProblem(AmiciInnerProblem):
-    """
-    Inner optimization problem in hierarchical optimization.
-
-    For use with AMICI objects.
+    """Inner optimization problem for relative data with scaling/offset.
 
     Attributes
     ----------
-    edataviews:
-        AMICI ``ExpDataView``s for each simulation condition.
+    xs:
+        Mapping of (inner) parameter ID to ``InnerParameters``.
+    data:
+        Measurement data. One matrix (`num_timepoints` x `num_observables`)
+        per simulation condition. Missing observations as NaN.
+    edatas:
+        List of AMICI ExpData objects.
     """
 
     def __init__(self, **kwargs):

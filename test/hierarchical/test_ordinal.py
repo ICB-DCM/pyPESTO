@@ -24,11 +24,8 @@ from pypesto.C import (
     STANDARD,
     InnerParameterType,
 )
-from pypesto.hierarchical.ordinal import (
-    OptimalScalingInnerSolver,
-    OptimalScalingProblem,
-)
-from pypesto.hierarchical.ordinal.parameter import OptimalScalingParameter
+from pypesto.hierarchical.ordinal import OrdinalInnerSolver, OrdinalProblem
+from pypesto.hierarchical.ordinal.parameter import OrdinalParameter
 from pypesto.hierarchical.ordinal.solver import (
     compute_interval_constraints,
     get_surrogate_all,
@@ -266,7 +263,7 @@ def _inner_problem_exp():
 
     # Construct inner parameters
     inner_parameters = [
-        OptimalScalingParameter(
+        OrdinalParameter(
             inner_parameter_id=inner_parameter_id,
             inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
             scale=LIN,
@@ -282,7 +279,7 @@ def _inner_problem_exp():
     ]
 
     # Construct inner problem
-    inner_problem = OptimalScalingProblem(
+    inner_problem = OrdinalProblem(
         xs=inner_parameters, data=[data], edatas=None, method=STANDARD
     )
 
@@ -299,7 +296,7 @@ def test_optimal_scaling_solver():
 
     rtol = 1e-3
 
-    solver = OptimalScalingInnerSolver(
+    solver = OrdinalInnerSolver(
         options={METHOD: STANDARD, REPARAMETERIZED: False}
     )
 
@@ -315,7 +312,7 @@ def test_optimal_scaling_solver():
     assert np.allclose(standard_result['fun'], 0, rtol=rtol)
     assert np.allclose(standard_result['jac'], 0, rtol=rtol)
 
-    solver = OptimalScalingInnerSolver(
+    solver = OrdinalInnerSolver(
         options={METHOD: REDUCED, REPARAMETERIZED: False}
     )
 

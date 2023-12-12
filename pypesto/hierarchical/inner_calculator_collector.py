@@ -47,11 +47,7 @@ except ImportError:
     petab = None
     ParameterMapping = None
 
-from .ordinal import (
-    OptimalScalingInnerSolver,
-    OptimalScalingProblem,
-    RelativeAmiciCalculator,
-)
+from .ordinal import OrdinalCalculator, OrdinalInnerSolver, OrdinalProblem
 from .semiquantitative import (
     SemiquantitativeCalculator,
     SemiquantitativeInnerProblem,
@@ -132,13 +128,13 @@ class InnerCalculatorCollector(AmiciCalculator):
             inner_problem_method = optimal_scaling_inner_options.get(
                 METHOD, None
             )
-            os_inner_problem = OptimalScalingProblem.from_petab_amici(
+            os_inner_problem = OrdinalProblem.from_petab_amici(
                 petab_problem, model, edatas, inner_problem_method
             )
-            os_inner_solver = OptimalScalingInnerSolver(
+            os_inner_solver = OrdinalInnerSolver(
                 options=optimal_scaling_inner_options
             )
-            os_calculator = RelativeAmiciCalculator(
+            os_calculator = OrdinalCalculator(
                 os_inner_problem, os_inner_solver
             )
             self.inner_calculators.append(os_calculator)

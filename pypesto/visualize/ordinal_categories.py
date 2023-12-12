@@ -11,8 +11,8 @@ try:
     import amici
     from petab.C import OBSERVABLE_ID
 
-    from ..hierarchical.ordinal.calculator import RelativeAmiciCalculator
-    from ..hierarchical.ordinal.parameter import OptimalScalingParameter
+    from ..hierarchical.ordinal.calculator import OrdinalCalculator
+    from ..hierarchical.ordinal.parameter import OrdinalParameter
     from ..hierarchical.ordinal.solver import (
         compute_interval_constraints,
         get_bounds_for_category,
@@ -126,7 +126,7 @@ def plot_categories_from_pypesto_result(
     for (
         calculator
     ) in pypesto_result.problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, RelativeAmiciCalculator):
+        if isinstance(calculator, OrdinalCalculator):
             optimal_scaling_calculator = calculator
             break
 
@@ -498,7 +498,7 @@ def _plot_category_rectangles(
 
 
 def _get_data_for_plotting(
-    inner_parameters: List['OptimalScalingParameter'],
+    inner_parameters: List['OrdinalParameter'],
     optimal_scaling_bounds: List,
     sim: List[np.ndarray],
     timepoints: List[np.ndarray],

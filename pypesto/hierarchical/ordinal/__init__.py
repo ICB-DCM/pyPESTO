@@ -19,7 +19,7 @@ with ordinal data can be found in Schmiester et al. 2020 (https://doi.org/10.100
 and Schmiester et al. 2021 (https://doi.org/10.1093/bioinformatics/btab512).
 """
 
-from .calculator import RelativeAmiciCalculator
-from .parameter import OptimalScalingParameter
-from .problem import OptimalScalingProblem
-from .solver import OptimalScalingInnerSolver
+from .calculator import OrdinalCalculator
+from .parameter import OrdinalParameter
+from .problem import OrdinalProblem
+from .solver import OrdinalInnerSolver

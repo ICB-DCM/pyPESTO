@@ -13,8 +13,8 @@ from ..base_parameter import InnerParameter
 logger = logging.getLogger(__name__)
 
 
-class OptimalScalingParameter(InnerParameter):
-    """Inner parameter of the optimal scaling hierarchical optimization problem.
+class OrdinalParameter(InnerParameter):
+    """Inner parameter of the optimal scaling inner optimization problem for ordinal data.
 
     Attributes
     ----------

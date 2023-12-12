@@ -27,8 +27,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .problem import OptimalScalingProblem
-from .solver import OptimalScalingInnerSolver
+from .problem import OrdinalProblem
+from .solver import OrdinalInnerSolver
 
 try:
     import amici
@@ -37,7 +37,7 @@ except ImportError:
     pass
 
 
-class RelativeAmiciCalculator(AmiciCalculator):
+class OrdinalCalculator(AmiciCalculator):
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -46,8 +46,8 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: OptimalScalingProblem,
-        inner_solver: OptimalScalingInnerSolver = None,
+        inner_problem: OrdinalProblem,
+        inner_solver: OrdinalInnerSolver = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -63,7 +63,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = OptimalScalingInnerSolver()
+            inner_solver = OrdinalInnerSolver()
         self.inner_solver = inner_solver
         if (
             self.inner_problem.method
