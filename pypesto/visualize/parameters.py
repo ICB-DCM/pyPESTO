@@ -10,13 +10,7 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import (
-    INNER_PARAMETERS,
-    LOWER_BOUND,
-    RGBA,
-    UPPER_BOUND,
-    WATERFALL_MAX_VALUE,
-)
+from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
