@@ -45,9 +45,8 @@ def add_inner_parameters(
     objective: Objective, optimizer_result: OptimizerResult
 ):
     """Add inner parameters from objective to the optimizer result."""
-    if (
-        hasattr(objective, INNER_PARAMETERS)
-        and objective.inner_parameters.any()
+    if hasattr(objective, INNER_PARAMETERS) and any(
+        objective.inner_parameters
     ):
         optimizer_result[INNER_PARAMETERS] = objective.inner_parameters
 
