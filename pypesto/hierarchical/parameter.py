@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 import numpy as np
 
@@ -24,8 +24,9 @@ class InnerParameter:
     Attributes
     ----------
     coupled:
-        Whether the inner parameter is part of an observable that has both
-        an offset and scaling inner parameter.
+        If the inner parameter is part of an observable that has both
+        an offset and scaling inner parameter, this attribute points to
+        the other inner parameter. Otherwise, it is None.
     dummy_value:
         Value to be used when the optimal parameter is not yet known
         (in particular to simulate unscaled observables).
@@ -62,7 +63,7 @@ class InnerParameter:
         See class attributes.
         """
         self.inner_parameter_id: str = inner_parameter_id
-        self.coupled = False
+        self.coupled: InnerParameter = None
         self.inner_parameter_type: str = inner_parameter_type
 
         if scale not in {LIN, LOG, LOG10}:
@@ -82,7 +83,12 @@ class InnerParameter:
 
         self.lb: float = lb
         self.ub: float = ub
-        self.check_bounds()
+        # Scaling and offset parameters can be bounded arbitrarily
+        if inner_parameter_type not in (
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        ):
+            self.check_bounds()
         self.ixs: Any = ixs
 
         if dummy_value is None:
@@ -114,3 +120,21 @@ class InnerParameter:
                 f"`[{expected_lb}, {expected_ub}]`. "
                 f"All expected parameter bounds:\n{INNER_PARAMETER_BOUNDS}"
             )
+
+    def is_within_bounds(self, value):
+        """Check whether a value is within the bounds."""
+        if value < self.lb or value > self.ub:
+            return False
+        return True
+
+    def get_unsatisfied_bound(self, value) -> Optional[str]:
+        """Get the unsatisfied bound index, if any."""
+        if value < self.lb:
+            return LOWER_BOUND
+        elif value > self.ub:
+            return UPPER_BOUND
+        return None
+
+    def get_bounds(self) -> dict:
+        """Get the bounds."""
+        return {LOWER_BOUND: self.lb, UPPER_BOUND: self.ub}
