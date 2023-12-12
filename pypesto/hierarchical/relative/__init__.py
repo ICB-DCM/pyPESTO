@@ -30,7 +30,6 @@ The implementation in this package is based on:
   substantially more efficiently in high dimension.
 """
 
-from .base_parameter import InnerParameter
-from .base_problem import InnerProblem
-from .base_solver import InnerSolver
-from .inner_calculator_collector import InnerCalculatorCollector
+from .calculator import RelativeAmiciCalculator
+from .problem import RelativeInnerProblem
+from .solver import AnalyticalInnerSolver, NumericalInnerSolver

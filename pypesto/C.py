@@ -84,12 +84,13 @@ ID = 'id'
 
 
 ###############################################################################
-# HIERARCHICAL
+# HIERARCHICAL SCALING + OFFSET
 
 INNER_PARAMETERS = 'inner_parameters'
 INNER_RDATAS = 'inner_rdatas'
 PARAMETER_TYPE = 'parameterType'
 X_INNER_OPT = 'x_inner_opt'
+RELATIVE = 'relative'
 
 
 class InnerParameterType(str, Enum):

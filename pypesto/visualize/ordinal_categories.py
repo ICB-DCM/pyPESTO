@@ -11,13 +11,9 @@ try:
     import amici
     from petab.C import OBSERVABLE_ID
 
-    from ..hierarchical.optimal_scaling.calculator import (
-        OptimalScalingAmiciCalculator,
-    )
-    from ..hierarchical.optimal_scaling.parameter import (
-        OptimalScalingParameter,
-    )
-    from ..hierarchical.optimal_scaling.solver import (
+    from ..hierarchical.ordinal.calculator import RelativeAmiciCalculator
+    from ..hierarchical.ordinal.parameter import OptimalScalingParameter
+    from ..hierarchical.ordinal.solver import (
         compute_interval_constraints,
         get_bounds_for_category,
         undo_inner_parameter_reparameterization,
@@ -130,7 +126,7 @@ def plot_categories_from_pypesto_result(
     for (
         calculator
     ) in pypesto_result.problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, OptimalScalingAmiciCalculator):
+        if isinstance(calculator, RelativeAmiciCalculator):
             optimal_scaling_calculator = calculator
             break
 

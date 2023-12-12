@@ -11,7 +11,7 @@ try:
 except ImportError:
     pass
 
-from ..C import (
+from ...C import (
     AMICI_SIGMAY,
     AMICI_Y,
     GRAD,
@@ -21,7 +21,7 @@ from ..C import (
     RDATAS,
     ModeType,
 )
-from ..objective.amici.amici_calculator import (
+from ...objective.amici.amici_calculator import (
     AmiciCalculator,
     AmiciModel,
     AmiciSolver,
@@ -30,7 +30,7 @@ from .problem import AmiciInnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
 
 
-class HierarchicalAmiciCalculator(AmiciCalculator):
+class RelativeAmiciCalculator(AmiciCalculator):
     """A calculator that is passed as `calculator` to the pypesto.AmiciObjective."""
 
     def __init__(

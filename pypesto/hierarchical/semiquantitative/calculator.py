@@ -1,4 +1,3 @@
-"""Definition of an optimal scaling calculator class."""
 import copy
 from typing import Dict, List, Sequence, Tuple
 
@@ -12,6 +11,7 @@ from ...C import (
     FVAL,
     GRAD,
     HESS,
+    INNER_PARAMETERS,
     MODE_RES,
     RDATAS,
     RES,
@@ -27,8 +27,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .problem import OptimalScalingProblem
-from .solver import OptimalScalingInnerSolver
+from .problem import SemiquantitativeInnerProblem
+from .solver import SemiquantitativeInnerSolver
 
 try:
     import amici
@@ -37,7 +37,7 @@ except ImportError:
     pass
 
 
-class OptimalScalingAmiciCalculator(AmiciCalculator):
+class SemiquantitativeCalculator(AmiciCalculator):
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -46,8 +46,8 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: OptimalScalingProblem,
-        inner_solver: OptimalScalingInnerSolver = None,
+        inner_problem: SemiquantitativeInnerProblem,
+        inner_solver: SemiquantitativeInnerSolver = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -57,21 +57,14 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             The optimal scaling inner problem.
         inner_solver:
             A solver to solve ``inner_problem``.
-            Defaults to ``OptimalScalingInnerSolver``.
+            Defaults to ``SplineInnerSolver``.
         """
         super().__init__()
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = OptimalScalingInnerSolver()
+            inner_solver = SemiquantitativeInnerSolver()
         self.inner_solver = inner_solver
-        if (
-            self.inner_problem.method
-            is not self.inner_solver.options['method']
-        ):
-            raise ValueError(
-                f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
-            )
 
     def initialize(self):
         """Initialize."""
@@ -126,6 +119,7 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             the :class:`pypesto.objective.amici.InnerCalculatorCollector`,
             it will already simulate the model and pass the results here.
 
+
         Returns
         -------
         inner_result:
@@ -133,11 +127,11 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         """
         if mode == MODE_RES:
             raise ValueError(
-                "Optimal scaling method cannot be called with residual mode."
+                "Spline approximation cannot be called with residual mode."
             )
         if 2 in sensi_orders:
             raise ValueError(
-                "Hessian and FIM are not implemented for the optimal scaling calculator."
+                "Hessian and FIM are not implemented for the spline calculator."
             )
 
         # get dimension of outer problem
@@ -153,10 +147,14 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             sensi_order = max(sensi_orders)
 
         # If AMICI ReturnData is not provided, we need to simulate the model
+
         if rdatas is None:
             amici_solver.setSensitivityOrder(sensi_order)
 
             x_dct = copy.deepcopy(x_dct)
+            x_dct.update(
+                self.inner_problem.get_noise_dummy_values(scaled=True)
+            )
 
             # fill in parameters
             amici.parameter_mapping.fill_in_parameters(
@@ -199,6 +197,10 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         sim = [rdata[AMICI_Y] for rdata in rdatas]
         sigma = [rdata[AMICI_SIGMAY] for rdata in rdatas]
 
+        # Clip negative simulation values to zero, to avoid numerical issues.
+        for i in range(len(sim)):
+            sim[i] = sim[i].clip(min=0)
+
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
@@ -208,18 +210,21 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
             X_INNER_OPT
         ] = self.inner_problem.get_inner_parameter_dictionary()
 
-        # calculate analytical gradients if requested
+        inner_result[
+            INNER_PARAMETERS
+        ] = self.inner_problem.get_inner_noise_parameters()
+
+        # Calculate analytical gradients if requested
         if sensi_order > 0:
-            # print([opt['fun'] for opt in x_inner_opt])
             sy = [rdata[AMICI_SY] for rdata in rdatas]
             ssigma = [rdata[AMICI_SSIGMAY] for rdata in rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
+                amici_sigma=sigma,
                 sy=sy,
-                sigma=sigma,
-                ssigma=ssigma,
+                amici_ssigma=ssigma,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),

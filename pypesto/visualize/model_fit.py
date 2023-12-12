@@ -16,7 +16,7 @@ from amici.petab_objective import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
 from ..C import CENSORED, NONLINEAR_MONOTONE, ORDINAL, RDATAS
-from ..hierarchical.calculator import HierarchicalAmiciCalculator
+from ..hierarchical.relative.calculator import RelativeAmiciCalculator
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import Problem
 from ..result import Result
@@ -240,7 +240,7 @@ def _get_simulation_rdatas(
     parameters = problem.get_reduced_vector(parameters)
 
     # simulate with custom timepoints for hierarchical model
-    if isinstance(problem.objective.calculator, HierarchicalAmiciCalculator):
+    if isinstance(problem.objective.calculator, RelativeAmiciCalculator):
         # get parameter dictionary
         x_dct = dict(
             zip(problem.x_names, result.optimize_result.list[start_index].x)

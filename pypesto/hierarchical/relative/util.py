@@ -4,8 +4,13 @@ from typing import List
 
 import numpy as np
 
-from ..C import DUMMY_INNER_VALUE, LOWER_BOUND, UPPER_BOUND, InnerParameterType
-from .parameter import InnerParameter
+from ...C import (
+    DUMMY_INNER_VALUE,
+    LOWER_BOUND,
+    UPPER_BOUND,
+    InnerParameterType,
+)
+from ..base_parameter import InnerParameter
 
 
 def get_finite_quotient(

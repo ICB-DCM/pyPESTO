@@ -47,15 +47,15 @@ except ImportError:
     petab = None
     ParameterMapping = None
 
-from .optimal_scaling import (
-    OptimalScalingAmiciCalculator,
+from .ordinal import (
     OptimalScalingInnerSolver,
     OptimalScalingProblem,
+    RelativeAmiciCalculator,
 )
-from .spline_approximation import (
-    SplineAmiciCalculator,
-    SplineInnerProblem,
-    SplineInnerSolver,
+from .semiquantitative import (
+    SemiquantitativeCalculator,
+    SemiquantitativeInnerProblem,
+    SemiquantitativeInnerSolver,
 )
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
@@ -138,7 +138,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             os_inner_solver = OptimalScalingInnerSolver(
                 options=optimal_scaling_inner_options
             )
-            os_calculator = OptimalScalingAmiciCalculator(
+            os_calculator = RelativeAmiciCalculator(
                 os_inner_problem, os_inner_solver
             )
             self.inner_calculators.append(os_calculator)
@@ -150,13 +150,15 @@ class InnerCalculatorCollector(AmiciCalculator):
                 if key in SPLINE_APPROXIMATION_OPTIONS
             }
             spline_ratio = spline_inner_options.pop(SPLINE_RATIO, None)
-            spline_inner_problem = SplineInnerProblem.from_petab_amici(
-                petab_problem, model, edatas, spline_ratio
+            spline_inner_problem = (
+                SemiquantitativeInnerProblem.from_petab_amici(
+                    petab_problem, model, edatas, spline_ratio
+                )
             )
-            spline_inner_solver = SplineInnerSolver(
+            spline_inner_solver = SemiquantitativeInnerSolver(
                 options=spline_inner_options
             )
-            spline_calculator = SplineAmiciCalculator(
+            spline_calculator = SemiquantitativeCalculator(
                 spline_inner_problem, spline_inner_solver
             )
             self.noise_dummy_values = (

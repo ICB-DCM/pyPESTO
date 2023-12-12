@@ -8,7 +8,7 @@ from ...C import (
     RIGHT_CENSORED,
     InnerParameterType,
 )
-from ..parameter import InnerParameter
+from ..base_parameter import InnerParameter
 
 logger = logging.getLogger(__name__)
 

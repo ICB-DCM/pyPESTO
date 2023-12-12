@@ -32,7 +32,7 @@ from ...C import (
     W_MATRIX,
     InnerParameterType,
 )
-from ..solver import InnerSolver
+from ..base_solver import InnerSolver
 from .parameter import OptimalScalingParameter
 from .problem import OptimalScalingProblem
 

@@ -1,12 +1,12 @@
 import logging
 
 from ...C import InnerParameterType
-from ..parameter import InnerParameter
+from ..base_parameter import InnerParameter
 
 logger = logging.getLogger(__name__)
 
 
-class SplineInnerParameter(InnerParameter):
+class SemiquantitativeInnerParameter(InnerParameter):
     """A spline (inner) parameter of the spline hierarchical optimization problem.
 
     Attributes

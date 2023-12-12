@@ -16,13 +16,11 @@ from pypesto.C import (
     STANDARD,
     InnerParameterType,
 )
-from pypesto.hierarchical.optimal_scaling import (
+from pypesto.hierarchical.ordinal import (
     OptimalScalingInnerSolver,
     OptimalScalingProblem,
 )
-from pypesto.hierarchical.optimal_scaling.parameter import (
-    OptimalScalingParameter,
-)
+from pypesto.hierarchical.ordinal.parameter import OptimalScalingParameter
 
 example_censored_yaml = (
     Path(__file__).parent
@@ -171,7 +169,7 @@ def _inner_problem_exp():
 
     # Construct inner problem
     inner_problem = OptimalScalingProblem(
-        xs=inner_parameters, data=[data], method=STANDARD
+        xs=inner_parameters, data=[data], edatas=None, method=STANDARD
     )
 
     return inner_problem, expected_values, simulation

@@ -16,14 +16,14 @@ from pypesto.C import (
     UPPER_BOUND,
     InnerParameterType,
 )
-from pypesto.hierarchical.parameter import InnerParameter
+from pypesto.hierarchical.base_parameter import InnerParameter
+from pypesto.hierarchical.base_problem import InnerProblem
 from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
-from pypesto.hierarchical.problem import InnerProblem
-from pypesto.hierarchical.solver import (
+from pypesto.hierarchical.relative.solver import (
     AnalyticalInnerSolver,
     NumericalInnerSolver,
 )
-from pypesto.hierarchical.util import (
+from pypesto.hierarchical.relative.util import (
     apply_offset,
     apply_scaling,
     compute_optimal_offset,

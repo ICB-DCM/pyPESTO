@@ -3,12 +3,13 @@ from typing import Any, Dict, List
 
 import numpy as np
 
-from ..C import InnerParameterType
-from ..objective import Objective
-from ..optimize import minimize
-from ..problem import Problem
-from .parameter import InnerParameter
-from .problem import InnerProblem, scale_value_dict
+from ...C import InnerParameterType
+from ...objective import Objective
+from ...optimize import minimize
+from ...problem import Problem
+from ..base_parameter import InnerParameter
+from ..base_problem import InnerProblem, scale_value_dict
+from ..base_solver import InnerSolver
 from .util import (
     apply_offset,
     apply_scaling,
@@ -20,43 +21,6 @@ from .util import (
     compute_optimal_scaling,
     compute_optimal_sigma,
 )
-
-
-class InnerSolver:
-    """Solver for an inner optimization problem."""
-
-    def initialize(self):
-        """
-        (Re-)initialize the solver.
-
-        Default: Do nothing.
-        """
-
-    def solve(
-        self,
-        problem: InnerProblem,
-        sim: List[np.ndarray],
-        sigma: List[np.ndarray],
-        scaled: bool,
-    ) -> Dict[str, float]:
-        """Solve the subproblem.
-
-        Parameters
-        ----------
-        problem:
-            The inner problem to solve.
-        sim:
-            List of model output matrices, as provided in AMICI's
-            ``ReturnData.y``. Same order as simulations in the
-            PEtab problem.
-        sigma:
-            List of sigma matrices from the model, as provided in AMICI's
-            ``ReturnData.sigmay``. Same order as simulations in the
-            PEtab problem.
-        scaled:
-            Whether to scale the results to the parameter scale specified in
-            ``problem``.
-        """
 
 
 class AnalyticalInnerSolver(InnerSolver):

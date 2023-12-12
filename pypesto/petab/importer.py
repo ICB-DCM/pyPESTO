@@ -37,9 +37,9 @@ from ..C import (
     ORDINAL,
     SPLINE_APPROXIMATION_OPTIONS,
 )
-from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
-from ..hierarchical.problem import InnerProblem
+from ..hierarchical.relative.calculator import RelativeAmiciCalculator
+from ..hierarchical.relative.problem import RelativeInnerProblem
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -481,10 +481,10 @@ class PetabImporter(AmiciObjectBuilder):
             amici_reporting = amici.RDataReporting.residuals
 
         elif self._hierarchical:
-            inner_problem = InnerProblem.from_petab_amici(
+            inner_problem = RelativeInnerProblem.from_petab_amici(
                 self.petab_problem, model, edatas
             )
-            calculator = HierarchicalAmiciCalculator(inner_problem)
+            calculator = RelativeAmiciCalculator(inner_problem)
             amici_reporting = amici.RDataReporting.full
 
         if self._hierarchical:
@@ -714,11 +714,9 @@ class PetabImporter(AmiciObjectBuilder):
                     f"If there are ordinal, censored or nonlinear-monotone measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
         elif self._hierarchical:
-            if not isinstance(
-                objective.calculator, HierarchicalAmiciCalculator
-            ):
+            if not isinstance(objective.calculator, RelativeAmiciCalculator):
                 raise AssertionError(
-                    f"If hierarchical optimization of relative data is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
+                    f"If hierarchical optimization of relative data is enabled, the `calculator` attribute of the `objective` has to be {RelativeAmiciCalculator} and not {objective.calculator}."
                 )
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
@@ -940,19 +938,46 @@ def get_petab_non_quantitative_data_types(
         A list of the data types.
     """
     non_quantitative_data_types = []
-    if MEASUREMENT_TYPE in petab_problem.measurement_df.columns:
-        petab_data_types = petab_problem.measurement_df[
-            MEASUREMENT_TYPE
-        ].unique()
-        if ORDINAL in petab_data_types:
-            non_quantitative_data_types.append(ORDINAL)
-        if any(
-            censoring_type in petab_data_types
-            for censoring_type in CENSORING_TYPES
-        ):
-            non_quantitative_data_types.append(CENSORED)
-        if NONLINEAR_MONOTONE in petab_data_types:
-            non_quantitative_data_types.append(NONLINEAR_MONOTONE)
+    caught_observables = []
+    # For ordinal, censored and nonlinear-monotone data, search
+    # for the corresponding data types in the measurement table
+    meas_df = petab_problem.measurement_df
+    if MEASUREMENT_TYPE in meas_df.columns:
+        petab_data_types = meas_df[MEASUREMENT_TYPE].unique()
+        for data_type in [ORDINAL, NONLINEAR_MONOTONE] + CENSORING_TYPES:
+            if data_type in petab_data_types:
+                non_quantitative_data_types.append(
+                    CENSORED if data_type in CENSORING_TYPES else data_type
+                )
+                caught_observables.append(
+                    meas_df[
+                        meas_df[MEASUREMENT_TYPE] == data_type
+                    ].index.tolist()
+                )
+
+    # For relative data, search for parameters to estimate with
+    # a scaling/offset/sigma parameter type
+    # if PARAMETER_TYPE in petab_problem.parameter_df.columns:
+    #     # get the df with non-nan parameter types
+    #     par_df = petab_problem.parameter_df[
+    #         petab_problem.parameter_df[PARAMETER_TYPE].notna()
+    #     ]
+    #     for row in par_df.iterrows():
+    #         if row[1][PARAMETER_TYPE] in [InnerParameterType.SCALING, InnerParameterType.OFFSET]:
+    #             non_quantitative_data_types.append(RELATIVE)
+    #         # For sigma parameters, we need to check if they belong
+    #         # to an observable with a non-quantitative data type
+    #         elif row[1][PARAMETER_TYPE] == InnerParameterType.SIGMA:
+    #             par_id = row[0]
+    #             corresponding_observables = meas_df[
+    #                 meas_df[NOISE_PARAMETERS] == par_id
+    #             ].index.tolist()
+    #             if not (set(corresponding_observables) & set(caught_observables)):
+    #                 non_quantitative_data_types.append(RELATIVE)
+
+    # TODO this can be made muuuch shorter if the relative measurements
+    # are also specified in the measurement table, but that would require
+    # changing the PEtab format of a lot of benchmark models...
 
     if len(non_quantitative_data_types) == 0:
         return None

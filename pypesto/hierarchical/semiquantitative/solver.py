@@ -23,9 +23,9 @@ from ...C import (
     SCIPY_X,
     InnerParameterType,
 )
-from ..solver import InnerSolver
-from .parameter import SplineInnerParameter
-from .problem import SplineInnerProblem
+from ..base_solver import InnerSolver
+from .parameter import SemiquantitativeInnerParameter
+from .problem import SemiquantitativeInnerProblem
 
 try:
     from amici.parameter_mapping import ParameterMapping
@@ -33,7 +33,7 @@ except ImportError:
     pass
 
 
-class SplineInnerSolver(InnerSolver):
+class SemiquantitativeInnerSolver(InnerSolver):
     """Solver of the inner subproblem of spline approximation for nonlinear-monotone data.
 
     Options
@@ -76,7 +76,7 @@ class SplineInnerSolver(InnerSolver):
 
     def solve(
         self,
-        problem: SplineInnerProblem,
+        problem: SemiquantitativeInnerProblem,
         sim: List[np.ndarray],
         amici_sigma: List[np.ndarray],
     ) -> list:
@@ -155,7 +155,7 @@ class SplineInnerSolver(InnerSolver):
 
     def calculate_gradients(
         self,
-        problem: SplineInnerProblem,
+        problem: SemiquantitativeInnerProblem,
         x_inner_opt: List[Dict],
         sim: List[np.ndarray],
         amici_sigma: List[np.ndarray],
@@ -363,7 +363,7 @@ class SplineInnerSolver(InnerSolver):
 
     def _optimize_spline(
         self,
-        inner_parameters: List[SplineInnerParameter],
+        inner_parameters: List[SemiquantitativeInnerParameter],
         group_dict: Dict,
     ):
         """Run optimization for the inner problem.
@@ -524,7 +524,7 @@ class SplineInnerSolver(InnerSolver):
 
     def _get_inner_optimization_options(
         self,
-        inner_parameters: List[SplineInnerParameter],
+        inner_parameters: List[SemiquantitativeInnerParameter],
         N: int,
         min_meas: float,
         max_meas: float,
@@ -1059,7 +1059,7 @@ def extract_expdata_using_mask(
 
 
 def save_inner_parameters_to_inner_problem(
-    inner_problem: SplineInnerProblem,
+    inner_problem: SemiquantitativeInnerProblem,
     s: np.ndarray,
     group: int,
 ) -> None:

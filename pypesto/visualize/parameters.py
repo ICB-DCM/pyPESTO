@@ -381,14 +381,14 @@ def handle_inputs(
         res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
     ]
 
-    from ..hierarchical.calculator import HierarchicalAmiciCalculator
+    from ..hierarchical.relative.calculator import RelativeAmiciCalculator
 
     if (
         any(inner_x is not None for inner_x in inner_xs)
         and hasattr(result.problem.objective, 'calculator')
         and isinstance(
             inner_calculator := result.problem.objective.calculator,
-            HierarchicalAmiciCalculator,
+            RelativeAmiciCalculator,
         )
     ):
         inner_xs_names = inner_calculator.inner_problem.get_x_ids()

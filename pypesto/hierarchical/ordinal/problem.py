@@ -35,8 +35,8 @@ from ...C import (
     W_MATRIX,
     InnerParameterType,
 )
-from ..problem import (
-    InnerProblem,
+from ..base_problem import (
+    AmiciInnerProblem,
     _get_timepoints_with_replicates,
     ix_matrices_from_arrays,
 )
@@ -50,7 +50,7 @@ except ImportError:
     pass
 
 
-class OptimalScalingProblem(InnerProblem):
+class OptimalScalingProblem(AmiciInnerProblem):
     """Inner optimization problem for optimal scaling.
 
     Attributes
@@ -68,12 +68,11 @@ class OptimalScalingProblem(InnerProblem):
 
     def __init__(
         self,
-        xs: List[OptimalScalingParameter],
-        data: List[np.ndarray],
         method: str,
+        **kwargs,
     ):
         """Construct."""
-        super().__init__(xs, data)
+        super().__init__(**kwargs)
         self.groups = {}
         self.method = method
 
@@ -484,21 +483,20 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    edatas = [
-        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-    ]
+    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
 
     # matrixify
-    ix_matrices = ix_matrices_from_arrays(ixs, edatas)
+    ix_matrices = ix_matrices_from_arrays(ixs, data)
 
     # assign matrices
     for par in inner_parameters:
         par.ixs = ix_matrices[par.inner_parameter_id]
 
     return OptimalScalingProblem(
-        inner_parameters,
-        edatas,
-        method,
+        xs=inner_parameters,
+        data=data,
+        edatas=edatas,
+        method=method,
     )
 
 
