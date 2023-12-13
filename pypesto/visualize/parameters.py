@@ -454,6 +454,9 @@ def _handle_inner_inputs(
     inner_xs = [
         res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
     ]
+    inner_xs_names = None
+    inner_lb = None
+    inner_ub = None
 
     if any(inner_x is not None for inner_x in inner_xs):
         from ..hierarchical.calculator import HierarchicalAmiciCalculator
@@ -472,11 +475,9 @@ def _handle_inner_inputs(
             ]
             # set bounds for inner parameters
             inner_lb, inner_ub = inner_calculator.inner_problem.get_bounds()
-        else:
-            inner_xs = None
-            inner_xs_names = None
-            inner_lb = None
-            inner_ub = None
+
+    if inner_xs_names is None:
+        inner_xs = None
 
     return inner_xs, inner_xs_names, inner_lb, inner_ub
 
