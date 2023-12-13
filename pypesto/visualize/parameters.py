@@ -378,7 +378,7 @@ def handle_inputs(
     xs = result.optimize_result.x
 
     # retrieve inner parameters if available
-    inner_xs, inner_xs_names, inner_lb, inner_ub = handle_inner_inputs(result)
+    inner_xs, inner_xs_names, inner_lb, inner_ub = _handle_inner_inputs(result)
 
     # parse indices which should be plotted
     if start_indices is not None:
@@ -430,7 +430,7 @@ def handle_inputs(
     return lb, ub, x_labels, fvals_out, xs_out
 
 
-def handle_inner_inputs(
+def _handle_inner_inputs(
     result: Result,
 ):
     """Handle inner parameters if available.
