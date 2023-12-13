@@ -459,7 +459,7 @@ def test_parameters_hist():
 @pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
 @close_fig
 def test_parameters_hierarchical(scale_to_interval):
-    # bbtain a petab problem with hierarchical parameters
+    # obtain a petab problem with hierarchical parameters
     petab_problem = (
         get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
     )

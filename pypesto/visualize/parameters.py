@@ -376,33 +376,9 @@ def handle_inputs(
     # retrieve results
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
+
     # retrieve inner parameters if available
-    inner_xs = [
-        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
-    ]
-
-    from ..hierarchical.calculator import HierarchicalAmiciCalculator
-
-    if (
-        any(inner_x is not None for inner_x in inner_xs)
-        and hasattr(result.problem.objective, 'calculator')
-        and isinstance(
-            inner_calculator := result.problem.objective.calculator,
-            HierarchicalAmiciCalculator,
-        )
-    ):
-        inner_xs_names = inner_calculator.inner_problem.get_x_ids()
-        # replace None with a list of nans
-        inner_xs = [
-            [np.nan for i in range(len(inner_xs_names))]
-            if inner_xs_idx is None
-            else np.asarray(inner_xs_idx)
-            for inner_xs_idx in inner_xs
-        ]
-        # set bounds for inner parameters
-        inner_lb, inner_ub = inner_calculator.inner_problem.get_bounds()
-    else:
-        inner_xs = None
+    inner_xs, inner_xs_names, inner_lb, inner_ub = handle_inner_inputs(result)
 
     # parse indices which should be plotted
     if start_indices is not None:
@@ -452,6 +428,57 @@ def handle_inputs(
         ]
 
     return lb, ub, x_labels, fvals_out, xs_out
+
+
+def handle_inner_inputs(
+    result: Result,
+):
+    """Handle inner parameters if available.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'.
+
+    Returns
+    -------
+    inner_xs:
+        Inner parameter values which will be appended to xs.
+    inner_xs_names:
+        Inner parameter names.
+    inner_lb:
+        Inner parameter lower bounds.
+    inner_ub:
+        Inner parameter upper bounds.
+    """
+    inner_xs = [
+        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
+    ]
+
+    if any(inner_x is not None for inner_x in inner_xs):
+        from ..hierarchical.calculator import HierarchicalAmiciCalculator
+
+        if hasattr(result.problem.objective, 'calculator') and isinstance(
+            inner_calculator := result.problem.objective.calculator,
+            HierarchicalAmiciCalculator,
+        ):
+            inner_xs_names = inner_calculator.inner_problem.get_x_ids()
+            # replace None with a list of nans
+            inner_xs = [
+                [np.nan for i in range(len(inner_xs_names))]
+                if inner_xs_idx is None
+                else np.asarray(inner_xs_idx)
+                for inner_xs_idx in inner_xs
+            ]
+            # set bounds for inner parameters
+            inner_lb, inner_ub = inner_calculator.inner_problem.get_bounds()
+        else:
+            inner_xs = None
+            inner_xs_names = None
+            inner_lb = None
+            inner_ub = None
+
+    return inner_xs, inner_xs_names, inner_lb, inner_ub
 
 
 def parameters_correlation_matrix(

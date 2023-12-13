@@ -41,12 +41,13 @@ class OptimizerImportError(ImportError):
         )
 
 
-def add_inner_parameters(
+def _add_inner_parameters(
     objective: Objective, optimizer_result: OptimizerResult
 ):
     """Add inner parameters from objective to the optimizer result."""
-    if hasattr(objective, INNER_PARAMETERS) and any(
-        objective.inner_parameters
+    if (
+        hasattr(objective, INNER_PARAMETERS)
+        and objective.inner_parameters is not None
     ):
         optimizer_result[INNER_PARAMETERS] = objective.inner_parameters
 
@@ -472,7 +473,7 @@ class ScipyOptimizer(Optimizer):
             exitflag=res.status,
             message=res.message,
         )
-        add_inner_parameters(objective, optimizer_result)
+        _add_inner_parameters(objective, optimizer_result)
 
         return optimizer_result
 
@@ -618,7 +619,7 @@ class DlibOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult()
 
-        add_inner_parameters(objective, optimizer_result)
+        _add_inner_parameters(objective, optimizer_result)
 
         return optimizer_result
 
@@ -682,7 +683,7 @@ class PyswarmOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult(x=np.array(xopt), fval=fopt)
 
-        add_inner_parameters(problem.objective, optimizer_result)
+        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -771,7 +772,7 @@ class CmaesOptimizer(Optimizer):
             x=np.array(result[0]), fval=result[1]
         )
 
-        add_inner_parameters(problem.objective, optimizer_result)
+        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -842,7 +843,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             x=np.array(result.x), fval=result.fun
         )
 
-        add_inner_parameters(problem.objective, optimizer_result)
+        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -963,7 +964,7 @@ class PyswarmsOptimizer(Optimizer):
             fval=float(cost),
         )
 
-        add_inner_parameters(problem.objective, optimizer_result)
+        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -1197,7 +1198,7 @@ class NLoptOptimizer(Optimizer):
             exitflag=opt.last_optimize_result(),
         )
 
-        add_inner_parameters(problem.objective, optimizer_result)
+        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -1385,7 +1386,7 @@ class FidesOptimizer(Optimizer):
             exitflag=opt.exitflag,
         )
 
-        add_inner_parameters(problem.objective, optimizer_result)
+        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
