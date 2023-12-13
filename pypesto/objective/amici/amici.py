@@ -456,7 +456,7 @@ class AmiciObjective(ObjectiveBase):
 
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]
-        if INNER_PARAMETERS in ret and ret[INNER_PARAMETERS] is not None:
+        if ret.get(INNER_PARAMETERS, None) is not None:
             self.inner_parameters = ret[INNER_PARAMETERS]
 
         # check whether we should update data for preequilibration guesses
