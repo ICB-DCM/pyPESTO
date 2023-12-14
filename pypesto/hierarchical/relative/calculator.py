@@ -123,6 +123,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 inner_result[HESS] = np.full(
                     shape=(dim, dim), fill_value=np.nan
                 )
+            inner_result[INNER_PARAMETERS] = None
             return inner_result
 
         inner_parameters = self.inner_solver.solve(

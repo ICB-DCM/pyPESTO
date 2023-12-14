@@ -414,7 +414,11 @@ class InnerCalculatorCollector(AmiciCalculator):
         # only if the objective value improved.
         if ret[FVAL] < self.best_fval:
             ret[X_INNER_OPT] = all_inner_pars
-            ret[INNER_PARAMETERS] = interpretable_inner_pars
+            ret[INNER_PARAMETERS] = (
+                interpretable_inner_pars
+                if len(interpretable_inner_pars) > 0
+                else None
+            )
             self.best_fval = ret[FVAL]
 
         return filter_return_dict(ret)

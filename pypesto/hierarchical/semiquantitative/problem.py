@@ -189,7 +189,7 @@ class SemiquantProblem(AmiciInnerProblem):
             inner_par_dict[x_id] = x.value
         return inner_par_dict
 
-    def get_inner_noise_parameters(self) -> Dict:
+    def get_inner_noise_parameters(self) -> list[float]:
         """Get a list with all noise parameter values."""
         return [
             x.value for x in self.get_xs_for_type(InnerParameterType.SIGMA)
