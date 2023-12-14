@@ -377,7 +377,7 @@ def handle_inputs(
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
 
-    # retrieve inner parameters if available
+    # retrieve inner parameters in case of hierarchical optimization
     inner_xs, inner_xs_names, inner_lb, inner_ub = _handle_inner_inputs(result)
 
     # parse indices which should be plotted
@@ -432,8 +432,11 @@ def handle_inputs(
 
 def _handle_inner_inputs(
     result: Result,
-):
-    """Handle inner parameters if available.
+) -> Union[
+    Tuple[None, None, None, None],
+    Tuple[list[np.ndarray], list[str], np.ndarray, np.ndarray],
+]:
+    """Handle inner parameters from hierarchical optimization, if available.
 
     Parameters
     ----------
@@ -468,7 +471,7 @@ def _handle_inner_inputs(
             inner_xs_names = inner_calculator.inner_problem.get_x_ids()
             # replace None with a list of nans
             inner_xs = [
-                [np.nan for i in range(len(inner_xs_names))]
+                np.full(len(inner_xs_names), np.nan)
                 if inner_xs_idx is None
                 else np.asarray(inner_xs_idx)
                 for inner_xs_idx in inner_xs
