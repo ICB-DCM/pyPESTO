@@ -99,7 +99,7 @@ class InnerParameterType(str, Enum):
     OFFSET = 'offset'
     SCALING = 'scaling'
     SIGMA = 'sigma'
-    OPTIMAL_SCALING = 'optimal_scaling'
+    OPTIMAL_SCALING = 'optimal_scaling'  # TODO rename?
     SPLINE = 'spline'
 
 
@@ -124,7 +124,7 @@ INNER_PARAMETER_BOUNDS = {
         LOWER_BOUND: 0,
         UPPER_BOUND: float('inf'),
     },
-    InnerParameterType.OPTIMAL_SCALING: {
+    InnerParameterType.OPTIMAL_SCALING: {  # TODO rename?
         LOWER_BOUND: -float('inf'),
         UPPER_BOUND: float('inf'),
     },

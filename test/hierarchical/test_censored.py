@@ -58,8 +58,8 @@ def test_optimization():
     )
 
 
-def test_optimal_scaling_calculator_and_objective():
-    """Test the optimal scaling calculation of objective and gradient values."""
+def test_ordinal_calculator_and_objective():
+    """Test the ordinal calculation of objective and gradient values."""
     petab_problem = petab.Problem.from_yaml(example_censored_yaml)
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
@@ -172,8 +172,8 @@ def _inner_problem_exp():
     return inner_problem, expected_values, simulation
 
 
-def test_optimal_scaling_solver():
-    """Test the Optimal scaling solver."""
+def test_ordinal_solver():
+    """Test the ordinal solver."""
     (
         inner_problem,
         expected_values,

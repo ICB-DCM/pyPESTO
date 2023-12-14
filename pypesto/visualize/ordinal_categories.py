@@ -152,8 +152,8 @@ def plot_categories_from_pypesto_result(
 
 
 def plot_categories_from_inner_result(
-    inner_problem: 'pypesto.hierarchical.optimal_scaling.problem.OptimalScalingProblem',
-    inner_solver: 'pypesto.hierarchical.optimal_scaling.solver.OptimalScalingInnerSolver',
+    inner_problem: 'pypesto.hierarchical.ordinal.problem.OrdinalProblem',
+    inner_solver: 'pypesto.hierarchical.ordinal.solver.OrdinalInnerSolver',
     results: List[Dict],
     simulation: List[np.ndarray],
     timepoints: List[np.ndarray],
