@@ -49,9 +49,9 @@ except ImportError:
 
 from .ordinal import OrdinalCalculator, OrdinalInnerSolver, OrdinalProblem
 from .semiquantitative import (
-    SemiquantitativeCalculator,
-    SemiquantitativeInnerProblem,
-    SemiquantitativeInnerSolver,
+    SemiquantCalculator,
+    SemiquantInnerSolver,
+    SemiquantProblem,
 )
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
@@ -146,15 +146,13 @@ class InnerCalculatorCollector(AmiciCalculator):
                 if key in SPLINE_APPROXIMATION_OPTIONS
             }
             spline_ratio = spline_inner_options.pop(SPLINE_RATIO, None)
-            spline_inner_problem = (
-                SemiquantitativeInnerProblem.from_petab_amici(
-                    petab_problem, model, edatas, spline_ratio
-                )
+            spline_inner_problem = SemiquantProblem.from_petab_amici(
+                petab_problem, model, edatas, spline_ratio
             )
-            spline_inner_solver = SemiquantitativeInnerSolver(
+            spline_inner_solver = SemiquantInnerSolver(
                 options=spline_inner_options
             )
-            spline_calculator = SemiquantitativeCalculator(
+            spline_calculator = SemiquantCalculator(
                 spline_inner_problem, spline_inner_solver
             )
             self.noise_dummy_values = (

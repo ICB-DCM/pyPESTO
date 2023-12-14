@@ -27,8 +27,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .problem import SemiquantitativeInnerProblem
-from .solver import SemiquantitativeInnerSolver
+from .problem import SemiquantProblem
+from .solver import SemiquantInnerSolver
 
 try:
     import amici
@@ -37,7 +37,7 @@ except ImportError:
     pass
 
 
-class SemiquantitativeCalculator(AmiciCalculator):
+class SemiquantCalculator(AmiciCalculator):
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -46,8 +46,8 @@ class SemiquantitativeCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: SemiquantitativeInnerProblem,
-        inner_solver: SemiquantitativeInnerSolver = None,
+        inner_problem: SemiquantProblem,
+        inner_solver: SemiquantInnerSolver = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -63,7 +63,7 @@ class SemiquantitativeCalculator(AmiciCalculator):
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = SemiquantitativeInnerSolver()
+            inner_solver = SemiquantInnerSolver()
         self.inner_solver = inner_solver
 
     def initialize(self):

@@ -17,11 +17,11 @@ from pypesto.C import (
     InnerParameterType,
 )
 from pypesto.hierarchical.semiquantitative import (
-    SemiquantitativeInnerProblem,
-    SemiquantitativeInnerSolver,
+    SemiquantInnerSolver,
+    SemiquantProblem,
 )
 from pypesto.hierarchical.semiquantitative.parameter import (
-    SemiquantitativeInnerParameter,
+    SplineInnerParameter,
 )
 from pypesto.hierarchical.semiquantitative.solver import (
     _calculate_nllh_for_group,
@@ -270,7 +270,7 @@ def _inner_problem_exp():
     mask = [np.full(len(simulation), True)]
 
     inner_parameters = [
-        SemiquantitativeInnerParameter(
+        SplineInnerParameter(
             inner_parameter_id=f'{par_type}_{1}_{par_index+1}',
             inner_parameter_type=InnerParameterType.SPLINE,
             scale=LIN,
@@ -284,7 +284,7 @@ def _inner_problem_exp():
         for par_index in range(n_spline_pars)
     ]
 
-    inner_problem = SemiquantitativeInnerProblem(
+    inner_problem = SemiquantProblem(
         xs=inner_parameters,
         data=[data],
         edatas=None,
@@ -313,7 +313,7 @@ def test_spline_inner_solver():
     results = {}
 
     for minimal_diff, option in options.items():
-        inner_solvers[minimal_diff] = SemiquantitativeInnerSolver(
+        inner_solvers[minimal_diff] = SemiquantInnerSolver(
             options=option,
         )
 

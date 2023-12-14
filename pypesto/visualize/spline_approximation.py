@@ -21,11 +21,9 @@ from ..result import Result
 try:
     import amici
 
-    from ..hierarchical.semiquantitative.calculator import (
-        SemiquantitativeCalculator,
-    )
+    from ..hierarchical.semiquantitative.calculator import SemiquantCalculator
     from ..hierarchical.semiquantitative.solver import (
-        SemiquantitativeInnerSolver,
+        SemiquantInnerSolver,
         _calculate_regularization_for_group,
         get_spline_mapped_simulations,
     )
@@ -107,7 +105,7 @@ def plot_splines_from_pypesto_result(
     for (
         calculator
     ) in pypesto_result.problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, SemiquantitativeCalculator):
+        if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
 
@@ -192,7 +190,7 @@ def plot_splines_from_inner_result(
             delta_c,
             spline_bases,
             n,
-        ) = SemiquantitativeInnerSolver._rescale_spline_bases(
+        ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
             N=len(inner_parameters),
@@ -357,7 +355,7 @@ def _add_spline_mapped_simulations_to_model_fit(
 
     spline_calculator = None
     for calculator in pypesto_problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, SemiquantitativeCalculator):
+        if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
 
@@ -392,7 +390,7 @@ def _add_spline_mapped_simulations_to_model_fit(
             delta_c,
             spline_bases,
             n,
-        ) = SemiquantitativeInnerSolver._rescale_spline_bases(
+        ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
             N=len(inner_parameters),
@@ -510,7 +508,7 @@ def _obtain_regularization_for_start(
     for (
         calculator
     ) in pypesto_result.problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, SemiquantitativeCalculator):
+        if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
 
@@ -537,7 +535,7 @@ def _obtain_regularization_for_start(
             delta_c,
             spline_bases,
             n,
-        ) = SemiquantitativeInnerSolver._rescale_spline_bases(
+        ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
             N=len(inner_parameters),

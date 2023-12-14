@@ -24,8 +24,8 @@ from ...C import (
     InnerParameterType,
 )
 from ..base_solver import InnerSolver
-from .parameter import SemiquantitativeInnerParameter
-from .problem import SemiquantitativeInnerProblem
+from .parameter import SplineInnerParameter
+from .problem import SemiquantProblem
 
 try:
     from amici.parameter_mapping import ParameterMapping
@@ -33,7 +33,7 @@ except ImportError:
     pass
 
 
-class SemiquantitativeInnerSolver(InnerSolver):
+class SemiquantInnerSolver(InnerSolver):
     """Solver of the inner subproblem of spline approximation for nonlinear-monotone data.
 
     Options
@@ -76,7 +76,7 @@ class SemiquantitativeInnerSolver(InnerSolver):
 
     def solve(
         self,
-        problem: SemiquantitativeInnerProblem,
+        problem: SemiquantProblem,
         sim: List[np.ndarray],
         amici_sigma: List[np.ndarray],
     ) -> list:
@@ -155,7 +155,7 @@ class SemiquantitativeInnerSolver(InnerSolver):
 
     def calculate_gradients(
         self,
-        problem: SemiquantitativeInnerProblem,
+        problem: SemiquantProblem,
         x_inner_opt: List[Dict],
         sim: List[np.ndarray],
         amici_sigma: List[np.ndarray],
@@ -363,7 +363,7 @@ class SemiquantitativeInnerSolver(InnerSolver):
 
     def _optimize_spline(
         self,
-        inner_parameters: List[SemiquantitativeInnerParameter],
+        inner_parameters: List[SplineInnerParameter],
         group_dict: Dict,
     ):
         """Run optimization for the inner problem.
@@ -524,7 +524,7 @@ class SemiquantitativeInnerSolver(InnerSolver):
 
     def _get_inner_optimization_options(
         self,
-        inner_parameters: List[SemiquantitativeInnerParameter],
+        inner_parameters: List[SplineInnerParameter],
         N: int,
         min_meas: float,
         max_meas: float,
@@ -1059,7 +1059,7 @@ def extract_expdata_using_mask(
 
 
 def save_inner_parameters_to_inner_problem(
-    inner_problem: SemiquantitativeInnerProblem,
+    inner_problem: SemiquantProblem,
     s: np.ndarray,
     group: int,
 ) -> None:

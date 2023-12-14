@@ -10,7 +10,7 @@ optimized to fit the data. This constitutes the inner subproblem of the
 hierarchical optimization problem.
 """
 
-from .calculator import SemiquantitativeCalculator
-from .parameter import SemiquantitativeInnerParameter
-from .problem import SemiquantitativeInnerProblem
-from .solver import SemiquantitativeInnerSolver
+from .calculator import SemiquantCalculator
+from .parameter import SplineInnerParameter
+from .problem import SemiquantProblem
+from .solver import SemiquantInnerSolver
