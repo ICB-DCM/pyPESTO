@@ -41,15 +41,41 @@ class OptimizerImportError(ImportError):
         )
 
 
-def _add_inner_parameters(
-    objective: Objective, optimizer_result: OptimizerResult
-):
-    """Add inner parameters from objective to the optimizer result."""
-    if (
-        hasattr(objective, INNER_PARAMETERS)
-        and objective.inner_parameters is not None
+def hierarchical_decorator(minimize):
+    """Add inner parameters to the optimizer result.
+
+    Default decorator for the minimize() method.
+    """
+
+    @wraps(minimize)
+    def wrapped_minimize(
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
+        optimize_options: OptimizeOptions = None,
     ):
-        optimizer_result[INNER_PARAMETERS] = objective.inner_parameters
+        # perform the actual optimization
+        result = minimize(
+            self,
+            problem=problem,
+            x0=x0,
+            id=id,
+            history_options=history_options,
+            optimize_options=optimize_options,
+        )
+
+        # add inner parameters
+        if (
+            hasattr(problem.objective, INNER_PARAMETERS)
+            and problem.objective.inner_parameters is not None
+        ):
+            result[INNER_PARAMETERS] = problem.objective.inner_parameters
+
+        return result
+
+    return wrapped_minimize
 
 
 def history_decorator(minimize):
@@ -206,6 +232,34 @@ def fix_decorator(minimize):
     return wrapped_minimize
 
 
+# def decorator_collection(minimize):
+#     """Collect all decorators for the minimize() method."""
+
+#     @wraps(minimize)
+#     @fix_decorator
+#     @time_decorator
+#     @history_decorator
+#     @hierarchical_decorator
+#     def wrapped_minimize(
+#         self,
+#         problem: Problem,
+#         x0: np.ndarray,
+#         id: str,
+#         history_options: HistoryOptions = None,
+#         optimize_options: OptimizeOptions = None,
+#     ):
+#         return minimize(
+#             self,
+#             problem=problem,
+#             x0=x0,
+#             id=id,
+#             history_options=history_options,
+#             optimize_options=optimize_options,
+#         )
+
+#     return wrapped_minimize
+
+
 class Optimizer(abc.ABC):
     """
     Optimizer base class, not functional on its own.
@@ -221,6 +275,7 @@ class Optimizer(abc.ABC):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -298,6 +353,7 @@ class ScipyOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -473,7 +529,6 @@ class ScipyOptimizer(Optimizer):
             exitflag=res.status,
             message=res.message,
         )
-        _add_inner_parameters(objective, optimizer_result)
 
         return optimizer_result
 
@@ -518,6 +573,7 @@ class IpoptOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -580,6 +636,7 @@ class DlibOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -619,8 +676,6 @@ class DlibOptimizer(Optimizer):
 
         optimizer_result = OptimizerResult()
 
-        _add_inner_parameters(objective, optimizer_result)
-
         return optimizer_result
 
     def is_least_squares(self):
@@ -658,6 +713,7 @@ class PyswarmOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -682,8 +738,6 @@ class PyswarmOptimizer(Optimizer):
         )
 
         optimizer_result = OptimizerResult(x=np.array(xopt), fval=fopt)
-
-        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -736,6 +790,7 @@ class CmaesOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -771,8 +826,6 @@ class CmaesOptimizer(Optimizer):
         optimizer_result = OptimizerResult(
             x=np.array(result[0]), fval=result[1]
         )
-
-        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -821,6 +874,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -842,8 +896,6 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         optimizer_result = OptimizerResult(
             x=np.array(result.x), fval=result.fun
         )
-
-        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -899,6 +951,7 @@ class PyswarmsOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -963,8 +1016,6 @@ class PyswarmsOptimizer(Optimizer):
             x=pos,
             fval=float(cost),
         )
-
-        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -1120,6 +1171,7 @@ class NLoptOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -1197,8 +1249,6 @@ class NLoptOptimizer(Optimizer):
             message=msg,
             exitflag=opt.last_optimize_result(),
         )
-
-        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
@@ -1307,6 +1357,7 @@ class FidesOptimizer(Optimizer):
     @fix_decorator
     @time_decorator
     @history_decorator
+    @hierarchical_decorator
     def minimize(
         self,
         problem: Problem,
@@ -1385,8 +1436,6 @@ class FidesOptimizer(Optimizer):
             message=msg,
             exitflag=opt.exitflag,
         )
-
-        _add_inner_parameters(problem.objective, optimizer_result)
 
         return optimizer_result
 
