@@ -1,4 +1,5 @@
 """Tests for hierarchical optimization."""
+import copy
 import time
 
 import amici
@@ -314,9 +315,9 @@ def test_analytical_computations():
     assert np.isclose(sigma_value, expected_sigma_value, rtol=rtol)
 
 
-def inner_problem_exp():
+def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
     function = np.exp
-    timepoints = np.linspace(0, 10, 101)
+    timepoints = np.linspace(0, 3, 101)
 
     expected_values = {
         'scaling_': 5,
@@ -326,9 +327,13 @@ def inner_problem_exp():
 
     simulation = function(timepoints)
 
-    data = (
-        expected_values['scaling_'] * simulation + expected_values['offset_']
-    )
+    data = copy.deepcopy(simulation)
+    if add_scaling:
+        data *= expected_values['scaling_']
+
+    if add_offset:
+        data += expected_values['offset_']
+
     data[0::2] -= expected_values['sigma_']
     data[1::2] += expected_values['sigma_']
 
@@ -344,14 +349,20 @@ def inner_problem_exp():
             ixs=mask,
         )
         for inner_parameter_id, inner_parameter_type in [
-            ('offset_', InnerParameterType.OFFSET),
-            ('scaling_', InnerParameterType.SCALING),
+            ('offset_', InnerParameterType.OFFSET)
+            if add_offset
+            else (None, None),
+            ('scaling_', InnerParameterType.SCALING)
+            if add_scaling
+            else (None, None),
             ('sigma_', InnerParameterType.SIGMA),
         ]
+        if inner_parameter_id is not None
     ]
 
-    inner_parameters[0].coupled = True
-    inner_parameters[1].coupled = True
+    if add_scaling and add_offset:
+        inner_parameters[0].coupled = inner_parameters[1]
+        inner_parameters[1].coupled = inner_parameters[0]
 
     inner_problem = InnerProblem(xs=inner_parameters, data=[data])
 
@@ -403,6 +414,181 @@ def test_numerical_inner_solver():
         result['scaling_'], expected_values['scaling_'], rtol=rtol
     )
     assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
+
+
+def test_non_coupled_analytical_inner_solver():
+    """Test analytically-solved non-coupled hierarchical inner parameters."""
+    # Test for only offset
+    inner_problem, expected_values, simulation = inner_problem_exp(
+        add_scaling=False
+    )
+    dummy_sigma = np.ones(simulation.shape)
+
+    rtol = 1e-1
+
+    solver = AnalyticalInnerSolver()
+    result = solver.solve(
+        problem=inner_problem,
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        scaled=False,
+    )
+    assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
+    assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
+
+    # Test for only scaling
+    inner_problem, expected_values, simulation = inner_problem_exp(
+        add_offset=False
+    )
+    dummy_sigma = np.ones(simulation.shape)
+
+    rtol = 1e-3
+
+    solver = AnalyticalInnerSolver()
+    result = solver.solve(
+        problem=inner_problem,
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        scaled=False,
+    )
+
+    assert np.isclose(
+        result['scaling_'], expected_values['scaling_'], rtol=rtol
+    )
+    assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
+
+
+def test_constrained_inner_solver():
+    """Test numerically- and analytically-solved box-constrained hierarchical inner parameters."""
+    inner_problem, expected_values, simulation = inner_problem_exp()
+
+    dummy_sigma = np.ones(simulation.shape)
+
+    all_lb = [(6, 3), (3, 0), (3, 1), (4, 3)]
+    all_ub = [(7, 4), (4, 1), (4, 3), (6, 4)]
+
+    all_expected_values = [
+        {'scaling_': 6, 'offset_': 3},
+        {'scaling_': 4, 'offset_': 1},
+        {
+            'scaling_': 4,  # all_lb[2][0],
+            'offset_': np.clip(
+                compute_optimal_offset(
+                    data=inner_problem.data,
+                    sim=[simulation],
+                    sigma=[dummy_sigma],
+                    mask=[np.full(simulation.shape, True)],
+                    optimal_scaling=4.0,
+                ),
+                1,  # all_lb[2][1],
+                3,  # all_ub[2][1],
+            ),
+        },
+        {
+            'scaling_': np.clip(
+                compute_optimal_scaling(
+                    data=inner_problem.data,
+                    sim=[simulation],
+                    sigma=[dummy_sigma],
+                    mask=[np.full(simulation.shape, True)],
+                    optimal_offset=3.0,
+                ),
+                4,  # all_lb[3][0],
+                6,  # all_ub[3][0],
+            ),
+            'offset_': 3,  # all_lb[3][1],
+        },
+    ]
+
+    for lb, ub, expected_values in zip(all_lb, all_ub, all_expected_values):
+        # Set seed for reproducibility
+        np.random.seed(1)
+        inner_problem.get_for_id('scaling_').lb = lb[0]
+        inner_problem.get_for_id('scaling_').ub = ub[0]
+        inner_problem.get_for_id('offset_').lb = lb[1]
+        inner_problem.get_for_id('offset_').ub = ub[1]
+
+        copied_sim = copy.deepcopy(simulation)
+        rtol = 1e-3
+
+        solver = AnalyticalInnerSolver()
+        ana_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        copied_sim = copy.deepcopy(simulation)
+        solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
+        num_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        assert np.isclose(ana_res['offset_'], num_res['offset_'], rtol=rtol)
+        assert np.isclose(ana_res['scaling_'], num_res['scaling_'], rtol=rtol)
+
+        assert np.isclose(
+            ana_res['offset_'], expected_values['offset_'], rtol=rtol
+        )
+        assert np.isclose(
+            ana_res['scaling_'], expected_values['scaling_'], rtol=rtol
+        )
+
+
+def test_non_coupled_constrained_inner_solver():
+    """Test non-coupled box-constrained hierarchical inner parameters."""
+    for current_par, add_scaling, add_offset, lb, ub in zip(
+        ['scaling_', 'scaling_', 'offset_', 'offset_'],
+        [True, True, False, False],
+        [False, False, True, True],
+        [6, None, 3, None],
+        [None, 4, None, 1],
+    ):
+        # Set seed for reproducibility
+        np.random.seed(4)
+        inner_problem, expected_values, simulation = inner_problem_exp(
+            add_scaling=add_scaling,
+            add_offset=add_offset,
+        )
+        if lb is not None:
+            inner_problem.get_for_id(current_par).lb = lb
+            expected_values = {current_par: lb}
+        if ub is not None:
+            inner_problem.get_for_id(current_par).ub = ub
+            expected_values = {current_par: ub}
+
+        dummy_sigma = np.ones(simulation.shape)
+        copied_sim = copy.deepcopy(simulation)
+        rtol = 1e-3
+
+        solver = AnalyticalInnerSolver()
+        ana_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        copied_sim = copy.deepcopy(simulation)
+        solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
+        num_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        assert np.isclose(
+            ana_res[current_par], num_res[current_par], rtol=rtol
+        )
+
+        assert np.isclose(
+            ana_res[current_par], expected_values[current_par], rtol=rtol
+        )
 
 
 def at_least_as_good_as(v, v0) -> bool:

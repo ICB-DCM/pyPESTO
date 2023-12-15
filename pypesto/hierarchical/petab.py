@@ -39,6 +39,11 @@ def correct_parameter_df_bounds(parameter_df: pd.DataFrame) -> pd.DataFrame:
     def correct_row(row: pd.Series) -> pd.Series:
         if pd.isna(row[PARAMETER_TYPE]):
             return row
+        if row[PARAMETER_TYPE] in [
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        ]:
+            return row
         bounds = INNER_PARAMETER_BOUNDS[row[PARAMETER_TYPE]]
         row[PETAB_LOWER_BOUND] = bounds[PYPESTO_LOWER_BOUND]
         row[PETAB_UPPER_BOUND] = bounds[PYPESTO_UPPER_BOUND]
