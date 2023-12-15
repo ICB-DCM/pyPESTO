@@ -22,8 +22,9 @@ python:
 build:
   os: "ubuntu-22.04"
   apt_packages:
-    - libatlas-base-dev
-    - swig
     - gfortran
+    - libatlas-base-dev
+    - python3-dev
+    - swig
   tools:
     python: "3.11"
