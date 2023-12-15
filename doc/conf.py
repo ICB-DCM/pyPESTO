@@ -78,16 +78,19 @@ napoleon_use_rtype = False
 
 # links for intersphinx
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
+    'amici': ('https://amici.readthedocs.io/en/latest/', None),
+    'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
     'numpy': ('https://numpy.org/devdocs/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'petab': (
         'https://petab.readthedocs.io/projects/libpetab-python/en/latest/',
         None,
     ),
-    'amici': ('https://amici.readthedocs.io/en/latest/', None),
-    'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
+    # TODO on next release petab-select release
+    #  'petab_select': ('https://petab-select.readthedocs.io/en/latest/', None),
+    'python': ('https://docs.python.org/3', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
 }
 
 
