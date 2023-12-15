@@ -2,6 +2,8 @@
 
 import ast
 import logging
+from pathlib import Path
+from typing import Union
 
 import h5py
 import numpy as np
@@ -48,7 +50,7 @@ def read_hdf5_profile(
 
 def read_hdf5_optimization(
     f: h5py.File,
-    file_name: str,
+    file_name: Union[Path, str],
     opt_id: str,
 ) -> 'OptimizerResult':
     """Read HDF5 results per start.
@@ -91,12 +93,12 @@ class ProblemHDF5Reader:
         HDF5 problem file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """Initialize reader.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 problem file name
         """
         self.storage_filename = storage_filename
@@ -153,13 +155,13 @@ class OptimizationResultHDF5Reader:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize reader.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
         self.storage_filename = storage_filename
@@ -187,12 +189,12 @@ class SamplingResultHDF5Reader:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """Initialize reader.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
         self.storage_filename = storage_filename
@@ -226,7 +228,7 @@ class ProfileResultHDF5Reader:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize reader.
 
@@ -261,7 +263,7 @@ class ProfileResultHDF5Reader:
 
 
 def read_result(
-    filename: str,
+    filename: Union[Path, str],
     problem: bool = True,
     optimize: bool = False,
     profile: bool = False,
@@ -339,7 +341,7 @@ def read_result(
     return result
 
 
-def load_objective_config(filename: str):
+def load_objective_config(filename: Union[str, Path]):
     """Load the objective information stored in f.
 
     Parameters

@@ -4,6 +4,7 @@ import binascii
 import datetime
 import logging
 import os
+from pathlib import Path
 from typing import Callable, Union
 
 import h5py
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def autosave(
-    filename: Union[str, Callable, None],
+    filename: Union[Path, str, Callable, None],
     result: Result,
     store_type: str,
     overwrite: bool = False,
@@ -42,6 +43,9 @@ def autosave(
     """
     if filename is None:
         return
+
+    if isinstance(filename, Path):
+        filename = str(filename)
 
     if filename == "Auto":
         filename = default_filename
