@@ -17,11 +17,13 @@ python:
       path: .
       extra_requirements:
         - doc
+        - example
 
 build:
-  os: "ubuntu-20.04"
+  os: "ubuntu-22.04"
   apt_packages:
     - libatlas-base-dev
     - swig
+    - gfortran
   tools:
     python: "3.10"
