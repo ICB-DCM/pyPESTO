@@ -17,7 +17,6 @@ python:
       path: .
       extra_requirements:
         - doc
-        - example
 
 build:
   os: "ubuntu-22.04"
