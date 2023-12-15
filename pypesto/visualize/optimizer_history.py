@@ -476,3 +476,71 @@ def handle_options(
         )
 
     return ax
+
+
+def sacess_history(
+    histories: list[HistoryBase],
+    ax: Optional[plt.Axes] = None,
+    legend_kwargs: dict = None,
+) -> plt.Axes:
+    """Plot SacessOptimizer history.
+
+    Plot the history of the best objective values for each :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
+    worker over computation time.
+
+    Parameters
+    ----------
+    histories:
+        List of histories from different workers as obtained from
+        :attr:`pypesto.optimize.ess.sacess.SacessOptimizer.history`.
+    ax:
+        Axes object to use.
+    legend_kwargs:
+        Keyword arguments passed to :meth:`matplotlib.axes.Axes.legend`.
+
+    Returns
+    -------
+    The plot axes. `ax` or a new axes if `ax` was `None`.
+    """
+    ax = ax or plt.subplot()
+
+    # plot overall minimum
+    # merge results
+    t = np.hstack([history.get_time_trace() for history in histories])
+    fx = np.hstack([history.get_fval_trace() for history in histories])
+    time_order = np.argsort(t)
+    t = t[time_order]
+    fx = fx[time_order]
+    # get the monotonously decreasing sequence
+    monotone = np.where(fx <= np.fmin.accumulate(fx))[0]
+    x, y = t[monotone], fx[monotone]
+    # extend from last decrease to last timepoint
+    x = np.append(x, [t.max()])
+    y = np.append(y, [y.min()])
+    ax.step(
+        x,
+        y,
+        linestyle="dotted",
+        color="grey",
+        where="post",
+        label="overall",
+        alpha=0.8,
+    )
+
+    # plot steps of individual workers
+    for worker_idx, history in enumerate(histories):
+        x, y = history.get_time_trace(), history.get_fval_trace()
+        # extend from last decrease to last timepoint
+        # TODO plot last point without dot, unless it already was there
+        x = np.append(x, [np.max(t)])
+        y = np.append(y, [np.min(y)])
+
+        ax.step(
+            x, y, ".-", where="post", label=f"worker {worker_idx}", alpha=0.8
+        )
+    legend_kwargs = legend_kwargs or {}
+    ax.legend(**legend_kwargs)
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("fval")
+    ax.set_title("sacess convergence")
+    return ax
