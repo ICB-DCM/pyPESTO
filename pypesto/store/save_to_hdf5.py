@@ -3,6 +3,7 @@
 import logging
 import os
 from numbers import Integral
+from pathlib import Path
 from typing import Union
 
 import h5py
@@ -52,16 +53,16 @@ class ProblemHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 problem file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, problem, overwrite: bool = False):
         """Write HDF5 problem file from pyPESTO problem object."""
@@ -105,16 +106,16 @@ class OptimizationResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize Writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, result: Result, overwrite=False):
         """Write HDF5 result file from pyPESTO result object."""
@@ -154,16 +155,16 @@ class SamplingResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize Writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, result: Result, overwrite: bool = False):
         """Write HDF5 sampling file from pyPESTO result object."""
@@ -207,16 +208,16 @@ class ProfileResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize Writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, result: Result, overwrite: bool = False):
         """Write HDF5 result file from pyPESTO result object."""
@@ -266,7 +267,7 @@ class ProfileResultHDF5Writer:
 
 def write_result(
     result: Result,
-    filename: str,
+    filename: Union[str, Path],
     overwrite: bool = False,
     problem: bool = True,
     optimize: bool = False,
