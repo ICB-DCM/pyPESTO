@@ -388,7 +388,7 @@ jobs:
       run: pip install cffconvert && cffconvert --validate
 
     - name: Build doc
-      timeout-minutes: 10
+      timeout-minutes: 30
       run: tox -e doc
 
   notebooks1:
