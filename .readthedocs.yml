@@ -24,6 +24,7 @@ build:
   apt_packages:
     - gfortran
     - libatlas-base-dev
+    - libhdf5-serial-dev
     - swig
   tools:
     python: "3.11"
