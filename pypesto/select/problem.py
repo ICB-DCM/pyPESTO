@@ -1,5 +1,5 @@
 """Manage all components of a pyPESTO model selection problem."""
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, Optional
 
 import petab_select
 from petab_select import Model
@@ -57,8 +57,7 @@ class Problem:
 
         Returns
         -------
-        MethodCaller
-            A `MethodCaller` instance.
+        A :class:`MethodCaller` instance.
         """
         return MethodCaller(
             petab_select_problem=self.petab_select_problem,
@@ -69,8 +68,8 @@ class Problem:
 
     def set_state(
         self,
-        calibrated_models: Dict[str, Model],
-        newly_calibrated_models: Dict[str, Model],
+        calibrated_models: dict[str, Model],
+        newly_calibrated_models: dict[str, Model],
     ) -> None:
         """Set the state of the problem.
 
@@ -81,7 +80,7 @@ class Problem:
 
     def update_with_newly_calibrated_models(
         self,
-        newly_calibrated_models: Optional[Dict[str, Model]] = None,
+        newly_calibrated_models: Optional[dict[str, Model]] = None,
     ) -> None:
         """Update the state of the problem with newly calibrated models.
 
@@ -94,7 +93,7 @@ class Problem:
 
     def handle_select_kwargs(
         self,
-        kwargs: Dict[str, Any],
+        kwargs: dict[str, Any],
     ):
         """Check keyword arguments to select calls."""
         if "newly_calibrated_models" in kwargs:
@@ -111,7 +110,7 @@ class Problem:
     def select(
         self,
         **kwargs,
-    ) -> Tuple[Model, Dict[str, Model], Dict[str, Model]]:
+    ) -> tuple[Model, dict[str, Model], dict[str, Model]]:
         """Run a single iteration of a model selection algorithm.
 
         The result is the selected model for the current run, independent of
@@ -121,14 +120,13 @@ class Problem:
 
         Returns
         -------
-        tuple
-            A 3-tuple, with the following values:
+        A 3-tuple, with the following values:
 
-               1. the best model;
-               2. all candidate models in this iteration, as a `dict` with
-                  model hashes as keys and models as values; and
-               3. all candidate models from all iterations, as a `dict` with
-                  model hashes as keys and models as values.
+           1. the best model;
+           2. all candidate models in this iteration, as a `dict` with
+              model hashes as keys and models as values; and
+           3. all candidate models from all iterations, as a `dict` with
+              model hashes as keys and models as values.
         """
         # TODO move some options to PEtab Select? e.g.:
         # - startpoint_latest_mle
@@ -159,7 +157,7 @@ class Problem:
     def select_to_completion(
         self,
         **kwargs,
-    ) -> List[Model]:
+    ) -> list[Model]:
         """Run an algorithm until an exception `StopIteration` is raised.
 
         ``kwargs`` are passed to the :class:`MethodCaller` constructor.
@@ -170,8 +168,7 @@ class Problem:
 
         Returns
         -------
-        list
-            The best models (the best model at each iteration).
+        The best models (the best model at each iteration).
         """
         best_models = []
         self.handle_select_kwargs(kwargs)
@@ -208,7 +205,7 @@ class Problem:
         self,
         predecessor_models: Iterable[Model] = None,
         **kwargs,
-    ) -> Tuple[Model, List[Model]]:
+    ) -> tuple[Model, list[Model]]:
         """Run an algorithm multiple times, with different predecessor models.
 
         Note that the same method caller is currently shared between all calls.
@@ -228,11 +225,10 @@ class Problem:
 
         Returns
         -------
-        tuple
-            A 2-tuple, with the following values:
+        A 2-tuple, with the following values:
 
-               1. the best model; and
-               2. the best models (the best model at each iteration).
+           1. the best model; and
+           2. the best models (the best model at each iteration).
         """
         self.handle_select_kwargs(kwargs)
         model_lists = []
