@@ -2,7 +2,8 @@
 Model Selection
 ===============
 
-Perform model selection with a PEtab Select problem.
+Perform model selection with a
+`PEtab Select <https://petab-select.readthedocs.io/>`_ problem.
 """
 
 from . import postprocessors
