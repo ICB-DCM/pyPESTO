@@ -1,6 +1,6 @@
 """Calibrate a PEtab Select model with pyPESTO."""
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from petab_select import Criterion, Model
 
@@ -33,7 +33,7 @@ class ModelProblem:
         Keyword argument options that will be passed on to
         :func:`pypesto.optimize.minimize`.
     minimize_result:
-        A pyPESTO result with an optimize result.
+        A pyPESTO result with an `optimize` result.
     model:
         A PEtab Select model.
     model_id:
@@ -61,8 +61,8 @@ class ModelProblem:
         criterion: Criterion,
         valid: bool = True,
         autorun: bool = True,
-        x_guess: List[float] = None,
-        minimize_options: Dict = None,
+        x_guess: list[float] = None,
+        minimize_options: dict = None,
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
         postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
@@ -141,7 +141,7 @@ class ModelProblem:
         Parameters
         ----------
         result:
-            A pyPESTO result with an optimize result.
+            A pyPESTO result with an `optimize` result.
         """
         self.minimize_result = result
         # TODO extract best parameter estimates, to use as start point for
