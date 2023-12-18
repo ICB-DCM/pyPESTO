@@ -205,7 +205,9 @@ jobs:
       run: .github/workflows/install_deps.sh
 
     - name: Install PEtabJL dependencies
-      run: julia -e 'using Pkg; Pkg.add("PEtab"); Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials")'
+      run: >
+        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="PEtab", version="2.5.0"));
+        Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials")'
 
     - name: Run tests
       timeout-minutes: 25

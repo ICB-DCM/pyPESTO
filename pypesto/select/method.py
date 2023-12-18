@@ -2,7 +2,7 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 import petab_select
@@ -55,7 +55,7 @@ class MethodLogger:
     level:
         The logging level.
     logger:
-        A logger from the `logging` module.
+        A logger from the :mod:`logging` module.
     """
 
     column_width: int = 12
@@ -138,8 +138,7 @@ class MethodLogger:
 
             Returns
             -------
-            str
-                The ID.
+            The ID.
             """
             model_subspace_id = model.model_subspace_id or ''
             original_model_id = model.model_id or model.get_hash()
@@ -193,11 +192,11 @@ class MethodCaller:
     petab_select_problem:
         The PEtab Select problem.
     candidate_space:
-        A `petab_select.CandidateSpace`, used to generate candidate models.
+        A :class:`petab_select.CandidateSpace`, used to generate candidate models.
     criterion:
         The criterion by which models will be compared.
     criterion_threshold:
-        The minimum improvement in criterion that a test model must have to
+        The minimum improvement in `criterion` that a test model must have to
         be selected. The comparison is made according to the method. For
         example, in `ForwardSelector`, test models are compared to the
         previously selected model.
@@ -208,7 +207,7 @@ class MethodCaller:
         Limit the number of calibrated models. NB: the number of accepted
         models may (likely) be fewer.
     logger:
-        A `MethodLogger`, used to log results.
+        A :class:`MethodLogger`, used to log results.
     minimize_options:
         A dictionary that will be passed to `pypesto.minimize` as keyword
         arguments for model optimization.
@@ -219,24 +218,24 @@ class MethodCaller:
         objective is initialized, before calibration.
     predecessor_model:
         Specify the predecessor (initial) model for the model selection
-        algorithm. If `None`, then the algorithm will generate an
+        algorithm. If ``None``, then the algorithm will generate an initial
         predecessor model if required.
     select_first_improvement:
-        If `True`, model selection will terminate as soon as a better model
+        If ``True``, model selection will terminate as soon as a better model
         is found. If `False`, all candidate models will be tested.
     startpoint_latest_mle:
-        If `True`, one of the startpoints in the multistart optimization
+        If ``True``, one of the startpoints in the multistart optimization
         will be the MLE of the latest model.
     """
 
     def __init__(
         self,
         petab_select_problem: petab_select.Problem,
-        calibrated_models: Dict[str, Model],
+        calibrated_models: dict[str, Model],
         # Arguments/attributes that can simply take the default value here.
         criterion_threshold: float = 0.0,
         limit: int = np.inf,
-        minimize_options: Dict = None,
+        minimize_options: dict = None,
         model_postprocessor: TYPE_POSTPROCESSOR = None,
         objective_customizer: Callable = None,
         select_first_improvement: bool = False,
@@ -318,15 +317,15 @@ class MethodCaller:
     def __call__(
         self,
         predecessor_model: Optional[Union[Model, None]] = None,
-        newly_calibrated_models: Optional[Dict[str, Model]] = None,
-    ) -> Tuple[List[Model], Dict[str, Model]]:
+        newly_calibrated_models: Optional[dict[str, Model]] = None,
+    ) -> tuple[list[Model], dict[str, Model]]:
         """Run a single iteration of the model selection method.
 
         A single iteration here refers to calibration of all candidate models.
         For example, given a predecessor model with 3 estimated parameters,
         with the forward method, a single iteration would involve calibration
         of all models that have both: the same 3 estimated parameters; and 1
-        additional estimated paramenter.
+        additional estimated parameter.
 
         The input `newly_calibrated_models` is from the previous iteration. The
         output `newly_calibrated_models` is from the current iteration.
@@ -342,12 +341,11 @@ class MethodCaller:
 
         Returns
         -------
-        tuple
-            A 2-tuple, with the following values:
+        A 2-tuple, with the following values:
 
-               1. the predecessor model for the newly calibrated models; and
-               2. the newly calibrated models, as a `dict` where keys are model
-                  hashes and values are models.
+           1. the predecessor model for the newly calibrated models; and
+           2. the newly calibrated models, as a `dict` where keys are model
+              hashes and values are models.
         """
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
@@ -406,8 +404,7 @@ class MethodCaller:
 
         Returns
         -------
-        MethodSignal
-            A `MethodSignal` that describes the result.
+        A :class:`MethodSignal` that describes the result.
         """
         # Use the predecessor model from `__init__` if an iteration-specific
         # predecessor model was not supplied to `__call__`.
@@ -465,9 +462,8 @@ class MethodCaller:
 
         Returns
         -------
-        bool
-            `True`, if `model1` is superior to `model0` by the criterion,
-            else `False`.
+        ``True``, if `model1` is superior to `model0` by the criterion,
+        else ``False``.
         """
         if self.criterion in [
             Criterion.AIC,
@@ -509,8 +505,7 @@ class MethodCaller:
 
         Returns
         -------
-        ModelProblem
-            The model selection problem.
+        The model selection problem.
         """
         x_guess = None
         if (
