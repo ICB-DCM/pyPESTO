@@ -140,10 +140,22 @@ class SacessOptimizer:
     ):
         """Solve the given optimization problem.
 
+        Note that if this function is called from a multi-threaded program (
+        multiple threads running at the time of calling this function) and
+        the :mod:`multiprocessing` `start method` is set to ``fork``, there is
+        a good chance for deadlocks. Postpone spawning threads until after
+        `minimize` or change the *start method* to ``spawn``.
+
         Parameters
         ----------
         problem:
             Minimization problem.
+            :meth:`Problem.startpoint_method` will be used to sample random
+            points. `SacessOptimizer` will deal with non-evaluable points.
+            Therefore, using :class:`pypesto.startpoint.CheckedStartpoints`
+            with ``check_fval=True`` or ``check_grad=True`` is not recommended
+            since it would create significant overhead.
+
         startpoint_method:
             Method for choosing starting points.
             **Deprecated. Use ``problem.startpoint_method`` instead.**
@@ -759,8 +771,12 @@ def get_default_ess_options(
     num_workers: Number of configurations to return.
     dim: Problem dimension (number of optimized parameters).
     local_optimizer: The local optimizer to use
-        (see same argument in :class:`ESSOptimizer`), or a boolean indicating
-        whether to set the default local optimizer (currently :class:`FidesOptimizer`).
+        (see same argument in :class:`ESSOptimizer`), a boolean indicating
+        whether to set the default local optimizer
+        (currently :class:`FidesOptimizer`), a :obj:`Callable` returning an
+        optimizer instance.
+        The latter can be used to propagate walltime limits to the local
+        optimizers. See :meth:`SacessFidesFactory.__call__` for an example.
     """
     min_dimrefset = 5
 
