@@ -71,10 +71,6 @@ class SemiquantCalculator(AmiciCalculator):
         self.inner_solver.initialize()
         self.inner_problem.initialize()
 
-    def get_inner_parameter_ids(self) -> List[str]:
-        """Get the ids of the inner parameters."""
-        return self.inner_problem.get_x_ids()
-
     def __call__(
         self,
         x_dct: Dict,
@@ -186,12 +182,8 @@ class SemiquantCalculator(AmiciCalculator):
         # meaningful inner parameters, so we better just fail early.
         if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
-            # if the gradient was requested,
-            # we need to provide some value for it
             if 1 in sensi_orders:
-                inner_result[GRAD] = np.full(
-                    shape=len(x_ids), fill_value=np.nan
-                )
+                inner_result[GRAD] = np.full(shape=dim, fill_value=np.nan)
             return filter_return_dict(inner_result)
 
         sim = [rdata[AMICI_Y] for rdata in rdatas]
@@ -213,6 +205,7 @@ class SemiquantCalculator(AmiciCalculator):
         inner_result[
             INNER_PARAMETERS
         ] = self.inner_problem.get_inner_noise_parameters()
+        # print("semiquant inner parameters: ", inner_result[INNER_PARAMETERS])
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:

@@ -96,7 +96,7 @@ def apply_scaling(
     Parameters
     ----------
     scaling_value:
-        The optimal offset for the masked simulations.
+        The optimal scaling for the masked simulations.
     sim:
         All full (unmasked) simulations.
     mask:
@@ -105,6 +105,25 @@ def apply_scaling(
     """
     for i in range(len(sim)):
         sim[i][mask[i]] *= scaling_value
+
+
+def apply_scaling_to_sensitivities(
+    scaling_value: float, ssim: List[np.ndarray], mask: List[np.ndarray]
+):
+    """Apply scaling to sensitivities (in-place).
+
+    Parameters
+    ----------
+    scaling_value:
+        The optimal scaling for the masked simulations.
+    ssim:
+        All full (unmasked) sensitivities.
+    mask:
+        The masks that indicate the simulation subset that corresponds to the
+        `scaling_value`.
+    """
+    for i in range(len(ssim)):
+        ssim[i][:, mask[i]] *= scaling_value
 
 
 def compute_optimal_offset(
@@ -212,7 +231,10 @@ def compute_optimal_offset_coupled(
 
 
 def apply_offset(
-    offset_value: float, data: List[np.ndarray], mask: List[np.ndarray]
+    offset_value: float,
+    data: List[np.ndarray],
+    mask: List[np.ndarray],
+    is_data: bool = True,
 ):
     """Apply offset to data (in-place).
 
@@ -236,9 +258,12 @@ def apply_offset(
     mask:
         The masks that indicate the data subset that corresponds to the
         `offset_value`.
+    is_data:
+        Whether the data is being offset, or the simulation is. If False, the
+        offset is added to the simulation instead of subtracted from the data.
     """
     for i in range(len(data)):
-        data[i][mask[i]] -= offset_value
+        data[i][mask[i]] += -offset_value if is_data else offset_value
 
 
 def compute_optimal_sigma(
@@ -434,4 +459,32 @@ def compute_nllh(
         0.5 * np.nansum(np.log(2 * np.pi * sigma_i**2))
         + 0.5 * np.nansum((data_i - sim_i) ** 2 / sigma_i**2)
         for data_i, sim_i, sigma_i in zip(data, sim, sigma)
+    )
+
+
+def compute_nllh_gradient_for_condition(
+    data: np.ndarray,
+    sim: np.ndarray,
+    sigma: np.ndarray,
+    ssim: np.ndarray,
+    ssigma: np.ndarray,
+):
+    """Compute gradient of negative the log-likelihood function for a condition.
+
+    Compute gradient of negative log-likelihood function with respect to
+    outer optimization parameters for a condition, given the model outputs,
+    relevant data and sigmas.
+    """
+    return np.nansum(
+        np.multiply(
+            ssigma,
+            (
+                (np.full(data.shape, 1) - (data - sim) ** 2 / sigma**2)
+                / sigma
+            ),
+        ),
+        axis=(1, 2),
+    ) + np.nansum(
+        np.multiply(ssim, (sim - data) / sigma**2),
+        axis=(1, 2),
     )

@@ -13,21 +13,273 @@ from ..base_solver import InnerSolver
 from .util import (
     apply_offset,
     apply_scaling,
+    apply_scaling_to_sensitivities,
     apply_sigma,
     compute_bounded_optimal_scaling_offset_coupled,
     compute_nllh,
+    compute_nllh_gradient_for_condition,
     compute_optimal_offset,
     compute_optimal_offset_coupled,
     compute_optimal_scaling,
     compute_optimal_sigma,
 )
 
+try:
+    import amici
+    from amici.parameter_mapping import ParameterMapping
+except ImportError:
+    pass
 
-class AnalyticalInnerSolver(InnerSolver):
+
+class RelativeInnerSolver(InnerSolver):
+    """Base class for the relative inner solver."""
+
+    def calculate_obj_function(
+        self,
+        problem: InnerProblem,
+        sim: List[np.ndarray],
+        sigma: List[np.ndarray],
+        inner_parameters: dict[str, float],
+    ) -> float:
+        """Calculate the objective function value.
+
+        Parameters
+        ----------
+        problem:
+            The inner problem to solve.
+        sim:
+            List of model output matrices, as provided in AMICI's
+            ``ReturnData.y``. Same order as simulations in the
+            PEtab problem.
+        sigma:
+            List of sigma matrices from the model, as provided in AMICI's
+            ``ReturnData.sigmay``. Same order as simulations in the
+            PEtab problem.
+        """
+        relevant_data = copy.deepcopy(problem.data)
+        sim = copy.deepcopy(sim)
+        sigma = copy.deepcopy(sigma)
+        for i in range(len(problem.data)):
+            relevant_data[i][~problem.data_mask[i]] = np.nan
+
+        for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
+            apply_offset(
+                offset_value=inner_parameters[x.inner_parameter_id],
+                data=relevant_data,
+                mask=x.ixs,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.SCALING):
+            apply_scaling(
+                scaling_value=inner_parameters[x.inner_parameter_id],
+                sim=sim,
+                mask=x.ixs,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.SIGMA):
+            apply_sigma(
+                sigma_value=inner_parameters[x.inner_parameter_id],
+                sigma=sigma,
+                mask=x.ixs,
+            )
+
+        return compute_nllh(relevant_data, sim, sigma)
+
+    def calculate_gradients(
+        self,
+        problem: InnerProblem,
+        sim: List[np.ndarray],
+        ssim: List[np.ndarray],
+        sigma: List[np.ndarray],
+        ssigma: List[np.ndarray],
+        inner_parameters: dict[str, float],
+        parameter_mapping: ParameterMapping,
+        par_opt_ids: List[str],
+        par_sim_ids: List[str],
+        par_edatas_indices: List[List[int]],
+        snllh: np.ndarray,
+    ):
+        """Calculate the gradients with respect to the outer parameters.
+
+        Parameters
+        ----------
+        problem:
+            The inner problem to solve.
+        sim:
+            List of model output matrices, as provided in AMICI's
+            ``ReturnData.y``. Same order as simulations in the
+            PEtab problem.
+        ssim:
+            List of sensitivity matrices from the model, as provided in AMICI's
+            ``ReturnData.sy``. Same order as simulations in the
+            PEtab problem.
+        sigma:
+            List of sigma matrices from the model, as provided in AMICI's
+            ``ReturnData.sigmay``. Same order as simulations in the
+            PEtab problem.
+        ssigma:
+            List of sensitivity matrices from the model, as provided in AMICI's
+            ``ReturnData.ssigmay``. Same order as simulations in the
+            PEtab problem.
+        inner_parameters:
+            The computed inner parameters.
+        parameter_mapping:
+            TODO
+        par_opt_ids:
+            TODO
+        par_sim_ids:
+            TODO
+        par_edatas_indices:
+            TODO
+        snllh:
+            TODO
+
+        Returns
+        -------
+        The gradients with respect to the outer parameters.
+        """
+        relevant_data = copy.deepcopy(problem.data)
+        sim = copy.deepcopy(sim)
+        sigma = copy.deepcopy(sigma)
+        for i in range(len(problem.data)):
+            relevant_data[i][~problem.data_mask[i]] = np.nan
+
+        # restructure sensitivities to have parameter index as second index
+        ssim = [
+            np.asarray(
+                [
+                    ssim[cond_idx][:, par_idx, :]
+                    for par_idx in range(ssim[cond_idx].shape[1])
+                ]
+            )
+            for cond_idx in range(len(sim))
+        ]
+        ssigma = [
+            np.asarray(
+                [
+                    ssigma[cond_idx][:, par_idx, :]
+                    for par_idx in range(ssigma[cond_idx].shape[1])
+                ]
+            )
+            for cond_idx in range(len(sigma))
+        ]
+
+        # apply offsets, scalings and sigmas
+        for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
+            apply_offset(
+                offset_value=inner_parameters[x.inner_parameter_id],
+                data=relevant_data,
+                mask=x.ixs,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.SCALING):
+            apply_scaling(
+                scaling_value=inner_parameters[x.inner_parameter_id],
+                sim=sim,
+                mask=x.ixs,
+            )
+            apply_scaling_to_sensitivities(
+                scaling_value=inner_parameters[x.inner_parameter_id],
+                ssim=ssim,
+                mask=x.ixs,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.SIGMA):
+            apply_sigma(
+                sigma_value=inner_parameters[x.inner_parameter_id],
+                sigma=sigma,
+                mask=x.ixs,
+            )
+
+        # compute gradients
+        for cond_idx, cond_par_map, par_edata_indices in zip(
+            range(len(sim)), parameter_mapping, par_edatas_indices
+        ):
+            gradient_for_cond = compute_nllh_gradient_for_condition(
+                data=relevant_data[cond_idx],
+                sim=sim[cond_idx],
+                ssim=ssim[cond_idx],
+                sigma=sigma[cond_idx],
+                ssigma=ssigma[cond_idx],
+            )
+
+            # TODO this should maybe become a method... It's used by all inner solvers
+            # add gradient to correct index of snllh
+            # use add_sim_grad_to_opt_grad
+            for par_sim, par_opt in cond_par_map.map_sim_var.items():
+                if not isinstance(par_opt, str):
+                    continue
+
+                if par_opt not in par_opt_ids:
+                    continue
+
+                par_opt_idx = par_opt_ids.index(par_opt)
+                par_sim_idx = par_sim_ids.index(par_sim)
+                par_edata_idx = (
+                    par_edata_indices.index(par_sim_idx)
+                    if par_sim_idx in par_edata_indices
+                    else None
+                )
+
+                if par_edata_idx is not None:
+                    snllh[par_opt_idx] += gradient_for_cond[par_edata_idx]
+
+        return snllh
+
+    def apply_inner_parameters_to_rdatas(
+        self,
+        problem: InnerProblem,
+        rdatas: List[amici.ReturnData],
+        inner_parameters: dict[str, float],
+    ):
+        """Apply the inner parameters to the rdatas.
+
+        If we have simulated the model with dummy inner parameters only,
+        we need to apply the inner parameters to the rdatas to get the
+        correct model output.
+
+        Parameters
+        ----------
+        problem:
+            The inner problem to solve.
+        rdatas:
+            The rdatas to apply the inner parameters to.
+        inner_parameters:
+            The inner parameters to apply to the rdatas.
+        """
+        sim = [rdata['y'] for rdata in rdatas]
+        sigma = [rdata['sigmay'] for rdata in rdatas]
+
+        # apply offsets, scalings and sigmas
+        for x in problem.get_xs_for_type(InnerParameterType.SCALING):
+            apply_scaling(
+                scaling_value=inner_parameters[x.inner_parameter_id],
+                sim=sim,
+                mask=x.ixs,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
+            apply_offset(
+                offset_value=inner_parameters[x.inner_parameter_id],
+                data=sim,
+                mask=x.ixs,
+                is_data=False,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.SIGMA):
+            apply_sigma(
+                sigma_value=inner_parameters[x.inner_parameter_id],
+                sigma=sigma,
+                mask=x.ixs,
+            )
+
+        return rdatas
+
+
+class AnalyticalInnerSolver(RelativeInnerSolver):
     """Solve the inner subproblem analytically.
 
-    Currently, supports offset and scaling parameters (coupled or not), and
-    sigmas for additive Gaussian noise.
+    Currently, supports sigmas for additive Gaussian noise.
     """
 
     def solve(
@@ -57,6 +309,9 @@ class AnalyticalInnerSolver(InnerSolver):
         """
         x_opt = {}
         data = copy.deepcopy(problem.data)
+        sim = copy.deepcopy(sim)
+        sigma = copy.deepcopy(sigma)
+        # TODO do something about all of this copying?
 
         # compute optimal offsets
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
@@ -153,7 +408,7 @@ class AnalyticalInnerSolver(InnerSolver):
         return x_opt
 
 
-class NumericalInnerSolver(InnerSolver):
+class NumericalInnerSolver(RelativeInnerSolver):
     """Solve the inner subproblem numerically.
 
     Advantage: The structure of the subproblem does not matter like, at all.

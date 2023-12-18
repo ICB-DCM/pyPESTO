@@ -137,6 +137,18 @@ class SemiquantProblem(AmiciInnerProblem):
             petab_problem, amici_model, edatas, spline_ratio
         )
 
+    def get_interpretable_x_ids(self) -> List[str]:
+        """Get IDs of interpretable inner parameters.
+
+        The interpretable inner parameters of the semiquantitative
+        problem are the noise parameters.
+        """
+        return [
+            x.inner_parameter_id
+            for x in self.xs.values()
+            if x.inner_parameter_type == InnerParameterType.SIGMA
+        ]
+
     def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
         """Get unique list of ``SplineParameter.group`` values."""
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
@@ -171,6 +183,12 @@ class SemiquantProblem(AmiciInnerProblem):
             and x.inner_parameter_type == InnerParameterType.SPLINE
         ]
 
+    def get_inner_noise_parameters(self) -> list[float]:
+        """Get a list with all noise parameter values."""
+        return [
+            x.value for x in self.get_xs_for_type(InnerParameterType.SIGMA)
+        ]
+
     def get_noise_parameters_for_group(
         self, group: int
     ) -> SplineInnerParameter:
@@ -188,12 +206,6 @@ class SemiquantProblem(AmiciInnerProblem):
         for x_id, x in self.xs.items():
             inner_par_dict[x_id] = x.value
         return inner_par_dict
-
-    def get_inner_noise_parameters(self) -> list[float]:
-        """Get a list with all noise parameter values."""
-        return [
-            x.value for x in self.get_xs_for_type(InnerParameterType.SIGMA)
-        ]
 
     def get_measurements_for_group(self, gr) -> np.ndarray:
         """Get measurements for a group."""

@@ -80,8 +80,7 @@ def test_hierarchical_optimization_pipeline():
     outer_indices = [
         ix
         for ix, x in enumerate(problems[False].x_names)
-        if x
-        not in problems[True].objective.calculator.inner_problem.get_x_ids()
+        if x not in problems[True].objective.calculator.get_inner_par_ids()
     ]
     problems[True].set_x_guesses(startpoints[:, outer_indices])
 
@@ -203,7 +202,7 @@ def test_hierarchical_calculator_and_objective():
     ).all()
 
     for inner_idx, inner_par in enumerate(
-        problems[True].objective.calculator.inner_problem.get_x_ids()
+        problems[True].objective.calculator.get_inner_par_ids()
     ):
         x_dct[inner_par] = calculator_results[True]['inner_parameters'][
             inner_idx

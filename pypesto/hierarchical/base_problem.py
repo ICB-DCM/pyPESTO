@@ -36,6 +36,19 @@ class InnerProblem:
         }
         self.data = data
 
+        # create the joint mask of all inner problem parameters
+        self.data_mask = [
+            np.zeros_like(cond_data, dtype=bool) for cond_data in data
+        ]
+        for x in xs:
+            for condition_ix, cond_mask in enumerate(self.data_mask):
+                cond_mask[x.ixs[condition_ix]] = True
+        # TODO should the data just be masked already here?
+        # this would make sense, since inner problems should be aware
+        # of only the data its inner parameters are relevant for...
+        # Then we wouldn't need to copy the data in the inner solver
+        # calculate_obj_function
+
         logger.debug(f"Created InnerProblem with ids {self.get_x_ids()}")
 
         if self.is_empty():
@@ -54,6 +67,10 @@ class InnerProblem:
 
     def get_x_ids(self) -> List[str]:
         """Get IDs of inner parameters."""
+        return list(self.xs.keys())
+
+    def get_interpretable_x_ids(self) -> List[str]:
+        """Get IDs of interpretable inner parameters."""
         return list(self.xs.keys())
 
     def get_xs_for_type(
@@ -107,6 +124,21 @@ class InnerProblem:
         """Get bounds of inner parameters."""
         lb = [x.lb for x in self.xs.values()]
         ub = [x.ub for x in self.xs.values()]
+        return lb, ub
+
+    def get_interpretable_x_bounds(self) -> Tuple[List[float], List[float]]:
+        """Get bounds of interpretable inner parameters."""
+        interpretable_x_ids = self.get_interpretable_x_ids()
+        lb = [
+            x.lb
+            for x in self.xs.values()
+            if x.inner_parameter_id in interpretable_x_ids
+        ]
+        ub = [
+            x.ub
+            for x in self.xs.values()
+            if x.inner_parameter_id in interpretable_x_ids
+        ]
         return lb, ub
 
 

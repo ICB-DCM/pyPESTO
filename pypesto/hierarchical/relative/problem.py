@@ -5,7 +5,12 @@ from typing import Dict, List, Tuple
 import numpy as np
 import pandas as pd
 
-from ...C import PARAMETER_TYPE, InnerParameterType
+from ...C import (
+    MEASUREMENT_TYPE,
+    NONLINEAR_MONOTONE,
+    PARAMETER_TYPE,
+    InnerParameterType,
+)
 from ..base_parameter import InnerParameter
 from ..base_problem import (
     AmiciInnerProblem,
@@ -107,7 +112,7 @@ def inner_problem_from_petab_problem(
 
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
-        petab_problem.parameter_df
+        petab_problem.parameter_df, petab_problem.measurement_df
     )
 
     x_ids = [x.inner_parameter_id for x in inner_parameters]
@@ -176,7 +181,8 @@ def inner_problem_from_petab_problem(
 
 
 def inner_parameters_from_parameter_df(
-    df: pd.DataFrame,
+    par_df: pd.DataFrame,
+    meas_df: pd.DataFrame,
 ) -> List[InnerParameter]:
     """
     Create list of inner free parameters from PEtab parameter table.
@@ -185,19 +191,33 @@ def inner_parameters_from_parameter_df(
     PEtab problem.
     """
     # create list of hierarchical parameters
-    df = df.reset_index()
+    par_df = par_df.reset_index()
 
     for col in (PARAMETER_TYPE,):
-        if col not in df:
-            df[col] = None
+        if col not in par_df:
+            par_df[col] = None
 
     parameters = []
 
-    for _, row in df.iterrows():
+    for _, row in par_df.iterrows():
         if not row[ESTIMATE]:
             continue
         if petab.is_empty(row[PARAMETER_TYPE]):
             continue
+        # If a sigma parameter belongs to a semi-quantiative
+        # observable, it is not a relative inner parameter. # TODO make nicer?
+        if row[PARAMETER_TYPE] == InnerParameterType.SIGMA:
+            if MEASUREMENT_TYPE in meas_df.columns:
+                par_id = row[PARAMETER_ID]
+                corresponding_measurements = meas_df[
+                    meas_df[NOISE_PARAMETERS] == par_id
+                ]
+                if any(
+                    corresponding_measurements[MEASUREMENT_TYPE]
+                    == NONLINEAR_MONOTONE
+                ):
+                    continue
+
         parameters.append(
             InnerParameter(
                 inner_parameter_id=row[PARAMETER_ID],
