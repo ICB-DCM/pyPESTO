@@ -49,7 +49,7 @@ class HistoryOptions(dict):
         trace_record_res: bool = True,
         trace_record_sres: bool = True,
         trace_save_iter: int = 10,
-        storage_file: Union[str, None] = None,
+        storage_file: Union[str, Path, None] = None,
     ):
         super().__init__()
 

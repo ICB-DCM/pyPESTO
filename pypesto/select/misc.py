@@ -1,6 +1,6 @@
 """Miscellaneous methods."""
 import logging
-from typing import Dict, Iterable
+from typing import Iterable
 
 import pandas as pd
 import petab
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def model_to_pypesto_problem(
     model: Model,
     objective: Objective = None,
-    x_guesses: Iterable[Dict[str, float]] = None,
+    x_guesses: Iterable[dict[str, float]] = None,
     hierarchical: bool = False,
 ) -> Problem:
     """Create a pyPESTO problem from a PEtab Select model.
@@ -43,8 +43,7 @@ def model_to_pypesto_problem(
 
     Returns
     -------
-    Problem
-        The pyPESTO select problem.
+    The pyPESTO select problem.
     """
     petab_problem = petab_select.ui.model_to_petab(model=model)[PETAB_PROBLEM]
 
@@ -78,7 +77,7 @@ def model_to_pypesto_problem(
 def model_to_hierarchical_pypesto_problem(*args, **kwargs) -> Problem:
     """Create a hierarchical pyPESTO problem from a PEtab Select model.
 
-    See `model_to_pypesto_problem`.
+    See :func:`model_to_pypesto_problem`.
     """
     pypesto_problem = model_to_pypesto_problem(
         *args,
@@ -89,7 +88,7 @@ def model_to_hierarchical_pypesto_problem(*args, **kwargs) -> Problem:
 
 
 def correct_x_guesses(
-    x_guesses: Iterable[Dict[str, float]],
+    x_guesses: Iterable[dict[str, float]],
     model: Model,
     petab_problem: petab.Problem = None,
     hierarchical: bool = False,
