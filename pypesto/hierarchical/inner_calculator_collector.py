@@ -293,7 +293,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             sensi_orders, mode, dim
         )
         all_inner_pars = {}
-        interpretable_inner_pars = {}
+        interpretable_inner_pars = []
 
         # set order in solver
         sensi_order = 0
@@ -385,7 +385,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
             all_inner_pars.update(inner_result[X_INNER_OPT])
             if INNER_PARAMETERS in inner_result:
-                interpretable_inner_pars.update(inner_result[INNER_PARAMETERS])
+                interpretable_inner_pars.extend(inner_result[INNER_PARAMETERS])
 
         # add result for quantitative data
         if self.quantitative_data_mask is not None:
@@ -418,7 +418,11 @@ class InnerCalculatorCollector(AmiciCalculator):
         # only if the objective value improved.
         if ret[FVAL] < self.best_fval:
             ret[X_INNER_OPT] = all_inner_pars
-            ret[INNER_PARAMETERS] = interpretable_inner_pars
+            ret[INNER_PARAMETERS] = (
+                interpretable_inner_pars
+                if len(interpretable_inner_pars) > 0
+                else None
+            )
             self.best_fval = ret[FVAL]
 
         return filter_return_dict(ret)

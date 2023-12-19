@@ -202,7 +202,12 @@ def test_hierarchical_calculator_and_objective():
         calculator_results[False]['grad'],
     ).all()
 
-    x_dct.update(calculator_results[True]['inner_parameters'])
+    for inner_idx, inner_par in enumerate(
+        problems[True].objective.calculator.inner_problem.get_x_ids()
+    ):
+        x_dct[inner_par] = calculator_results[True]['inner_parameters'][
+            inner_idx
+        ]
     calculator_results[False] = calculate(problem=problems[False], x_dct=x_dct)
 
     # The `False` case has copied the optimal sigma values from hierarchical

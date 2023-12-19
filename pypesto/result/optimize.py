@@ -116,6 +116,7 @@ class OptimizerResult(dict):
         self.message: str = message
         self.optimizer = optimizer
         self.free_indices = None
+        self.inner_parameters = None
 
     def __getattr__(self, key):
         try:
