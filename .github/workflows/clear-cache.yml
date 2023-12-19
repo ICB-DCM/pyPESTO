@@ -1,6 +1,6 @@
 # Save cache space by deleting cache entries from a PR after it was merged.
 # https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
-name: Delete after after PR merge
+name: Delete after PR merge
 on:
   pull_request:
     types:
