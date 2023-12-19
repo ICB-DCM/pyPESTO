@@ -123,6 +123,7 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
                 inner_result[HESS] = np.full(
                     shape=(dim, dim), fill_value=np.nan
                 )
+            inner_result[INNER_PARAMETERS] = None
             return inner_result
 
         inner_parameters = self.inner_solver.solve(
@@ -155,7 +156,10 @@ class HierarchicalAmiciCalculator(AmiciCalculator):
             parameter_mapping=parameter_mapping,
             fim_for_hess=fim_for_hess,
         )
-        result[INNER_PARAMETERS] = inner_parameters
+        # Return inner parameters in order of inner problem x_ids
+        result[INNER_PARAMETERS] = np.array(
+            [inner_parameters[x_id] for x_id in self.inner_problem.get_x_ids()]
+        )
         result[INNER_RDATAS] = inner_rdatas
 
         return result

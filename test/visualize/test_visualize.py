@@ -17,7 +17,9 @@ import pypesto.predict as predict
 import pypesto.sample as sample
 import pypesto.util
 import pypesto.visualize as visualize
-from pypesto.C import INNER_PARAMETERS
+from pypesto.testing.examples import (
+    get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds,
+)
 from pypesto.visualize.model_fit import (
     time_trajectory_model,
     visualize_optimized_model_fit,
@@ -464,15 +466,26 @@ def test_parameters_hist():
 @pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
 @close_fig
 def test_parameters_hierarchical(scale_to_interval):
-    # create the necessary results
-    result = create_optimization_result()
+    # obtain a petab problem with hierarchical parameters
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
+    helper_problem = importer.create_problem()
 
-    # add hierarchical parameters
-    for index, optimizer_result in enumerate(result.optimize_result.list):
-        optimizer_result[INNER_PARAMETERS] = {
-            'inner_x_1': index + 3,
-            'inner_x_2': index + 3 + 0.1,
-        }
+    # set x_guesses to nominal values for fast optimization
+    x_guesses = np.asarray(petab_problem.x_nominal_scaled)[
+        helper_problem.x_free_indices
+    ]
+    problem = importer.create_problem(x_guesses=[x_guesses])
+
+    # run optimization
+    n_starts = 1
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=n_starts,
+        progress_bar=False,
+    )
 
     # test a call with hierarchical parameters
     visualize.parameters(
