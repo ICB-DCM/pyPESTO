@@ -130,8 +130,13 @@ def create_optimization_result_nan_inf():
     result = create_optimization_result()
 
     # append nan and inf
+    # depending on optimizer failed starts's x can be None or vector of np.nan
     optimizer_result = pypesto.OptimizerResult(
         fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
+    )
+    result.optimize_result.append(optimize_result=optimizer_result)
+    optimizer_result = pypesto.OptimizerResult(
+        fval=float('nan'), x=None, id='nan_none'
     )
     result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
@@ -404,19 +409,21 @@ def test_parameters_with_options(scale_to_interval):
 def test_parameters_lowlevel():
     # create some dummy results
     (lb, ub) = create_bounds()
-    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    xs = [
-        [0.1, 1],
-        [1.2, 3],
-        [2, 4],
-        [1.2, 4.1],
-        [1.1, 3.5],
-        [4.2, 3.5],
-        [1, 4],
-        [6.2, 5],
-        [4.3, 3],
-        [3, 2],
-    ]
+    fvals = np.array([0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11])
+    xs = np.array(
+        [
+            [0.1, 1],
+            [1.2, 3],
+            [2, 4],
+            [1.2, 4.1],
+            [1.1, 3.5],
+            [4.2, 3.5],
+            [1, 4],
+            [6.2, 5],
+            [4.3, 3],
+            [3, 2],
+        ]
+    )
 
     # pass lists
     visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
