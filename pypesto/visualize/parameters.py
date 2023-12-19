@@ -121,6 +121,17 @@ def parameters(
             start_indices=start_indices,
             plot_inner_parameters=plot_inner_parameters,
         )
+
+        # parse fvals and parameters
+        fvals = np.array(fvals)
+        # remove nan or inf values
+        xs, fvals = delete_nan_inf(
+            fvals=fvals,
+            x=xs,
+            xdim=len(ub) if ub is not None else 1,
+            magnitude_bound=WATERFALL_MAX_VALUE,
+        )
+
         lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
         # call lowlevel routine
@@ -229,8 +240,8 @@ def parameter_hist(
 
 
 def parameters_lowlevel(
-    xs: Sequence[Union[np.ndarray, List[float]]],
-    fvals: Union[np.ndarray, List[float]],
+    xs: np.ndarray,
+    fvals: np.ndarray,
     lb: Optional[Union[np.ndarray, List[float]]] = None,
     ub: Optional[Union[np.ndarray, List[float]]] = None,
     x_labels: Optional[Iterable[str]] = None,
@@ -247,8 +258,8 @@ def parameters_lowlevel(
     Parameters
     ----------
     xs:
-        Including optimized parameters for each startpoint.
-        Shape: (n_starts, dim).
+        Including optimized parameters for each start that did not result in an infinite fval.
+        Shape: (n_starts_successful, dim).
     fvals:
         Function values. Needed to assign cluster colors.
     lb, ub:
@@ -274,15 +285,6 @@ def parameters_lowlevel(
     ax:
         The plot axes.
     """
-    # parse input
-    fvals = np.array(fvals)
-    # remove nan or inf values in fvals and xs
-    xs, fvals = delete_nan_inf(
-        fvals=fvals,
-        x=xs,
-        xdim=len(ub) if ub is not None else 1,
-        magnitude_bound=WATERFALL_MAX_VALUE,
-    )
 
     if size is None:
         # 0.5 inch height per parameter
