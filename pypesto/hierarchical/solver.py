@@ -338,7 +338,7 @@ class NumericalInnerSolver(InnerSolver):
             )
         ):
             raise RuntimeError(
-                f"An optimal inner parameter is on the defualt dummy bound of numerical optimization. "
+                f"An optimal inner parameter is on the default dummy bound of numerical optimization. "
                 f"This means the optimal inner parameter is either extremely large (>={self.dummy_ub})"
                 f"or extremely small (<={self.dummy_lb}). Consider changing the inner parameter bounds."
             )
