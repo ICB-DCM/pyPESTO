@@ -16,6 +16,7 @@ import pypesto.optimize as optimize
 from pypesto import (
     CsvHistory,
     Hdf5History,
+    Hdf5AmiciHistory,
     HistoryOptions,
     MemoryHistory,
     ObjectiveBase,
@@ -690,11 +691,17 @@ def test_hdf5_history_mp():
 
 
 def test_hdf5_amici_history():
-    objective = load_amici_objective('conversion_reaction')[0]
+    objective1 = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
+    objective2 = load_amici_objective('conversion_reaction')[0]
     lb = -2 * np.ones((1, 2))
     ub = 2 * np.ones((1, 2))
-    problem = pypesto.Problem(
-        objective=objective, lb=lb, ub=ub
+    problem1 = pypesto.Problem(
+        objective=objective1, lb=lb, ub=ub
+    )
+    problem2 = pypesto.Problem(
+        objective=objective2, lb=lb, ub=ub
     )
 
     optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
@@ -706,19 +713,31 @@ def test_hdf5_amici_history():
             trace_record=True, storage_file=fn
         )
 
-        # optimizing with amici history saved in hdf5
-        result = pypesto.optimize.minimize(
-            problem=problem,
+        result1 = pypesto.optimize.minimize(
+            problem=problem1,
             optimizer=optimizer,
             n_starts=1,
             history_options=history_options_mp,
             progress_bar=False,
         )
-        result.optimize_result.list[0].history.get_cpu_time_total_trace()
-        result.optimize_result.list[0].history.get_preeq_time_trace()
-        result.optimize_result.list[0].history.get_preeq_timeB_trace()
-        result.optimize_result.list[0].history.get_posteq_time_trace()
-        result.optimize_result.list[0].history.get_posteq_timeB_trace()
+        assert not isinstance(result1.optimize_result.list[0].history,
+                              Hdf5AmiciHistory)
+
+        # optimizing with amici history saved in hdf5
+        result2 = pypesto.optimize.minimize(
+            problem=problem2,
+            optimizer=optimizer,
+            n_starts=1,
+            history_options=history_options_mp,
+            progress_bar=False,
+        )
+        assert isinstance(result2.optimize_result.list[0].history,
+                          Hdf5AmiciHistory)
+        result2.optimize_result.list[0].history.get_cpu_time_total_trace()
+        result2.optimize_result.list[0].history.get_preeq_time_trace()
+        result2.optimize_result.list[0].history.get_preeq_timeB_trace()
+        result2.optimize_result.list[0].history.get_posteq_time_trace()
+        result2.optimize_result.list[0].history.get_posteq_timeB_trace()
 
 
 def test_trim_history():
