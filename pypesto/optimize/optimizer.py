@@ -18,7 +18,7 @@ from ..history import (
     OptimizerHistory,
     create_history,
 )
-from ..objective import Objective
+from ..objective import AmiciObjective, Objective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
@@ -106,6 +106,7 @@ def history_decorator(minimize):
             id=id,
             x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
             options=history_options,
+            amici_objective=isinstance(objective, AmiciObjective)
         )
         optimizer_history = OptimizerHistory(
             history=history,
