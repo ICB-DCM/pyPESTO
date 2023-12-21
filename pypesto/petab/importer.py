@@ -428,7 +428,10 @@ class PetabImporter(AmiciObjectBuilder):
 
         # create model
         if model is None:
-            model = self.create_model(force_compile=force_compile)
+            verbose = kwargs.pop('verbose', True)
+            model = self.create_model(
+                force_compile=force_compile, verbose=verbose
+            )
         # create solver
         if solver is None:
             solver = self.create_solver(model)
