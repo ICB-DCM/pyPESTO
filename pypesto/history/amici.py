@@ -6,9 +6,9 @@ import numpy as np
 from ..C import (
     CPU_TIME_TOTAL,
     POSTEQ_CPU_TIME,
-    POSTEQ_CPU_TIME_B,
+    POSTEQ_CPU_TIME_BACKWARD,
     PREEQ_CPU_TIME,
-    PREEQ_CPU_TIME_B,
+    PREEQ_CPU_TIME_BACKWARD,
     RDATAS,
 )
 from .csv import CsvHistory
@@ -50,12 +50,12 @@ class Hdf5AmiciHistory(Hdf5History):
                                  result[RDATAS]]),
             PREEQ_CPU_TIME: sum([rdata[PREEQ_CPU_TIME] for rdata in
                                  result[RDATAS]]),
-            PREEQ_CPU_TIME_B: sum([rdata[PREEQ_CPU_TIME_B] for rdata in
-                                   result[RDATAS]]),
+            PREEQ_CPU_TIME_BACKWARD: sum([rdata[PREEQ_CPU_TIME_BACKWARD] for
+                                          rdata in result[RDATAS]]),
             POSTEQ_CPU_TIME: sum([rdata[POSTEQ_CPU_TIME] for rdata in
                                   result[RDATAS]]),
-            POSTEQ_CPU_TIME_B: sum([rdata[POSTEQ_CPU_TIME_B] for rdata in
-                                    result[RDATAS]])}
+            POSTEQ_CPU_TIME_BACKWARD: sum([rdata[POSTEQ_CPU_TIME_BACKWARD] for
+                                           rdata in result[RDATAS]])}
         return values
 
     @trace_wrap
@@ -92,7 +92,7 @@ class Hdf5AmiciHistory(Hdf5History):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        return self._get_hdf5_entries(PREEQ_CPU_TIME_B, ix)
+        return self._get_hdf5_entries(PREEQ_CPU_TIME_BACKWARD, ix)
 
     @trace_wrap
     def get_posteq_time_trace(
@@ -116,7 +116,7 @@ class Hdf5AmiciHistory(Hdf5History):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        return self._get_hdf5_entries(POSTEQ_CPU_TIME_B, ix)
+        return self._get_hdf5_entries(POSTEQ_CPU_TIME_BACKWARD, ix)
 
 
 class CsvAmiciHistory(CsvHistory):
@@ -154,9 +154,9 @@ class CsvAmiciHistory(CsvHistory):
             for c in [
                 CPU_TIME_TOTAL,
                 PREEQ_CPU_TIME,
-                PREEQ_CPU_TIME_B,
+                PREEQ_CPU_TIME_BACKWARD,
                 POSTEQ_CPU_TIME,
-                POSTEQ_CPU_TIME_B
+                POSTEQ_CPU_TIME_BACKWARD
             ]
         ]
 
@@ -167,12 +167,12 @@ class CsvAmiciHistory(CsvHistory):
                                  result[RDATAS]]),
             PREEQ_CPU_TIME: sum([rdata[PREEQ_CPU_TIME] for rdata in
                                  result[RDATAS]]),
-            PREEQ_CPU_TIME_B: sum([rdata[PREEQ_CPU_TIME_B] for rdata in
-                                   result[RDATAS]]),
+            PREEQ_CPU_TIME_BACKWARD: sum([rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in
+                                          result[RDATAS]]),
             POSTEQ_CPU_TIME: sum([rdata[POSTEQ_CPU_TIME] for rdata in
                                   result[RDATAS]]),
-            POSTEQ_CPU_TIME_B: sum([rdata[POSTEQ_CPU_TIME_B] for rdata in
-                                    result[RDATAS]])}
+            POSTEQ_CPU_TIME_BACKWARD: sum([rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in
+                                           result[RDATAS]])}
         return values
 
     @trace_wrap
@@ -209,7 +209,7 @@ class CsvAmiciHistory(CsvHistory):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        return list(self._trace[(PREEQ_CPU_TIME_B, np.nan)].values[ix])
+        return list(self._trace[(PREEQ_CPU_TIME_BACKWARD, np.nan)].values[ix])
 
     @trace_wrap
     def get_posteq_time_trace(
@@ -233,4 +233,4 @@ class CsvAmiciHistory(CsvHistory):
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
-        return list(self._trace[(POSTEQ_CPU_TIME_B, np.nan)].values[ix])
+        return list(self._trace[(POSTEQ_CPU_TIME_BACKWARD, np.nan)].values[ix])
