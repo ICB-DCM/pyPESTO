@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Sequence
 
 from ..C import SUFFIXES_CSV, SUFFIXES_HDF5
+from .amici import CsvAmiciHistory, Hdf5AmiciHistory
 from .base import CountHistory, HistoryBase
 from .csv import CsvHistory
 from .hdf5 import Hdf5History
-from .amici import CsvAmiciHistory, Hdf5AmiciHistory
 from .memory import MemoryHistory
 from .options import HistoryOptions
 from .util import HistoryTypeError

@@ -14,10 +14,10 @@ from numpy.testing import assert_array_almost_equal
 import pypesto
 import pypesto.optimize as optimize
 from pypesto import (
-    CsvHistory,
     CsvAmiciHistory,
-    Hdf5History,
+    CsvHistory,
     Hdf5AmiciHistory,
+    Hdf5History,
     HistoryOptions,
     MemoryHistory,
     ObjectiveBase,
