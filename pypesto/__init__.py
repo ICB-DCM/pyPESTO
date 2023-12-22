@@ -16,6 +16,7 @@ from .history import (
     CountHistory,
     CountHistoryBase,
     CsvHistory,
+    CsvAmiciHistory,
     Hdf5History,
     Hdf5AmiciHistory,
     NoHistory,

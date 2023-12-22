@@ -7,7 +7,7 @@ from ..C import SUFFIXES_CSV, SUFFIXES_HDF5
 from .base import CountHistory, HistoryBase
 from .csv import CsvHistory
 from .hdf5 import Hdf5History
-from .amici import Hdf5AmiciHistory
+from .amici import CsvAmiciHistory, Hdf5AmiciHistory
 from .memory import MemoryHistory
 from .options import HistoryOptions
 from .util import HistoryTypeError
@@ -51,7 +51,12 @@ def create_history(
 
     # create history type based on storage type
     if suffix in SUFFIXES_CSV:
-        return CsvHistory(x_names=x_names, file=storage_file, options=options)
+        if amici_objective:
+            return CsvAmiciHistory(x_names=x_names, file=storage_file,
+                                   options=options)
+        else:
+            return CsvHistory(x_names=x_names, file=storage_file,
+                              options=options)
     elif suffix in SUFFIXES_HDF5:
         if amici_objective:
             return Hdf5AmiciHistory(id=id, file=storage_file, options=options)

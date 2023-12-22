@@ -15,6 +15,7 @@ import pypesto
 import pypesto.optimize as optimize
 from pypesto import (
     CsvHistory,
+    CsvAmiciHistory,
     Hdf5History,
     Hdf5AmiciHistory,
     HistoryOptions,
@@ -707,37 +708,39 @@ def test_hdf5_amici_history():
     optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
 
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
-        _, fn = tempfile.mkstemp(".hdf5", dir=f"{tmpdirname}")
+        for f_ext, amici_history_class in \
+                zip([".csv", ".hdf5"], [CsvAmiciHistory, Hdf5AmiciHistory]):
+            _, fn = tempfile.mkstemp(f_ext, '{id}', dir=f"{tmpdirname}")
 
-        history_options_mp = pypesto.HistoryOptions(
-            trace_record=True, storage_file=fn
-        )
+            history_options_mp = pypesto.HistoryOptions(
+                trace_record=True, storage_file=fn
+            )
 
-        result1 = pypesto.optimize.minimize(
-            problem=problem1,
-            optimizer=optimizer,
-            n_starts=1,
-            history_options=history_options_mp,
-            progress_bar=False,
-        )
-        assert not isinstance(result1.optimize_result.list[0].history,
-                              Hdf5AmiciHistory)
+            result1 = pypesto.optimize.minimize(
+                problem=problem1,
+                optimizer=optimizer,
+                n_starts=1,
+                history_options=history_options_mp,
+                progress_bar=False,
+            )
+            assert not isinstance(result1.optimize_result.list[0].history,
+                                  amici_history_class)
 
-        # optimizing with amici history saved in hdf5
-        result2 = pypesto.optimize.minimize(
-            problem=problem2,
-            optimizer=optimizer,
-            n_starts=1,
-            history_options=history_options_mp,
-            progress_bar=False,
-        )
-        assert isinstance(result2.optimize_result.list[0].history,
-                          Hdf5AmiciHistory)
-        result2.optimize_result.list[0].history.get_cpu_time_total_trace()
-        result2.optimize_result.list[0].history.get_preeq_time_trace()
-        result2.optimize_result.list[0].history.get_preeq_timeB_trace()
-        result2.optimize_result.list[0].history.get_posteq_time_trace()
-        result2.optimize_result.list[0].history.get_posteq_timeB_trace()
+            # optimizing with amici history saved in hdf5
+            result2 = pypesto.optimize.minimize(
+                problem=problem2,
+                optimizer=optimizer,
+                n_starts=1,
+                history_options=history_options_mp,
+                progress_bar=False,
+            )
+            assert isinstance(result2.optimize_result.list[0].history,
+                              amici_history_class)
+            result2.optimize_result.list[0].history.get_cpu_time_total_trace()
+            result2.optimize_result.list[0].history.get_preeq_time_trace()
+            result2.optimize_result.list[0].history.get_preeq_timeB_trace()
+            result2.optimize_result.list[0].history.get_posteq_time_trace()
+            result2.optimize_result.list[0].history.get_posteq_timeB_trace()
 
 
 def test_trim_history():

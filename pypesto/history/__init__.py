@@ -8,7 +8,7 @@ e.g. recover results from failed runs, fill in further details,
 and evaluate performance.
 """
 
-from .amici import Hdf5AmiciHistory
+from .amici import CsvAmiciHistory, Hdf5AmiciHistory
 from .base import CountHistory, CountHistoryBase, HistoryBase, NoHistory
 from .csv import CsvHistory
 from .generate import create_history
