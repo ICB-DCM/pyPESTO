@@ -73,7 +73,7 @@ class CsvHistory(CountHistoryBase):
                 # transform strings to np.ndarrays
                 trace[col] = trace[col].apply(string2ndarray)
 
-            self._trtraceace = trace
+            self._trace = trace
             self.x_names = trace[X].columns
             self._update_counts_from_trace()
 
