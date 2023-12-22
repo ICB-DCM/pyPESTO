@@ -4,12 +4,12 @@ from typing import Sequence, Union
 import numpy as np
 
 from ..C import (
-    RDATAS,
     CPU_TIME_TOTAL,
-    PREEQ_CPU_TIME,
-    POSTEQ_CPU_TIME_B,
     POSTEQ_CPU_TIME,
-    PREEQ_CPU_TIME_B
+    POSTEQ_CPU_TIME_B,
+    PREEQ_CPU_TIME,
+    PREEQ_CPU_TIME_B,
+    RDATAS,
 )
 from .csv import CsvHistory
 from .hdf5 import Hdf5History
@@ -19,9 +19,10 @@ from .util import trace_wrap
 
 class Hdf5AmiciHistory(Hdf5History):
     """
-    Stores a representation of the history in an HDF5 file, extended with
-    AMICI-specific traces of total simulation time, pre-equilibration time and
-    post-equilibration time.
+    Stores history extended by AMICI-specific time traces in an HDF5 file.
+
+    Stores AMICI-specific traces of total simulation time, pre-equilibration
+    time and post-equilibration time.
 
     Parameters
     ----------
@@ -63,6 +64,7 @@ class Hdf5AmiciHistory(Hdf5History):
     ) -> Union[Sequence[float], float]:
         """
         Cumulative simulation CPU time [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -73,8 +75,8 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver [ms].
-        (preequilibration)
+        Cumulative pre-equilibration time, [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -85,8 +87,8 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver of the backward
-        problem [ms] (preequilibration).
+        Cumulative pre-equilibration time of the backward problem, [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -97,8 +99,8 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver [ms]
-        (postequilibration).
+        Cumulative post-equilibration time [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -109,8 +111,8 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver of the backward
-        problem [ms] (postequilibration).
+        Cumulative post-equilibration time of the backward problem [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -118,9 +120,11 @@ class Hdf5AmiciHistory(Hdf5History):
 
 
 class CsvAmiciHistory(CsvHistory):
-    """Stores a representation of the history in a CSV file, extended with
-    AMICI-specific traces of total simulation time, pre-equilibration time and
-    post-equilibration time.
+    """
+    Stores history extended by AMICI-specific time traces in a CSV file.
+
+    Stores AMICI-specific traces of total simulation time, pre-equilibration
+    time and post-equilibration time.
 
     Parameters
     ----------
@@ -177,6 +181,7 @@ class CsvAmiciHistory(CsvHistory):
     ) -> Union[Sequence[float], float]:
         """
         Cumulative simulation CPU time [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -187,8 +192,8 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver [ms].
-        (pre-equilibration)
+        Cumulative pre-equilibration time [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -199,8 +204,8 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver of the backward
-        problem [ms] (pre-equilibration).
+        Cumulative pre-equilibration time of the backward problem [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -211,8 +216,8 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver [ms]
-        (post-equilibration).
+        Cumulative post-equilibration time [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
@@ -223,10 +228,9 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative computation time of the steady state solver of the backward
-        problem [ms] (post-equilibration).
+        Cumulative post-equilibration time of the backward problem [ms].
+
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
         """
         return list(self._trace[(POSTEQ_CPU_TIME_B, np.nan)].values[ix])
-
