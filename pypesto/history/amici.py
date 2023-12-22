@@ -51,34 +51,10 @@ class Hdf5AmiciHistory(Hdf5History):
     ):
         super().__init__(id, file, options=options)
 
-    @with_h5_file("a")
-    def _update_trace(
-        self,
-        x: np.ndarray,
-        sensi_orders: tuple[int],
-        mode: ModeType,
-        result: ResultDict,
-    ) -> None:
-        """Update and possibly store the trace."""
-        if not self.options.trace_record:
-            return
-
-        # calculating function values from residuals
-        #  and reduce via requested history options
-        result = reduce_result_via_options(
-            add_fun_from_res(result), self.options
-        )
-
-        used_time = time.time() - self.start_time
-
-        values = {
-            X: x,
-            FVAL: result[FVAL],
-            GRAD: result[GRAD],
-            RES: result[RES],
-            SRES: result[SRES],
-            HESS: result[HESS],
-            TIME: used_time,
+    @staticmethod
+    def _simulation_to_values(x, result, used_time):
+        values = Hdf5History._simulation_to_values(x, result, used_time)
+        values |= {
             CPU_TIME_TOTAL: sum([rdata[CPU_TIME_TOTAL] for rdata in
                                  result[RDATAS]]),
             PREEQ_CPU_TIME: sum([rdata[PREEQ_CPU_TIME] for rdata in
@@ -88,16 +64,8 @@ class Hdf5AmiciHistory(Hdf5History):
             POSTEQ_CPU_TIME: sum([rdata[POSTEQ_CPU_TIME] for rdata in
                                   result[RDATAS]]),
             POSTEQ_CPU_TIME_B: sum([rdata[POSTEQ_CPU_TIME_B] for rdata in
-                                    result[RDATAS]])
-        }
-
-        iteration = self._require_group().attrs[N_ITERATIONS]
-
-        for key in values.keys():
-            if values[key] is not None:
-                self._require_group()[f'{iteration}/{key}'] = values[key]
-
-        self._require_group().attrs[N_ITERATIONS] += 1
+                                    result[RDATAS]])}
+        return values
 
     @trace_wrap
     def get_cpu_time_total_trace(
