@@ -440,7 +440,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 )
             self._known_least_squares_safe = True  # don't check this again
 
-        # call inner calculators
+        # call inner calculators and collect results
         for calculator in self.inner_calculators:
             inner_result = calculator(
                 x_dct=x_dct,
@@ -463,7 +463,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             if INNER_PARAMETERS in inner_result:
                 interpretable_inner_pars.extend(inner_result[INNER_PARAMETERS])
 
-        # add result for quantitative data
+        # add the quantitative data contribution
         if self.quantitative_data_mask is not None:
             quantitative_result = calculate_quantitative_result(
                 rdatas=rdatas,
