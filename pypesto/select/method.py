@@ -2,7 +2,7 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 import numpy as np
 import petab_select
@@ -274,8 +274,8 @@ class MethodCaller:
                     f'Specifying `{key}` as an individual argument is '
                     'deprecated. Please instead specify it within some '
                     '`model_problem_options` dictionary, e.g. '
-                    f'`model_problem_options={"{key}": ...}`.',
-                    level=logging.WARNING,
+                    f'`model_problem_options={{"{key}": ...}}`.',
+                    level='warning',
                 )
         self.model_problem_options = {}
         self.model_problem_options |= old_model_problem_options
@@ -334,7 +334,6 @@ class MethodCaller:
 
     def __call__(
         self,
-        predecessor_model: Optional[Union[Model, None]] = None,
         newly_calibrated_models: Optional[dict[str, Model]] = None,
     ) -> tuple[list[Model], dict[str, Model]]:
         """Run a single iteration of the model selection method.
@@ -350,10 +349,6 @@ class MethodCaller:
 
         Parameters
         ----------
-        predecessor_model:
-            The model that will be used for comparison. Example 1: the
-            initial model of a forward method. Example 2: all models found
-            with a brute force method should be better than this model.
         newly_calibrated_models:
             The newly calibrated models from the previous iteration.
 
@@ -367,10 +362,6 @@ class MethodCaller:
         """
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
-
-        if predecessor_model is None:
-            # May still be `None` (e.g. brute force method)
-            predecessor_model = self.predecessor_model
 
         candidate_space = petab_select.ui.candidates(
             problem=self.petab_select_problem,

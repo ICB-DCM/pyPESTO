@@ -72,8 +72,8 @@ class Problem:
         -------
         A :class:`MethodCaller` instance.
         """
-        model_problem_options = (
-            self.model_problem_options | kwargs['model_problem_options']
+        model_problem_options = self.model_problem_options | kwargs.get(
+            'model_problem_options', {}
         )
 
         return MethodCaller(
@@ -191,16 +191,9 @@ class Problem:
         self.handle_select_kwargs(kwargs)
         method_caller = self.create_method_caller(**kwargs)
 
-        intermediate_kwargs = {}
         while True:
-            # TODO currently uses the best model so far, not the best model
-            #      from the previous iteration. Make this a possibility?
-            # TODO string literals
-            if best_models:
-                intermediate_kwargs["predecessor_model"] = best_models[-1]
             try:
                 previous_best_model, newly_calibrated_models = method_caller(
-                    **intermediate_kwargs,
                     newly_calibrated_models=self.newly_calibrated_models,
                 )
                 self.update_with_newly_calibrated_models(
@@ -262,7 +255,6 @@ class Problem:
                 best_model,
                 newly_calibrated_models_list[start_index],
             ) = method_caller(
-                predecessor_model=predecessor_model,
                 newly_calibrated_models=newly_calibrated_models_list[
                     start_index
                 ],
