@@ -32,11 +32,11 @@ from ..C import (
     MEASUREMENT_TYPE,
     MODE_FUN,
     MODE_RES,
-    NONLINEAR_MONOTONE,
     OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
     PARAMETER_TYPE,
     RELATIVE,
+    SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
     InnerParameterType,
 )
@@ -114,7 +114,7 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
-            parameter table). Required for ordinal, censored and nonlinear-monotone data.
+            parameter table). Required for ordinal, censored and semiquantitative data.
         inner_options:
             Options for the inner problems and solvers.
             If not provided, default options will be used.
@@ -130,12 +130,12 @@ class PetabImporter(AmiciObjectBuilder):
             self._non_quantitative_data_types
             and any(
                 data_type in self._non_quantitative_data_types
-                for data_type in [ORDINAL, CENSORED, NONLINEAR_MONOTONE]
+                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
             )
             and not self._hierarchical
         ):
             raise ValueError(
-                "Ordinal, censored and nonlinear-monotone data require "
+                "Ordinal, censored and semiquantitative data require "
                 "hierarchical optimization to be enabled.",
             )
 
@@ -423,7 +423,7 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to force-compile the model if not passed.
         **kwargs:
             Additional arguments passed on to the objective. In case of ordinal
-            or nonlinear-monotone measurements, ``inner_options`` can optionally
+            or semiquantitative measurements, ``inner_options`` can optionally
             be passed here. If none are given, ``inner_options`` given to the
             importer constructor (or inner defaults) will be chosen.
 
@@ -505,11 +505,11 @@ class PetabImporter(AmiciObjectBuilder):
         max_sensi_order = kwargs.pop('max_sensi_order', None)
         if self._non_quantitative_data_types is not None and any(
             data_type in self._non_quantitative_data_types
-            for data_type in [ORDINAL, CENSORED, NONLINEAR_MONOTONE]
+            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
         ):  # TODO fix
             if max_sensi_order is not None and max_sensi_order > 1:
                 raise warnings.warn(
-                    "Higher order sensitivities are not supported for ordinal, censored and nonlinear-monotone data. Setting `max_sensi_order` to 1."
+                    "Higher order sensitivities are not supported for ordinal, censored and semiquantitative data. Setting `max_sensi_order` to 1."
                 )
             max_sensi_order = 1
 
@@ -718,7 +718,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         if self._non_quantitative_data_types is not None and any(
             data_type in self._non_quantitative_data_types
-            for data_type in [ORDINAL, CENSORED, NONLINEAR_MONOTONE]
+            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
         ):
             if not isinstance(objective.calculator, InnerCalculatorCollector):
                 raise AssertionError(
@@ -952,12 +952,12 @@ def get_petab_non_quantitative_data_types(
     """
     non_quantitative_data_types = []
     caught_observables = set()
-    # For ordinal, censored and nonlinear-monotone data, search
+    # For ordinal, censored and semiquantitative data, search
     # for the corresponding data types in the measurement table
     meas_df = petab_problem.measurement_df
     if MEASUREMENT_TYPE in meas_df.columns:
         petab_data_types = meas_df[MEASUREMENT_TYPE].unique()
-        for data_type in [ORDINAL, NONLINEAR_MONOTONE] + CENSORING_TYPES:
+        for data_type in [ORDINAL, SEMIQUANTITATIVE] + CENSORING_TYPES:
             if data_type in petab_data_types:
                 non_quantitative_data_types.append(
                     CENSORED if data_type in CENSORING_TYPES else data_type

@@ -1,7 +1,7 @@
 """Module for the InnerCalculatorCollector class.
 
-In case of non-quantitative measurements, this class is used to collect
-hierarchical inner calculators for each data type and merge their results.
+In case of semi-quantitative or qualitative measurements, this class is used
+to collect hierarchical inner calculators for each data type and merge their results.
 """
 from __future__ import annotations
 
@@ -23,12 +23,12 @@ from ..C import (
     INNER_PARAMETERS,
     METHOD,
     MODE_RES,
-    NONLINEAR_MONOTONE,
     OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
     RDATAS,
     RELATIVE,
     RES,
+    SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
     SPLINE_RATIO,
     SRES,
@@ -152,7 +152,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
             self.inner_calculators.append(ordinal_calculator)
 
-        if NONLINEAR_MONOTONE in self.data_types:
+        if SEMIQUANTITATIVE in self.data_types:
             spline_inner_options = {
                 key: value
                 for key, value in inner_options.items()
@@ -177,13 +177,13 @@ class InnerCalculatorCollector(AmiciCalculator):
             RELATIVE,
             ORDINAL,
             CENSORED,
-            NONLINEAR_MONOTONE,
+            SEMIQUANTITATIVE,
         }:
             unsupported_data_types = set(self.data_types) - {
                 RELATIVE,
                 ORDINAL,
                 CENSORED,
-                NONLINEAR_MONOTONE,
+                SEMIQUANTITATIVE,
             }
             raise NotImplementedError(
                 f"Data types {unsupported_data_types} are not supported."
@@ -315,7 +315,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         if 2 in sensi_orders and any(
             data_type in self.data_types
-            for data_type in [ORDINAL, CENSORED, NONLINEAR_MONOTONE]
+            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
         ):
             raise ValueError(
                 "Hessian and FIM are not implemented for ordinal, censored or semi-quantitative data."
@@ -327,7 +327,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             == amici.SensitivityMethod_adjoint
             and any(
                 data_type in self.data_types
-                for data_type in [ORDINAL, CENSORED, NONLINEAR_MONOTONE]
+                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
             )
         ):
             raise NotImplementedError(

@@ -1,5 +1,5 @@
 """
-Optimal scaling
+Ordinal and censored data integration
 ===============
 
 Contains the implementation of the optimal scaling approach, applied for integration
@@ -10,8 +10,10 @@ measurements are calculated to represent the ordinal measurements. This constitu
 the inner subproblem of the hierarchical optimization problem. For censored data, as the
 category interval bounds are known, the surrogate measurements are directly calculated.
 
-An example of parameter estimation with ordinal data can be found in pypesto/doc/examples/example_ordinal.ipynb.
-An example of parameter estimation with censored data can be found in pypesto/doc/examples/example_censored.ipynb.
+An example of parameter estimation with ordinal data
+can be found in pypesto/doc/examples/ordinal_data.ipynb.
+An example of parameter estimation with censored data
+can be found in pypesto/doc/examples/censored_data.ipynb.
 
 Details on the optimal scaling approach can be found in Shepard, 1962 (https://doi.org/10.1007/BF02289621).
 Details on the application of the gradient-based optimal scaling approach to mechanistic modeling

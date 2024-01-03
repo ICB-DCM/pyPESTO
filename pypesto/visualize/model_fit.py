@@ -15,7 +15,7 @@ import petab
 from amici.petab_objective import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
-from ..C import CENSORED, NONLINEAR_MONOTONE, ORDINAL, RDATAS
+from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
 from ..hierarchical.relative.calculator import RelativeAmiciCalculator
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import Problem
@@ -111,7 +111,7 @@ def visualize_optimized_model_fit(
                 start_index=start_index,
                 axes=axes,
             )
-        if NONLINEAR_MONOTONE in non_quantitative_data_types:
+        if SEMIQUANTITATIVE in non_quantitative_data_types:
             axes = _add_spline_mapped_simulations_to_model_fit(
                 result=result,
                 pypesto_problem=pypesto_problem,

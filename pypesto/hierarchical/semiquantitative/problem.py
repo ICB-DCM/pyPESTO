@@ -14,10 +14,10 @@ from ...C import (
     MEASUREMENT_TYPE,
     MIN_DATAPOINT,
     N_SPLINE_PARS,
-    NONLINEAR_MONOTONE,
     NUM_DATAPOINTS,
     OPTIMIZE_NOISE,
     PARAMETER_TYPE,
+    SEMIQUANTITATIVE,
     SPLINE_PAR_TYPE,
     TIME,
     InnerParameterType,
@@ -221,7 +221,7 @@ class SemiquantProblem(AmiciInnerProblem):
         )
 
     def get_noise_dummy_values(self, scaled: bool) -> Dict[str, float]:
-        """Get dummy values for noise parameters of the nonlinear-monotone observable."""
+        """Get dummy values for noise parameters of the semiquantitative observable."""
         return {
             x_id: scale_value(x.value, x.scale) if scaled else x.value
             for x_id, x in self.xs.items()
@@ -252,7 +252,7 @@ def spline_inner_problem_from_petab_problem(
         petab_problem.measurement_df, spline_ratio, amici_model
     )
 
-    # noise parameters for nonlinear-monotone observables
+    # noise parameters for semiquantitative observables
     noise_parameters = noise_inner_parameters_from_parameter_df(
         petab_problem, amici_model
     )
@@ -297,8 +297,8 @@ def spline_inner_parameters_from_measurement_df(
 
     inner_parameters = []
 
-    # Select the nonlinear monotone measurements.
-    df = df[df[MEASUREMENT_TYPE] == NONLINEAR_MONOTONE]
+    # Select the semiquantitative measurements.
+    df = df[df[MEASUREMENT_TYPE] == SEMIQUANTITATIVE]
 
     # Iterate over groups.
     for observable_id in observable_ids:
@@ -334,10 +334,10 @@ def noise_inner_parameters_from_parameter_df(
     amici_model: 'amici.Model',
 ) -> List[SplineInnerParameter]:
     """Create list of inner free noise parameters from PEtab parameter table."""
-    # Select the nonlinear monotone measurements.
+    # Select the semiquantitative measurements.
     measurement_df = petab_problem.measurement_df
     measurement_df = measurement_df[
-        measurement_df[MEASUREMENT_TYPE] == NONLINEAR_MONOTONE
+        measurement_df[MEASUREMENT_TYPE] == SEMIQUANTITATIVE
     ]
 
     observable_ids = amici_model.getObservableIds()

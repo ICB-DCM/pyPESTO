@@ -191,7 +191,7 @@ SCIPY_X = 'x'
 
 MEASUREMENT_TYPE = 'measurementType'
 
-NONLINEAR_MONOTONE = 'nonlinear_monotone'  # TODO rename?
+SEMIQUANTITATIVE = 'semiquantitative'
 
 SPLINE_RATIO = 'spline_ratio'
 MIN_DIFF_FACTOR = 'min_diff_factor'

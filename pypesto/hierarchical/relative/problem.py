@@ -7,8 +7,8 @@ import pandas as pd
 
 from ...C import (
     MEASUREMENT_TYPE,
-    NONLINEAR_MONOTONE,
     PARAMETER_TYPE,
+    SEMIQUANTITATIVE,
     InnerParameterType,
 )
 from ..base_parameter import InnerParameter
@@ -214,7 +214,7 @@ def inner_parameters_from_parameter_df(
                 ]
                 if any(
                     corresponding_measurements[MEASUREMENT_TYPE]
-                    == NONLINEAR_MONOTONE
+                    == SEMIQUANTITATIVE
                 ):
                     continue
 
