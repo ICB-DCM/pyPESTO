@@ -72,7 +72,8 @@ class Problem:
         -------
         A :class:`MethodCaller` instance.
         """
-        model_problem_options = self.model_problem_options | kwargs.get(
+        kwargs = kwargs.copy()
+        model_problem_options = self.model_problem_options | kwargs.pop(
             'model_problem_options', {}
         )
 
