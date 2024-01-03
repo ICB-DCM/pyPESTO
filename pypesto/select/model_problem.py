@@ -29,6 +29,11 @@ class ModelProblem:
     criterion:
         The criterion that should be computed after the model is
         calibrated.
+    minimize_method:
+        The optimization method, which should take a :class:``Problem`` as its
+        only required positional argument, and return a :class:``Result`` that
+        contains an :class:``OptimizerResult``. Other arguments can be provided
+        as keyword arguments, via ``minimize_options``.
     minimize_options:
         Keyword argument options that will be passed on to
         :func:`pypesto.optimize.minimize`.
@@ -66,6 +71,7 @@ class ModelProblem:
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
         postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
+        minimize_method: Callable[[Problem], Result] = None,
     ):
         """Construct then calibrate a model problem.
 
@@ -75,8 +81,8 @@ class ModelProblem:
         ----------
         autorun:
             If ``False``, the model parameters will not be estimated. Allows
-            users to manually call ``pypesto.minimize`` with custom options,
-            then :meth:`set_result()`.
+            users to manually call ``pypesto.optimize.minimize`` with custom
+            options, then :meth:`set_result()`.
 
         TODO: constraints
         """
@@ -87,6 +93,9 @@ class ModelProblem:
         self.minimize_options = {}
         if minimize_options is not None:
             self.minimize_options = minimize_options
+        self.minimize_method = minimize
+        if minimize_method is not None:
+            self.minimize_method = minimize_method
 
         self.model_id = self.model.model_id
         self.objective_customizer = objective_customizer
@@ -128,12 +137,18 @@ class ModelProblem:
                 # TODO rename `minimize_options` to `minimize_kwargs`.
                 # TODO or allow users to provide custom `minimize` methods?
                 else:
-                    self.set_result(
-                        minimize(
-                            self.pypesto_problem,
-                            **minimize_options,
-                        )
-                    )
+                    self.set_result(self.minimize())
+
+    def minimize(self) -> Result:
+        """Optimize the model.
+
+        Returns:
+            The optimization result.
+        """
+        return self.minimize_method(
+            self.pypesto_problem,
+            **self.minimize_options,
+        )
 
     def set_result(self, result: Result):
         """Postprocess a result.
