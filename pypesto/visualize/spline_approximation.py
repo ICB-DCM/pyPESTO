@@ -21,6 +21,7 @@ from ..result import Result
 try:
     import amici
 
+    from ..hierarchical import InnerCalculatorCollector
     from ..hierarchical.semiquantitative.calculator import SemiquantCalculator
     from ..hierarchical.semiquantitative.solver import (
         SemiquantInnerSolver,
@@ -52,6 +53,13 @@ def plot_splines_from_pypesto_result(
     ax:
         The axes.
     """
+    # Check the calculator is the InnerCalculatorCollector.
+    if not isinstance(
+        pypesto_result.problem.objective.calculator, InnerCalculatorCollector
+    ):
+        raise ValueError(
+            'The calculator must be an instance of the InnerCalculatorCollector.'
+        )
 
     # Get the parameters from the pypesto result for the start_index.
     x_dct = dict(
