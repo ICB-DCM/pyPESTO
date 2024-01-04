@@ -87,7 +87,7 @@ class SacessOptimizer:
             See :func:`get_default_ess_options` for details on the default
             settings.
         max_walltime_s:
-            Maximum walltime in seconds. Will only be checked between local
+            Maximum walltime in seconds. It will only be checked between local
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search. Defaults to no limit.
             Note that in order to impose the wall time limit also on the local
@@ -98,10 +98,11 @@ class SacessOptimizer:
         sacess_loglevel:
             Loglevel for SACESS runs.
         tmpdir:
-            Directory for temporary files. Defaults to a directory in the current
-            working directory named ``SacessOptimizerTemp-{random suffix}``.
-            When setting this option, make sure any optimizers running in parallel
-            have unique tmpdirs.
+            Directory for temporary files. This defaults to a directory in the
+            current working directory named
+            ``SacessOptimizerTemp-{random suffix}``.
+            When setting this option, make sure any optimizers running in
+            parallel have unique `tmpdir`s.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -137,10 +138,10 @@ class SacessOptimizer:
         self,
         problem: Problem,
         startpoint_method: StartpointMethod = None,
-    ):
+    ) -> pypesto.Result:
         """Solve the given optimization problem.
 
-        Note that if this function is called from a multi-threaded program (
+        Note that if this function is called from a multithreaded program (
         multiple threads running at the time of calling this function) and
         the :mod:`multiprocessing` `start method` is set to ``fork``, there is
         a good chance for deadlocks. Postpone spawning threads until after
@@ -159,6 +160,14 @@ class SacessOptimizer:
         startpoint_method:
             Method for choosing starting points.
             **Deprecated. Use ``problem.startpoint_method`` instead.**
+
+        Returns
+        -------
+        Result object with optimized parameters in
+        :attr:`pypesto.Result.optimize_result`.
+        Results are sorted by objective. At least the best parameters are
+        included. Additional results may be included - this is subject to
+        change.
         """
         if startpoint_method is not None:
             warn(
@@ -623,7 +632,7 @@ class SacessWorker:
 
         Update ESS settings if conditions are met.
         """
-        # Update ESS settings if we received way more solutions than we  sent
+        # Update ESS settings if we received way more solutions than we sent
         # Magic numbers from [PenasGon2017]_ algorithm 5
         if (
             self._n_received_solutions > 10 * self._n_sent_solutions + 20
