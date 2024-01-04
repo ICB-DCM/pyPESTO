@@ -1,4 +1,5 @@
 """Manage all components of a pyPESTO model selection problem."""
+import warnings
 from typing import Any, Iterable, Optional
 
 import petab_select
@@ -26,8 +27,8 @@ class Problem:
     method_caller:
         A :class:`MethodCaller`, used to run a single iteration of a model
         selection method.
-    model_postprocessor:
-        A method that is applied to each model after calibration.
+    model_problem_options:
+        Passed to the constructor of :class:``ModelProblem``.
     petab_select_problem:
         A PEtab Select problem.
     """
@@ -38,9 +39,21 @@ class Problem:
         self,
         petab_select_problem: petab_select.Problem,
         model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        model_problem_options: dict = None,
     ):
         self.petab_select_problem = petab_select_problem
-        self.model_postprocessor = model_postprocessor
+
+        self.model_problem_options = {}
+        if model_problem_options is not None:
+            self.model_problem_options = model_problem_options
+        # TODO deprecated
+        if model_postprocessor is not None:
+            warnings.warn(
+                'Specifying `model_postprocessor` directly is deprecated. '
+                'Please specify it with `model_problem_options`, e.g. '
+                'model_problem_options={"postprocessor": ...}`.'
+            )
+            self.model_problem_options['postprocessor'] = model_postprocessor
 
         self.set_state(
             calibrated_models={},
@@ -59,10 +72,15 @@ class Problem:
         -------
         A :class:`MethodCaller` instance.
         """
+        kwargs = kwargs.copy()
+        model_problem_options = self.model_problem_options | kwargs.pop(
+            'model_problem_options', {}
+        )
+
         return MethodCaller(
             petab_select_problem=self.petab_select_problem,
             calibrated_models=self.calibrated_models,
-            model_postprocessor=self.model_postprocessor,
+            model_problem_options=model_problem_options,
             **kwargs,
         )
 
@@ -174,16 +192,9 @@ class Problem:
         self.handle_select_kwargs(kwargs)
         method_caller = self.create_method_caller(**kwargs)
 
-        intermediate_kwargs = {}
         while True:
-            # TODO currently uses the best model so far, not the best model
-            #      from the previous iteration. Make this a possibility?
-            # TODO string literals
-            if best_models:
-                intermediate_kwargs["predecessor_model"] = best_models[-1]
             try:
                 previous_best_model, newly_calibrated_models = method_caller(
-                    **intermediate_kwargs,
                     newly_calibrated_models=self.newly_calibrated_models,
                 )
                 self.update_with_newly_calibrated_models(
@@ -245,7 +256,6 @@ class Problem:
                 best_model,
                 newly_calibrated_models_list[start_index],
             ) = method_caller(
-                predecessor_model=predecessor_model,
                 newly_calibrated_models=newly_calibrated_models_list[
                     start_index
                 ],
