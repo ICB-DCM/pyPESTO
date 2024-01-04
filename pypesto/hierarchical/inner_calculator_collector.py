@@ -82,7 +82,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def __init__(
         self,
-        data_types: List[str],
+        data_types: set[str],
         petab_problem: 'petab.Problem',
         model: AmiciModel,
         edatas: List['amici.ExpData'],
@@ -173,13 +173,13 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
             self.inner_calculators.append(semiquant_calculator)
 
-        if set(self.data_types) - {
+        if self.data_types - {
             RELATIVE,
             ORDINAL,
             CENSORED,
             SEMIQUANTITATIVE,
         }:
-            unsupported_data_types = set(self.data_types) - {
+            unsupported_data_types = self.data_types - {
                 RELATIVE,
                 ORDINAL,
                 CENSORED,

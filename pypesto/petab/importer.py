@@ -127,7 +127,7 @@ class PetabImporter(AmiciObjectBuilder):
         )
 
         if (
-            self._non_quantitative_data_types
+            self._non_quantitative_data_types is not None
             and any(
                 data_type in self._non_quantitative_data_types
                 for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
@@ -474,7 +474,10 @@ class PetabImporter(AmiciObjectBuilder):
         calculator = None
         amici_reporting = None
 
-        if self._non_quantitative_data_types and self._hierarchical:
+        if (
+            self._non_quantitative_data_types is not None
+            and self._hierarchical
+        ):
             inner_options = kwargs.pop('inner_options', None)
             inner_options = (
                 inner_options
@@ -936,7 +939,7 @@ def _find_model_name(output_folder: str) -> str:
 
 def get_petab_non_quantitative_data_types(
     petab_problem: petab.Problem,
-) -> List[str]:
+) -> set[str]:
     """
     Get the data types from the PEtab problem.
 
@@ -950,7 +953,7 @@ def get_petab_non_quantitative_data_types(
     data_types:
         A list of the data types.
     """
-    non_quantitative_data_types = []
+    non_quantitative_data_types = set()
     caught_observables = set()
     # For ordinal, censored and semiquantitative data, search
     # for the corresponding data types in the measurement table
@@ -959,7 +962,7 @@ def get_petab_non_quantitative_data_types(
         petab_data_types = meas_df[MEASUREMENT_TYPE].unique()
         for data_type in [ORDINAL, SEMIQUANTITATIVE] + CENSORING_TYPES:
             if data_type in petab_data_types:
-                non_quantitative_data_types.append(
+                non_quantitative_data_types.add(
                     CENSORED if data_type in CENSORING_TYPES else data_type
                 )
                 caught_observables.update(
@@ -984,7 +987,7 @@ def get_petab_non_quantitative_data_types(
                 InnerParameterType.SCALING,
                 InnerParameterType.OFFSET,
             ]:
-                non_quantitative_data_types.append(RELATIVE)
+                non_quantitative_data_types.add(RELATIVE)
 
             # For sigma parameters, we need to check if they belong
             # to an observable with a non-quantitative data type
@@ -993,7 +996,7 @@ def get_petab_non_quantitative_data_types(
                     meas_df[meas_df[NOISE_PARAMETERS] == par_id][OBSERVABLE_ID]
                 )
                 if not (corresponding_observables & caught_observables):
-                    non_quantitative_data_types.append(RELATIVE)
+                    non_quantitative_data_types.add(RELATIVE)
 
     # TODO this can be made muuuch shorter if the relative measurements
     # are also specified in the measurement table, but that would require
