@@ -35,8 +35,7 @@ class ModelProblem:
         contains an :class:``OptimizerResult``. Other arguments can be provided
         as keyword arguments, via ``minimize_options``.
     minimize_options:
-        Keyword argument options that will be passed on to
-        :func:`pypesto.optimize.minimize`.
+        Keyword argument options that will be passed on to `minimize_method`.
     minimize_result:
         A pyPESTO result with an `optimize` result.
     model:
