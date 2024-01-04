@@ -156,7 +156,7 @@ class OptimizerResult(dict):
             f"* message: {self.message} \n"
             f"* number of evaluations: {self.n_fval}\n"
             f"* time taken to optimize: {self.time:0.3f}s\n"
-            f"* startpoint: {self.x0 if full else self.x0[self.free_indices]}\n"
+            f"* startpoint: {self.x0 if full or self.x0 is None else self.x0[self.free_indices]}\n"
             f"* endpoint: {self.x if full else self.x[self.free_indices]}\n"
         )
         # add fval, gradient, hessian, res, sres if available
