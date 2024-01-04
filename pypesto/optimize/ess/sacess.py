@@ -101,7 +101,7 @@ class SacessOptimizer:
             Directory for temporary files. This defaults to a directory in the
             current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
-            parallel have unique `tmpdir`s.
+            parallel have unique `tmpdir`.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
