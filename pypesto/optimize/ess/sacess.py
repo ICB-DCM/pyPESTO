@@ -922,7 +922,9 @@ def get_default_ess_options(
     # Set local optimizer
     for cur_settings in settings:
         if local_optimizer is True:
-            cur_settings['local_optimizer'] = SacessFidesFactory()
+            cur_settings['local_optimizer'] = SacessFidesFactory(
+                fides_kwargs={"verbose": logging.WARNING}
+            )
         elif local_optimizer is not False:
             cur_settings['local_optimizer'] = local_optimizer
 
