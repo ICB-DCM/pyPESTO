@@ -169,12 +169,10 @@ class ModelProblem:
         self.model.estimated_parameters = {
             id: float(value)
             for index, (id, value) in enumerate(
-                dict(
-                    zip(
-                        self.pypesto_problem.x_names,
-                        self.best_start.x,
-                    )
-                ).items()
+                zip(
+                    self.pypesto_problem.x_names,
+                    self.best_start.x,
+                )
             )
             if index in self.pypesto_problem.x_free_indices
         }
