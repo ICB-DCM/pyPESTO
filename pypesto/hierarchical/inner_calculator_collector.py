@@ -312,9 +312,13 @@ class InnerCalculatorCollector(AmiciCalculator):
         """
         import amici.parameter_mapping
 
-        if mode == MODE_RES:
+        if mode == MODE_RES and any(
+            data_type in self.data_types
+            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+        ):
             raise NotImplementedError(
-                f"Mode {mode} is not implemented for the :class:`pypesto.objective.amici.InnerCalculatorCollector`."
+                f"Mode {mode} is not implemented for ordinal, censored or semi-quantitative data."
+                "However, it can be used if the only non-quantitative data type is relative data."
             )
 
         if 2 in sensi_orders and any(
@@ -340,12 +344,14 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
 
         # if we're using adjoint sensitivity analysis or need second order
-        # sensitivities, we can do so if the only non-quantitative data type
-        # is relative data. In this case, we can use the relative calculator directly
+        # sensitivities or are in residual mode, we can do so if the only
+        # non-quantitative data type is relative data. In this case, we
+        # use the relative calculator directly.
         if (
             amici_solver.getSensitivityMethod()
             == amici.SensitivityMethod_adjoint
             or 2 in sensi_orders
+            or mode == MODE_RES
         ):
             relative_calculator = self.inner_calculators[0]
             ret = relative_calculator(
