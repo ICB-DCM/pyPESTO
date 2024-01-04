@@ -54,6 +54,8 @@ class SacessOptimizer:
     histories:
         List of the histories of the best values/parameters
         found by each worker. (Monotonously decreasing objective values.)
+        See :func:`pypesto.visualize.optimizer_history.sacess_history` for
+        visualization.
     """
 
     def __init__(
