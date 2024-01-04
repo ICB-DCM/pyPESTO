@@ -99,8 +99,7 @@ class SacessOptimizer:
             Loglevel for SACESS runs.
         tmpdir:
             Directory for temporary files. This defaults to a directory in the
-            current working directory named
-            ``SacessOptimizerTemp-{random suffix}``.
+            current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
             parallel have unique `tmpdir`s.
         """
