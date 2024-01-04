@@ -481,7 +481,6 @@ def handle_options(
 def sacess_history(
     histories: list[HistoryBase],
     ax: Optional[plt.Axes] = None,
-    legend_kwargs: dict = None,
 ) -> plt.Axes:
     """Plot `SacessOptimizer` history.
 
@@ -496,8 +495,6 @@ def sacess_history(
         :attr:`pypesto.optimize.ess.sacess.SacessOptimizer.histories`.
     ax:
         Axes object to use.
-    legend_kwargs:
-        Keyword arguments passed to :meth:`matplotlib.axes.Axes.legend`.
 
     Returns
     -------
@@ -544,8 +541,8 @@ def sacess_history(
         # even if redundant, so we can just skip the marker for the last point.
         for line in lines:
             line.set_markevery([True] * (len(x) - 1) + [False])
-    legend_kwargs = legend_kwargs or {}
-    ax.legend(**legend_kwargs)
+
+    ax.legend()
     ax.set_xlabel("time (s)")
     ax.set_ylabel("fval")
     ax.set_title("SacessOptimizer convergence")
