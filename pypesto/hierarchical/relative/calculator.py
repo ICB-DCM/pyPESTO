@@ -369,7 +369,6 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),
-                par_edatas_indices=[edata.plist for edata in edatas],
                 snllh=snllh,
             )
         # apply the computed inner parameters to the ReturnData

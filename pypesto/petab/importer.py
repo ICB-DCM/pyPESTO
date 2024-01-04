@@ -493,9 +493,8 @@ class PetabImporter(AmiciObjectBuilder):
             )
             amici_reporting = amici.RDataReporting.full  # TODO does it need to
             # be full, as it was for hierarchical? It needs to be full only if
-            # we're using adjoint sensitivities or 2nd order sensitivities. Hard to test
+            # we're using adjoint sensitivities or 2nd order sensitivities. Hard to test.
 
-        if self._hierarchical:
             # FIXME: currently not supported with hierarchical
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
                 warnings.warn(
@@ -505,16 +504,23 @@ class PetabImporter(AmiciObjectBuilder):
             inner_parameter_ids = calculator.get_inner_par_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
+        elif self._hierarchical:
+            raise ValueError(
+                "No non-quantitative data types specified, but hierarchical "
+                "optimization enabled. Specify non-quantitative data types"
+                "or disable hierarchical optimization."
+            )
+
         max_sensi_order = kwargs.pop('max_sensi_order', None)
         if self._non_quantitative_data_types is not None and any(
             data_type in self._non_quantitative_data_types
             for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
         ):  # TODO fix
             if max_sensi_order is not None and max_sensi_order > 1:
-                raise warnings.warn(
+                warnings.warn(
                     "Higher order sensitivities are not supported for ordinal, censored and semiquantitative data. Setting `max_sensi_order` to 1."
                 )
-            max_sensi_order = 1
+                max_sensi_order = 1
 
         # create objective
         obj = AmiciObjective(

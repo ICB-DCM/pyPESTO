@@ -211,12 +211,7 @@ class SemiquantInnerSolver(InnerSolver):
                 # Current fix for scaling/offset parameters in models.
                 elif par_sim.startswith('observableParameter'):
                     continue
-                # For noise parameters optimized hierarchically, we
-                # do not calculate the gradient.
-                elif (
-                    par_sim.startswith('noiseParameter')
-                    and par_opt not in par_opt_ids
-                ):
+                elif par_opt not in par_opt_ids:
                     continue
                 else:
                     already_calculated.add(par_opt)

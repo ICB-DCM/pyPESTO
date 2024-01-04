@@ -5,6 +5,7 @@ import numpy as np
 
 from ...C import InnerParameterType
 from ...objective import Objective
+from ...objective.amici.amici_util import add_sim_grad_to_opt_grad
 from ...optimize import minimize
 from ...problem import Problem
 from ..base_parameter import InnerParameter
@@ -96,7 +97,6 @@ class RelativeInnerSolver(InnerSolver):
         parameter_mapping: ParameterMapping,
         par_opt_ids: List[str],
         par_sim_ids: List[str],
-        par_edatas_indices: List[List[int]],
         snllh: np.ndarray,
     ):
         """Calculate the gradients with respect to the outer parameters.
@@ -128,8 +128,6 @@ class RelativeInnerSolver(InnerSolver):
         par_opt_ids:
             TODO
         par_sim_ids:
-            TODO
-        par_edatas_indices:
             TODO
         snllh:
             TODO
@@ -192,9 +190,7 @@ class RelativeInnerSolver(InnerSolver):
             )
 
         # compute gradients
-        for cond_idx, cond_par_map, par_edata_indices in zip(
-            range(len(sim)), parameter_mapping, par_edatas_indices
-        ):
+        for cond_idx, cond_par_map in enumerate(parameter_mapping):
             gradient_for_cond = compute_nllh_gradient_for_condition(
                 data=relevant_data[cond_idx],
                 sim=sim[cond_idx],
@@ -202,27 +198,13 @@ class RelativeInnerSolver(InnerSolver):
                 sigma=sigma[cond_idx],
                 ssigma=ssigma[cond_idx],
             )
-
-            # TODO this should maybe become a method... It's used by all inner solvers
-            # add gradient to correct index of snllh
-            # use add_sim_grad_to_opt_grad
-            for par_sim, par_opt in cond_par_map.map_sim_var.items():
-                if not isinstance(par_opt, str):
-                    continue
-
-                if par_opt not in par_opt_ids:
-                    continue
-
-                par_opt_idx = par_opt_ids.index(par_opt)
-                par_sim_idx = par_sim_ids.index(par_sim)
-                par_edata_idx = (
-                    par_edata_indices.index(par_sim_idx)
-                    if par_sim_idx in par_edata_indices
-                    else None
-                )
-
-                if par_edata_idx is not None:
-                    snllh[par_opt_idx] += gradient_for_cond[par_edata_idx]
+            add_sim_grad_to_opt_grad(
+                par_opt_ids=par_opt_ids,
+                par_sim_ids=par_sim_ids,
+                condition_map_sim_var=cond_par_map.map_sim_var,
+                sim_grad=gradient_for_cond,
+                opt_grad=snllh,
+            )
 
         return snllh
 

@@ -36,7 +36,11 @@ from ..C import (
     ModeType,
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
-from ..objective.amici.amici_util import filter_return_dict, init_return_values
+from ..objective.amici.amici_util import (
+    add_sim_grad_to_opt_grad,
+    filter_return_dict,
+    init_return_values,
+)
 
 try:
     import amici
@@ -475,7 +479,6 @@ class InnerCalculatorCollector(AmiciCalculator):
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),
-                par_edatas_indices=[edata.plist for edata in edatas],
             )
             nllh += quantitative_result[FVAL]
             if 1 in sensi_orders:
@@ -514,7 +517,6 @@ def calculate_quantitative_result(
     parameter_mapping: ParameterMapping,
     par_opt_ids: List[str],
     par_sim_ids: List[str],
-    par_edatas_indices: List[List[int]],
 ):
     """Calculate the function values from rdatas and return as dict."""
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
@@ -548,13 +550,11 @@ def calculate_quantitative_result(
             edata,
             mask,
             condition_map_sim_var,
-            par_edata_indices,
         ) in zip(
             rdatas,
             edatas,
             quantitative_data_mask,
             parameter_map_sim_var,
-            par_edatas_indices,
         ):
             data_i = edata[mask]
             sim_i = rdata[AMICI_Y][mask]
@@ -594,25 +594,13 @@ def calculate_quantitative_result(
                 ),
                 axis=1,
             )
-
-            # add gradient to correct index of snllh
-            for par_sim, par_opt in condition_map_sim_var.items():
-                if not isinstance(par_opt, str):
-                    continue
-
-                if par_opt not in par_opt_ids:
-                    continue
-
-                par_opt_idx = par_opt_ids.index(par_opt)
-                par_sim_idx = par_sim_ids.index(par_sim)
-                par_edata_idx = (
-                    par_edata_indices.index(par_sim_idx)
-                    if par_sim_idx in par_edata_indices
-                    else None
-                )
-
-                if par_edata_idx is not None:
-                    snllh[par_opt_idx] += gradient_for_condition[par_edata_idx]
+            add_sim_grad_to_opt_grad(
+                par_opt_ids=par_opt_ids,
+                par_sim_ids=par_sim_ids,
+                condition_map_sim_var=condition_map_sim_var,
+                sim_grad=gradient_for_condition,
+                opt_grad=snllh,
+            )
 
     ret = {
         FVAL: nllh,
