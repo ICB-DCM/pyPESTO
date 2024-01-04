@@ -10,13 +10,7 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import (
-    INNER_PARAMETERS,
-    LOWER_BOUND,
-    RGBA,
-    UPPER_BOUND,
-    WATERFALL_MAX_VALUE,
-)
+from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -121,6 +115,17 @@ def parameters(
             start_indices=start_indices,
             plot_inner_parameters=plot_inner_parameters,
         )
+
+        # parse fvals and parameters
+        fvals = np.array(fvals)
+        # remove nan or inf values
+        xs, fvals = delete_nan_inf(
+            fvals=fvals,
+            x=xs,
+            xdim=len(ub) if ub is not None else 1,
+            magnitude_bound=WATERFALL_MAX_VALUE,
+        )
+
         lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
         # call lowlevel routine
@@ -229,8 +234,8 @@ def parameter_hist(
 
 
 def parameters_lowlevel(
-    xs: Sequence[Union[np.ndarray, List[float]]],
-    fvals: Union[np.ndarray, List[float]],
+    xs: np.ndarray,
+    fvals: np.ndarray,
     lb: Optional[Union[np.ndarray, List[float]]] = None,
     ub: Optional[Union[np.ndarray, List[float]]] = None,
     x_labels: Optional[Iterable[str]] = None,
@@ -247,8 +252,8 @@ def parameters_lowlevel(
     Parameters
     ----------
     xs:
-        Including optimized parameters for each startpoint.
-        Shape: (n_starts, dim).
+        Including optimized parameters for each start that did not result in an infinite fval.
+        Shape: (n_starts_successful, dim).
     fvals:
         Function values. Needed to assign cluster colors.
     lb, ub:
@@ -274,16 +279,6 @@ def parameters_lowlevel(
     ax:
         The plot axes.
     """
-    # parse input
-    xs = np.array(xs)
-    fvals = np.array(fvals)
-    # remove nan or inf values in fvals and xs
-    xs, fvals = delete_nan_inf(
-        fvals=fvals,
-        x=xs,
-        xdim=len(ub) if ub is not None else 1,
-        magnitude_bound=WATERFALL_MAX_VALUE,
-    )
 
     if size is None:
         # 0.5 inch height per parameter
@@ -382,45 +377,10 @@ def handle_inputs(
     # retrieve results
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
-    # retrieve inner parameters if available
-    inner_xs = [
-        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
-    ]
-    if any(inner_xs):
-        inner_xs_names = next(
-            list(inner_x.keys()) for inner_x in inner_xs if inner_x is not None
-        )
-        inner_xs = [
-            [np.nan for i in range(len(inner_xs_names))]
-            if inner_x is None
-            else list(inner_x.values())
-            for inner_x in inner_xs
-        ]
-        # set bounds for inner parameters
-        from ..hierarchical.calculator import HierarchicalAmiciCalculator
 
-        # Check if objective has a calculator attribute
-        if hasattr(result.problem.objective, 'calculator') and isinstance(
-            inner_calculator := result.problem.objective.calculator,
-            HierarchicalAmiciCalculator,
-        ):
-            all_inner_bounds = np.array(
-                [
-                    inner_calculator.inner_problem.xs[inner_name].get_bounds()
-                    for inner_name in inner_xs_names
-                ]
-            )
-            inner_lb = [
-                inner_bounds[LOWER_BOUND] for inner_bounds in all_inner_bounds
-            ]
-            inner_ub = [
-                inner_bounds[UPPER_BOUND] for inner_bounds in all_inner_bounds
-            ]
-        else:
-            inner_lb = np.full(len(inner_xs_names), -np.inf)
-            inner_ub = np.full(len(inner_xs_names), np.inf)
-    else:
-        inner_xs = None
+    # retrieve inner parameters in case of hierarchical optimization
+    inner_xs, inner_xs_names, inner_lb, inner_ub = _handle_inner_inputs(result)
+
     # parse indices which should be plotted
     if start_indices is not None:
         start_indices = process_start_indices(result, start_indices)
@@ -469,6 +429,61 @@ def handle_inputs(
         ]
 
     return lb, ub, x_labels, fvals_out, xs_out
+
+
+def _handle_inner_inputs(
+    result: Result,
+) -> Union[
+    Tuple[None, None, None, None],
+    Tuple[list[np.ndarray], list[str], np.ndarray, np.ndarray],
+]:
+    """Handle inner parameters from hierarchical optimization, if available.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'.
+
+    Returns
+    -------
+    inner_xs:
+        Inner parameter values which will be appended to xs.
+    inner_xs_names:
+        Inner parameter names.
+    inner_lb:
+        Inner parameter lower bounds.
+    inner_ub:
+        Inner parameter upper bounds.
+    """
+    inner_xs = [
+        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
+    ]
+    inner_xs_names = None
+    inner_lb = None
+    inner_ub = None
+
+    if any(inner_x is not None for inner_x in inner_xs):
+        from ..hierarchical.calculator import HierarchicalAmiciCalculator
+
+        if hasattr(result.problem.objective, 'calculator') and isinstance(
+            inner_calculator := result.problem.objective.calculator,
+            HierarchicalAmiciCalculator,
+        ):
+            inner_xs_names = inner_calculator.inner_problem.get_x_ids()
+            # replace None with a list of nans
+            inner_xs = [
+                np.full(len(inner_xs_names), np.nan)
+                if inner_xs_idx is None
+                else np.asarray(inner_xs_idx)
+                for inner_xs_idx in inner_xs
+            ]
+            # set bounds for inner parameters
+            inner_lb, inner_ub = inner_calculator.inner_problem.get_bounds()
+
+    if inner_xs_names is None:
+        inner_xs = None
+
+    return inner_xs, inner_xs_names, inner_lb, inner_ub
 
 
 def parameters_correlation_matrix(

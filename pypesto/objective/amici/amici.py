@@ -215,7 +215,7 @@ class AmiciObjective(ObjectiveBase):
         self.custom_timepoints = None
 
         # Initialize the dictionary for saving of inner parameters.
-        self.inner_parameters: Dict[str, float] = {}
+        self.inner_parameters: list[float] = None
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
@@ -456,7 +456,7 @@ class AmiciObjective(ObjectiveBase):
 
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]
-        if INNER_PARAMETERS in ret and ret[INNER_PARAMETERS]:
+        if ret.get(INNER_PARAMETERS, None) is not None:
             self.inner_parameters = ret[INNER_PARAMETERS]
 
         # check whether we should update data for preequilibration guesses

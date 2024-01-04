@@ -41,6 +41,43 @@ class OptimizerImportError(ImportError):
         )
 
 
+def hierarchical_decorator(minimize):
+    """Add inner parameters to the optimizer result.
+
+    Default decorator for the minimize() method.
+    """
+
+    @wraps(minimize)
+    def wrapped_minimize(
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
+        optimize_options: OptimizeOptions = None,
+    ):
+        # perform the actual optimization
+        result = minimize(
+            self,
+            problem=problem,
+            x0=x0,
+            id=id,
+            history_options=history_options,
+            optimize_options=optimize_options,
+        )
+
+        # add inner parameters
+        if (
+            hasattr(problem.objective, INNER_PARAMETERS)
+            and problem.objective.inner_parameters is not None
+        ):
+            result[INNER_PARAMETERS] = problem.objective.inner_parameters
+
+        return result
+
+    return wrapped_minimize
+
+
 def history_decorator(minimize):
     """Initialize and extract information stored in the history.
 
@@ -195,6 +232,34 @@ def fix_decorator(minimize):
     return wrapped_minimize
 
 
+def minimize_decorator_collection(minimize):
+    """Collect all decorators for the minimize() method."""
+
+    @wraps(minimize)
+    @fix_decorator
+    @time_decorator
+    @history_decorator
+    @hierarchical_decorator
+    def wrapped_minimize(
+        self,
+        problem: Problem,
+        x0: np.ndarray,
+        id: str,
+        history_options: HistoryOptions = None,
+        optimize_options: OptimizeOptions = None,
+    ):
+        return minimize(
+            self,
+            problem=problem,
+            x0=x0,
+            id=id,
+            history_options=history_options,
+            optimize_options=optimize_options,
+        )
+
+    return wrapped_minimize
+
+
 class Optimizer(abc.ABC):
     """
     Optimizer base class, not functional on its own.
@@ -207,9 +272,7 @@ class Optimizer(abc.ABC):
         """Initialize base class."""
 
     @abc.abstractmethod
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -284,9 +347,7 @@ class ScipyOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -462,8 +523,6 @@ class ScipyOptimizer(Optimizer):
             exitflag=res.status,
             message=res.message,
         )
-        if hasattr(objective, INNER_PARAMETERS) and objective.inner_parameters:
-            optimizer_result[INNER_PARAMETERS] = objective.inner_parameters
 
         return optimizer_result
 
@@ -505,9 +564,7 @@ class IpoptOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -567,9 +624,7 @@ class DlibOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -643,9 +698,7 @@ class PyswarmOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -719,9 +772,7 @@ class CmaesOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -802,9 +853,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -878,9 +927,7 @@ class PyswarmsOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -1097,9 +1144,7 @@ class NLoptOptimizer(Optimizer):
             rep += f" local_options={self.local_methods}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,
@@ -1282,9 +1327,7 @@ class FidesOptimizer(Optimizer):
             rep += f" options={self.options}"
         return rep + ">"
 
-    @fix_decorator
-    @time_decorator
-    @history_decorator
+    @minimize_decorator_collection
     def minimize(
         self,
         problem: Problem,

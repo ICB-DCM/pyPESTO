@@ -1,6 +1,6 @@
 """Calibrate a PEtab Select model with pyPESTO."""
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Optional
 
 from petab_select import Criterion, Model
 
@@ -29,11 +29,15 @@ class ModelProblem:
     criterion:
         The criterion that should be computed after the model is
         calibrated.
+    minimize_method:
+        The optimization method, which should take a :class:``Problem`` as its
+        only required positional argument, and return a :class:``Result`` that
+        contains an :class:``OptimizerResult``. Other arguments can be provided
+        as keyword arguments, via ``minimize_options``.
     minimize_options:
-        Keyword argument options that will be passed on to
-        :func:`pypesto.optimize.minimize`.
+        Keyword argument options that will be passed on to `minimize_method`.
     minimize_result:
-        A pyPESTO result with an optimize result.
+        A pyPESTO result with an `optimize` result.
     model:
         A PEtab Select model.
     model_id:
@@ -61,11 +65,12 @@ class ModelProblem:
         criterion: Criterion,
         valid: bool = True,
         autorun: bool = True,
-        x_guess: List[float] = None,
-        minimize_options: Dict = None,
+        x_guess: list[float] = None,
+        minimize_options: dict = None,
         objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
         postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
+        minimize_method: Callable[[Problem], Result] = None,
     ):
         """Construct then calibrate a model problem.
 
@@ -75,8 +80,8 @@ class ModelProblem:
         ----------
         autorun:
             If ``False``, the model parameters will not be estimated. Allows
-            users to manually call ``pypesto.minimize`` with custom options,
-            then :meth:`set_result()`.
+            users to manually call ``pypesto.optimize.minimize`` with custom
+            options, then :meth:`set_result()`.
 
         TODO: constraints
         """
@@ -87,6 +92,9 @@ class ModelProblem:
         self.minimize_options = {}
         if minimize_options is not None:
             self.minimize_options = minimize_options
+        self.minimize_method = minimize
+        if minimize_method is not None:
+            self.minimize_method = minimize_method
 
         self.model_id = self.model.model_id
         self.objective_customizer = objective_customizer
@@ -128,12 +136,18 @@ class ModelProblem:
                 # TODO rename `minimize_options` to `minimize_kwargs`.
                 # TODO or allow users to provide custom `minimize` methods?
                 else:
-                    self.set_result(
-                        minimize(
-                            self.pypesto_problem,
-                            **minimize_options,
-                        )
-                    )
+                    self.set_result(self.minimize())
+
+    def minimize(self) -> Result:
+        """Optimize the model.
+
+        Returns:
+            The optimization result.
+        """
+        return self.minimize_method(
+            self.pypesto_problem,
+            **self.minimize_options,
+        )
 
     def set_result(self, result: Result):
         """Postprocess a result.
@@ -141,7 +155,7 @@ class ModelProblem:
         Parameters
         ----------
         result:
-            A pyPESTO result with an optimize result.
+            A pyPESTO result with an `optimize` result.
         """
         self.minimize_result = result
         # TODO extract best parameter estimates, to use as start point for
@@ -154,12 +168,10 @@ class ModelProblem:
         self.model.estimated_parameters = {
             id: float(value)
             for index, (id, value) in enumerate(
-                dict(
-                    zip(
-                        self.pypesto_problem.x_names,
-                        self.best_start.x,
-                    )
-                ).items()
+                zip(
+                    self.pypesto_problem.x_names,
+                    self.best_start.x,
+                )
             )
             if index in self.pypesto_problem.x_free_indices
         }
