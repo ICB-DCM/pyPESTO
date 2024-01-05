@@ -10,7 +10,7 @@ pip install wheel setuptools
 pip install tox
 
 # Update package lists
-if [ "$(uname)" == "Darwin" ]; then
+if [ "$(uname)" = "Darwin" ]; then
   # MacOS
   :
 else
@@ -28,7 +28,7 @@ for par in "$@"; do
 
     amici)
       # for amici
-      if [ "$(uname)" == "Darwin" ]; then
+      if [ "$(uname)" = "Darwin" ]; then
         brew install swig hdf5 libomp
       else
         sudo apt-get install \
