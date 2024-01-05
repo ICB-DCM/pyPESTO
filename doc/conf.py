@@ -22,6 +22,12 @@ import sys
 
 sys.path.insert(0, os.path.abspath('../'))
 
+# Silence:
+# Debugger warning: It seems that frozen modules are being used, which may
+# make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+# to python to disable frozen modules.
+# Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
 
 # -- General configuration ------------------------------------------------
 
