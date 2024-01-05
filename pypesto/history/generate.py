@@ -17,7 +17,7 @@ def create_history(
     id: str,
     x_names: Sequence[str],
     options: HistoryOptions,
-    amici_objective: bool
+    amici_objective: bool,
 ) -> HistoryBase:
     """Create a :class:`HistoryBase` object; Factory method.
 
@@ -52,11 +52,13 @@ def create_history(
     # create history type based on storage type
     if suffix in SUFFIXES_CSV:
         if amici_objective:
-            return CsvAmiciHistory(x_names=x_names, file=storage_file,
-                                   options=options)
+            return CsvAmiciHistory(
+                x_names=x_names, file=storage_file, options=options
+            )
         else:
-            return CsvHistory(x_names=x_names, file=storage_file,
-                              options=options)
+            return CsvHistory(
+                x_names=x_names, file=storage_file, options=options
+            )
     elif suffix in SUFFIXES_HDF5:
         if amici_objective:
             return Hdf5AmiciHistory(id=id, file=storage_file, options=options)

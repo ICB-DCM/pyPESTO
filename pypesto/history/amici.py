@@ -46,16 +46,22 @@ class Hdf5AmiciHistory(Hdf5History):
     def _simulation_to_values(x, result, used_time):
         values = Hdf5History._simulation_to_values(x, result, used_time)
         values |= {
-            CPU_TIME_TOTAL: sum([rdata[CPU_TIME_TOTAL] for rdata in
-                                 result[RDATAS]]),
-            PREEQ_CPU_TIME: sum([rdata[PREEQ_CPU_TIME] for rdata in
-                                 result[RDATAS]]),
-            PREEQ_CPU_TIME_BACKWARD: sum([rdata[PREEQ_CPU_TIME_BACKWARD] for
-                                          rdata in result[RDATAS]]),
-            POSTEQ_CPU_TIME: sum([rdata[POSTEQ_CPU_TIME] for rdata in
-                                  result[RDATAS]]),
-            POSTEQ_CPU_TIME_BACKWARD: sum([rdata[POSTEQ_CPU_TIME_BACKWARD] for
-                                           rdata in result[RDATAS]])}
+            CPU_TIME_TOTAL: sum(
+                [rdata[CPU_TIME_TOTAL] for rdata in result[RDATAS]]
+            ),
+            PREEQ_CPU_TIME: sum(
+                [rdata[PREEQ_CPU_TIME] for rdata in result[RDATAS]]
+            ),
+            PREEQ_CPU_TIME_BACKWARD: sum(
+                [rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
+            ),
+            POSTEQ_CPU_TIME: sum(
+                [rdata[POSTEQ_CPU_TIME] for rdata in result[RDATAS]]
+            ),
+            POSTEQ_CPU_TIME_BACKWARD: sum(
+                [rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
+            ),
+        }
         return values
 
     @trace_wrap
@@ -156,23 +162,29 @@ class CsvAmiciHistory(CsvHistory):
                 PREEQ_CPU_TIME,
                 PREEQ_CPU_TIME_BACKWARD,
                 POSTEQ_CPU_TIME,
-                POSTEQ_CPU_TIME_BACKWARD
+                POSTEQ_CPU_TIME_BACKWARD,
             ]
         ]
 
     def _simulation_to_values(self, result, used_time):
         values = super()._simulation_to_values(result, used_time)
         values |= {
-            CPU_TIME_TOTAL: sum([rdata[CPU_TIME_TOTAL] for rdata in
-                                 result[RDATAS]]),
-            PREEQ_CPU_TIME: sum([rdata[PREEQ_CPU_TIME] for rdata in
-                                 result[RDATAS]]),
-            PREEQ_CPU_TIME_BACKWARD: sum([rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in
-                                          result[RDATAS]]),
-            POSTEQ_CPU_TIME: sum([rdata[POSTEQ_CPU_TIME] for rdata in
-                                  result[RDATAS]]),
-            POSTEQ_CPU_TIME_BACKWARD: sum([rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in
-                                           result[RDATAS]])}
+            CPU_TIME_TOTAL: sum(
+                [rdata[CPU_TIME_TOTAL] for rdata in result[RDATAS]]
+            ),
+            PREEQ_CPU_TIME: sum(
+                [rdata[PREEQ_CPU_TIME] for rdata in result[RDATAS]]
+            ),
+            PREEQ_CPU_TIME_BACKWARD: sum(
+                [rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
+            ),
+            POSTEQ_CPU_TIME: sum(
+                [rdata[POSTEQ_CPU_TIME] for rdata in result[RDATAS]]
+            ),
+            POSTEQ_CPU_TIME_BACKWARD: sum(
+                [rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
+            ),
+        }
         return values
 
     @trace_wrap

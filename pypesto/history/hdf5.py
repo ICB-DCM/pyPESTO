@@ -311,7 +311,7 @@ class Hdf5History(HistoryBase):
             RES: result[RES],
             SRES: result[SRES],
             HESS: result[HESS],
-            TIME: used_time
+            TIME: used_time,
         }
         return values
 
