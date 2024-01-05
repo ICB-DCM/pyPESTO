@@ -65,6 +65,7 @@ class ESSOptimizer:
         n_procs=None,
         n_threads=None,
         max_walltime_s=None,
+        result_includes_refset: bool = False,
     ):
         """Construct new ESS instance.
 
@@ -113,6 +114,10 @@ class ESSOptimizer:
         history:
             History of the best values/parameters found so far.
             (Monotonously decreasing objective values.)
+        result_includes_refset:
+            Whether the :meth:`minimize` result should include the final
+            RefSet, or just the local search results and the overall best
+            parameters.
         """
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
@@ -151,6 +156,7 @@ class ESSOptimizer:
         self.logger = logging.getLogger(
             f"{self.__class__.__name__}-{id(self)}"
         )
+        self._result_includes_refset = result_includes_refset
 
     def _initialize(self):
         """(Re-)Initialize."""
@@ -160,9 +166,8 @@ class ESSOptimizer:
         self.x_best: Optional[np.array] = None
         # Overall best function value found so far
         self.fx_best: float = np.inf
-        # Final `(parameters, fval)` from local searches
-        # TODO: just keep the OptimizerResult from the local search?
-        self.local_solutions: list[tuple[np.array, float]] = []
+        # Results from local searches
+        self.local_solutions: list[OptimizerResult] = []
         # Index of current iteration
         self.n_iter: int = 0
         # ESS iteration at which the last local search took place
@@ -317,32 +322,25 @@ class ESSOptimizer:
         result.optimize_result.append(optimizer_result)
 
         # save local solutions
-        for i, (x, fx) in enumerate(self.local_solutions):
+        for i, optimizer_result in enumerate(self.local_solutions):
             i_result += 1
-            result.optimize_result.append(
-                pypesto.OptimizerResult(
-                    id=str(i_result),
-                    x=x,
-                    fval=fx,
-                    message=f"Local solution {i}",
-                    **common_result_fields,
-                )
-            )
-            result.optimize_result[-1].update_to_full(result.problem)
+            optimizer_result.id = f"Local solution {i}"
+            result.optimize_result.append(optimizer_result)
 
-        # save refset
-        for i in range(self.refset.dim):
-            i_result += 1
-            result.optimize_result.append(
-                pypesto.OptimizerResult(
-                    id=str(i_result),
-                    x=self.refset.x[i],
-                    fval=self.refset.fx[i],
-                    message=f"RefSet[{i}]",
-                    **common_result_fields,
+        if self._result_includes_refset:
+            # save refset
+            for i in range(self.refset.dim):
+                i_result += 1
+                result.optimize_result.append(
+                    pypesto.OptimizerResult(
+                        id=str(i_result),
+                        x=self.refset.x[i],
+                        fval=self.refset.fx[i],
+                        message=f"RefSet[{i}]",
+                        **common_result_fields,
+                    )
                 )
-            )
-            result.optimize_result[-1].update_to_full(result.problem)
+                result.optimize_result[-1].update_to_full(result.problem)
 
         return result
 
@@ -482,8 +480,10 @@ class ESSOptimizer:
             #  optima found so far
             min_distances = np.array(
                 np.min(
-                    np.linalg.norm(y_i - local_solution)
-                    for local_solution, _ in self.local_solutions
+                    np.linalg.norm(
+                        y_i - optimizer_result.x[optimizer_result.free_indices]
+                    )
+                    for optimizer_result in self.local_solutions
                 )
                 for y_i in x_best_children
             )
@@ -532,17 +532,11 @@ class ESSOptimizer:
                 f"{optimizer_result.exitflag}: {optimizer_result.message}"
             )
             if np.isfinite(optimizer_result.fval):
-                local_solution_x = optimizer_result.x[
-                    optimizer_result.free_indices
-                ]
-                local_solution_fx = optimizer_result.fval
-
-                self.local_solutions.append(
-                    (local_solution_x, local_solution_fx)
-                )
+                self.local_solutions.append(optimizer_result)
 
                 self._maybe_update_global_best(
-                    local_solution_x, local_solution_fx
+                    optimizer_result.x[optimizer_result.free_indices],
+                    optimizer_result.fval,
                 )
                 break
 

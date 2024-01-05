@@ -482,6 +482,7 @@ class SacessWorker:
     _loglevel: Logging level for sacess
     _ess_loglevel: Logging level for ESS runs
     _tmp_result_file: Path of a temporary file to be created.
+
     """
 
     def __init__(
@@ -543,7 +544,6 @@ class SacessWorker:
             )
         )
 
-        ess_results = pypesto.Result(problem=problem)
         ess = self._setup_ess(startpoint_method)
 
         # run ESS until exit criteria are met, but start at least one iteration
@@ -551,17 +551,9 @@ class SacessWorker:
             # perform one ESS iteration
             ess._do_iteration()
 
-            # TODO maybe not in every iteration?
-            # drop all but the 50 best results
-            cur_ess_results = ess._create_result()
-            ess_results.optimize_result.append(
-                cur_ess_results.optimize_result,
-                prefix=f"{self._worker_idx}_{ess.n_iter}_",
-            )
-            ess_results.optimize_result.list = (
-                ess_results.optimize_result.list[:50]
-            )
             if self._tmp_result_file:
+                # TODO maybe not in every iteration?
+                ess_results = ess._create_result()
                 write_result(
                     ess_results,
                     self._tmp_result_file,
@@ -580,6 +572,7 @@ class SacessWorker:
                 f"sacess worker {self._worker_idx} iteration {ess.n_iter} "
                 f"(best: {self._best_known_fx})."
             )
+
         ess.history.finalize(exitflag=ess.exit_flag.name)
         self._manager._result_queue.put(ess.history)
         ess._report_final()
