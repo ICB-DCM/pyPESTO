@@ -19,9 +19,11 @@ python:
         - doc
 
 build:
-  os: "ubuntu-20.04"
+  os: "ubuntu-22.04"
   apt_packages:
+    - gfortran
     - libatlas-base-dev
+    - libhdf5-serial-dev
     - swig
   tools:
     python: "3.10"
