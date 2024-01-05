@@ -6,7 +6,7 @@ CESS :footcite:p:`VillaverdeEge2012`, and saCeSS :footcite:p:`PenasGon2017`.
 import enum
 import logging
 import time
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 from warnings import warn
 
 import numpy as np
@@ -160,8 +160,9 @@ class ESSOptimizer:
         self.x_best: Optional[np.array] = None
         # Overall best function value found so far
         self.fx_best: float = np.inf
-        # Final parameters from local searches
-        self.local_solutions: List[np.array] = []
+        # Final `(parameters, fval)` from local searches
+        # TODO: just keep the OptimizerResult from the local search?
+        self.local_solutions: list[tuple[np.array, float]] = []
         # Index of current iteration
         self.n_iter: int = 0
         # ESS iteration at which the last local search took place
@@ -313,8 +314,21 @@ class ESSOptimizer:
             **common_result_fields,
         )
         optimizer_result.update_to_full(result.problem)
-        # TODO DW: Create a single History with the global best?
         result.optimize_result.append(optimizer_result)
+
+        # save local solutions
+        for i, (x, fx) in enumerate(self.local_solutions):
+            i_result += 1
+            result.optimize_result.append(
+                pypesto.OptimizerResult(
+                    id=str(i_result),
+                    x=x,
+                    fval=fx,
+                    message=f"Local solution {i}",
+                    **common_result_fields,
+                )
+            )
+            result.optimize_result[-1].update_to_full(result.problem)
 
         # save refset
         for i in range(self.refset.dim):
@@ -329,9 +343,6 @@ class ESSOptimizer:
                 )
             )
             result.optimize_result[-1].update_to_full(result.problem)
-
-        # TODO DW: also save local solutions?
-        #  (need to track fvals or re-evaluate)
 
         return result
 
@@ -370,7 +381,7 @@ class ESSOptimizer:
             return np.inf
         return self.max_eval - self.evaluator.n_eval
 
-    def _combine_solutions(self) -> Tuple[np.array, np.array]:
+    def _combine_solutions(self) -> tuple[np.array, np.array]:
         """Combine solutions and evaluate.
 
         Creates the next generation from the RefSet by pair-wise combinations
@@ -472,7 +483,7 @@ class ESSOptimizer:
             min_distances = np.array(
                 np.min(
                     np.linalg.norm(y_i - local_solution)
-                    for local_solution in self.local_solutions
+                    for local_solution, _ in self.local_solutions
                 )
                 for y_i in x_best_children
             )
@@ -526,7 +537,9 @@ class ESSOptimizer:
                 ]
                 local_solution_fx = optimizer_result.fval
 
-                self.local_solutions.append(local_solution_x)
+                self.local_solutions.append(
+                    (local_solution_x, local_solution_fx)
+                )
 
                 self._maybe_update_global_best(
                     local_solution_x, local_solution_fx
