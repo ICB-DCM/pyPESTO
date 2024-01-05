@@ -99,7 +99,7 @@ class InnerParameterType(str, Enum):
     OFFSET = 'offset'
     SCALING = 'scaling'
     SIGMA = 'sigma'
-    OPTIMAL_SCALING = 'optimal_scaling'  # TODO rename?
+    ORDINAL = 'ordinal'
     SPLINE = 'spline'
 
 
@@ -107,7 +107,7 @@ DUMMY_INNER_VALUE = {
     InnerParameterType.OFFSET: 0.0,
     InnerParameterType.SCALING: 1.0,
     InnerParameterType.SIGMA: 1.0,
-    InnerParameterType.OPTIMAL_SCALING: 0.0,
+    InnerParameterType.ORDINAL: 0.0,
     InnerParameterType.SPLINE: 0.0,
 }
 
@@ -124,7 +124,7 @@ INNER_PARAMETER_BOUNDS = {
         LOWER_BOUND: 0,
         UPPER_BOUND: float('inf'),
     },
-    InnerParameterType.OPTIMAL_SCALING: {  # TODO rename?
+    InnerParameterType.ORDINAL: {
         LOWER_BOUND: -float('inf'),
         UPPER_BOUND: float('inf'),
     },
@@ -158,7 +158,7 @@ METHOD = 'method'
 REPARAMETERIZED = 'reparameterized'
 INTERVAL_CONSTRAINTS = 'interval_constraints'
 MIN_GAP = 'min_gap'
-OPTIMAL_SCALING_OPTIONS = [
+ORDINAL_OPTIONS = [
     METHOD,
     REPARAMETERIZED,
     INTERVAL_CONSTRAINTS,
@@ -187,7 +187,7 @@ SCIPY_FUN = 'fun'
 SCIPY_X = 'x'
 
 ###############################################################################
-# SPLINE APPROXIMATION
+# SPLINE APPROXIMATION FOR SEMIQUANTITATIVE DATA
 
 MEASUREMENT_TYPE = 'measurementType'
 

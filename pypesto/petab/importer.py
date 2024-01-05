@@ -32,8 +32,8 @@ from ..C import (
     MEASUREMENT_TYPE,
     MODE_FUN,
     MODE_RES,
-    OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
+    ORDINAL_OPTIONS,
     PARAMETER_TYPE,
     RELATIVE,
     SEMIQUANTITATIVE,
@@ -192,10 +192,7 @@ class PetabImporter(AmiciObjectBuilder):
     def validate_inner_options(self):
         """Validate the inner options."""
         for key in self.inner_options:
-            if (
-                key
-                not in OPTIMAL_SCALING_OPTIONS + SPLINE_APPROXIMATION_OPTIONS
-            ):
+            if key not in ORDINAL_OPTIONS + SPLINE_APPROXIMATION_OPTIONS:
                 raise ValueError(f"Unknown inner option {key}.")
 
     def check_gradients(
@@ -498,9 +495,7 @@ class PetabImporter(AmiciObjectBuilder):
                 edatas,
                 inner_options,
             )
-            amici_reporting = amici.RDataReporting.full  # TODO does it need to
-            # be full, as it was for hierarchical? It needs to be full only if
-            # we're using adjoint sensitivities or 2nd order sensitivities. Hard to test.
+            amici_reporting = amici.RDataReporting.full
 
             # FIXME: currently not supported with hierarchical
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
@@ -1006,7 +1001,7 @@ def get_petab_non_quantitative_data_types(
 
     # TODO this can be made much shorter if the relative measurements
     # are also specified in the measurement table, but that would require
-    # changing the PEtab format of a lot of benchmark models...
+    # changing the PEtab format of a lot of benchmark models.
 
     if len(non_quantitative_data_types) == 0:
         return None

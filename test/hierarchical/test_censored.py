@@ -142,7 +142,7 @@ def _inner_problem_exp():
     inner_parameters = [
         OrdinalParameter(
             inner_parameter_id=inner_parameter_id,
-            inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+            inner_parameter_type=InnerParameterType.ORDINAL,
             scale=LIN,
             lb=-np.inf,
             ub=np.inf,

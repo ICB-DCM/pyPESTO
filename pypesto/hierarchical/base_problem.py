@@ -47,7 +47,7 @@ class InnerProblem:
         # this would make sense, since inner problems should be aware
         # of only the data its inner parameters are relevant for...
         # Then we wouldn't need to copy the data in the inner solver
-        # calculate_obj_function
+        # calculate_obj_function (left to discuss in PR)
 
         logger.debug(f"Created InnerProblem with ids {self.get_x_ids()}")
 

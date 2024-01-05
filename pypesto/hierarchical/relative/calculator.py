@@ -164,21 +164,6 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 rdatas=rdatas,
             )
 
-        # TODO check again completely.
-        # There seems to be a 10^-4 to 10^-6 difference
-        # in the sum of the gradient...
-        # if 1 in sensi_orders:
-        # if not np.isclose(inner_result[FVAL], result[FVAL]) \
-        # or not np.allclose(inner_result[GRAD], result[GRAD]):
-        #     # Compare result and inner_result
-        #     print("inner_result, result")
-        #     print(inner_result[FVAL], result[FVAL])
-        #     for i in range(len(inner_result[GRAD])):
-        #         print(inner_result[GRAD][i], result[GRAD][i])
-        #     print("Difference: ", inner_result[FVAL] - result[FVAL])
-        #     print("Difference: ", np.sum(np.abs(inner_result[GRAD] - result[GRAD])))
-        #     breakpoint()
-
         inner_result[X_INNER_OPT] = {}
         inner_result[INNER_PARAMETERS] = np.array(
             [inner_parameters[x_id] for x_id in self.inner_problem.get_x_ids()]
@@ -211,7 +196,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
-        # TODO don't need to simulate again?
+
         inner_result = super().__call__(
             x_dct=x_dct,
             sensi_orders=(0,),

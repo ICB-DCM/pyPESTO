@@ -23,8 +23,8 @@ from ..C import (
     INNER_PARAMETERS,
     METHOD,
     MODE_RES,
-    OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
+    ORDINAL_OPTIONS,
     RDATAS,
     RELATIVE,
     RES,
@@ -98,7 +98,9 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.data_types = data_types
         self.inner_calculators: list[
             AmiciCalculator
-        ] = []  # Should this be a dictionary? TODO? Can it?
+        ] = (
+            []
+        )  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
         self.construct_inner_calculators(
             petab_problem, model, edatas, inner_options
         )
@@ -140,7 +142,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             optimal_scaling_inner_options = {
                 key: value
                 for key, value in inner_options.items()
-                if key in OPTIMAL_SCALING_OPTIONS
+                if key in ORDINAL_OPTIONS
             }
             inner_problem_method = optimal_scaling_inner_options.get(
                 METHOD, None
@@ -203,7 +205,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         """
         for key in inner_options:
             if (
-                key not in OPTIMAL_SCALING_OPTIONS
+                key not in ORDINAL_OPTIONS
                 and key not in SPLINE_APPROXIMATION_OPTIONS
             ):
                 raise ValueError(f"Unknown inner option {key}.")

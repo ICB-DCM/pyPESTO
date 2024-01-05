@@ -118,19 +118,19 @@ class RelativeInnerSolver(InnerSolver):
             ``ReturnData.sigmay``. Same order as simulations in the
             PEtab problem.
         ssigma:
-            List of sensitivity matrices from the model, as provided in AMICI's
-            ``ReturnData.ssigmay``. Same order as simulations in the
+            List of sigma sensitivity matrices from the model, as provided
+            in AMICI's ``ReturnData.ssigmay``. Same order as simulations in the
             PEtab problem.
         inner_parameters:
             The computed inner parameters.
         parameter_mapping:
-            TODO
+            Mapping of optimization to simulation parameters.
         par_opt_ids:
-            TODO
+            Ids of outer otimization parameters.
         par_sim_ids:
-            TODO
+            Ids of outer simulation parameters, includes fixed parameters.
         snllh:
-            TODO
+            Empty dictionary with optimization parameters as keys.
 
         Returns
         -------
@@ -293,7 +293,6 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
         data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
         sigma = copy.deepcopy(sigma)
-        # TODO do something about all of this copying?
 
         # compute optimal offsets
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):

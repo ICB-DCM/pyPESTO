@@ -128,9 +128,7 @@ class OrdinalInnerSolver(InnerSolver):
         List of optimization results of the inner subproblem.
         """
         optimal_surrogates = []
-        for group in problem.get_groups_for_xs(
-            InnerParameterType.OPTIMAL_SCALING
-        ):
+        for group in problem.get_groups_for_xs(InnerParameterType.ORDINAL):
             category_upper_bounds = problem.get_cat_ub_parameters_for_group(
                 group
             )
@@ -279,9 +277,7 @@ class OrdinalInnerSolver(InnerSolver):
 
                 # Iterate over inner parameter groups.
                 for idx, group in enumerate(
-                    problem.get_groups_for_xs(
-                        InnerParameterType.OPTIMAL_SCALING
-                    )
+                    problem.get_groups_for_xs(InnerParameterType.ORDINAL)
                 ):
                     if problem.groups[group][MEASUREMENT_TYPE] == CENSORED:
                         category_upper_bounds = (

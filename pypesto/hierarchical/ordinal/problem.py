@@ -91,9 +91,7 @@ class OrdinalProblem(AmiciInnerProblem):
         """Initialize the groups of the subproblem."""
         self.groups = {}
 
-        for group in self.get_groups_for_xs(
-            InnerParameterType.OPTIMAL_SCALING
-        ):
+        for group in self.get_groups_for_xs(InnerParameterType.ORDINAL):
             self.groups[group] = {}
             xs = self.get_xs_for_group(group)
             self.groups[group][NUM_CATEGORIES] = len({x.category for x in xs})
@@ -526,9 +524,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     par_types = [CAT_LB, CAT_UB]
 
     inner_parameters = []
-    lb, ub = INNER_PARAMETER_BOUNDS[
-        InnerParameterType.OPTIMAL_SCALING
-    ].values()
+    lb, ub = INNER_PARAMETER_BOUNDS[InnerParameterType.ORDINAL].values()
 
     for observable_idx, observable_id in enumerate(observable_ids):
         group = observable_idx + 1
@@ -549,7 +545,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                         inner_parameters.append(
                             OrdinalParameter(
                                 inner_parameter_id=par_id,
-                                inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+                                inner_parameter_type=InnerParameterType.ORDINAL,
                                 scale=LIN,
                                 lb=lb,
                                 ub=ub,
@@ -585,7 +581,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                         inner_parameters.append(
                             OrdinalParameter(
                                 inner_parameter_id=par_id,
-                                inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+                                inner_parameter_type=InnerParameterType.ORDINAL,
                                 scale=LIN,
                                 lb=lb,
                                 ub=ub,
