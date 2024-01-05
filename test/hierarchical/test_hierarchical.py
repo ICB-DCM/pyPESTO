@@ -646,6 +646,7 @@ def test_validate():
             {
                 petab.PARAMETER_ID: ["s"],
                 "parameterType": ['scaling'],
+                "estimate": [1],
             }
         )
     )

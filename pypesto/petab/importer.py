@@ -126,6 +126,13 @@ class PetabImporter(AmiciObjectBuilder):
             get_petab_non_quantitative_data_types(petab_problem)
         )
 
+        if self._non_quantitative_data_types is None and hierarchical:
+            raise ValueError(
+                "Hierarchical optimization enabled, but no non-quantitative "
+                "data types specified. Specify non-quantitative data types "
+                "or disable hierarchical optimization."
+            )
+
         if (
             self._non_quantitative_data_types is not None
             and any(
@@ -503,13 +510,6 @@ class PetabImporter(AmiciObjectBuilder):
             kwargs['guess_steadystate'] = False
             inner_parameter_ids = calculator.get_inner_par_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
-
-        elif self._hierarchical:
-            raise ValueError(
-                "No non-quantitative data types specified, but hierarchical "
-                "optimization enabled. Specify non-quantitative data types"
-                "or disable hierarchical optimization."
-            )
 
         max_sensi_order = kwargs.pop('max_sensi_order', None)
         if self._non_quantitative_data_types is not None and any(
@@ -1004,7 +1004,7 @@ def get_petab_non_quantitative_data_types(
                 if not (corresponding_observables & caught_observables):
                     non_quantitative_data_types.add(RELATIVE)
 
-    # TODO this can be made muuuch shorter if the relative measurements
+    # TODO this can be made much shorter if the relative measurements
     # are also specified in the measurement table, but that would require
     # changing the PEtab format of a lot of benchmark models...
 
