@@ -45,22 +45,23 @@ class Hdf5AmiciHistory(Hdf5History):
     @staticmethod
     def _simulation_to_values(x, result, used_time):
         values = Hdf5History._simulation_to_values(x, result, used_time)
+        # default unit for time in amici is [ms], converted to [s]
         values |= {
             CPU_TIME_TOTAL: sum(
                 [rdata[CPU_TIME_TOTAL] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             PREEQ_CPU_TIME: sum(
                 [rdata[PREEQ_CPU_TIME] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             PREEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             POSTEQ_CPU_TIME: sum(
                 [rdata[POSTEQ_CPU_TIME] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             POSTEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
         }
         return values
 
@@ -69,7 +70,7 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative simulation CPU time [ms].
+        Cumulative simulation CPU time [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -81,7 +82,7 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative pre-equilibration time, [ms].
+        Cumulative pre-equilibration time, [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -93,7 +94,7 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative pre-equilibration time of the backward problem, [ms].
+        Cumulative pre-equilibration time of the backward problem, [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -105,7 +106,7 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative post-equilibration time [ms].
+        Cumulative post-equilibration time [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -117,7 +118,7 @@ class Hdf5AmiciHistory(Hdf5History):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative post-equilibration time of the backward problem [ms].
+        Cumulative post-equilibration time of the backward problem [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -168,22 +169,23 @@ class CsvAmiciHistory(CsvHistory):
 
     def _simulation_to_values(self, result, used_time):
         values = super()._simulation_to_values(result, used_time)
+        # default unit for time in amici is [ms], converted to [s]
         values |= {
             CPU_TIME_TOTAL: sum(
                 [rdata[CPU_TIME_TOTAL] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             PREEQ_CPU_TIME: sum(
                 [rdata[PREEQ_CPU_TIME] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             PREEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             POSTEQ_CPU_TIME: sum(
                 [rdata[POSTEQ_CPU_TIME] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
             POSTEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            ),
+            )*0.001,
         }
         return values
 
@@ -192,7 +194,7 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative simulation CPU time [ms].
+        Cumulative simulation CPU time [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -204,7 +206,7 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative pre-equilibration time [ms].
+        Cumulative pre-equilibration time [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -216,7 +218,7 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative pre-equilibration time of the backward problem [ms].
+        Cumulative pre-equilibration time of the backward problem [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -228,7 +230,7 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative post-equilibration time [ms].
+        Cumulative post-equilibration time [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
@@ -240,7 +242,7 @@ class CsvAmiciHistory(CsvHistory):
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative post-equilibration time of the backward problem [ms].
+        Cumulative post-equilibration time of the backward problem [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.
