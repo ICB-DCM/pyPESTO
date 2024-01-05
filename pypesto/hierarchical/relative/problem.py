@@ -205,7 +205,7 @@ def inner_parameters_from_parameter_df(
         if petab.is_empty(row[PARAMETER_TYPE]):
             continue
         # If a sigma parameter belongs to a semi-quantiative
-        # observable, it is not a relative inner parameter. # TODO make nicer?
+        # observable, it is not a relative inner parameter.
         if row[PARAMETER_TYPE] == InnerParameterType.SIGMA:
             if MEASUREMENT_TYPE in meas_df.columns:
                 par_id = row[PARAMETER_ID]
