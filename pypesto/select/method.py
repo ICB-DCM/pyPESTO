@@ -2,7 +2,7 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 import numpy as np
 import petab_select
@@ -208,14 +208,6 @@ class MethodCaller:
         models may (likely) be fewer.
     logger:
         A :class:`MethodLogger`, used to log results.
-    minimize_options:
-        A dictionary that will be passed to `pypesto.minimize` as keyword
-        arguments for model optimization.
-    model_postprocessor:
-        A method that is applied to each model after calibration.
-    objective_customizer:
-        A method that is applied to the pyPESTO objective after the
-        objective is initialized, before calibration.
     predecessor_model:
         Specify the predecessor (initial) model for the model selection
         algorithm. If ``None``, then the algorithm will generate an initial
@@ -235,8 +227,11 @@ class MethodCaller:
         # Arguments/attributes that can simply take the default value here.
         criterion_threshold: float = 0.0,
         limit: int = np.inf,
+        # TODO deprecated
         minimize_options: dict = None,
+        # TODO deprecated
         model_postprocessor: TYPE_POSTPROCESSOR = None,
+        # TODO deprecated
         objective_customizer: Callable = None,
         select_first_improvement: bool = False,
         startpoint_latest_mle: bool = True,
@@ -246,7 +241,9 @@ class MethodCaller:
         # TODO misleading, `Method` here is simply an Enum, not a callable...
         method: Method = None,
         predecessor_model: Model = None,
+        # TODO deprecated
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
+        model_problem_options: dict = None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
@@ -254,15 +251,36 @@ class MethodCaller:
 
         self.criterion_threshold = criterion_threshold
         self.limit = limit
-        self.minimize_options = minimize_options
-        self.model_postprocessor = model_postprocessor
-        self.objective_customizer = objective_customizer
         self.predecessor_model = predecessor_model
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
-        self.model_to_pypesto_problem_method = model_to_pypesto_problem_method
 
         self.logger = MethodLogger()
+
+        # TODO deprecated
+        old_model_problem_options = {}
+        for key, value in [
+            ('postprocessor', model_postprocessor),
+            (
+                'model_to_pypesto_problem_method',
+                model_to_pypesto_problem_method,
+            ),
+            ('minimize_options', minimize_options),
+            ('objective_customizer', objective_customizer),
+        ]:
+            if value is not None:
+                old_model_problem_options[key] = value
+                self.logger.log(
+                    f'Specifying `{key}` as an individual argument is '
+                    'deprecated. Please instead specify it within some '
+                    '`model_problem_options` dictionary, e.g. '
+                    f'`model_problem_options={{"{key}": ...}}`.',
+                    level='warning',
+                )
+        self.model_problem_options = {}
+        self.model_problem_options |= old_model_problem_options
+        if model_problem_options is not None:
+            self.model_problem_options |= model_problem_options
 
         self.criterion = criterion
         if self.criterion is None:
@@ -316,7 +334,6 @@ class MethodCaller:
 
     def __call__(
         self,
-        predecessor_model: Optional[Union[Model, None]] = None,
         newly_calibrated_models: Optional[dict[str, Model]] = None,
     ) -> tuple[list[Model], dict[str, Model]]:
         """Run a single iteration of the model selection method.
@@ -332,10 +349,6 @@ class MethodCaller:
 
         Parameters
         ----------
-        predecessor_model:
-            The model that will be used for comparison. Example 1: the
-            initial model of a forward method. Example 2: all models found
-            with a brute force method should be better than this model.
         newly_calibrated_models:
             The newly calibrated models from the previous iteration.
 
@@ -349,10 +362,6 @@ class MethodCaller:
         """
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
-
-        if predecessor_model is None:
-            # May still be `None` (e.g. brute force method)
-            predecessor_model = self.predecessor_model
 
         candidate_space = petab_select.ui.candidates(
             problem=self.petab_select_problem,
@@ -533,8 +542,5 @@ class MethodCaller:
             valid=valid,
             autorun=autorun,
             x_guess=x_guess,
-            minimize_options=self.minimize_options,
-            objective_customizer=self.objective_customizer,
-            postprocessor=self.model_postprocessor,
-            model_to_pypesto_problem_method=self.model_to_pypesto_problem_method,
+            **self.model_problem_options,
         )

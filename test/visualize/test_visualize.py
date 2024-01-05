@@ -17,7 +17,9 @@ import pypesto.predict as predict
 import pypesto.sample as sample
 import pypesto.util
 import pypesto.visualize as visualize
-from pypesto.C import INNER_PARAMETERS
+from pypesto.testing.examples import (
+    get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds,
+)
 from pypesto.visualize.model_fit import (
     time_trajectory_model,
     visualize_optimized_model_fit,
@@ -130,8 +132,13 @@ def create_optimization_result_nan_inf():
     result = create_optimization_result()
 
     # append nan and inf
+    # depending on optimizer failed starts's x can be None or vector of np.nan
     optimizer_result = pypesto.OptimizerResult(
         fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
+    )
+    result.optimize_result.append(optimize_result=optimizer_result)
+    optimizer_result = pypesto.OptimizerResult(
+        fval=float('nan'), x=None, id='nan_none'
     )
     result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
@@ -404,19 +411,21 @@ def test_parameters_with_options(scale_to_interval):
 def test_parameters_lowlevel():
     # create some dummy results
     (lb, ub) = create_bounds()
-    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    xs = [
-        [0.1, 1],
-        [1.2, 3],
-        [2, 4],
-        [1.2, 4.1],
-        [1.1, 3.5],
-        [4.2, 3.5],
-        [1, 4],
-        [6.2, 5],
-        [4.3, 3],
-        [3, 2],
-    ]
+    fvals = np.array([0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11])
+    xs = np.array(
+        [
+            [0.1, 1],
+            [1.2, 3],
+            [2, 4],
+            [1.2, 4.1],
+            [1.1, 3.5],
+            [4.2, 3.5],
+            [1, 4],
+            [6.2, 5],
+            [4.3, 3],
+            [3, 2],
+        ]
+    )
 
     # pass lists
     visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
@@ -457,15 +466,26 @@ def test_parameters_hist():
 @pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
 @close_fig
 def test_parameters_hierarchical(scale_to_interval):
-    # create the necessary results
-    result = create_optimization_result()
+    # obtain a petab problem with hierarchical parameters
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
+    helper_problem = importer.create_problem()
 
-    # add hierarchical parameters
-    for index, optimizer_result in enumerate(result.optimize_result.list):
-        optimizer_result[INNER_PARAMETERS] = {
-            'inner_x_1': index + 3,
-            'inner_x_2': index + 3 + 0.1,
-        }
+    # set x_guesses to nominal values for fast optimization
+    x_guesses = np.asarray(petab_problem.x_nominal_scaled)[
+        helper_problem.x_free_indices
+    ]
+    problem = importer.create_problem(x_guesses=[x_guesses])
+
+    # run optimization
+    n_starts = 1
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=n_starts,
+        progress_bar=False,
+    )
 
     # test a call with hierarchical parameters
     visualize.parameters(

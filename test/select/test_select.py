@@ -324,9 +324,12 @@ def test_postprocessors(petab_select_problem):
         pypesto.select.postprocessors.multi_postprocessor,
         postprocessors=[postprocessor_1, postprocessor_2],
     )
+    model_problem_options = {
+        'postprocessor': multi_postprocessor,
+    }
     pypesto_select_problem = pypesto.select.Problem(
         petab_select_problem=petab_select_problem,
-        model_postprocessor=multi_postprocessor,
+        model_problem_options=model_problem_options,
     )
 
     # Iteration 1 # Same as first iteration of `test_problem_select` ##########

@@ -5,6 +5,7 @@ on:
   push:
     branches:
     - main
+    - develop
   pull_request:
   workflow_dispatch:
   schedule:
@@ -14,6 +15,8 @@ on:
 env:
   # use all available cores for compiling amici models
   AMICI_PARALLEL_COMPILE: ""
+  # non-interactive backend for matplotlib
+  MPLBACKEND: "agg"
 
 # jobs
 jobs:
@@ -36,7 +39,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -75,9 +78,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
-          ~/Library/Caches/Homebrew
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci
 
     - name: Install dependencies
@@ -145,7 +147,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -189,7 +191,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -239,7 +241,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -275,7 +277,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -311,7 +313,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -347,7 +349,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -379,7 +381,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -412,7 +414,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
@@ -442,7 +444,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          ~/.cache
+          ~/.cache/pip
           .tox/
         key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
 
