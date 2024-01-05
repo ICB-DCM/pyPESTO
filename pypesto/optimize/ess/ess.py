@@ -325,6 +325,7 @@ class ESSOptimizer:
         for i, optimizer_result in enumerate(self.local_solutions):
             i_result += 1
             optimizer_result.id = f"Local solution {i}"
+            optimizer_result.optimizer = str(self.local_optimizer)
             result.optimize_result.append(optimizer_result)
 
         if self._result_includes_refset:
