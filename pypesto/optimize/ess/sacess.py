@@ -54,6 +54,8 @@ class SacessOptimizer:
     histories:
         List of the histories of the best values/parameters
         found by each worker. (Monotonously decreasing objective values.)
+        See :func:`pypesto.visualize.optimizer_history.sacess_history` for
+        visualization.
     """
 
     def __init__(
@@ -944,7 +946,9 @@ def get_default_ess_options(
     # Set local optimizer
     for cur_settings in settings:
         if local_optimizer is True:
-            cur_settings['local_optimizer'] = SacessFidesFactory()
+            cur_settings['local_optimizer'] = SacessFidesFactory(
+                fides_kwargs={"verbose": logging.WARNING}
+            )
         elif local_optimizer is not False:
             cur_settings['local_optimizer'] = local_optimizer
 
