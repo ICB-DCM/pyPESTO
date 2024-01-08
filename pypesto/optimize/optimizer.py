@@ -12,11 +12,7 @@ import numpy as np
 import scipy.optimize
 
 from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES
-from ..history import (
-    HistoryOptions,
-    NoHistory,
-    OptimizerHistory
-)
+from ..history import HistoryOptions, NoHistory, OptimizerHistory
 from ..objective import Objective
 from ..problem import Problem
 from ..result import OptimizerResult

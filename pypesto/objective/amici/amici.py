@@ -8,10 +8,24 @@ from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from ...C import (FVAL, INNER_PARAMETERS, MODE_FUN, MODE_RES, RDATAS,
-                  ModeType, SUFFIXES_CSV, SUFFIXES_HDF5)
-from ...history import (CountHistory, CsvAmiciHistory, Hdf5AmiciHistory,
-                        HistoryOptions, MemoryHistory, HistoryTypeError)
+from ...C import (
+    FVAL,
+    INNER_PARAMETERS,
+    MODE_FUN,
+    MODE_RES,
+    RDATAS,
+    SUFFIXES_CSV,
+    SUFFIXES_HDF5,
+    ModeType,
+)
+from ...history import (
+    CountHistory,
+    CsvAmiciHistory,
+    Hdf5AmiciHistory,
+    HistoryOptions,
+    HistoryTypeError,
+    MemoryHistory,
+)
 from ..base import ObjectiveBase, ResultDict
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
