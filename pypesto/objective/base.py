@@ -120,6 +120,7 @@ class ObjectiveBase(ABC):
         """
 
     def create_history(self, id, x_names, options):
+        """See `history.generate.create_history` documentation."""
         return create_history(id, x_names, options)
 
     def __call__(

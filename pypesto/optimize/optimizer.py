@@ -15,8 +15,7 @@ from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES
 from ..history import (
     HistoryOptions,
     NoHistory,
-    OptimizerHistory,
-    create_history,
+    OptimizerHistory
 )
 from ..objective import Objective
 from ..problem import Problem
