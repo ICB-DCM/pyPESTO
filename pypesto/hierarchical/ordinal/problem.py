@@ -72,7 +72,7 @@ class OrdinalProblem(AmiciInnerProblem):
     groups:
         A dictionary of the groups of the subproblem.
     method:
-        A string representing the method of the Optimal Scaling approach, either 'reduced' or 'standard'.
+        A string representing the method of the Optimal Scaling approach, either `reduced` or `standard`.
     """
 
     def __init__(

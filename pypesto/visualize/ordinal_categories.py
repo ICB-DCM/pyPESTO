@@ -72,7 +72,7 @@ def plot_categories_from_pypesto_result(
         )
     )
     x_dct.update(
-        pypesto_result.problem.objective.calculator.noise_dummy_values
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
     )
 
     # Get the needed objects from the pypesto problem.
