@@ -20,8 +20,9 @@
 /pypesto/engine/mpi_pool.py @PaulJonasJost
 /pypesto/ensemble/ @dilpath @PaulJonasJost
 /pypesto/hierarchical/ @dweindl @Doresic
-/pypesto/hierarchical/optimal_scaling_approach/ @Doresic
-/pypesto/hierarchical/spline_approximation/ @Doresic
+/pypesto/hierarchical/ordinal/ @Doresic
+/pypesto/hierarchical/relative/ @dweindl @Doresic
+/pypesto/hierarchical/semiquantitative/ @Doresic
 /pypesto/history/ @PaulJonasJost
 /pypesto/objective/ @PaulJonasJost
 /pypesto/objective/amici/ @dweindl @FFroehlich
