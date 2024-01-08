@@ -91,6 +91,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         The return object also includes the simulation results that were
         generated to solve the inner problem, as well as the parameters that
         solver the inner problem.
+
         Parameters
         ----------
         x_dct:
