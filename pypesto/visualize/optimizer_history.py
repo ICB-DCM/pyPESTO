@@ -476,3 +476,74 @@ def handle_options(
         )
 
     return ax
+
+
+def sacess_history(
+    histories: list[HistoryBase],
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Plot `SacessOptimizer` history.
+
+    Plot the history of the best objective values for each
+    :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
+    worker over computation time as step splot.
+
+    Parameters
+    ----------
+    histories:
+        List of histories from different workers as obtained from
+        :attr:`pypesto.optimize.ess.sacess.SacessOptimizer.histories`.
+    ax:
+        Axes object to use.
+
+    Returns
+    -------
+    The plot axes. `ax` or a new axes if `ax` was `None`.
+    """
+    ax = ax or plt.subplot()
+
+    # plot overall minimum
+    # merge results
+    t = np.hstack([history.get_time_trace() for history in histories])
+    fx = np.hstack([history.get_fval_trace() for history in histories])
+    time_order = np.argsort(t)
+    t = t[time_order]
+    fx = fx[time_order]
+
+    # get the monotonously decreasing sequence
+    monotone = np.where(fx <= np.fmin.accumulate(fx))[0]
+    x, y = t[monotone], fx[monotone]
+
+    # extend from last decrease to last timepoint
+    x = np.append(x, [t.max()])
+    y = np.append(y, [y.min()])
+    ax.step(
+        x,
+        y,
+        linestyle="dotted",
+        color="grey",
+        where="post",
+        label="overall",
+        alpha=0.8,
+    )
+
+    # plot steps of individual workers
+    for worker_idx, history in enumerate(histories):
+        x, y = history.get_time_trace(), history.get_fval_trace()
+        # extend from last decrease to last timepoint
+        x = np.append(x, [np.max(t)])
+        y = np.append(y, [np.min(y)])
+        lines = ax.step(
+            x, y, ".-", where="post", label=f"worker {worker_idx}", alpha=0.8
+        )
+        # Plot last point without marker, unless we actually had an improvement there.
+        # The time point of the overall last improvement is appended to all histories,
+        # even if redundant, so we can just skip the marker for the last point.
+        for line in lines:
+            line.set_markevery([True] * (len(x) - 1) + [False])
+
+    ax.legend()
+    ax.set_xlabel("time (s)")
+    ax.set_ylabel("fval")
+    ax.set_title("SacessOptimizer convergence")
+    return ax
