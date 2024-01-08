@@ -51,27 +51,29 @@ except ImportError:
 
 
 class OrdinalProblem(AmiciInnerProblem):
-    """Inner optimization problem for ordinal or censored data."""
+    r"""Inner optimization problem for ordinal or censored data.
 
-    # The ordinal inner problem contains the following parameters: surrogate data,
-    # lower bounds, and upper bounds. All parameters are optimized to minimize the
-    # distance between the surrogate data and the simulated data while satisfying
-    # the ordering constraints of the problem. Depending on the method, the problem
-    # is re-formulated to reduce the number of parameters to estimate.
+    The ordinal inner problem contains the following parameters: surrogate data,
+    lower bounds, and upper bounds. All parameters are optimized to minimize the
+    distance between the surrogate data and the simulated data while satisfying
+    the ordering constraints of the problem. Depending on the method, the problem
+    is re-formulated to reduce the number of parameters to estimate.
 
-    # Attributes
-    # ----------
-    # xs:
-    #     Mapping of (inner) parameter ID to ``InnerParameters``.
-    # data:
-    #     Measurement data. One matrix (`num_timepoints` x `num_observables`)
-    #     per simulation condition. Missing observations as NaN.
-    # edatas:
-    #     AMICI ``ExpData``s for each simulation condition.
-    # groups:
-    #     A dictionary of the groups of the subproblem.
-    # method:
-    #     A string representing the method of the Optimal Scaling approach, either `reduced` or `standard`.
+    Attributes
+    ----------
+    xs:
+        Mapping of (inner) parameter ID to ``InnerParameters``.
+    data:
+        Measurement data. One matrix (``num_timepoints`` x ``num_observables``)
+        per simulation condition. Missing observations as NaN.
+    edatas:
+        AMICI ``ExpData``\s for each simulation condition.
+    groups:
+        A dictionary of the groups of the subproblem.
+    method:
+        A string representing the method of the Optimal Scaling approach, either ``reduced`` or ``standard``.
+    """
+
     def __init__(
         self,
         method: str,

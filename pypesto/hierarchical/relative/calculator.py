@@ -119,7 +119,6 @@ class RelativeAmiciCalculator(AmiciCalculator):
             the :class:`pypesto.objective.amici.InnerCalculatorCollector`,
             it will already simulate the model and pass the results here.
 
-
         Returns
         -------
         inner_result:
