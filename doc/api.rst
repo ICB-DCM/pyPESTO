@@ -6,9 +6,9 @@ API reference
 
    pypesto.engine
    pypesto.ensemble
-   pypesto.hierarchical
-   pypesto.hierarchical.optimal_scaling
-   pypesto.hierarchical.spline_approximation
+   pypesto.hierarchical.ordinal
+   pypesto.hierarchical.relative
+   pypesto.hierarchical.semiquantitative
    pypesto.history
    pypesto.logging
    pypesto.objective
