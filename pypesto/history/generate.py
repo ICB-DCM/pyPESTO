@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Sequence
 
 from ..C import SUFFIXES_CSV, SUFFIXES_HDF5
-from .amici import CsvAmiciHistory, Hdf5AmiciHistory
 from .base import CountHistory, HistoryBase
 from .csv import CsvHistory
 from .hdf5 import Hdf5History
@@ -16,8 +15,7 @@ from .util import HistoryTypeError
 def create_history(
     id: str,
     x_names: Sequence[str],
-    options: HistoryOptions,
-    amici_objective: bool,
+    options: HistoryOptions
 ) -> HistoryBase:
     """Create a :class:`HistoryBase` object; Factory method.
 
@@ -29,8 +27,6 @@ def create_history(
         Parameter names.
     options:
         History options.
-    amici_objective:
-        Indicates if AmiciObjective was used
 
     Returns
     -------
@@ -51,18 +47,10 @@ def create_history(
 
     # create history type based on storage type
     if suffix in SUFFIXES_CSV:
-        if amici_objective:
-            return CsvAmiciHistory(
-                x_names=x_names, file=storage_file, options=options
-            )
-        else:
-            return CsvHistory(
-                x_names=x_names, file=storage_file, options=options
-            )
+        return CsvHistory(
+            x_names=x_names, file=storage_file, options=options
+        )
     elif suffix in SUFFIXES_HDF5:
-        if amici_objective:
-            return Hdf5AmiciHistory(id=id, file=storage_file, options=options)
-        else:
-            return Hdf5History(id=id, file=storage_file, options=options)
+        return Hdf5History(id=id, file=storage_file, options=options)
     else:
         raise HistoryTypeError(suffix)
