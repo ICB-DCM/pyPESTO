@@ -205,7 +205,6 @@ class SemiquantCalculator(AmiciCalculator):
         inner_result[
             INNER_PARAMETERS
         ] = self.inner_problem.get_inner_noise_parameters()
-        # print("semiquant inner parameters: ", inner_result[INNER_PARAMETERS])
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:

@@ -22,6 +22,12 @@ import sys
 
 sys.path.insert(0, os.path.abspath('../'))
 
+# Silence:
+# Debugger warning: It seems that frozen modules are being used, which may
+# make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+# to python to disable frozen modules.
+# Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
 
 # -- General configuration ------------------------------------------------
 
@@ -70,7 +76,6 @@ autodoc_default_options = {
     'show-inheritance': True,
     'autodoc_inherit_docstrings': True,
 }
-autodoc_mock_imports = ["amici"]
 autodoc_class_signature = "separated"
 
 # napoleon options
@@ -78,16 +83,18 @@ napoleon_use_rtype = False
 
 # links for intersphinx
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
+    'amici': ('https://amici.readthedocs.io/en/latest/', None),
+    'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
     'numpy': ('https://numpy.org/devdocs/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
     'pandas': ('https://pandas.pydata.org/docs/', None),
     'petab': (
         'https://petab.readthedocs.io/projects/libpetab-python/en/latest/',
         None,
     ),
-    'amici': ('https://amici.readthedocs.io/en/latest/', None),
-    'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
+    'petab_select': ('https://petab-select.readthedocs.io/en/develop/', None),
+    'python': ('https://docs.python.org/3', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
 }
 
 

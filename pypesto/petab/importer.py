@@ -266,6 +266,7 @@ class PetabImporter(AmiciObjectBuilder):
     def create_model(
         self,
         force_compile: bool = False,
+        verbose: bool = True,
         **kwargs,
     ) -> amici.Model:
         """
@@ -281,8 +282,11 @@ class PetabImporter(AmiciObjectBuilder):
             .. warning::
                 If `force_compile`, then an existing folder of that name will
                 be deleted.
-
-        kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
+        kwargs:
+            Extra arguments passed to amici.SbmlImporter.sbml2amici
         """
         # courtesy check whether target is folder
         if os.path.exists(self.output_folder) and not os.path.isdir(
@@ -305,10 +309,11 @@ class PetabImporter(AmiciObjectBuilder):
             if self.petab_problem.model.type_id == MODEL_TYPE_SBML:
                 self.compile_model(
                     validate=self.validate_petab,
+                    verbose=verbose,
                     **kwargs,
                 )
             else:
-                self.compile_model(**kwargs)
+                self.compile_model(verbose=verbose, **kwargs)
         else:
             logger.debug(
                 f"Using existing amici model in folder "
@@ -382,22 +387,29 @@ class PetabImporter(AmiciObjectBuilder):
             **kwargs,
         )
 
-    def create_solver(self, model: amici.Model = None) -> amici.Solver:
+    def create_solver(
+        self,
+        model: amici.Model = None,
+        verbose: bool = True,
+    ) -> amici.Solver:
         """Return model solver."""
         # create model
         if model is None:
-            model = self.create_model()
+            model = self.create_model(verbose=verbose)
 
         solver = model.getSolver()
         return solver
 
     def create_edatas(
-        self, model: amici.Model = None, simulation_conditions=None
+        self,
+        model: amici.Model = None,
+        simulation_conditions=None,
+        verbose: bool = True,
     ) -> List[amici.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
         # create model
         if model is None:
-            model = self.create_model()
+            model = self.create_model(verbose=verbose)
 
         return amici.petab_objective.create_edatas(
             amici_model=model,
@@ -411,6 +423,7 @@ class PetabImporter(AmiciObjectBuilder):
         solver: amici.Solver = None,
         edatas: Sequence[amici.ExpData] = None,
         force_compile: bool = False,
+        verbose: bool = True,
         **kwargs,
     ) -> AmiciObjective:
         """Create a :class:`pypesto.objective.AmiciObjective`.
@@ -425,6 +438,9 @@ class PetabImporter(AmiciObjectBuilder):
             The experimental data in AMICI format.
         force_compile:
             Whether to force-compile the model if not passed.
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
         **kwargs:
             Additional arguments passed on to the objective. In case of ordinal
             or semiquantitative measurements, ``inner_options`` can optionally
@@ -442,7 +458,9 @@ class PetabImporter(AmiciObjectBuilder):
 
         # create model
         if model is None:
-            model = self.create_model(force_compile=force_compile)
+            model = self.create_model(
+                force_compile=force_compile, verbose=verbose
+            )
         # create solver
         if solver is None:
             solver = self.create_solver(model)
@@ -791,6 +809,7 @@ class PetabImporter(AmiciObjectBuilder):
         self,
         rdatas: Sequence[amici.ReturnData],
         model: amici.Model = None,
+        verbose: bool = True,
     ) -> pd.DataFrame:
         """
         Create a measurement dataframe in the petab format.
@@ -802,6 +821,9 @@ class PetabImporter(AmiciObjectBuilder):
             ``pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas']``.
         model:
             The amici model.
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
 
         Returns
         -------
@@ -810,7 +832,7 @@ class PetabImporter(AmiciObjectBuilder):
         """
         # create model
         if model is None:
-            model = self.create_model()
+            model = self.create_model(verbose=verbose)
 
         measurement_df = self.petab_problem.measurement_df
 

@@ -1,4 +1,5 @@
 import functools
+import logging
 import os
 from functools import wraps
 from typing import Sequence
@@ -132,8 +133,13 @@ def create_optimization_result_nan_inf():
     result = create_optimization_result()
 
     # append nan and inf
+    # depending on optimizer failed starts's x can be None or vector of np.nan
     optimizer_result = pypesto.OptimizerResult(
         fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
+    )
+    result.optimize_result.append(optimize_result=optimizer_result)
+    optimizer_result = pypesto.OptimizerResult(
+        fval=float('nan'), x=None, id='nan_none'
     )
     result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
@@ -406,19 +412,21 @@ def test_parameters_with_options(scale_to_interval):
 def test_parameters_lowlevel():
     # create some dummy results
     (lb, ub) = create_bounds()
-    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    xs = [
-        [0.1, 1],
-        [1.2, 3],
-        [2, 4],
-        [1.2, 4.1],
-        [1.1, 3.5],
-        [4.2, 3.5],
-        [1, 4],
-        [6.2, 5],
-        [4.3, 3],
-        [3, 2],
-    ]
+    fvals = np.array([0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11])
+    xs = np.array(
+        [
+            [0.1, 1],
+            [1.2, 3],
+            [2, 4],
+            [1.2, 4.1],
+            [1.1, 3.5],
+            [4.2, 3.5],
+            [1, 4],
+            [6.2, 5],
+            [4.3, 3],
+            [3, 2],
+        ]
+    )
 
     # pass lists
     visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
@@ -1160,3 +1168,17 @@ def test_time_trajectory_model():
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)
+
+
+@close_fig
+def test_sacess_history():
+    """Test pypesto.visualize.optimizer_history.sacess_history"""
+    from pypesto.optimize.ess.sacess import SacessOptimizer
+    from pypesto.visualize.optimizer_history import sacess_history
+
+    problem = create_problem()
+    sacess = SacessOptimizer(
+        max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
+    )
+    sacess.minimize(problem)
+    sacess_history(sacess.histories)
