@@ -47,9 +47,7 @@ def create_history(
 
     # create history type based on storage type
     if suffix in SUFFIXES_CSV:
-        return CsvHistory(
-            x_names=x_names, file=storage_file, options=options
-        )
+        return CsvHistory(x_names=x_names, file=storage_file, options=options)
     elif suffix in SUFFIXES_HDF5:
         return Hdf5History(id=id, file=storage_file, options=options)
     else:

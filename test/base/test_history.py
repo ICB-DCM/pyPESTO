@@ -709,7 +709,7 @@ def test_hdf5_amici_history():
         ):
             _, fn = tempfile.mkstemp(f_ext, '{id}', dir=f"{tmpdirname}")
 
-            history_options_mp = pypesto.HistoryOptions(
+            history_options = pypesto.HistoryOptions(
                 trace_record=True, storage_file=fn
             )
 
@@ -717,19 +717,21 @@ def test_hdf5_amici_history():
                 problem=problem1,
                 optimizer=optimizer,
                 n_starts=1,
-                history_options=history_options_mp,
+                history_options=history_options,
                 progress_bar=False,
             )
             assert not isinstance(
                 result1.optimize_result.list[0].history, amici_history_class
             )
+            os.remove(fn)
+            os.remove(fn.replace('{id}', '0'))
 
             # optimizing with amici history saved in hdf5
             result2 = pypesto.optimize.minimize(
                 problem=problem2,
                 optimizer=optimizer,
                 n_starts=1,
-                history_options=history_options_mp,
+                history_options=history_options,
                 progress_bar=False,
             )
             history = result2.optimize_result.list[0].history
