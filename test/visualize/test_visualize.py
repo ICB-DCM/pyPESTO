@@ -1,4 +1,5 @@
 import functools
+import logging
 import os
 from functools import wraps
 from typing import Sequence
@@ -1167,3 +1168,17 @@ def test_time_trajectory_model():
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)
+
+
+@close_fig
+def test_sacess_history():
+    """Test pypesto.visualize.optimizer_history.sacess_history"""
+    from pypesto.optimize.ess.sacess import SacessOptimizer
+    from pypesto.visualize.optimizer_history import sacess_history
+
+    problem = create_problem()
+    sacess = SacessOptimizer(
+        max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
+    )
+    sacess.minimize(problem)
+    sacess_history(sacess.histories)
