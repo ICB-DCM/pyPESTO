@@ -6,6 +6,7 @@ API reference
 
    pypesto.engine
    pypesto.ensemble
+   pypesto.hierarchical
    pypesto.hierarchical.ordinal
    pypesto.hierarchical.relative
    pypesto.hierarchical.semiquantitative

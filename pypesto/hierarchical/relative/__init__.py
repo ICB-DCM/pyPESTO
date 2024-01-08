@@ -1,6 +1,6 @@
 """
 Relative data integration
-============
+=========================
 
 Contains an implementation of the hierarchical inner subproblem for relative data.
 In this inner problem, the scaling factors, offsets, and noise standard deviations

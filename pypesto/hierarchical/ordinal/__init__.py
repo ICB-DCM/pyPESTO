@@ -1,6 +1,6 @@
 """
 Ordinal and censored data integration
-===============
+=====================================
 
 Contains the implementation of the optimal scaling approach, applied for integration
 of ordinal and censored data in ODE modeling. Each ordinal datapoint is defined as

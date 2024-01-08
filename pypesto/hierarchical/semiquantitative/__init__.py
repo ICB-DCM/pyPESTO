@@ -1,6 +1,6 @@
 """
 Semi-quantitative data integration
-====================
+==================================
 
 Contains the implementation of a spline approximation approach, applied for
 integration of semi-quantitative data in ODE modeling, where the data is
