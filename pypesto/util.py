@@ -300,7 +300,7 @@ def delete_nan_inf(
 
 def tqdm(*args, enable: bool = None, **kwargs):
     """
-    Create a progress using tqdm.
+    Create a progress bar using tqdm.
 
     Parameters
     ----------
