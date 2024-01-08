@@ -18,7 +18,7 @@ from ..history import (
     OptimizerHistory,
     create_history,
 )
-from ..objective import AmiciObjective, Objective
+from ..objective import Objective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
