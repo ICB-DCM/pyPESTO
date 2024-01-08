@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 
 class RelativeInnerProblem(AmiciInnerProblem):
-    """Inner optimization problem for relative data with scaling/offset.
+    r"""Inner optimization problem for relative data with scaling/offset.
 
     Attributes
     ----------
@@ -49,7 +49,7 @@ class RelativeInnerProblem(AmiciInnerProblem):
         Measurement data. One matrix (`num_timepoints` x `num_observables`)
         per simulation condition. Missing observations as NaN.
     edatas:
-        List of AMICI ExpData objects.
+        AMICI ``ExpData``\s for each simulation condition.
     """
 
     def __init__(self, **kwargs):
