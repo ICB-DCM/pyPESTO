@@ -100,7 +100,7 @@ def history_decorator(minimize):
         history = objective.create_history(
             id=id,
             x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
-            options=history_options
+            options=history_options,
         )
         optimizer_history = OptimizerHistory(
             history=history,

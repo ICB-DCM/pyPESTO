@@ -245,10 +245,9 @@ class AmiciObjective(ObjectiveBase):
 
         return info
 
-    def create_history(self,
-                       id: str,
-                       x_names: Sequence[str],
-                       options: HistoryOptions):
+    def create_history(
+        self, id: str, x_names: Sequence[str], options: HistoryOptions
+    ):
         """See `history.generate.create_history` documentation."""
         # create different history types based on the inputs
         if options.storage_file is None:

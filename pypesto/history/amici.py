@@ -49,19 +49,24 @@ class Hdf5AmiciHistory(Hdf5History):
         values |= {
             CPU_TIME_TOTAL: sum(
                 [rdata[CPU_TIME_TOTAL] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             PREEQ_CPU_TIME: sum(
                 [rdata[PREEQ_CPU_TIME] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             PREEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             POSTEQ_CPU_TIME: sum(
                 [rdata[POSTEQ_CPU_TIME] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             POSTEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
         }
         return values
 
@@ -173,19 +178,24 @@ class CsvAmiciHistory(CsvHistory):
         values |= {
             CPU_TIME_TOTAL: sum(
                 [rdata[CPU_TIME_TOTAL] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             PREEQ_CPU_TIME: sum(
                 [rdata[PREEQ_CPU_TIME] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             PREEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[PREEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             POSTEQ_CPU_TIME: sum(
                 [rdata[POSTEQ_CPU_TIME] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
             POSTEQ_CPU_TIME_BACKWARD: sum(
                 [rdata[POSTEQ_CPU_TIME_BACKWARD] for rdata in result[RDATAS]]
-            )*0.001,
+            )
+            * 0.001,
         }
         return values
 
