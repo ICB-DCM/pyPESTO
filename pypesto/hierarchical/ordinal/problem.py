@@ -69,11 +69,12 @@ class OrdinalProblem(AmiciInnerProblem):
         per simulation condition. Missing observations as NaN.
     edatas:
         AMICI ``ExpData``s for each simulation condition.
-    groups:
-        A dictionary of the groups of the subproblem.
-    method:
-        A string representing the method of the Optimal Scaling approach, either ``reduced`` or ``standard``.
     """
+
+    # groups:
+    #     A dictionary of the groups of the subproblem.
+    # method:
+    #     A string representing the method of the Optimal Scaling approach, either `reduced` or `standard`.
 
     def __init__(
         self,
