@@ -1,8 +1,7 @@
 """Engines without parallelization."""
 from typing import Any
 
-from tqdm import tqdm
-
+from ..util import tqdm
 from .base import Engine
 from .task import Task
 
@@ -18,7 +17,7 @@ class SingleCoreEngine(Engine):
         super().__init__()
 
     def execute(
-        self, tasks: list[Task], progress_bar: bool = True
+        self, tasks: list[Task], progress_bar: bool = None
     ) -> list[Any]:
         """Execute all tasks in a simple for loop sequentially.
 
@@ -34,7 +33,10 @@ class SingleCoreEngine(Engine):
         A list of results.
         """
         results = []
-        for task in tqdm(tasks, disable=not progress_bar):
+        for task in tqdm(
+            tasks,
+            enable=progress_bar,
+        ):
             results.append(task.execute())
 
         return results
