@@ -11,6 +11,7 @@ from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from scipy import cluster
+from tqdm import tqdm as _tqdm
 
 
 def _check_none(fun: Callable[..., Any]) -> Callable[..., Union[Any, None]]:
@@ -295,3 +296,40 @@ def delete_nan_inf(
                 )
             )
     return x, fvals[finite_fvals]
+
+
+def tqdm(*args, enable: bool = None, **kwargs):
+    """
+    Create a progress bar using tqdm.
+
+    Parameters
+    ----------
+    args:
+        Arguments passed to tqdm.
+    enable:
+        Whether to enable the progress bar.
+        If None, use tqdm defaults.
+        Mutually exclusive with `disable`.
+    kwargs:
+        Keyword arguments passed to tqdm.
+
+    Returns
+    -------
+    progress_bar:
+        A progress bar.
+    """
+    # Drop the `disable` argument unless it is not-None.
+    # This way, we don't interfere with TQDM_DISABLE or other global
+    # tqdm settings.
+    disable = kwargs.pop("disable", None)
+
+    if enable is not None:
+        if disable is not None and enable != disable:
+            raise ValueError(
+                "Contradicting values for `enable` and `disable` passed."
+            )
+        disable = not enable
+
+    if disable is not None:
+        kwargs["disable"] = disable
+    return _tqdm(*args, **kwargs)
