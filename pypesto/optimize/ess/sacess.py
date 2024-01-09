@@ -103,7 +103,7 @@ class SacessOptimizer:
             Directory for temporary files. This defaults to a directory in the
             current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
-            parallel have unique `tmpdir`.
+            parallel have a unique `tmpdir`.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -783,7 +783,7 @@ def get_default_ess_options(
     local_optimizer: The local optimizer to use
         (see same argument in :class:`ESSOptimizer`), a boolean indicating
         whether to set the default local optimizer
-        (currently :class:`FidesOptimizer`), a :obj:`Callable` returning an
+        (currently :class:`FidesOptimizer`), a local :class:`Optimizer` or a :obj:`Callable` returning an
         optimizer instance.
         The latter can be used to propagate walltime limits to the local
         optimizers. See :meth:`SacessFidesFactory.__call__` for an example.
