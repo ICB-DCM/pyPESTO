@@ -47,6 +47,11 @@ class Hdf5AmiciHistory(Hdf5History):
         values = Hdf5History._simulation_to_values(x, result, used_time)
         # default unit for time in amici is [ms], converted to [s]
         values |= {
+            key: sum(
+                 [rdata[key] for rdata in result[RDATAS]]
+             ) * 0.001
+             for key in (CPU_TIME_TOTAL, PREEQ_CPU_TIME, PREEQ_CPU_TIME_BACKWARD, POSTEQ_CPU_TIME, POSTEQ_CPU_TIME_BACKWARD)
+         }
             CPU_TIME_TOTAL: sum(
                 [rdata[CPU_TIME_TOTAL] for rdata in result[RDATAS]]
             )
