@@ -5,8 +5,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Union
 
-from tqdm import tqdm
-
+from ..util import tqdm
 from .base import Engine
 from .task import Task
 
@@ -43,7 +42,7 @@ class MultiThreadEngine(Engine):
         self.n_threads: int = n_threads
 
     def execute(
-        self, tasks: list[Task], progress_bar: bool = True
+        self, tasks: list[Task], progress_bar: bool = None
     ) -> list[Any]:
         """Deepcopy tasks and distribute work over parallel threads.
 
@@ -70,7 +69,7 @@ class MultiThreadEngine(Engine):
                 tqdm(
                     pool.map(work, copied_tasks),
                     total=len(copied_tasks),
-                    disable=not progress_bar,
+                    enable=progress_bar,
                 ),
             )
 

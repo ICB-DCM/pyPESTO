@@ -25,7 +25,7 @@ def parameter_profile(
     result_index: int = 0,
     next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
     profile_options: ProfileOptions = None,
-    progress_bar: bool = True,
+    progress_bar: bool = None,
     filename: Union[str, Callable, None] = None,
     overwrite: bool = False,
 ) -> Result:

@@ -13,7 +13,7 @@ class Engine(abc.ABC):
 
     @abc.abstractmethod
     def execute(
-        self, tasks: list[Task], progress_bar: bool = True
+        self, tasks: list[Task], progress_bar: bool = None
     ) -> list[Any]:
         """Execute tasks.
 
@@ -22,6 +22,6 @@ class Engine(abc.ABC):
         tasks:
             List of tasks to execute.
         progress_bar:
-            Whether to display a progress bar. Defaults to ``True``.
+            Whether to display a progress bar.
         """
         raise NotImplementedError("This engine is not intended to be called.")
