@@ -37,13 +37,6 @@ os.environ["TQDM_DISABLE"] = "1"
 # Enable parallel compilation of AMICI models
 os.environ["AMICI_PARALLEL_COMPILE"] = ""
 
-# Increase the number of open files allowed to the hard limit
-import resource
-
-soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-print("RLIMIT_NOFILE", soft, hard)
-resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
-
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
