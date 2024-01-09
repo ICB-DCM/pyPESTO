@@ -1,6 +1,7 @@
 """Inner optimization problem in hierarchical optimization."""
+import copy
 import logging
-from typing import Dict, List, Tuple, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -30,11 +31,11 @@ class InnerProblem:
         per simulation condition. Missing observations as NaN.
     """
 
-    def __init__(self, xs: List[InnerParameter], data: List[np.ndarray]):
-        self.xs: Dict[str, InnerParameter] = {
+    def __init__(self, xs: list[InnerParameter], data: list[np.ndarray]):
+        self.xs: dict[str, InnerParameter] = {
             x.inner_parameter_id: x for x in xs
         }
-        self.data = data
+        self.data = copy.deepcopy(data)
 
         # create the joint mask of all inner problem parameters
         self.data_mask = [
@@ -43,11 +44,10 @@ class InnerProblem:
         for x in xs:
             for condition_ix, cond_mask in enumerate(self.data_mask):
                 cond_mask[x.ixs[condition_ix]] = True
-        # TODO should the data just be masked already here?
-        # this would make sense, since inner problems should be aware
-        # of only the data its inner parameters are relevant for...
-        # Then we wouldn't need to copy the data in the inner solver
-        # calculate_obj_function (left to discuss in PR)
+
+        # mask the data: a inner problem is aware of only the data it uses
+        for i in range(len(self.data)):
+            self.data[i][~self.data_mask[i]] = np.nan
 
         logger.debug(f"Created InnerProblem with ids {self.get_x_ids()}")
 
@@ -61,21 +61,28 @@ class InnerProblem:
     def from_petab_amici(
         petab_problem: 'petab.Problem',
         amici_model: 'amici.Model',
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
     ) -> 'InnerProblem':
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
-    def get_x_ids(self) -> List[str]:
+    def get_x_ids(self) -> list[str]:
         """Get IDs of inner parameters."""
         return list(self.xs.keys())
 
-    def get_interpretable_x_ids(self) -> List[str]:
-        """Get IDs of interpretable inner parameters."""
+    def get_interpretable_x_ids(self) -> list[str]:
+        """Get IDs of interpretable inner parameters.
+
+        Interpretable parameters need to be easily interpretable by the user.
+        Examples are scaling factors, offsets, or noise parameters. An example
+        for a non-interpretable inner parameters are spline heights of spline
+        approximation for semiquantitative data: it is hard to interpret what
+        the spline heights are just by looking at the parameter value.
+        """
         return list(self.xs.keys())
 
     def get_xs_for_type(
         self, inner_parameter_type: str
-    ) -> List[InnerParameter]:
+    ) -> list[InnerParameter]:
         """Get inner parameters of the given type."""
         return [
             x
@@ -83,7 +90,7 @@ class InnerProblem:
             if x.inner_parameter_type == inner_parameter_type
         ]
 
-    def get_dummy_values(self, scaled: bool) -> Dict[str, float]:
+    def get_dummy_values(self, scaled: bool) -> dict[str, float]:
         """
         Get dummy parameter values.
 
@@ -93,8 +100,8 @@ class InnerProblem:
         Parameters
         ----------
         scaled:
-            Whether the parameters should be returned on parameter or linear
-            scale.
+            Whether the parameters should be returned on parameter scale (``True``)
+            or on linear scale (``False``).
         """
         return {
             x.inner_parameter_id: scale_value(x.dummy_value, x.scale)
@@ -120,25 +127,29 @@ class InnerProblem:
         """
         return len(self.xs) == 0
 
-    def get_bounds(self) -> Tuple[List[float], List[float]]:
+    def get_bounds(self) -> tuple[np.ndarray, np.ndarray]:
         """Get bounds of inner parameters."""
-        lb = [x.lb for x in self.xs.values()]
-        ub = [x.ub for x in self.xs.values()]
+        lb = np.asarray([x.lb for x in self.xs.values()])
+        ub = np.asarray([x.ub for x in self.xs.values()])
         return lb, ub
 
-    def get_interpretable_x_bounds(self) -> Tuple[List[float], List[float]]:
+    def get_interpretable_x_bounds(self) -> tuple[np.ndarray, np.ndarray]:
         """Get bounds of interpretable inner parameters."""
         interpretable_x_ids = self.get_interpretable_x_ids()
-        lb = [
-            x.lb
-            for x in self.xs.values()
-            if x.inner_parameter_id in interpretable_x_ids
-        ]
-        ub = [
-            x.ub
-            for x in self.xs.values()
-            if x.inner_parameter_id in interpretable_x_ids
-        ]
+        lb = np.asarray(
+            [
+                x.lb
+                for x in self.xs.values()
+                if x.inner_parameter_id in interpretable_x_ids
+            ]
+        )
+        ub = np.asarray(
+            [
+                x.ub
+                for x in self.xs.values()
+                if x.inner_parameter_id in interpretable_x_ids
+            ]
+        )
         return lb, ub
 
 
@@ -154,10 +165,10 @@ class AmiciInnerProblem(InnerProblem):
         AMICI ``ExpDataView``s for each simulation condition.
     """
 
-    def __init__(self, edatas: List[amici.ExpData], **kwargs):
+    def __init__(self, edatas: list[amici.ExpData], **kwargs):
         super().__init__(**kwargs)
 
-    def check_edatas(self, edatas: List[amici.ExpData]) -> bool:
+    def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
         """Check for consistency in data.
 
         Currently only checks for the actual data values. e.g., timepoints are
@@ -190,8 +201,8 @@ class AmiciInnerProblem(InnerProblem):
 
 
 def scale_value_dict(
-    dct: Dict[str, float], problem: InnerProblem
-) -> Dict[str, float]:
+    dct: dict[str, float], problem: InnerProblem
+) -> dict[str, float]:
     """Scale a value dictionary."""
     scaled_dct = {}
     for key, val in dct.items():
@@ -214,8 +225,8 @@ def scale_value(
 
 
 def ix_matrices_from_arrays(
-    ixs: Dict[str, List[Tuple[int, int, int]]], edatas: List[np.array]
-) -> Dict[str, List[np.array]]:
+    ixs: dict[str, list[tuple[int, int, int]]], edatas: list[np.array]
+) -> dict[str, list[np.array]]:
     """
     Convert mapping of parameters to measurements to matrix form.
 
@@ -239,7 +250,7 @@ def ix_matrices_from_arrays(
 
 def _get_timepoints_with_replicates(
     measurement_df: pd.DataFrame,
-) -> List[float]:
+) -> list[float]:
     """
     Get list of timepoints including replicate measurements.
 

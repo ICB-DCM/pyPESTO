@@ -1,6 +1,5 @@
 """Inner optimization problem in hierarchical optimization."""
 import logging
-from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -59,14 +58,14 @@ class RelativeInnerProblem(AmiciInnerProblem):
     def from_petab_amici(
         petab_problem: 'petab.Problem',
         amici_model: 'amici.Model',
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
     ) -> 'RelativeInnerProblem':
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
         return inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas
         )
 
-    def check_edatas(self, edatas: List[amici.ExpData]) -> bool:
+    def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
         """Check for consistency in data.
 
         Currently only checks for the actual data values. e.g., timepoints are
@@ -101,7 +100,7 @@ class RelativeInnerProblem(AmiciInnerProblem):
 def inner_problem_from_petab_problem(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-    edatas: List['amici.ExpData'],
+    edatas: list['amici.ExpData'],
 ) -> AmiciInnerProblem:
     """
     Create inner problem from PEtab problem.
@@ -183,7 +182,7 @@ def inner_problem_from_petab_problem(
 def inner_parameters_from_parameter_df(
     par_df: pd.DataFrame,
     meas_df: pd.DataFrame,
-) -> List[InnerParameter]:
+) -> list[InnerParameter]:
     """
     Create list of inner free parameters from PEtab parameter table.
 
@@ -204,7 +203,7 @@ def inner_parameters_from_parameter_df(
             continue
         if petab.is_empty(row[PARAMETER_TYPE]):
             continue
-        # If a sigma parameter belongs to a semi-quantiative
+        # If a sigma parameter belongs to a semiquantitative
         # observable, it is not a relative inner parameter.
         if row[PARAMETER_TYPE] == InnerParameterType.SIGMA:
             if MEASUREMENT_TYPE in meas_df.columns:
@@ -234,14 +233,14 @@ def inner_parameters_from_parameter_df(
 def ixs_for_measurement_specific_parameters(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-    x_ids: List[str],
-) -> Dict[str, List[Tuple[int, int, int]]]:
+    x_ids: list[str],
+) -> dict[str, list[tuple[int, int, int]]]:
     """
     Create mapping of parameters to measurements.
 
     Returns
     -------
-    A dictionary mapping parameter ID to a List of
+    A dictionary mapping parameter ID to a list of
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.

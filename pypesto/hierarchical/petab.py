@@ -1,6 +1,6 @@
 """Helper methods for hierarchical optimization with PEtab."""
 
-from typing import Dict, Literal, Tuple
+from typing import Literal
 
 import pandas as pd
 import petab
@@ -196,7 +196,7 @@ def validate_inner_parameter_pairings(
 
 def get_inner_parameters(
     petab_problem: petab.Problem,
-) -> Dict[str, InnerParameterType]:
+) -> dict[str, InnerParameterType]:
     """Get information about the inner parameters.
 
     Parameters
@@ -285,8 +285,8 @@ def validate_measurement_formulae(
 def _validate_measurement_specific_observable_formula(
     measurement: pd.Series,
     petab_problem: petab.Problem,
-    inner_parameters: Dict[str, InnerParameterType],
-) -> Tuple[InnerParameterType, InnerParameterType]:
+    inner_parameters: dict[str, InnerParameterType],
+) -> tuple[InnerParameterType, InnerParameterType]:
     """Check whether a measurement observable formula is valid.
 
     Parameters
@@ -370,8 +370,8 @@ def _validate_measurement_specific_observable_formula(
 def _validate_measurement_specific_noise_formula(
     measurement: pd.Series,
     petab_problem: petab.Problem,
-    inner_parameters: Dict[str, InnerParameterType],
-) -> Tuple[InnerParameterType, InnerParameterType]:
+    inner_parameters: dict[str, InnerParameterType],
+) -> tuple[InnerParameterType, InnerParameterType]:
     """Check whether a measurement noise formula is valid.
 
     Parameters
@@ -422,8 +422,8 @@ def _get_symbolic_formula_from_measurement(
     measurement: pd.Series,
     formula_type: Literal['observable', 'noise'],
     petab_problem: petab.Problem,
-    inner_parameters: Dict[str, InnerParameterType],
-) -> Tuple[sp.Expr, Dict[sp.Symbol, InnerParameterType]]:
+    inner_parameters: dict[str, InnerParameterType],
+) -> tuple[sp.Expr, dict[sp.Symbol, InnerParameterType]]:
     """Get a symbolic representation of a formula, with overrides overridden.
 
     Also performs some checks to ensure only valid numbers and types of inner
@@ -612,7 +612,9 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
             )
         for _, row in meas_df_w_ordinals.iterrows():
             try:
-                int(row[MEASUREMENT_CATEGORY])
+                category = float(row[MEASUREMENT_CATEGORY])
+                if category != int(category):
+                    raise ValueError
             except ValueError as e:
                 raise ValueError(
                     "Measurement category for ordinal measurement must be "

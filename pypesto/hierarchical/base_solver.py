@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Union
 
 import numpy as np
 
@@ -18,10 +18,10 @@ class InnerSolver:
     def solve(
         self,
         problem: InnerProblem,
-        sim: List[np.ndarray],
-        sigma: List[np.ndarray],
+        sim: list[np.ndarray],
+        sigma: list[np.ndarray],
         scaled: bool,
-    ) -> Dict[str, float]:
+    ) -> Union[dict[str, float], list]:
         """Solve the subproblem.
 
         Parameters
@@ -39,4 +39,10 @@ class InnerSolver:
         scaled:
             Whether to scale the results to the parameter scale specified in
             ``problem``.
+
+        Returns
+        -------
+        A dictionary of inner parameter ids and their optimal values for the
+        relative inner problem, or a list of inner optimization results
+        for the semiquantitative and ordinal inner problems.
         """

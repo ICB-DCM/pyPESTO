@@ -1,6 +1,4 @@
 """Definition of an optimal scaling parameter class."""
-from typing import Dict, List, Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -174,7 +172,7 @@ class OrdinalProblem(AmiciInnerProblem):
     def from_petab_amici(
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
         method: str = None,
     ) -> 'OrdinalProblem':
         """Construct the inner problem from the `petab_problem`."""
@@ -185,23 +183,23 @@ class OrdinalProblem(AmiciInnerProblem):
             petab_problem, amici_model, edatas, method
         )
 
-    def get_interpretable_x_ids(self) -> List[str]:
+    def get_interpretable_x_ids(self) -> list[str]:
         """Get IDs of interpretable inner parameters.
 
         There are no interpretable inner parameters for the ordinal problem.
         """
         return []
 
-    def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
+    def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
         """Get unique list of ``OptimalScalingParameter.group`` values."""
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
         return list(set(groups))
 
-    def get_xs_for_group(self, group: int) -> List[OrdinalParameter]:
+    def get_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
-    def get_free_xs_for_group(self, group: int) -> List[OrdinalParameter]:
+    def get_free_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are free and belong to the given group."""
         return [
             x
@@ -209,7 +207,7 @@ class OrdinalProblem(AmiciInnerProblem):
             if x.group == group and x.estimate is True
         ]
 
-    def get_fixed_xs_for_group(self, group: int) -> List[OrdinalParameter]:
+    def get_fixed_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are fixed and belong to the given group."""
         return [
             x
@@ -219,7 +217,7 @@ class OrdinalProblem(AmiciInnerProblem):
 
     def get_cat_ub_parameters_for_group(
         self, group: int
-    ) -> List[OrdinalParameter]:
+    ) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category upper boundaries and belong to the given group."""
         return [
             x
@@ -229,7 +227,7 @@ class OrdinalProblem(AmiciInnerProblem):
 
     def get_cat_lb_parameters_for_group(
         self, group: int
-    ) -> List[OrdinalParameter]:
+    ) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category lower boundaries and belong to the given group."""
         return [
             x
@@ -376,7 +374,7 @@ class OrdinalProblem(AmiciInnerProblem):
     def get_d(
         self,
         group,
-        xs: List[OrdinalParameter],
+        xs: list[OrdinalParameter],
         y_sim_all: np.ndarray,
         eps: float,
     ) -> np.ndarray:
@@ -403,7 +401,7 @@ class OrdinalProblem(AmiciInnerProblem):
     def get_dd_dtheta(
         self,
         group: int,
-        xs: List[OrdinalParameter],
+        xs: list[OrdinalParameter],
         y_sim_all: np.ndarray,
         sy_all: np.ndarray,
     ) -> np.ndarray:
@@ -429,8 +427,8 @@ class OrdinalProblem(AmiciInnerProblem):
         return dd_dtheta
 
     def get_censored_group_quantitative_ixs(
-        self, xs: List[OrdinalParameter]
-    ) -> List[np.ndarray]:
+        self, xs: list[OrdinalParameter]
+    ) -> list[np.ndarray]:
         r"""Return a list of boolean masks indicating which data points are quantitative.
 
         For a given group with censored data, return a list of boolean masks indicating
@@ -466,7 +464,7 @@ class OrdinalProblem(AmiciInnerProblem):
 
         return quantitative_ixs
 
-    def get_inner_parameter_dictionary(self) -> Dict:
+    def get_inner_parameter_dictionary(self) -> dict:
         """Return a dictionary with inner parameter ids and their values."""
         inner_par_dict = {}
         for x_id, x in self.xs.items():
@@ -477,7 +475,7 @@ class OrdinalProblem(AmiciInnerProblem):
 def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
     amici_model: 'amici.Model',
-    edatas: List['amici.ExpData'],
+    edatas: list['amici.ExpData'],
     method: str,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -513,7 +511,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
     amici_model: 'amici.Model',
-) -> List[OrdinalParameter]:
+) -> list[OrdinalParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
 
@@ -600,7 +598,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     return inner_parameters
 
 
-def get_estimate_for_method(method: str) -> Tuple[bool, bool]:
+def get_estimate_for_method(method: str) -> tuple[bool, bool]:
     """Return which inner parameters to estimate dependent on the method provided."""
     estimate_ub = True
     estimate_lb = False
@@ -614,8 +612,8 @@ def get_estimate_for_method(method: str) -> Tuple[bool, bool]:
 def optimal_scaling_ixs_for_measurement_specific_parameters(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-    inner_parameters: List[OrdinalParameter],
-) -> Dict[str, List[Tuple[int, int, int]]]:
+    inner_parameters: list[OrdinalParameter],
+) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.
 
     Returns
@@ -702,9 +700,9 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
 
 
 def get_inner_par_ids_for_measurement(
-    measurement: Dict,
-    inner_parameters: List[OrdinalParameter],
-    unique_censoring_bounds_per_observable: Dict[str, List[float]],
+    measurement: dict,
+    inner_parameters: list[OrdinalParameter],
+    unique_censoring_bounds_per_observable: dict[str, list[float]],
 ):
     """Return inner parameter ids of parameters which are related to the measurement."""
     if measurement[MEASUREMENT_TYPE] == ORDINAL:

@@ -4,7 +4,7 @@ Visualization of the model fit after optimization.
 Currently only for PEtab problems.
 """
 import copy
-from typing import List, Sequence, Union
+from typing import Sequence, Union
 
 import amici
 import amici.plotting
@@ -208,7 +208,7 @@ def _get_simulation_rdatas(
     problem: Problem,
     start_index: int = 0,
     simulation_timepoints: np.ndarray = None,
-) -> List[amici.ReturnData]:
+) -> list[amici.ReturnData]:
     """
     Get simulation results for a given optimization result and timepoints.
 

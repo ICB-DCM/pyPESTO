@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import petab
@@ -62,7 +61,7 @@ def inner_options(request):
     return request.param
 
 
-def test_optimization(inner_options: Dict):
+def test_optimization(inner_options: dict):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_semiquantitative_yaml)
     # Set seed for reproducibility.
@@ -87,7 +86,7 @@ def test_optimization(inner_options: Dict):
 
 
 def _create_problem(
-    petab_problem: petab.Problem, option: Dict
+    petab_problem: petab.Problem, option: dict
 ) -> pypesto.Problem:
     """Creates the spline pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(

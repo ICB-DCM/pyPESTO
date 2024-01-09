@@ -7,7 +7,7 @@ decomposes the parameter estimation problem into an outer and an inner problem.
 In the outer problem, only dynamic parameters are optimized.
 In the inner problem, conditional on the outer solution, static parameters are
 optimized.
-Static parameters can be parameters affecting directly the model observables,
+Static parameters can be parameters affecting only the model observables,
 such as scaling factors, offsets, and noise parameters. Further, they can be
 spline parameters, which are used to approximate non-linear measurement mappings
 of semi-quantitative data. Finally, they can be optimal scaling parameters,

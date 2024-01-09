@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -131,7 +131,7 @@ def plot_splines_from_pypesto_result(
 def plot_splines_from_inner_result(
     inner_problem: 'pypesto.hierarchical.spline_approximation.problem.SplineInnerProblem',
     inner_solver: 'pypesto.hierarchical.spline_approximation.solver.SplineInnerSolver',
-    results: List[Dict],
+    results: list[dict],
     observable_ids=None,
     **kwargs,
 ):

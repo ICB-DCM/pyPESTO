@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     import pypesto
@@ -154,13 +154,13 @@ def plot_categories_from_pypesto_result(
 def plot_categories_from_inner_result(
     inner_problem: 'pypesto.hierarchical.ordinal.problem.OrdinalProblem',
     inner_solver: 'pypesto.hierarchical.ordinal.solver.OrdinalInnerSolver',
-    results: List[Dict],
-    simulation: List[np.ndarray],
-    timepoints: List[np.ndarray],
-    observable_ids: List[str] = None,
-    condition_ids: List[str] = None,
-    petab_condition_ordering: List[str] = None,
-    measurement_df_observable_ordering: List[str] = None,
+    results: list[dict],
+    simulation: list[np.ndarray],
+    timepoints: list[np.ndarray],
+    observable_ids: list[str] = None,
+    condition_ids: list[str] = None,
+    petab_condition_ordering: list[str] = None,
+    measurement_df_observable_ordering: list[str] = None,
     axes: Optional[plt.Axes] = None,
     **kwargs,
 ):
@@ -498,13 +498,13 @@ def _plot_category_rectangles(
 
 
 def _get_data_for_plotting(
-    inner_parameters: List['OrdinalParameter'],
-    optimal_scaling_bounds: List,
-    sim: List[np.ndarray],
-    timepoints: List[np.ndarray],
+    inner_parameters: list['OrdinalParameter'],
+    optimal_scaling_bounds: list,
+    sim: list[np.ndarray],
+    timepoints: list[np.ndarray],
     interval_range: float,
     interval_gap: float,
-    options: Dict,
+    options: dict,
     measurement_type: str,
 ):
     """Return data in the form suited for plotting."""

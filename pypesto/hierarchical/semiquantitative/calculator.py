@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, List, Sequence, Tuple
+from typing import Sequence
 
 import numpy as np
 
@@ -73,17 +73,17 @@ class SemiquantCalculator(AmiciCalculator):
 
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int, ...],
+        x_dct: dict,
+        sensi_orders: tuple[int, ...],
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: List['amici.ReturnData'] = None,
+        rdatas: list['amici.ReturnData'] = None,
     ):
         """Perform the actual AMICI call.
 

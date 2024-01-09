@@ -1,5 +1,5 @@
 import copy
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 
@@ -38,8 +38,8 @@ class RelativeInnerSolver(InnerSolver):
     def calculate_obj_function(
         self,
         problem: InnerProblem,
-        sim: List[np.ndarray],
-        sigma: List[np.ndarray],
+        sim: list[np.ndarray],
+        sigma: list[np.ndarray],
         inner_parameters: dict[str, float],
     ) -> float:
         """Calculate the objective function value.
@@ -60,8 +60,6 @@ class RelativeInnerSolver(InnerSolver):
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
         sigma = copy.deepcopy(sigma)
-        for i in range(len(problem.data)):
-            relevant_data[i][~problem.data_mask[i]] = np.nan
 
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
             apply_offset(
@@ -89,16 +87,16 @@ class RelativeInnerSolver(InnerSolver):
     def calculate_gradients(
         self,
         problem: InnerProblem,
-        sim: List[np.ndarray],
-        ssim: List[np.ndarray],
-        sigma: List[np.ndarray],
-        ssigma: List[np.ndarray],
+        sim: list[np.ndarray],
+        ssim: list[np.ndarray],
+        sigma: list[np.ndarray],
+        ssigma: list[np.ndarray],
         inner_parameters: dict[str, float],
         parameter_mapping: ParameterMapping,
-        par_opt_ids: List[str],
-        par_sim_ids: List[str],
+        par_opt_ids: list[str],
+        par_sim_ids: list[str],
         snllh: np.ndarray,
-    ):
+    ) -> np.ndarray:
         """Calculate the gradients with respect to the outer parameters.
 
         Parameters
@@ -130,7 +128,8 @@ class RelativeInnerSolver(InnerSolver):
         par_sim_ids:
             Ids of outer simulation parameters, includes fixed parameters.
         snllh:
-            Empty dictionary with optimization parameters as keys.
+            A vector of the same length as ``par_opt_ids`` to store the
+            gradients in. Will be modified in-place.
 
         Returns
         -------
@@ -139,8 +138,6 @@ class RelativeInnerSolver(InnerSolver):
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
         sigma = copy.deepcopy(sigma)
-        for i in range(len(problem.data)):
-            relevant_data[i][~problem.data_mask[i]] = np.nan
 
         # restructure sensitivities to have parameter index as second index
         ssim = [
@@ -211,7 +208,7 @@ class RelativeInnerSolver(InnerSolver):
     def apply_inner_parameters_to_rdatas(
         self,
         problem: InnerProblem,
-        rdatas: List[amici.ReturnData],
+        rdatas: list[amici.ReturnData],
         inner_parameters: dict[str, float],
     ):
         """Apply the inner parameters to the rdatas.
@@ -267,10 +264,10 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
     def solve(
         self,
         problem: InnerProblem,
-        sim: List[np.ndarray],
-        sigma: List[np.ndarray],
+        sim: list[np.ndarray],
+        sigma: list[np.ndarray],
         scaled: bool,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Solve the subproblem analytically.
 
         Parameters
@@ -413,9 +410,9 @@ class NumericalInnerSolver(RelativeInnerSolver):
 
     def __init__(
         self,
-        minimize_kwargs: Dict[str, Any] = None,
+        minimize_kwargs: dict[str, Any] = None,
         n_cached: int = 1,
-        problem_kwargs: Dict[str, Any] = None,
+        problem_kwargs: dict[str, Any] = None,
     ):
         self.minimize_kwargs = minimize_kwargs
         if self.minimize_kwargs is None:
@@ -445,10 +442,10 @@ class NumericalInnerSolver(RelativeInnerSolver):
     def solve(
         self,
         problem: InnerProblem,
-        sim: List[np.ndarray],
-        sigma: List[np.ndarray],
+        sim: list[np.ndarray],
+        sigma: list[np.ndarray],
         scaled: bool,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Solve the subproblem numerically.
 
         Parameters
@@ -560,7 +557,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
         return x_opt
 
     def sample_startpoints(
-        self, problem: InnerProblem, pars: List[InnerParameter]
+        self, problem: InnerProblem, pars: list[InnerParameter]
     ) -> np.ndarray:
         """Sample startpoints for the numerical optimization.
 

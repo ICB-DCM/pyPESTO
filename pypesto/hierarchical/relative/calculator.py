@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Optional, Sequence
 
 import numpy as np
 
@@ -74,17 +74,17 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int],
+        x_dct: dict,
+        sensi_orders: tuple[int],
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: List['amici.ReturnData'] = None,
+        rdatas: list['amici.ReturnData'] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -174,12 +174,12 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
     def call_amici_twice(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int],
+        x_dct: dict,
+        sensi_orders: tuple[int],
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -256,17 +256,17 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
     def calculate_directly(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int],
+        x_dct: dict,
+        sensi_orders: tuple[int],
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: List['amici.ReturnData'] = None,
+        rdatas: list['amici.ReturnData'] = None,
     ):
         """Calculate directly via solver calculate methods.
 

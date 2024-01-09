@@ -737,22 +737,10 @@ class PetabImporter(AmiciObjectBuilder):
         ub = self.petab_problem.ub_scaled
 
         # Raise error if the correct calculator is not used.
-
-        if self._non_quantitative_data_types is not None and any(
-            data_type in self._non_quantitative_data_types
-            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
-        ):
+        if self._hierarchical:
             if not isinstance(objective.calculator, InnerCalculatorCollector):
                 raise AssertionError(
-                    f"If there are ordinal, censored or semi-quantitative measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
-                )
-        elif (
-            self._hierarchical
-            and RELATIVE in self._non_quantitative_data_types
-        ):
-            if not isinstance(objective.calculator, InnerCalculatorCollector):
-                raise AssertionError(
-                    f"If there are relative measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
+                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
 
         # In case of hierarchical optimization, parameters estimated in the

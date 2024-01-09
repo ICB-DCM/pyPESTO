@@ -6,7 +6,7 @@ to collect hierarchical inner calculators for each data type and merge their res
 from __future__ import annotations
 
 import copy
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Sequence, Union
 
 import numpy as np
 
@@ -89,8 +89,8 @@ class InnerCalculatorCollector(AmiciCalculator):
         data_types: set[str],
         petab_problem: 'petab.Problem',
         model: AmiciModel,
-        edatas: List['amici.ExpData'],
-        inner_options: Dict,
+        edatas: list['amici.ExpData'],
+        inner_options: dict,
     ):
         super().__init__()
         self.validate_options(inner_options)
@@ -119,8 +119,8 @@ class InnerCalculatorCollector(AmiciCalculator):
         self,
         petab_problem: 'petab.Problem',
         model: AmiciModel,
-        edatas: List['amici.ExpData'],
-        inner_options: Dict,
+        edatas: list['amici.ExpData'],
+        inner_options: dict,
     ):
         """Construct inner calculators for each data type."""
         self.necessary_par_dummy_values = {}
@@ -195,7 +195,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 f"Data types {unsupported_data_types} are not supported."
             )
 
-    def validate_options(self, inner_options: Dict):
+    def validate_options(self, inner_options: dict):
         """Validate the inner options.
 
         Parameters
@@ -212,8 +212,8 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def _get_quantitative_data_mask(
         self,
-        edatas: List['amici.ExpData'],
-    ) -> List[np.ndarray]:
+        edatas: list['amici.ExpData'],
+    ) -> list[np.ndarray]:
         # transform experimental data
         edatas = [
             amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
@@ -239,7 +239,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         return quantitative_data_mask
 
-    def get_inner_par_ids(self) -> List[str]:
+    def get_inner_par_ids(self) -> list[str]:
         """Return the ids of inner parameters of all inner problems."""
         return [
             parameter_id
@@ -247,7 +247,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             for parameter_id in inner_calculator.inner_problem.get_x_ids()
         ]
 
-    def get_interpretable_inner_par_ids(self) -> List[str]:
+    def get_interpretable_inner_par_ids(self) -> list[str]:
         """Return the ids of interpretable inner parameters of all inner problems."""
         return [
             parameter_id
@@ -257,7 +257,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def get_interpretable_inner_par_bounds(
         self,
-    ) -> Tuple[List[float], List[float]]:
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Return the bounds of interpretable inner parameters of all inner problems."""
         lb = []
         ub = []
@@ -268,16 +268,16 @@ class InnerCalculatorCollector(AmiciCalculator):
             ) = inner_calculator.inner_problem.get_interpretable_x_bounds()
             lb.extend(lb_i)
             ub.extend(ub_i)
-        return lb, ub
+        return np.asarray(lb), np.asarray(ub)
 
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int],
+        x_dct: dict,
+        sensi_orders: tuple[int],
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -319,7 +319,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
         ):
             raise NotImplementedError(
-                f"Mode {mode} is not implemented for ordinal, censored or semi-quantitative data."
+                f"Mode {mode} is not implemented for ordinal, censored or semi-quantitative data. "
                 "However, it can be used if the only non-quantitative data type is relative data."
             )
 
@@ -328,7 +328,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
         ):
             raise ValueError(
-                "Hessian and FIM are not implemented for ordinal, censored or semi-quantitative data."
+                "Hessian and FIM are not implemented for ordinal, censored or semi-quantitative data. "
                 "However, they can be used if the only non-quantitative data type is relative data."
             )
 
@@ -341,7 +341,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
         ):
             raise NotImplementedError(
-                "Adjoint sensitivity analysis is not implemented for ordinal, censored or semi-quantitative data."
+                "Adjoint sensitivity analysis is not implemented for ordinal, censored or semi-quantitative data. "
                 "However, it can be used if the only non-quantitative data type is relative data."
             )
 
@@ -516,15 +516,15 @@ class InnerCalculatorCollector(AmiciCalculator):
 
 
 def calculate_quantitative_result(
-    rdatas: List[amici.ReturnDataView],
-    edatas: List[amici.ExpData],
-    sensi_orders: Tuple[int],
+    rdatas: list[amici.ReturnDataView],
+    edatas: list[amici.ExpData],
+    sensi_orders: tuple[int],
     mode: ModeType,
-    quantitative_data_mask: List[np.ndarray],
+    quantitative_data_mask: list[np.ndarray],
     dim: int,
     parameter_mapping: ParameterMapping,
-    par_opt_ids: List[str],
-    par_sim_ids: List[str],
+    par_opt_ids: list[str],
+    par_sim_ids: list[str],
 ):
     """Calculate the function values from rdatas and return as dict."""
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
