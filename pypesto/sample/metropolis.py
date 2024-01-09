@@ -1,12 +1,12 @@
 from typing import Dict, Sequence, Union
 
 import numpy as np
-from tqdm import tqdm
 
 from ..history import NoHistory
 from ..objective import NegLogPriors, ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult
+from ..util import tqdm
 from .sampler import InternalSample, InternalSampler
 
 
@@ -51,7 +51,7 @@ class MetropolisSampler(InternalSampler):
         """Return the default options for the sampler."""
         return {
             'std': 1.0,  # the proposal standard deviation
-            'show_progress': True,  # whether to show the progress
+            'show_progress': None,  # whether to show the progress
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -73,10 +73,10 @@ class MetropolisSampler(InternalSampler):
         lpost = -self.trace_neglogpost[-1]
         lprior = -self.trace_neglogprior[-1]
 
-        show_progress = self.options['show_progress']
+        show_progress = self.options.get('show_progress', None)
 
         # loop over iterations
-        for _ in tqdm(range(int(n_samples)), disable=not show_progress):
+        for _ in tqdm(range(int(n_samples)), enable=show_progress):
             # perform step
             x, lpost, lprior = self._perform_step(
                 x=x, lpost=lpost, lprior=lprior, beta=beta

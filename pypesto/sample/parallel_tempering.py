@@ -2,10 +2,10 @@ import copy
 from typing import Dict, List, Sequence, Union
 
 import numpy as np
-from tqdm import tqdm
 
 from ..problem import Problem
 from ..result import McmcPtResult
+from ..util import tqdm
 from .sampler import InternalSampler, Sampler
 
 
@@ -70,7 +70,7 @@ class ParallelTemperingSampler(Sampler):
             'max_temp': 5e4,
             'exponent': 4,
             'temper_log_posterior': False,
-            'show_progress': True,
+            'show_progress': None,
         }
 
     def initialize(
@@ -89,9 +89,9 @@ class ParallelTemperingSampler(Sampler):
 
     def sample(self, n_samples: int, beta: float = 1.0):
         """Sample and swap in between samplers."""
-        show_progress = self.options['show_progress']
+        show_progress = self.options.get('show_progress', None)
         # loop over iterations
-        for i_sample in tqdm(range(int(n_samples)), disable=not show_progress):
+        for i_sample in tqdm(range(int(n_samples)), enable=show_progress):
             # TODO test
             # sample
             for sampler, beta in zip(self.samplers, self.betas):

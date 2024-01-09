@@ -5,8 +5,8 @@ from typing import Any
 import cloudpickle as pickle
 from mpi4py import MPI
 from mpi4py.futures import MPIPoolExecutor
-from tqdm import tqdm
 
+from ..util import tqdm
 from .base import Engine
 from .task import Task
 
@@ -32,7 +32,7 @@ class MPIPoolEngine(Engine):
         super().__init__()
 
     def execute(
-        self, tasks: list[Task], progress_bar: bool = True
+        self, tasks: list[Task], progress_bar: bool = None
     ) -> list[Any]:
         """
         Pickle tasks and distribute work to workers.
@@ -42,7 +42,7 @@ class MPIPoolEngine(Engine):
         tasks:
             List of :class:`pypesto.engine.Task` to execute.
         progress_bar:
-            Whether to display a progress bar. Defaults to ``True``.
+            Whether to display a progress bar.
 
         Returns
         -------
@@ -55,6 +55,6 @@ class MPIPoolEngine(Engine):
 
         with MPIPoolExecutor() as executor:
             results = executor.map(
-                work, tqdm(pickled_tasks, disable=not progress_bar)
+                work, tqdm(pickled_tasks, enable=progress_bar)
             )
         return results
