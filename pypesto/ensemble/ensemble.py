@@ -877,7 +877,7 @@ class Ensemble:
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
         engine: Engine = None,
-        progress_bar: bool = True,
+        progress_bar: bool = None,
     ) -> EnsemblePrediction:
         """
         Run predictions for a full ensemble.
