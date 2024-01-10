@@ -21,7 +21,7 @@ python:
 build:
   os: "ubuntu-22.04"
   apt_packages:
-    - gfortran
+    - clang
     - libatlas-base-dev
     - libhdf5-serial-dev
     - swig
