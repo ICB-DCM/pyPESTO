@@ -3,16 +3,16 @@
 # default owners
 * @ICB-DCM/pypesto-maintainers
 
-/doc/example/censored.ipynb @Doresic
+/doc/example/censored_data.ipynb @Doresic
 /doc/example/hdf5_storage.ipynb @PaulJonasJost
-/doc/example/hierarchical.ipynb @dilpath @dweindl
 /doc/example/julia.ipynb @PaulJonasJost
 /doc/example/model_selection.ipynb @dilpath
-/doc/example/nonlinear_monotone.ipynb @Doresic
-/doc/example/ordinal.ipynb @Doresic
+/doc/example/ordinal_data.ipynb @Doresic
 /doc/example/petab_import.ipynb @dweindl @FFroehlich
+/doc/example/relative_data.ipynb @dilpath @dweindl
 /doc/example/sampler_study.ipynb @dilpath
 /doc/example/sampling_diagnostics.ipynb @dilpath
+/doc/example/semiquantitative_data.ipynb @Doresic
 /doc/example/store.ipynb @PaulJonasJost
 /doc/example/synthetic_data.ipynb @dilpath
 /docker/ @dweindl

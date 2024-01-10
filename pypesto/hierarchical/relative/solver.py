@@ -128,7 +128,7 @@ class RelativeInnerSolver(InnerSolver):
         par_sim_ids:
             Ids of outer simulation parameters, includes fixed parameters.
         snllh:
-            A vector of the same length as ``par_opt_ids`` to store the
+            A zero-initialized vector of the same length as ``par_opt_ids`` to store the
             gradients in. Will be modified in-place.
 
         Returns

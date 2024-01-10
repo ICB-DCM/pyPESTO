@@ -237,7 +237,7 @@ class OrdinalInnerSolver(InnerSolver):
             Indices of parameters from `amici_model.getParameterIds()` that are needed for
             sensitivity calculation. Comes from `edata.plist` for each condition.
         snllh:
-            A vector of the same length as ``par_opt_ids`` to store the
+            A zero-initialized vector of the same length as ``par_opt_ids`` to store the
             gradients in. Will be modified in-place.
 
         Returns

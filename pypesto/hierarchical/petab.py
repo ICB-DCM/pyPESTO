@@ -632,30 +632,38 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
                 "measurements."
             )
         for _, row in meas_df_w_censored.iterrows():
-            try:
-                if (
-                    row[MEASUREMENT_TYPE] == LEFT_CENSORED
-                    or row[MEASUREMENT_TYPE] == RIGHT_CENSORED
-                ):
-                    float(row[MEASUREMENT_CATEGORY])
-                elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED:
-                    bounds = row[MEASUREMENT_CATEGORY].split(
-                        PARAMETER_SEPARATOR
+            if (
+                row[MEASUREMENT_TYPE] == LEFT_CENSORED
+                or row[MEASUREMENT_TYPE] == RIGHT_CENSORED
+            ):
+                try:
+                    float(row[CENSORING_BOUNDS])
+                except ValueError as e:
+                    raise ValueError(
+                        f"Censoring bound(s) for a {row[MEASUREMENT_TYPE]}"
+                        " measurement must be of type float. Failure at "
+                        f"bound: `{row[CENSORING_BOUNDS]}`."
+                    ) from e
+            elif row[MEASUREMENT_TYPE] == INTERVAL_CENSORED:
+                bounds = row[CENSORING_BOUNDS].split(PARAMETER_SEPARATOR)
+                if len(bounds) != 2:
+                    raise ValueError(
+                        f"Censoring bounds for a {INTERVAL_CENSORED} measurement"
+                        f" must be two floats separated by the separator {PARAMETER_SEPARATOR}."
+                        f" Found {len(bounds)} bounds: `{bounds}`."
                     )
-                    if len(bounds) != 2:
-                        raise ValueError(
-                            f"Censoring bounds for a {INTERVAL_CENSORED} measurement"
-                            f" must be two floats separated by the separator {PARAMETER_SEPARATOR}."
-                        )
+                try:
                     float(bounds[0])
                     float(bounds[1])
-                    if float(bounds[0]) > float(bounds[1]):
-                        raise ValueError(
-                            f"Censoring bounds for a {INTERVAL_CENSORED}"
-                            " measurement must be increasing."
-                        )
-            except ValueError as e:
-                raise ValueError(
-                    f"Censoring bound(s) for a {row[MEASUREMENT_TYPE]}"
-                    " measurement must be of type float."
-                ) from e
+                except ValueError as e:
+                    raise ValueError(
+                        f"Censoring bound(s) for a {row[MEASUREMENT_TYPE]}"
+                        " measurement must be of type float. Failure at "
+                        f"bounds: `{bounds}`."
+                    ) from e
+                if float(bounds[0]) > float(bounds[1]):
+                    raise ValueError(
+                        f"Censoring bounds for a {INTERVAL_CENSORED}"
+                        " measurement must be increasing. Failure at "
+                        f"bounds: `{bounds}`."
+                    )
