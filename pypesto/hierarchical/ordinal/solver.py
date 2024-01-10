@@ -256,9 +256,6 @@ class OrdinalInnerSolver(InnerSolver):
                     or par_opt in already_calculated
                 ):
                     continue
-                # Current fix for scaling/offset parameters in models.
-                elif par_sim.startswith('observableParameter'):
-                    continue
                 elif par_opt not in par_opt_ids:
                     continue
                 else:
