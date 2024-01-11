@@ -524,16 +524,22 @@ class PetabImporter(AmiciObjectBuilder):
             inner_parameter_ids = calculator.get_inner_par_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
-        max_sensi_order = kwargs.pop('max_sensi_order', None)
-        if self._non_quantitative_data_types is not None and any(
-            data_type in self._non_quantitative_data_types
-            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
-        ):  # TODO fix
-            if max_sensi_order is not None and max_sensi_order > 1:
-                warnings.warn(
-                    "Higher order sensitivities are not supported for ordinal, censored and semiquantitative data. Setting `max_sensi_order` to 1."
-                )
-                max_sensi_order = 1
+        max_sensi_order = kwargs.get('max_sensi_order', None)
+
+        if (
+            self._non_quantitative_data_types is not None
+            and any(
+                data_type in self._non_quantitative_data_types
+                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+            )
+            and max_sensi_order is not None
+            and max_sensi_order > 1
+        ):
+            raise ValueError(
+                "Ordinal, censored and semiquantitative data cannot be "
+                "used with second order sensitivities. Use a up to first order "
+                "method or disable ordinal, censored and semiquantitative "
+            )
 
         # create objective
         obj = AmiciObjective(
@@ -546,7 +552,6 @@ class PetabImporter(AmiciObjectBuilder):
             amici_object_builder=self,
             calculator=calculator,
             amici_reporting=amici_reporting,
-            max_sensi_order=max_sensi_order,
             **kwargs,
         )
 
