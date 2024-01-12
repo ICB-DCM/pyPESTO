@@ -4,7 +4,7 @@ Visualization of the model fit after optimization.
 Currently only for PEtab problems.
 """
 import copy
-from typing import List, Sequence, Union
+from typing import Sequence, Union
 
 import amici
 import amici.plotting
@@ -15,8 +15,8 @@ import petab
 from amici.petab_objective import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
-from ..C import CENSORED, NONLINEAR_MONOTONE, ORDINAL, RDATAS
-from ..hierarchical.calculator import HierarchicalAmiciCalculator
+from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
+from ..hierarchical.relative.calculator import RelativeAmiciCalculator
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import Problem
 from ..result import Result
@@ -101,7 +101,7 @@ def visualize_optimized_model_fit(
         petab_problem
     )
 
-    if non_quantitative_data_types:
+    if non_quantitative_data_types is not None:
         if (
             ORDINAL in non_quantitative_data_types
             or CENSORED in non_quantitative_data_types
@@ -111,7 +111,7 @@ def visualize_optimized_model_fit(
                 start_index=start_index,
                 axes=axes,
             )
-        if NONLINEAR_MONOTONE in non_quantitative_data_types:
+        if SEMIQUANTITATIVE in non_quantitative_data_types:
             axes = _add_spline_mapped_simulations_to_model_fit(
                 result=result,
                 pypesto_problem=pypesto_problem,
@@ -208,7 +208,7 @@ def _get_simulation_rdatas(
     problem: Problem,
     start_index: int = 0,
     simulation_timepoints: np.ndarray = None,
-) -> List[amici.ReturnData]:
+) -> list[amici.ReturnData]:
     """
     Get simulation results for a given optimization result and timepoints.
 
@@ -240,7 +240,7 @@ def _get_simulation_rdatas(
     parameters = problem.get_reduced_vector(parameters)
 
     # simulate with custom timepoints for hierarchical model
-    if isinstance(problem.objective.calculator, HierarchicalAmiciCalculator):
+    if isinstance(problem.objective.calculator, RelativeAmiciCalculator):
         # get parameter dictionary
         x_dct = dict(
             zip(problem.x_names, result.optimize_result.list[start_index].x)

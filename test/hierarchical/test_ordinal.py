@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import petab
@@ -24,14 +23,9 @@ from pypesto.C import (
     STANDARD,
     InnerParameterType,
 )
-from pypesto.hierarchical.optimal_scaling import (
-    OptimalScalingInnerSolver,
-    OptimalScalingProblem,
-)
-from pypesto.hierarchical.optimal_scaling.parameter import (
-    OptimalScalingParameter,
-)
-from pypesto.hierarchical.optimal_scaling.solver import (
+from pypesto.hierarchical.ordinal import OrdinalInnerSolver, OrdinalProblem
+from pypesto.hierarchical.ordinal.parameter import OrdinalParameter
+from pypesto.hierarchical.ordinal.solver import (
     compute_interval_constraints,
     get_surrogate_all,
 )
@@ -67,7 +61,7 @@ def inner_options(request):
     return request.param
 
 
-def test_evaluate_objective(inner_options: List[Dict]):
+def test_evaluate_objective(inner_options: list[dict]):
     """Check that standard / reduced / reparameterized formulations yield the
     same result."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
@@ -79,7 +73,7 @@ def test_evaluate_objective(inner_options: List[Dict]):
         assert np.isclose(vals[idx], vals[idx - 1])
 
 
-def test_optimization(inner_options: List[Dict]):
+def test_optimization(inner_options: list[dict]):
     """Check that optimizations finishes without error."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
     # Set seed for reproducibility.
@@ -104,7 +98,7 @@ def test_optimization(inner_options: List[Dict]):
 
 
 def _create_problem(
-    petab_problem: petab.Problem, option: Dict
+    petab_problem: petab.Problem, option: dict
 ) -> pypesto.Problem:
     """Creates the ordinal pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
@@ -117,8 +111,8 @@ def _create_problem(
     return problem
 
 
-def test_optimal_scaling_calculator_and_objective():
-    """Test the optimal scaling calculation of objective and gradient values."""
+def test_ordinal_calculator_and_objective():
+    """Test the ordinal calculation of objective and gradient values."""
     petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
 
     methods = [STANDARD, REDUCED]
@@ -268,9 +262,9 @@ def _inner_problem_exp():
 
     # Construct inner parameters
     inner_parameters = [
-        OptimalScalingParameter(
+        OrdinalParameter(
             inner_parameter_id=inner_parameter_id,
-            inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+            inner_parameter_type=InnerParameterType.ORDINAL,
             scale=LIN,
             lb=-np.inf,
             ub=np.inf,
@@ -284,15 +278,15 @@ def _inner_problem_exp():
     ]
 
     # Construct inner problem
-    inner_problem = OptimalScalingProblem(
-        xs=inner_parameters, data=[data], method=STANDARD
+    inner_problem = OrdinalProblem(
+        xs=inner_parameters, data=[data], edatas=None, method=STANDARD
     )
 
     return inner_problem, expected_inner_parameter_values, simulation
 
 
-def test_optimal_scaling_solver():
-    """Test the Optimal scaling solver."""
+def test_ordinal_solver():
+    """Test the ordinal solver."""
     (
         inner_problem,
         expected_values,
@@ -301,7 +295,7 @@ def test_optimal_scaling_solver():
 
     rtol = 1e-3
 
-    solver = OptimalScalingInnerSolver(
+    solver = OrdinalInnerSolver(
         options={METHOD: STANDARD, REPARAMETERIZED: False}
     )
 
@@ -317,7 +311,7 @@ def test_optimal_scaling_solver():
     assert np.allclose(standard_result['fun'], 0, rtol=rtol)
     assert np.allclose(standard_result['jac'], 0, rtol=rtol)
 
-    solver = OptimalScalingInnerSolver(
+    solver = OrdinalInnerSolver(
         options={METHOD: REDUCED, REPARAMETERIZED: False}
     )
 

@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
     import pypesto
@@ -11,13 +11,9 @@ try:
     import amici
     from petab.C import OBSERVABLE_ID
 
-    from ..hierarchical.optimal_scaling.calculator import (
-        OptimalScalingAmiciCalculator,
-    )
-    from ..hierarchical.optimal_scaling.parameter import (
-        OptimalScalingParameter,
-    )
-    from ..hierarchical.optimal_scaling.solver import (
+    from ..hierarchical.ordinal.calculator import OrdinalCalculator
+    from ..hierarchical.ordinal.parameter import OrdinalParameter
+    from ..hierarchical.ordinal.solver import (
         compute_interval_constraints,
         get_bounds_for_category,
         undo_inner_parameter_reparameterization,
@@ -76,7 +72,7 @@ def plot_categories_from_pypesto_result(
         )
     )
     x_dct.update(
-        pypesto_result.problem.objective.calculator.noise_dummy_values
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
     )
 
     # Get the needed objects from the pypesto problem.
@@ -130,7 +126,7 @@ def plot_categories_from_pypesto_result(
     for (
         calculator
     ) in pypesto_result.problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, OptimalScalingAmiciCalculator):
+        if isinstance(calculator, OrdinalCalculator):
             optimal_scaling_calculator = calculator
             break
 
@@ -156,15 +152,15 @@ def plot_categories_from_pypesto_result(
 
 
 def plot_categories_from_inner_result(
-    inner_problem: 'pypesto.hierarchical.optimal_scaling.problem.OptimalScalingProblem',
-    inner_solver: 'pypesto.hierarchical.optimal_scaling.solver.OptimalScalingInnerSolver',
-    results: List[Dict],
-    simulation: List[np.ndarray],
-    timepoints: List[np.ndarray],
-    observable_ids: List[str] = None,
-    condition_ids: List[str] = None,
-    petab_condition_ordering: List[str] = None,
-    measurement_df_observable_ordering: List[str] = None,
+    inner_problem: 'pypesto.hierarchical.ordinal.problem.OrdinalProblem',
+    inner_solver: 'pypesto.hierarchical.ordinal.solver.OrdinalInnerSolver',
+    results: list[dict],
+    simulation: list[np.ndarray],
+    timepoints: list[np.ndarray],
+    observable_ids: list[str] = None,
+    condition_ids: list[str] = None,
+    petab_condition_ordering: list[str] = None,
+    measurement_df_observable_ordering: list[str] = None,
     axes: Optional[plt.Axes] = None,
     **kwargs,
 ):
@@ -502,13 +498,13 @@ def _plot_category_rectangles(
 
 
 def _get_data_for_plotting(
-    inner_parameters: List['OptimalScalingParameter'],
-    optimal_scaling_bounds: List,
-    sim: List[np.ndarray],
-    timepoints: List[np.ndarray],
+    inner_parameters: list['OrdinalParameter'],
+    optimal_scaling_bounds: list,
+    sim: list[np.ndarray],
+    timepoints: list[np.ndarray],
     interval_range: float,
     interval_gap: float,
-    options: Dict,
+    options: dict,
     measurement_type: str,
 ):
     """Return data in the form suited for plotting."""

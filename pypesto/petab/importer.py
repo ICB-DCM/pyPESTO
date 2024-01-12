@@ -32,14 +32,15 @@ from ..C import (
     MEASUREMENT_TYPE,
     MODE_FUN,
     MODE_RES,
-    NONLINEAR_MONOTONE,
-    OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
+    ORDINAL_OPTIONS,
+    PARAMETER_TYPE,
+    RELATIVE,
+    SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
+    InnerParameterType,
 )
-from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
-from ..hierarchical.problem import InnerProblem
 from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -56,6 +57,8 @@ try:
     import petab
     from petab.C import (
         ESTIMATE,
+        NOISE_PARAMETERS,
+        OBSERVABLE_ID,
         PREEQUILIBRATION_CONDITION_ID,
         SIMULATION_CONDITION_ID,
     )
@@ -111,7 +114,7 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
-            parameter table). Required for ordinal, censored and nonlinear-monotone data.
+            parameter table). Required for ordinal, censored and semiquantitative data.
         inner_options:
             Options for the inner problems and solvers.
             If not provided, default options will be used.
@@ -123,9 +126,23 @@ class PetabImporter(AmiciObjectBuilder):
             get_petab_non_quantitative_data_types(petab_problem)
         )
 
-        if self._non_quantitative_data_types and not self._hierarchical:
+        if self._non_quantitative_data_types is None and hierarchical:
             raise ValueError(
-                "Ordinal, censored and nonlinear-monotone data require "
+                "Hierarchical optimization enabled, but no non-quantitative "
+                "data types specified. Specify non-quantitative data types "
+                "or disable hierarchical optimization."
+            )
+
+        if (
+            self._non_quantitative_data_types is not None
+            and any(
+                data_type in self._non_quantitative_data_types
+                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+            )
+            and not self._hierarchical
+        ):
+            raise ValueError(
+                "Ordinal, censored and semiquantitative data require "
                 "hierarchical optimization to be enabled.",
             )
 
@@ -175,10 +192,7 @@ class PetabImporter(AmiciObjectBuilder):
     def validate_inner_options(self):
         """Validate the inner options."""
         for key in self.inner_options:
-            if (
-                key
-                not in OPTIMAL_SCALING_OPTIONS + SPLINE_APPROXIMATION_OPTIONS
-            ):
+            if key not in ORDINAL_OPTIONS + SPLINE_APPROXIMATION_OPTIONS:
                 raise ValueError(f"Unknown inner option {key}.")
 
     def check_gradients(
@@ -429,7 +443,7 @@ class PetabImporter(AmiciObjectBuilder):
             progress is printed.
         **kwargs:
             Additional arguments passed on to the objective. In case of ordinal
-            or nonlinear-monotone measurements, ``inner_options`` can optionally
+            or semiquantitative measurements, ``inner_options`` can optionally
             be passed here. If none are given, ``inner_options`` given to the
             importer constructor (or inner defaults) will be chosen.
 
@@ -482,7 +496,10 @@ class PetabImporter(AmiciObjectBuilder):
         calculator = None
         amici_reporting = None
 
-        if self._non_quantitative_data_types and self._hierarchical:
+        if (
+            self._non_quantitative_data_types is not None
+            and self._hierarchical
+        ):
             inner_options = kwargs.pop('inner_options', None)
             inner_options = (
                 inner_options
@@ -496,32 +513,33 @@ class PetabImporter(AmiciObjectBuilder):
                 edatas,
                 inner_options,
             )
-            amici_reporting = amici.RDataReporting.residuals
-
-        elif self._hierarchical:
-            inner_problem = InnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas
-            )
-            calculator = HierarchicalAmiciCalculator(inner_problem)
             amici_reporting = amici.RDataReporting.full
 
-        if self._hierarchical:
             # FIXME: currently not supported with hierarchical
             if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
                 warnings.warn(
                     "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
                 )
             kwargs['guess_steadystate'] = False
-            inner_parameter_ids = calculator.get_inner_parameter_ids()
+            inner_parameter_ids = calculator.get_inner_par_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
-        max_sensi_order = kwargs.pop('max_sensi_order', None)
-        if self._non_quantitative_data_types:
-            if max_sensi_order is not None and max_sensi_order > 1:
-                raise warnings.warn(
-                    "Higher order sensitivities are not supported for ordinal, censored and nonlinear-monotone data. Setting `max_sensi_order` to 1."
-                )
-            max_sensi_order = 1
+        max_sensi_order = kwargs.get('max_sensi_order', None)
+
+        if (
+            self._non_quantitative_data_types is not None
+            and any(
+                data_type in self._non_quantitative_data_types
+                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+            )
+            and max_sensi_order is not None
+            and max_sensi_order > 1
+        ):
+            raise ValueError(
+                "Ordinal, censored and semiquantitative data cannot be "
+                "used with second order sensitivities. Use a up to first order "
+                "method or disable ordinal, censored and semiquantitative "
+            )
 
         # create objective
         obj = AmiciObjective(
@@ -534,7 +552,6 @@ class PetabImporter(AmiciObjectBuilder):
             amici_object_builder=self,
             calculator=calculator,
             amici_reporting=amici_reporting,
-            max_sensi_order=max_sensi_order,
             **kwargs,
         )
 
@@ -725,25 +742,16 @@ class PetabImporter(AmiciObjectBuilder):
         ub = self.petab_problem.ub_scaled
 
         # Raise error if the correct calculator is not used.
-
-        if self._non_quantitative_data_types:
+        if self._hierarchical:
             if not isinstance(objective.calculator, InnerCalculatorCollector):
                 raise AssertionError(
-                    f"If there are ordinal, censored or nonlinear-monotone measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
+                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
-        elif self._hierarchical:
-            if not isinstance(
-                objective.calculator, HierarchicalAmiciCalculator
-            ):
-                raise AssertionError(
-                    f"If hierarchical optimization of relative data is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
-                )
+
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
         if self._hierarchical:
-            inner_parameter_ids = (
-                objective.calculator.get_inner_parameter_ids()
-            )
+            inner_parameter_ids = objective.calculator.get_inner_par_ids()
             lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
             ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]
             x_ids = [x for x in x_ids if x not in inner_parameter_ids]
@@ -947,7 +955,7 @@ def _find_model_name(output_folder: str) -> str:
 
 def get_petab_non_quantitative_data_types(
     petab_problem: petab.Problem,
-) -> List[str]:
+) -> set[str]:
     """
     Get the data types from the PEtab problem.
 
@@ -961,20 +969,54 @@ def get_petab_non_quantitative_data_types(
     data_types:
         A list of the data types.
     """
-    non_quantitative_data_types = []
-    if MEASUREMENT_TYPE in petab_problem.measurement_df.columns:
-        petab_data_types = petab_problem.measurement_df[
-            MEASUREMENT_TYPE
-        ].unique()
-        if ORDINAL in petab_data_types:
-            non_quantitative_data_types.append(ORDINAL)
-        if any(
-            censoring_type in petab_data_types
-            for censoring_type in CENSORING_TYPES
-        ):
-            non_quantitative_data_types.append(CENSORED)
-        if NONLINEAR_MONOTONE in petab_data_types:
-            non_quantitative_data_types.append(NONLINEAR_MONOTONE)
+    non_quantitative_data_types = set()
+    caught_observables = set()
+    # For ordinal, censored and semiquantitative data, search
+    # for the corresponding data types in the measurement table
+    meas_df = petab_problem.measurement_df
+    if MEASUREMENT_TYPE in meas_df.columns:
+        petab_data_types = meas_df[MEASUREMENT_TYPE].unique()
+        for data_type in [ORDINAL, SEMIQUANTITATIVE] + CENSORING_TYPES:
+            if data_type in petab_data_types:
+                non_quantitative_data_types.add(
+                    CENSORED if data_type in CENSORING_TYPES else data_type
+                )
+                caught_observables.update(
+                    set(
+                        meas_df[meas_df[MEASUREMENT_TYPE] == data_type][
+                            OBSERVABLE_ID
+                        ]
+                    )
+                )
+
+    # For relative data, search for parameters to estimate with
+    # a scaling/offset/sigma parameter type
+    if PARAMETER_TYPE in petab_problem.parameter_df.columns:
+        # get the df with non-nan parameter types
+        par_df = petab_problem.parameter_df[
+            petab_problem.parameter_df[PARAMETER_TYPE].notna()
+        ]
+        for par_id, row in par_df.iterrows():
+            if not row[ESTIMATE]:
+                continue
+            if row[PARAMETER_TYPE] in [
+                InnerParameterType.SCALING,
+                InnerParameterType.OFFSET,
+            ]:
+                non_quantitative_data_types.add(RELATIVE)
+
+            # For sigma parameters, we need to check if they belong
+            # to an observable with a non-quantitative data type
+            elif row[PARAMETER_TYPE] == InnerParameterType.SIGMA:
+                corresponding_observables = set(
+                    meas_df[meas_df[NOISE_PARAMETERS] == par_id][OBSERVABLE_ID]
+                )
+                if not (corresponding_observables & caught_observables):
+                    non_quantitative_data_types.add(RELATIVE)
+
+    # TODO this can be made much shorter if the relative measurements
+    # are also specified in the measurement table, but that would require
+    # changing the PEtab format of a lot of benchmark models.
 
     if len(non_quantitative_data_types) == 0:
         return None

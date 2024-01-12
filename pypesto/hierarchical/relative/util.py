@@ -1,11 +1,15 @@
 import copy
 import warnings
-from typing import List
 
 import numpy as np
 
-from ..C import DUMMY_INNER_VALUE, LOWER_BOUND, UPPER_BOUND, InnerParameterType
-from .parameter import InnerParameter
+from ...C import (
+    DUMMY_INNER_VALUE,
+    LOWER_BOUND,
+    UPPER_BOUND,
+    InnerParameterType,
+)
+from ..base_parameter import InnerParameter
 
 
 def get_finite_quotient(
@@ -40,10 +44,10 @@ def get_finite_quotient(
 
 
 def compute_optimal_scaling(
-    data: List[np.ndarray],
-    sim: List[np.ndarray],
-    sigma: List[np.ndarray],
-    mask: List[np.ndarray],
+    data: list[np.ndarray],
+    sim: list[np.ndarray],
+    sigma: list[np.ndarray],
+    mask: list[np.ndarray],
     optimal_offset: float = None,
 ) -> float:
     """
@@ -84,14 +88,14 @@ def compute_optimal_scaling(
 
 
 def apply_scaling(
-    scaling_value: float, sim: List[np.ndarray], mask: List[np.ndarray]
+    scaling_value: float, sim: list[np.ndarray], mask: list[np.ndarray]
 ):
     """Apply scaling to simulations (in-place).
 
     Parameters
     ----------
     scaling_value:
-        The optimal offset for the masked simulations.
+        The optimal scaling for the masked simulations.
     sim:
         All full (unmasked) simulations.
     mask:
@@ -102,11 +106,30 @@ def apply_scaling(
         sim[i][mask[i]] *= scaling_value
 
 
+def apply_scaling_to_sensitivities(
+    scaling_value: float, ssim: list[np.ndarray], mask: list[np.ndarray]
+):
+    """Apply scaling to sensitivities (in-place).
+
+    Parameters
+    ----------
+    scaling_value:
+        The optimal scaling for the masked simulations.
+    ssim:
+        All full (unmasked) sensitivities.
+    mask:
+        The masks that indicate the simulation subset that corresponds to the
+        `scaling_value`.
+    """
+    for i in range(len(ssim)):
+        ssim[i][:, mask[i]] *= scaling_value
+
+
 def compute_optimal_offset(
-    data: List[np.ndarray],
-    sim: List[np.ndarray],
-    sigma: List[np.ndarray],
-    mask: List[np.ndarray],
+    data: list[np.ndarray],
+    sim: list[np.ndarray],
+    sigma: list[np.ndarray],
+    mask: list[np.ndarray],
     optimal_scaling: float = None,
 ) -> float:
     """Compute optimal offset.
@@ -143,10 +166,10 @@ def compute_optimal_offset(
 
 
 def compute_optimal_offset_coupled(
-    data: List[np.ndarray],
-    sim: List[np.ndarray],
-    sigma: List[np.ndarray],
-    mask: List[np.ndarray],
+    data: list[np.ndarray],
+    sim: list[np.ndarray],
+    sigma: list[np.ndarray],
+    mask: list[np.ndarray],
 ) -> float:
     """Compute optimal offset.
 
@@ -207,7 +230,10 @@ def compute_optimal_offset_coupled(
 
 
 def apply_offset(
-    offset_value: float, data: List[np.ndarray], mask: List[np.ndarray]
+    offset_value: float,
+    data: list[np.ndarray],
+    mask: list[np.ndarray],
+    is_data: bool = True,
 ):
     """Apply offset to data (in-place).
 
@@ -231,13 +257,16 @@ def apply_offset(
     mask:
         The masks that indicate the data subset that corresponds to the
         `offset_value`.
+    is_data:
+        Whether the data is being offset, or the simulation is. If False, the
+        offset is added to the simulation instead of subtracted from the data.
     """
     for i in range(len(data)):
-        data[i][mask[i]] -= offset_value
+        data[i][mask[i]] += -offset_value if is_data else offset_value
 
 
 def compute_optimal_sigma(
-    data: List[np.ndarray], sim: List[np.ndarray], mask: List[np.ndarray]
+    data: list[np.ndarray], sim: list[np.ndarray], mask: list[np.ndarray]
 ) -> float:
     """Compute optimal sigma.
 
@@ -264,7 +293,7 @@ def compute_optimal_sigma(
 
 
 def apply_sigma(
-    sigma_value: float, sigma: List[np.ndarray], mask: List[np.ndarray]
+    sigma_value: float, sigma: list[np.ndarray], mask: list[np.ndarray]
 ):
     """Apply optimal sigma to pre-existing sigma arrays (in-place).
 
@@ -283,9 +312,9 @@ def apply_sigma(
 
 
 def compute_bounded_optimal_scaling_offset_coupled(
-    data: List[np.ndarray],
-    sim: List[np.ndarray],
-    sigma: List[np.ndarray],
+    data: list[np.ndarray],
+    sim: list[np.ndarray],
+    sigma: list[np.ndarray],
     s: InnerParameter,
     b: InnerParameter,
     s_opt_value: float,
@@ -418,7 +447,7 @@ def compute_bounded_optimal_scaling_offset_coupled(
 
 
 def compute_nllh(
-    data: List[np.ndarray], sim: List[np.ndarray], sigma: List[np.ndarray]
+    data: list[np.ndarray], sim: list[np.ndarray], sigma: list[np.ndarray]
 ) -> float:
     """Compute negative log-likelihood.
 
@@ -429,4 +458,32 @@ def compute_nllh(
         0.5 * np.nansum(np.log(2 * np.pi * sigma_i**2))
         + 0.5 * np.nansum((data_i - sim_i) ** 2 / sigma_i**2)
         for data_i, sim_i, sigma_i in zip(data, sim, sigma)
+    )
+
+
+def compute_nllh_gradient_for_condition(
+    data: np.ndarray,
+    sim: np.ndarray,
+    sigma: np.ndarray,
+    ssim: np.ndarray,
+    ssigma: np.ndarray,
+):
+    """Compute gradient of negative the log-likelihood function for a condition.
+
+    Compute gradient of negative log-likelihood function with respect to
+    outer optimization parameters for a condition, given the model outputs,
+    relevant data and sigmas.
+    """
+    return np.nansum(
+        np.multiply(
+            ssigma,
+            (
+                (np.full(data.shape, 1) - (data - sim) ** 2 / sigma**2)
+                / sigma
+            ),
+        ),
+        axis=(1, 2),
+    ) + np.nansum(
+        np.multiply(ssim, (sim - data) / sigma**2),
+        axis=(1, 2),
     )
