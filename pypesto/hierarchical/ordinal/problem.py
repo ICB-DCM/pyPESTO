@@ -1,6 +1,4 @@
 """Definition of an optimal scaling parameter class."""
-from typing import Dict, List, Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -35,12 +33,12 @@ from ...C import (
     W_MATRIX,
     InnerParameterType,
 )
-from ..problem import (
-    InnerProblem,
+from ..base_problem import (
+    AmiciInnerProblem,
     _get_timepoints_with_replicates,
     ix_matrices_from_arrays,
 )
-from .parameter import OptimalScalingParameter
+from .parameter import OrdinalParameter
 
 try:
     import amici
@@ -50,30 +48,37 @@ except ImportError:
     pass
 
 
-class OptimalScalingProblem(InnerProblem):
-    """Inner optimization problem for optimal scaling.
+class OrdinalProblem(AmiciInnerProblem):
+    r"""Inner optimization problem for ordinal or censored data.
+
+    The ordinal inner problem contains the following parameters: surrogate data,
+    lower bounds, and upper bounds. All parameters are optimized to minimize the
+    distance between the surrogate data and the simulated data while satisfying
+    the ordering constraints of the problem. Depending on the method, the problem
+    is re-formulated to reduce the number of parameters to estimate.
 
     Attributes
     ----------
     xs:
         Mapping of (inner) parameter ID to ``InnerParameters``.
     data:
-        Measurement data. One matrix (`num_timepoints` x `num_observables`)
+        Measurement data. One matrix (``num_timepoints`` x ``num_observables``)
         per simulation condition. Missing observations as NaN.
+    edatas:
+        AMICI ``ExpData``\s for each simulation condition.
     groups:
         A dictionary of the groups of the subproblem.
     method:
-        A string representing the method of the Optimal Scaling approach, either 'reduced' or 'standard'.
+        A string representing the method of the Optimal Scaling approach, either ``reduced`` or ``standard``.
     """
 
     def __init__(
         self,
-        xs: List[OptimalScalingParameter],
-        data: List[np.ndarray],
         method: str,
+        **kwargs,
     ):
         """Construct."""
-        super().__init__(xs, data)
+        super().__init__(**kwargs)
         self.groups = {}
         self.method = method
 
@@ -83,9 +88,7 @@ class OptimalScalingProblem(InnerProblem):
         """Initialize the groups of the subproblem."""
         self.groups = {}
 
-        for group in self.get_groups_for_xs(
-            InnerParameterType.OPTIMAL_SCALING
-        ):
+        for group in self.get_groups_for_xs(InnerParameterType.ORDINAL):
             self.groups[group] = {}
             xs = self.get_xs_for_group(group)
             self.groups[group][NUM_CATEGORIES] = len({x.category for x in xs})
@@ -169,9 +172,9 @@ class OptimalScalingProblem(InnerProblem):
     def from_petab_amici(
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
         method: str = None,
-    ) -> 'OptimalScalingProblem':
+    ) -> 'OrdinalProblem':
         """Construct the inner problem from the `petab_problem`."""
         if not method:
             method = REDUCED
@@ -180,18 +183,23 @@ class OptimalScalingProblem(InnerProblem):
             petab_problem, amici_model, edatas, method
         )
 
-    def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
+    def get_interpretable_x_ids(self) -> list[str]:
+        """Get IDs of interpretable inner parameters.
+
+        There are no interpretable inner parameters for the ordinal problem.
+        """
+        return []
+
+    def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
         """Get unique list of ``OptimalScalingParameter.group`` values."""
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
         return list(set(groups))
 
-    def get_xs_for_group(self, group: int) -> List[OptimalScalingParameter]:
+    def get_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that belong to the given group."""
         return [x for x in self.xs.values() if x.group == group]
 
-    def get_free_xs_for_group(
-        self, group: int
-    ) -> List[OptimalScalingParameter]:
+    def get_free_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are free and belong to the given group."""
         return [
             x
@@ -199,9 +207,7 @@ class OptimalScalingProblem(InnerProblem):
             if x.group == group and x.estimate is True
         ]
 
-    def get_fixed_xs_for_group(
-        self, group: int
-    ) -> List[OptimalScalingParameter]:
+    def get_fixed_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are fixed and belong to the given group."""
         return [
             x
@@ -211,7 +217,7 @@ class OptimalScalingProblem(InnerProblem):
 
     def get_cat_ub_parameters_for_group(
         self, group: int
-    ) -> List[OptimalScalingParameter]:
+    ) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category upper boundaries and belong to the given group."""
         return [
             x
@@ -221,7 +227,7 @@ class OptimalScalingProblem(InnerProblem):
 
     def get_cat_lb_parameters_for_group(
         self, group: int
-    ) -> List[OptimalScalingParameter]:
+    ) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category lower boundaries and belong to the given group."""
         return [
             x
@@ -368,7 +374,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_d(
         self,
         group,
-        xs: List[OptimalScalingParameter],
+        xs: list[OrdinalParameter],
         y_sim_all: np.ndarray,
         eps: float,
     ) -> np.ndarray:
@@ -395,7 +401,7 @@ class OptimalScalingProblem(InnerProblem):
     def get_dd_dtheta(
         self,
         group: int,
-        xs: List[OptimalScalingParameter],
+        xs: list[OrdinalParameter],
         y_sim_all: np.ndarray,
         sy_all: np.ndarray,
     ) -> np.ndarray:
@@ -421,8 +427,8 @@ class OptimalScalingProblem(InnerProblem):
         return dd_dtheta
 
     def get_censored_group_quantitative_ixs(
-        self, xs: List[OptimalScalingParameter]
-    ) -> List[np.ndarray]:
+        self, xs: list[OrdinalParameter]
+    ) -> list[np.ndarray]:
         r"""Return a list of boolean masks indicating which data points are quantitative.
 
         For a given group with censored data, return a list of boolean masks indicating
@@ -458,7 +464,7 @@ class OptimalScalingProblem(InnerProblem):
 
         return quantitative_ixs
 
-    def get_inner_parameter_dictionary(self) -> Dict:
+    def get_inner_parameter_dictionary(self) -> dict:
         """Return a dictionary with inner parameter ids and their values."""
         inner_par_dict = {}
         for x_id, x in self.xs.items():
@@ -469,7 +475,7 @@ class OptimalScalingProblem(InnerProblem):
 def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
     amici_model: 'amici.Model',
-    edatas: List['amici.ExpData'],
+    edatas: list['amici.ExpData'],
     method: str,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -484,21 +490,20 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    edatas = [
-        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-    ]
+    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
 
     # matrixify
-    ix_matrices = ix_matrices_from_arrays(ixs, edatas)
+    ix_matrices = ix_matrices_from_arrays(ixs, data)
 
     # assign matrices
     for par in inner_parameters:
         par.ixs = ix_matrices[par.inner_parameter_id]
 
-    return OptimalScalingProblem(
-        inner_parameters,
-        edatas,
-        method,
+    return OrdinalProblem(
+        xs=inner_parameters,
+        data=data,
+        edatas=edatas,
+        method=method,
     )
 
 
@@ -506,7 +511,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
     amici_model: 'amici.Model',
-) -> List[OptimalScalingParameter]:
+) -> list[OrdinalParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
 
@@ -516,9 +521,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     par_types = [CAT_LB, CAT_UB]
 
     inner_parameters = []
-    lb, ub = INNER_PARAMETER_BOUNDS[
-        InnerParameterType.OPTIMAL_SCALING
-    ].values()
+    lb, ub = INNER_PARAMETER_BOUNDS[InnerParameterType.ORDINAL].values()
 
     for observable_idx, observable_id in enumerate(observable_ids):
         group = observable_idx + 1
@@ -537,9 +540,9 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                         for inner_par in inner_parameters
                     ]:
                         inner_parameters.append(
-                            OptimalScalingParameter(
+                            OrdinalParameter(
                                 inner_parameter_id=par_id,
-                                inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+                                inner_parameter_type=InnerParameterType.ORDINAL,
                                 scale=LIN,
                                 lb=lb,
                                 ub=ub,
@@ -573,9 +576,9 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                         for inner_par in inner_parameters
                     ]:
                         inner_parameters.append(
-                            OptimalScalingParameter(
+                            OrdinalParameter(
                                 inner_parameter_id=par_id,
-                                inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+                                inner_parameter_type=InnerParameterType.ORDINAL,
                                 scale=LIN,
                                 lb=lb,
                                 ub=ub,
@@ -595,7 +598,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     return inner_parameters
 
 
-def get_estimate_for_method(method: str) -> Tuple[bool, bool]:
+def get_estimate_for_method(method: str) -> tuple[bool, bool]:
     """Return which inner parameters to estimate dependent on the method provided."""
     estimate_ub = True
     estimate_lb = False
@@ -609,8 +612,8 @@ def get_estimate_for_method(method: str) -> Tuple[bool, bool]:
 def optimal_scaling_ixs_for_measurement_specific_parameters(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-    inner_parameters: List[OptimalScalingParameter],
-) -> Dict[str, List[Tuple[int, int, int]]]:
+    inner_parameters: list[OrdinalParameter],
+) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.
 
     Returns
@@ -697,9 +700,9 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
 
 
 def get_inner_par_ids_for_measurement(
-    measurement: Dict,
-    inner_parameters: List[OptimalScalingParameter],
-    unique_censoring_bounds_per_observable: Dict[str, List[float]],
+    measurement: dict,
+    inner_parameters: list[OrdinalParameter],
+    unique_censoring_bounds_per_observable: dict[str, list[float]],
 ):
     """Return inner parameter ids of parameters which are related to the measurement."""
     if measurement[MEASUREMENT_TYPE] == ORDINAL:
@@ -729,7 +732,7 @@ def get_inner_par_ids_for_measurement(
 
 
 def _add_value_to_censored_bound_parameter(
-    inner_parameter: OptimalScalingParameter,
+    inner_parameter: OrdinalParameter,
     row: pd.Series,
     par_type: str,
 ) -> None:

@@ -463,13 +463,13 @@ def _handle_inner_inputs(
     inner_ub = None
 
     if any(inner_x is not None for inner_x in inner_xs):
-        from ..hierarchical.calculator import HierarchicalAmiciCalculator
+        from ..hierarchical import InnerCalculatorCollector
 
         if hasattr(result.problem.objective, 'calculator') and isinstance(
             inner_calculator := result.problem.objective.calculator,
-            HierarchicalAmiciCalculator,
+            InnerCalculatorCollector,
         ):
-            inner_xs_names = inner_calculator.inner_problem.get_x_ids()
+            inner_xs_names = inner_calculator.get_interpretable_inner_par_ids()
             # replace None with a list of nans
             inner_xs = [
                 np.full(len(inner_xs_names), np.nan)
@@ -478,7 +478,10 @@ def _handle_inner_inputs(
                 for inner_xs_idx in inner_xs
             ]
             # set bounds for inner parameters
-            inner_lb, inner_ub = inner_calculator.inner_problem.get_bounds()
+            (
+                inner_lb,
+                inner_ub,
+            ) = inner_calculator.get_interpretable_inner_par_bounds()
 
     if inner_xs_names is None:
         inner_xs = None

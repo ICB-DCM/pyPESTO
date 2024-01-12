@@ -16,14 +16,14 @@ from pypesto.C import (
     UPPER_BOUND,
     InnerParameterType,
 )
-from pypesto.hierarchical.parameter import InnerParameter
+from pypesto.hierarchical.base_parameter import InnerParameter
+from pypesto.hierarchical.base_problem import InnerProblem
 from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
-from pypesto.hierarchical.problem import InnerProblem
-from pypesto.hierarchical.solver import (
+from pypesto.hierarchical.relative.solver import (
     AnalyticalInnerSolver,
     NumericalInnerSolver,
 )
-from pypesto.hierarchical.util import (
+from pypesto.hierarchical.relative.util import (
     apply_offset,
     apply_scaling,
     compute_optimal_offset,
@@ -80,8 +80,7 @@ def test_hierarchical_optimization_pipeline():
     outer_indices = [
         ix
         for ix, x in enumerate(problems[False].x_names)
-        if x
-        not in problems[True].objective.calculator.inner_problem.get_x_ids()
+        if x not in problems[True].objective.calculator.get_inner_par_ids()
     ]
     problems[True].set_x_guesses(startpoints[:, outer_indices])
 
@@ -203,7 +202,7 @@ def test_hierarchical_calculator_and_objective():
     ).all()
 
     for inner_idx, inner_par in enumerate(
-        problems[True].objective.calculator.inner_problem.get_x_ids()
+        problems[True].objective.calculator.get_inner_par_ids()
     ):
         x_dct[inner_par] = calculator_results[True]['inner_parameters'][
             inner_idx
@@ -647,6 +646,7 @@ def test_validate():
             {
                 petab.PARAMETER_ID: ["s"],
                 "parameterType": ['scaling'],
+                "estimate": [1],
             }
         )
     )

@@ -1,5 +1,5 @@
 import warnings
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -21,11 +21,10 @@ from ..result import Result
 try:
     import amici
 
-    from ..hierarchical.spline_approximation.calculator import (
-        SplineAmiciCalculator,
-    )
-    from ..hierarchical.spline_approximation.solver import (
-        SplineInnerSolver,
+    from ..hierarchical import InnerCalculatorCollector
+    from ..hierarchical.semiquantitative.calculator import SemiquantCalculator
+    from ..hierarchical.semiquantitative.solver import (
+        SemiquantInnerSolver,
         _calculate_regularization_for_group,
         get_spline_mapped_simulations,
     )
@@ -54,6 +53,13 @@ def plot_splines_from_pypesto_result(
     ax:
         The axes.
     """
+    # Check the calculator is the InnerCalculatorCollector.
+    if not isinstance(
+        pypesto_result.problem.objective.calculator, InnerCalculatorCollector
+    ):
+        raise ValueError(
+            'The calculator must be an instance of the InnerCalculatorCollector.'
+        )
 
     # Get the parameters from the pypesto result for the start_index.
     x_dct = dict(
@@ -64,7 +70,7 @@ def plot_splines_from_pypesto_result(
     )
 
     x_dct.update(
-        pypesto_result.problem.objective.calculator.noise_dummy_values
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
     )
 
     # Get the needed objects from the pypesto problem.
@@ -107,7 +113,7 @@ def plot_splines_from_pypesto_result(
     for (
         calculator
     ) in pypesto_result.problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, SplineAmiciCalculator):
+        if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
 
@@ -125,7 +131,7 @@ def plot_splines_from_pypesto_result(
 def plot_splines_from_inner_result(
     inner_problem: 'pypesto.hierarchical.spline_approximation.problem.SplineInnerProblem',
     inner_solver: 'pypesto.hierarchical.spline_approximation.solver.SplineInnerSolver',
-    results: List[Dict],
+    results: list[dict],
     observable_ids=None,
     **kwargs,
 ):
@@ -188,7 +194,11 @@ def plot_splines_from_inner_result(
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
-        delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
+        (
+            delta_c,
+            spline_bases,
+            n,
+        ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
             N=len(inner_parameters),
@@ -315,7 +325,9 @@ def _add_spline_mapped_simulations_to_model_fit(
             result.optimize_result.list[start_index]['x'],
         )
     )
-    x_dct.update(pypesto_problem.objective.calculator.noise_dummy_values)
+    x_dct.update(
+        pypesto_problem.objective.calculator.necessary_par_dummy_values
+    )
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_problem.objective.edatas
     parameter_mapping = pypesto_problem.objective.parameter_mapping
@@ -353,7 +365,7 @@ def _add_spline_mapped_simulations_to_model_fit(
 
     spline_calculator = None
     for calculator in pypesto_problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, SplineAmiciCalculator):
+        if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
 
@@ -384,7 +396,11 @@ def _add_spline_mapped_simulations_to_model_fit(
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
-        delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
+        (
+            delta_c,
+            spline_bases,
+            n,
+        ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
             N=len(inner_parameters),
@@ -460,7 +476,7 @@ def _obtain_regularization_for_start(
     )
 
     x_dct.update(
-        pypesto_result.problem.objective.calculator.noise_dummy_values
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
     )
 
     # Get the needed objects from the pypesto problem.
@@ -502,7 +518,7 @@ def _obtain_regularization_for_start(
     for (
         calculator
     ) in pypesto_result.problem.objective.calculator.inner_calculators:
-        if isinstance(calculator, SplineAmiciCalculator):
+        if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
 
@@ -525,7 +541,11 @@ def _obtain_regularization_for_start(
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
-        delta_c, spline_bases, n = SplineInnerSolver._rescale_spline_bases(
+        (
+            delta_c,
+            spline_bases,
+            n,
+        ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
             N=len(inner_parameters),

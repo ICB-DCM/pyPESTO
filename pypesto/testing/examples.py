@@ -17,7 +17,7 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
     import petab
     from benchmark_models_petab import get_problem
 
-    from pypesto.hierarchical.problem import PARAMETER_TYPE
+    from pypesto.C import PARAMETER_TYPE
 
     petab_problem = get_problem("Boehm_JProteomeRes2014")
     # Add scaling and offset parameters

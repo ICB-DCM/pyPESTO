@@ -1,0 +1,11 @@
+format_version: 1
+parameter_file: parameters_example_semiquantitative.tsv
+problems:
+- condition_files:
+  - experimentalCondition_example_semiquantitative.tsv
+  measurement_files:
+  - measurementData_example_semiquantitative_linear.tsv
+  observable_files:
+  - observables_example_semiquantitative.tsv
+  sbml_files:
+  - model_example_semiquantitative.xml

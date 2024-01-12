@@ -71,7 +71,7 @@ class InnerParameter:
         self.scale = scale
 
         if inner_parameter_type not in (
-            InnerParameterType.OPTIMAL_SCALING,
+            InnerParameterType.ORDINAL,
             InnerParameterType.OFFSET,
             InnerParameterType.SIGMA,
             InnerParameterType.SCALING,

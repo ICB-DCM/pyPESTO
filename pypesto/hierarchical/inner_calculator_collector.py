@@ -1,12 +1,12 @@
 """Module for the InnerCalculatorCollector class.
 
-In case of non-quantitative measurements, this class is used to collect
-hierarchical inner calculators for each data type and merge their results.
+In case of semi-quantitative or qualitative measurements, this class is used
+to collect hierarchical inner calculators for each data type and merge their results.
 """
 from __future__ import annotations
 
 import copy
-from typing import Dict, List, Sequence, Tuple, Union
+from typing import Sequence, Union
 
 import numpy as np
 
@@ -21,14 +21,14 @@ from ..C import (
     GRAD,
     HESS,
     INNER_PARAMETERS,
-    MEASUREMENT_TYPE,
     METHOD,
     MODE_RES,
-    NONLINEAR_MONOTONE,
-    OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
+    ORDINAL_OPTIONS,
     RDATAS,
+    RELATIVE,
     RES,
+    SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
     SPLINE_RATIO,
     SRES,
@@ -36,26 +36,26 @@ from ..C import (
     ModeType,
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
-from ..objective.amici.amici_util import filter_return_dict, init_return_values
+from ..objective.amici.amici_util import (
+    add_sim_grad_to_opt_grad,
+    filter_return_dict,
+    init_return_values,
+)
 
 try:
     import amici
     import petab
     from amici.parameter_mapping import ParameterMapping
-    from petab.C import OBSERVABLE_ID
 except ImportError:
     petab = None
     ParameterMapping = None
 
-from .optimal_scaling import (
-    OptimalScalingAmiciCalculator,
-    OptimalScalingInnerSolver,
-    OptimalScalingProblem,
-)
-from .spline_approximation import (
-    SplineAmiciCalculator,
-    SplineInnerProblem,
-    SplineInnerSolver,
+from .ordinal import OrdinalCalculator, OrdinalInnerSolver, OrdinalProblem
+from .relative import RelativeAmiciCalculator, RelativeInnerProblem
+from .semiquantitative import (
+    SemiquantCalculator,
+    SemiquantInnerSolver,
+    SemiquantProblem,
 )
 
 AmiciModel = Union['amici.Model', 'amici.ModelPtr']
@@ -86,24 +86,26 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def __init__(
         self,
-        data_types: List[str],
+        data_types: set[str],
         petab_problem: 'petab.Problem',
         model: AmiciModel,
-        edatas: List['amici.ExpData'],
-        inner_options: Dict,
+        edatas: list['amici.ExpData'],
+        inner_options: dict,
     ):
         super().__init__()
         self.validate_options(inner_options)
 
         self.data_types = data_types
-        self.inner_calculators = []
+        self.inner_calculators: list[
+            AmiciCalculator
+        ] = (
+            []
+        )  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
         self.construct_inner_calculators(
             petab_problem, model, edatas, inner_options
         )
 
-        self.quantitative_data_mask = self._get_quantitative_data_mask(
-            petab_problem, model.getObservableIds(), edatas
-        )
+        self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
 
         self._known_least_squares_safe = False
 
@@ -117,65 +119,83 @@ class InnerCalculatorCollector(AmiciCalculator):
         self,
         petab_problem: 'petab.Problem',
         model: AmiciModel,
-        edatas: List['amici.ExpData'],
-        inner_options: Dict,
+        edatas: list['amici.ExpData'],
+        inner_options: dict,
     ):
         """Construct inner calculators for each data type."""
-        self.noise_dummy_values = {}
+        self.necessary_par_dummy_values = {}
         self.best_fval = np.inf
+
+        if RELATIVE in self.data_types:
+            relative_inner_problem = RelativeInnerProblem.from_petab_amici(
+                petab_problem, model, edatas
+            )
+            self.necessary_par_dummy_values.update(
+                relative_inner_problem.get_dummy_values(scaled=True)
+            )
+            relative_inner_solver = RelativeAmiciCalculator(
+                inner_problem=relative_inner_problem
+            )
+            self.inner_calculators.append(relative_inner_solver)
+
         if ORDINAL in self.data_types or CENSORED in self.data_types:
             optimal_scaling_inner_options = {
                 key: value
                 for key, value in inner_options.items()
-                if key in OPTIMAL_SCALING_OPTIONS
+                if key in ORDINAL_OPTIONS
             }
             inner_problem_method = optimal_scaling_inner_options.get(
                 METHOD, None
             )
-            os_inner_problem = OptimalScalingProblem.from_petab_amici(
+            ordinal_inner_problem = OrdinalProblem.from_petab_amici(
                 petab_problem, model, edatas, inner_problem_method
             )
-            os_inner_solver = OptimalScalingInnerSolver(
+            ordinal_inner_solver = OrdinalInnerSolver(
                 options=optimal_scaling_inner_options
             )
-            os_calculator = OptimalScalingAmiciCalculator(
-                os_inner_problem, os_inner_solver
+            ordinal_calculator = OrdinalCalculator(
+                ordinal_inner_problem, ordinal_inner_solver
             )
-            self.inner_calculators.append(os_calculator)
+            self.inner_calculators.append(ordinal_calculator)
 
-        if NONLINEAR_MONOTONE in self.data_types:
+        if SEMIQUANTITATIVE in self.data_types:
             spline_inner_options = {
                 key: value
                 for key, value in inner_options.items()
                 if key in SPLINE_APPROXIMATION_OPTIONS
             }
             spline_ratio = spline_inner_options.pop(SPLINE_RATIO, None)
-            spline_inner_problem = SplineInnerProblem.from_petab_amici(
+            semiquant_problem = SemiquantProblem.from_petab_amici(
                 petab_problem, model, edatas, spline_ratio
             )
-            spline_inner_solver = SplineInnerSolver(
+            semiquant_inner_solver = SemiquantInnerSolver(
                 options=spline_inner_options
             )
-            spline_calculator = SplineAmiciCalculator(
-                spline_inner_problem, spline_inner_solver
+            semiquant_calculator = SemiquantCalculator(
+                semiquant_problem, semiquant_inner_solver
             )
-            self.noise_dummy_values = (
-                spline_inner_problem.get_noise_dummy_values(scaled=True)
+            self.necessary_par_dummy_values.update(
+                semiquant_problem.get_noise_dummy_values(scaled=True)
             )
-            self.inner_calculators.append(spline_calculator)
-        # TODO relative data
+            self.inner_calculators.append(semiquant_calculator)
 
-        if set(self.data_types) - {ORDINAL, CENSORED, NONLINEAR_MONOTONE}:
-            unsupported_data_types = set(self.data_types) - {
+        if self.data_types - {
+            RELATIVE,
+            ORDINAL,
+            CENSORED,
+            SEMIQUANTITATIVE,
+        }:
+            unsupported_data_types = self.data_types - {
+                RELATIVE,
                 ORDINAL,
                 CENSORED,
-                NONLINEAR_MONOTONE,
+                SEMIQUANTITATIVE,
             }
             raise NotImplementedError(
                 f"Data types {unsupported_data_types} are not supported."
             )
 
-    def validate_options(self, inner_options: Dict):
+    def validate_options(self, inner_options: dict):
         """Validate the inner options.
 
         Parameters
@@ -185,37 +205,33 @@ class InnerCalculatorCollector(AmiciCalculator):
         """
         for key in inner_options:
             if (
-                key not in OPTIMAL_SCALING_OPTIONS
+                key not in ORDINAL_OPTIONS
                 and key not in SPLINE_APPROXIMATION_OPTIONS
             ):
                 raise ValueError(f"Unknown inner option {key}.")
 
     def _get_quantitative_data_mask(
         self,
-        petab_problem: 'petab.Problem',
-        observable_ids: List[str],
-        edatas: List['amici.ExpData'],
-    ) -> List[np.ndarray]:
+        edatas: list['amici.ExpData'],
+    ) -> list[np.ndarray]:
         # transform experimental data
         edatas = [
             amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
         ]
 
-        measurement_df = petab_problem.measurement_df
-
         quantitative_data_mask = [
-            np.zeros_like(edata, dtype=bool) for edata in edatas
+            np.ones_like(edata, dtype=bool) for edata in edatas
         ]
 
-        for observable_idx, observable_id in enumerate(observable_ids):
-            observable_df = measurement_df[
-                measurement_df[OBSERVABLE_ID] == observable_id
-            ]
-            # If the MEASUREMENT_TYPE column is filled with nans,
-            # then fill that axis of the mask with True
-            if observable_df[MEASUREMENT_TYPE].isna().all():
-                for condition_mask in quantitative_data_mask:
-                    condition_mask[:, observable_idx] = True
+        # iterate over inner problems
+        for calculator in self.inner_calculators:
+            inner_parameters = calculator.inner_problem.xs.values()
+            # Remove inner parameter masks from quantitative data mask
+            for inner_par in inner_parameters:
+                for cond_idx, condition_mask in enumerate(
+                    quantitative_data_mask
+                ):
+                    condition_mask[inner_par.ixs[cond_idx]] = False
 
         # If there is no quantitative data, return None
         if not all(mask.any() for mask in quantitative_data_mask):
@@ -223,22 +239,45 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         return quantitative_data_mask
 
-    def get_inner_parameter_ids(self) -> List[str]:
-        """Return the ids of the inner parameters."""
+    def get_inner_par_ids(self) -> list[str]:
+        """Return the ids of inner parameters of all inner problems."""
         return [
             parameter_id
             for inner_calculator in self.inner_calculators
-            for parameter_id in inner_calculator.get_inner_parameter_ids()
+            for parameter_id in inner_calculator.inner_problem.get_x_ids()
         ]
+
+    def get_interpretable_inner_par_ids(self) -> list[str]:
+        """Return the ids of interpretable inner parameters of all inner problems."""
+        return [
+            parameter_id
+            for inner_calculator in self.inner_calculators
+            for parameter_id in inner_calculator.inner_problem.get_interpretable_x_ids()
+        ]
+
+    def get_interpretable_inner_par_bounds(
+        self,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Return the bounds of interpretable inner parameters of all inner problems."""
+        lb = []
+        ub = []
+        for inner_calculator in self.inner_calculators:
+            (
+                lb_i,
+                ub_i,
+            ) = inner_calculator.inner_problem.get_interpretable_x_bounds()
+            lb.extend(lb_i)
+            ub.extend(ub_i)
+        return np.asarray(lb), np.asarray(ub)
 
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int],
+        x_dct: dict,
+        sensi_orders: tuple[int],
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -275,15 +314,64 @@ class InnerCalculatorCollector(AmiciCalculator):
         """
         import amici.parameter_mapping
 
-        if mode == MODE_RES:
+        if mode == MODE_RES and any(
+            data_type in self.data_types
+            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+        ):
             raise NotImplementedError(
-                f"Mode {mode} is not implemented for the :class:`pypesto.objective.amici.InnerCalculatorCollector`."
+                f"Mode {mode} is not implemented for ordinal, censored or semi-quantitative data. "
+                "However, it can be used if the only non-quantitative data type is relative data."
             )
 
-        if 2 in sensi_orders:
+        if 2 in sensi_orders and any(
+            data_type in self.data_types
+            for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+        ):
             raise ValueError(
-                "Hessian and FIM are not implemented for the :class:`pypesto.objective.amici.InnerCalculatorCollector`."
+                "Hessian and FIM are not implemented for ordinal, censored or semi-quantitative data. "
+                "However, they can be used if the only non-quantitative data type is relative data."
             )
+
+        if (
+            amici_solver.getSensitivityMethod()
+            == amici.SensitivityMethod_adjoint
+            and any(
+                data_type in self.data_types
+                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+            )
+        ):
+            raise NotImplementedError(
+                "Adjoint sensitivity analysis is not implemented for ordinal, censored or semi-quantitative data. "
+                "However, it can be used if the only non-quantitative data type is relative data."
+            )
+
+        # if we're using adjoint sensitivity analysis or need second order
+        # sensitivities or are in residual mode, we can do so if the only
+        # non-quantitative data type is relative data. In this case, we
+        # use the relative calculator directly.
+        if (
+            amici_solver.getSensitivityMethod()
+            == amici.SensitivityMethod_adjoint
+            or 2 in sensi_orders
+            or mode == MODE_RES
+        ):
+            relative_calculator = self.inner_calculators[0]
+            ret = relative_calculator(
+                x_dct=x_dct,
+                sensi_orders=sensi_orders,
+                mode=mode,
+                amici_model=amici_model,
+                amici_solver=amici_solver,
+                edatas=edatas,
+                n_threads=n_threads,
+                x_ids=x_ids,
+                parameter_mapping=parameter_mapping,
+                fim_for_hess=fim_for_hess,
+            )
+            # only return inner parameters if the objective value improved
+            if ret[FVAL] > self.best_fval:
+                ret[INNER_PARAMETERS] = None
+            return filter_return_dict(ret)
 
         # get dimension of outer problem
         dim = len(x_ids)
@@ -303,7 +391,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         amici_solver.setSensitivityOrder(sensi_order)
 
         x_dct = copy.deepcopy(x_dct)
-        x_dct.update(self.noise_dummy_values)
+        x_dct.update(self.necessary_par_dummy_values)
         # fill in parameters
         amici.parameter_mapping.fill_in_parameters(
             edatas=edatas,
@@ -332,7 +420,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 SRES: sres,
                 RDATAS: rdatas,
                 X_INNER_OPT: all_inner_pars,
-                INNER_PARAMETERS: interpretable_inner_pars,
+                INNER_PARAMETERS: None,
             }
             ret[FVAL] = np.inf
             # if the gradient was requested,
@@ -364,7 +452,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 )
             self._known_least_squares_safe = True  # don't check this again
 
-        # call inner calculators
+        # call inner calculators and collect results
         for calculator in self.inner_calculators:
             inner_result = calculator(
                 x_dct=x_dct,
@@ -380,14 +468,14 @@ class InnerCalculatorCollector(AmiciCalculator):
                 rdatas=rdatas,
             )
             nllh += inner_result[FVAL]
-            if sensi_order > 0:
+            if 1 in sensi_orders:
                 snllh += inner_result[GRAD]
 
             all_inner_pars.update(inner_result[X_INNER_OPT])
             if INNER_PARAMETERS in inner_result:
                 interpretable_inner_pars.extend(inner_result[INNER_PARAMETERS])
 
-        # add result for quantitative data
+        # add the quantitative data contribution
         if self.quantitative_data_mask is not None:
             quantitative_result = calculate_quantitative_result(
                 rdatas=rdatas,
@@ -399,10 +487,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),
-                par_edatas_indices=[edata.plist for edata in edatas],
             )
             nllh += quantitative_result[FVAL]
-            if sensi_order > 0:
+            if 1 in sensi_orders:
                 snllh += quantitative_result[GRAD]
 
         ret = {
@@ -429,16 +516,15 @@ class InnerCalculatorCollector(AmiciCalculator):
 
 
 def calculate_quantitative_result(
-    rdatas: List[amici.ReturnDataView],
-    edatas: List[amici.ExpData],
-    sensi_orders: Tuple[int],
+    rdatas: list[amici.ReturnDataView],
+    edatas: list[amici.ExpData],
+    sensi_orders: tuple[int],
     mode: ModeType,
-    quantitative_data_mask: List[np.ndarray],
+    quantitative_data_mask: list[np.ndarray],
     dim: int,
     parameter_mapping: ParameterMapping,
-    par_opt_ids: List[str],
-    par_sim_ids: List[str],
-    par_edatas_indices: List[List[int]],
+    par_opt_ids: list[str],
+    par_sim_ids: list[str],
 ):
     """Calculate the function values from rdatas and return as dict."""
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
@@ -472,13 +558,11 @@ def calculate_quantitative_result(
             edata,
             mask,
             condition_map_sim_var,
-            par_edata_indices,
         ) in zip(
             rdatas,
             edatas,
             quantitative_data_mask,
             parameter_map_sim_var,
-            par_edatas_indices,
         ):
             data_i = edata[mask]
             sim_i = rdata[AMICI_Y][mask]
@@ -495,7 +579,7 @@ def calculate_quantitative_result(
             )
             ssigma_i = np.asarray(
                 [
-                    rdata[AMICI_SSIGMAY][:, parameter_index][mask]
+                    rdata[AMICI_SSIGMAY][:, parameter_index, :][mask]
                     for parameter_index in range(n_parameters)
                 ]
             )
@@ -518,25 +602,13 @@ def calculate_quantitative_result(
                 ),
                 axis=1,
             )
-
-            # add gradient to correct index of snllh
-            for par_sim, par_opt in condition_map_sim_var.items():
-                if not isinstance(par_opt, str):
-                    continue
-
-                if par_opt not in par_opt_ids:
-                    continue
-
-                par_opt_idx = par_opt_ids.index(par_opt)
-                par_sim_idx = par_sim_ids.index(par_sim)
-                par_edata_idx = (
-                    par_edata_indices.index(par_sim_idx)
-                    if par_sim_idx in par_edata_indices
-                    else None
-                )
-
-                if par_edata_idx is not None:
-                    snllh[par_opt_idx] += gradient_for_condition[par_edata_idx]
+            add_sim_grad_to_opt_grad(
+                par_opt_ids=par_opt_ids,
+                par_sim_ids=par_sim_ids,
+                condition_map_sim_var=condition_map_sim_var,
+                sim_grad=gradient_for_condition,
+                opt_grad=snllh,
+            )
 
     ret = {
         FVAL: nllh,
