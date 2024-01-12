@@ -1,5 +1,4 @@
 import warnings
-from typing import Dict, List
 
 import numpy as np
 from scipy.optimize import minimize
@@ -23,9 +22,9 @@ from ...C import (
     SCIPY_X,
     InnerParameterType,
 )
-from ..solver import InnerSolver
+from ..base_solver import InnerSolver
 from .parameter import SplineInnerParameter
-from .problem import SplineInnerProblem
+from .problem import SemiquantProblem
 
 try:
     from amici.parameter_mapping import ParameterMapping
@@ -33,7 +32,7 @@ except ImportError:
     pass
 
 
-class SplineInnerSolver(InnerSolver):
+class SemiquantInnerSolver(InnerSolver):
     """Solver of the inner subproblem of spline approximation for nonlinear-monotone data.
 
     Options
@@ -44,7 +43,7 @@ class SplineInnerSolver(InnerSolver):
         Default is 1/2.
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         self.options = {
             **self.get_default_options(),
             **(options or {}),
@@ -76,9 +75,9 @@ class SplineInnerSolver(InnerSolver):
 
     def solve(
         self,
-        problem: SplineInnerProblem,
-        sim: List[np.ndarray],
-        amici_sigma: List[np.ndarray],
+        problem: SemiquantProblem,
+        sim: list[np.ndarray],
+        amici_sigma: list[np.ndarray],
     ) -> list:
         """Get results for every group (inner optimization problem).
 
@@ -155,17 +154,17 @@ class SplineInnerSolver(InnerSolver):
 
     def calculate_gradients(
         self,
-        problem: SplineInnerProblem,
-        x_inner_opt: List[Dict],
-        sim: List[np.ndarray],
-        amici_sigma: List[np.ndarray],
-        sy: List[np.ndarray],
-        amici_ssigma: List[np.ndarray],
+        problem: SemiquantProblem,
+        x_inner_opt: list[dict],
+        sim: list[np.ndarray],
+        amici_sigma: list[np.ndarray],
+        sy: list[np.ndarray],
+        amici_ssigma: list[np.ndarray],
         parameter_mapping: ParameterMapping,
-        par_opt_ids: List,
-        par_sim_ids: List,
-        par_edatas_indices: List,
-        snllh: Dict,
+        par_opt_ids: list,
+        par_sim_ids: list,
+        par_edatas_indices: list,
+        snllh: np.ndarray,
     ):
         """Calculate gradients of the inner objective function.
 
@@ -191,11 +190,12 @@ class SplineInnerSolver(InnerSolver):
         par_sim_ids:
             Ids of outer simulation parameters, includes fixed parameters.
         snllh:
-            Empty dictionary with optimization parameters as keys.
+            A zero-initialized vector of the same length as ``par_opt_ids`` to store the
+            gradients in. Will be modified in-place.
 
         Returns
         -------
-        Filled in snllh dictionary with objective function gradients.
+        The gradients with respect to the outer parameters.
         """
         already_calculated = set()
 
@@ -208,15 +208,7 @@ class SplineInnerSolver(InnerSolver):
                     or par_opt in already_calculated
                 ):
                     continue
-                # Current fix for scaling/offset parameters in models.
-                elif par_sim.startswith('observableParameter'):
-                    continue
-                # For noise parameters optimized hierarchically, we
-                # do not calculate the gradient.
-                elif (
-                    par_sim.startswith('noiseParameter')
-                    and par_opt not in par_opt_ids
-                ):
+                elif par_opt not in par_opt_ids:
                     continue
                 else:
                     already_calculated.add(par_opt)
@@ -352,7 +344,7 @@ class SplineInnerSolver(InnerSolver):
         return snllh
 
     @staticmethod
-    def get_default_options() -> Dict:
+    def get_default_options() -> dict:
         """Return default options for solving the inner problem."""
         options = {
             MIN_DIFF_FACTOR: 0.0,
@@ -363,8 +355,8 @@ class SplineInnerSolver(InnerSolver):
 
     def _optimize_spline(
         self,
-        inner_parameters: List[SplineInnerParameter],
-        group_dict: Dict,
+        inner_parameters: list[SplineInnerParameter],
+        group_dict: dict,
     ):
         """Run optimization for the inner problem.
 
@@ -524,12 +516,12 @@ class SplineInnerSolver(InnerSolver):
 
     def _get_inner_optimization_options(
         self,
-        inner_parameters: List[SplineInnerParameter],
+        inner_parameters: list[SplineInnerParameter],
         N: int,
         min_meas: float,
         max_meas: float,
         min_diff: float,
-    ) -> Dict:
+    ) -> dict:
         """Return default options for scipy optimizer.
 
         Returns inner subproblem optimization options including startpoint
@@ -594,7 +586,7 @@ def _calculate_nllh_for_group(
     n: np.ndarray,
     regularization_factor: float,
     regularize_spline: bool,
-    group_dict: Dict,
+    group_dict: dict,
 ) -> float:
     """Calculate the negative log-likelihood for the group.
 
@@ -680,7 +672,7 @@ def _calculate_nllh_gradient_for_group(
     n: np.ndarray,
     regularization_factor: float,
     regularize_spline: bool,
-    group_dict: Dict,
+    group_dict: dict,
 ) -> np.ndarray:
     """Calculate the gradient of the nllh wrt. spline differences s for the group.
 
@@ -1047,7 +1039,7 @@ def calculate_spline_bases_gradient(
 
 
 def extract_expdata_using_mask(
-    expdata: List[np.ndarray], mask: List[np.ndarray]
+    expdata: list[np.ndarray], mask: list[np.ndarray]
 ):
     """Extract data from expdata list of arrays for the given mask."""
     return np.concatenate(
@@ -1059,7 +1051,7 @@ def extract_expdata_using_mask(
 
 
 def save_inner_parameters_to_inner_problem(
-    inner_problem: SplineInnerProblem,
+    inner_problem: SemiquantProblem,
     s: np.ndarray,
     group: int,
 ) -> None:

@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Dict
 
 import numpy as np
 import petab
@@ -16,14 +15,14 @@ from pypesto.C import (
     OPTIMIZE_NOISE,
     InnerParameterType,
 )
-from pypesto.hierarchical.spline_approximation import (
-    SplineInnerProblem,
-    SplineInnerSolver,
+from pypesto.hierarchical.semiquantitative import (
+    SemiquantInnerSolver,
+    SemiquantProblem,
 )
-from pypesto.hierarchical.spline_approximation.parameter import (
+from pypesto.hierarchical.semiquantitative.parameter import (
     SplineInnerParameter,
 )
-from pypesto.hierarchical.spline_approximation.solver import (
+from pypesto.hierarchical.semiquantitative.solver import (
     _calculate_nllh_for_group,
     _calculate_regularization_for_group,
     _calculate_regularization_gradient_for_group,
@@ -46,14 +45,14 @@ inner_options = [
     for regularization_factor in [1.0, 0.0]
 ]
 
-example_nonlinear_monotone_yaml = (
+example_semiquantitative_yaml = (
     Path(__file__).parent
     / '..'
     / '..'
     / 'doc'
     / 'example'
-    / 'example_nonlinear_monotone'
-    / 'example_nonlinear_monotone_linear.yaml'
+    / 'example_semiquantitative'
+    / 'example_semiquantitative_linear.yaml'
 )
 
 
@@ -62,9 +61,9 @@ def inner_options(request):
     return request.param
 
 
-def test_optimization(inner_options: Dict):
+def test_optimization(inner_options: dict):
     """Check that optimizations finishes without error."""
-    petab_problem = petab.Problem.from_yaml(example_nonlinear_monotone_yaml)
+    petab_problem = petab.Problem.from_yaml(example_semiquantitative_yaml)
     # Set seed for reproducibility.
     np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
@@ -87,7 +86,7 @@ def test_optimization(inner_options: Dict):
 
 
 def _create_problem(
-    petab_problem: petab.Problem, option: Dict
+    petab_problem: petab.Problem, option: dict
 ) -> pypesto.Problem:
     """Creates the spline pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(
@@ -105,7 +104,7 @@ def _create_problem(
 
 def test_spline_calculator_and_objective():
     """Test the spline calculation of objective values."""
-    petab_problem = petab.Problem.from_yaml(example_nonlinear_monotone_yaml)
+    petab_problem = petab.Problem.from_yaml(example_semiquantitative_yaml)
 
     problems = {}
     options = {
@@ -284,8 +283,11 @@ def _inner_problem_exp():
         for par_index in range(n_spline_pars)
     ]
 
-    inner_problem = SplineInnerProblem(
-        xs=inner_parameters, data=[data], spline_ratio=spline_ratio
+    inner_problem = SemiquantProblem(
+        xs=inner_parameters,
+        data=[data],
+        edatas=None,
+        spline_ratio=spline_ratio,
     )
 
     return inner_problem, expected_values, simulation, sigma
@@ -310,7 +312,7 @@ def test_spline_inner_solver():
     results = {}
 
     for minimal_diff, option in options.items():
-        inner_solvers[minimal_diff] = SplineInnerSolver(
+        inner_solvers[minimal_diff] = SemiquantInnerSolver(
             options=option,
         )
 

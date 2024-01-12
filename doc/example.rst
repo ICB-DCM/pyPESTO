@@ -51,10 +51,10 @@ Algorithms and features
    example/store.ipynb
    example/model_selection.ipynb
    example/julia.ipynb
-   example/hierarchical.ipynb
-   example/ordinal.ipynb
-   example/censored.ipynb
-   example/nonlinear_monotone.ipynb
+   example/relative_data.ipynb
+   example/ordinal_data.ipynb
+   example/censored_data.ipynb
+   example/semiquantitative_data.ipynb
 
 Application examples
 --------------------

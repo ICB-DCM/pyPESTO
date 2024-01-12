@@ -24,10 +24,10 @@ nbs_1=(
   'custom_objective_function.ipynb'
   'store.ipynb'
   'synthetic_data.ipynb'
-  'hierarchical.ipynb'
-  'ordinal.ipynb'
-  'censored.ipynb'
-  'nonlinear_monotone.ipynb'
+  'relative_data.ipynb'
+  'ordinal_data.ipynb'
+  'censored_data.ipynb'
+  'semiquantitative_data.ipynb'
 )
 
 # Sampling notebooks

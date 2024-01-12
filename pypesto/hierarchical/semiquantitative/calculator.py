@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, List, Sequence, Tuple
+from typing import Sequence
 
 import numpy as np
 
@@ -27,8 +27,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .problem import SplineInnerProblem
-from .solver import SplineInnerSolver
+from .problem import SemiquantProblem
+from .solver import SemiquantInnerSolver
 
 try:
     import amici
@@ -37,7 +37,7 @@ except ImportError:
     pass
 
 
-class SplineAmiciCalculator(AmiciCalculator):
+class SemiquantCalculator(AmiciCalculator):
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -46,8 +46,8 @@ class SplineAmiciCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: SplineInnerProblem,
-        inner_solver: SplineInnerSolver = None,
+        inner_problem: SemiquantProblem,
+        inner_solver: SemiquantInnerSolver = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -63,7 +63,7 @@ class SplineAmiciCalculator(AmiciCalculator):
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = SplineInnerSolver()
+            inner_solver = SemiquantInnerSolver()
         self.inner_solver = inner_solver
 
     def initialize(self):
@@ -71,23 +71,19 @@ class SplineAmiciCalculator(AmiciCalculator):
         self.inner_solver.initialize()
         self.inner_problem.initialize()
 
-    def get_inner_parameter_ids(self) -> List[str]:
-        """Get the ids of the inner parameters."""
-        return self.inner_problem.get_x_ids()
-
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int, ...],
+        x_dct: dict,
+        sensi_orders: tuple[int, ...],
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: List['amici.ReturnData'] = None,
+        rdatas: list['amici.ReturnData'] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -186,12 +182,8 @@ class SplineAmiciCalculator(AmiciCalculator):
         # meaningful inner parameters, so we better just fail early.
         if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
-            # if the gradient was requested,
-            # we need to provide some value for it
             if 1 in sensi_orders:
-                inner_result[GRAD] = np.full(
-                    shape=len(x_ids), fill_value=np.nan
-                )
+                inner_result[GRAD] = np.full(shape=dim, fill_value=np.nan)
             return filter_return_dict(inner_result)
 
         sim = [rdata[AMICI_Y] for rdata in rdatas]
