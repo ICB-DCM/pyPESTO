@@ -248,7 +248,14 @@ class InnerCalculatorCollector(AmiciCalculator):
         ]
 
     def get_interpretable_inner_par_ids(self) -> list[str]:
-        """Return the ids of interpretable inner parameters of all inner problems."""
+        """Return the ids of interpretable inner parameters of all inner problems.
+
+        Interpretable parameters need to be easily interpretable by the user.
+        Examples are scaling factors, offsets, or noise parameters. An example
+        of a non-interpretable inner parameters are spline heights of spline
+        approximation for semiquantitative data: it is hard to interpret what
+        the spline heights are just by looking at the parameter value.
+        """
         return [
             parameter_id
             for inner_calculator in self.inner_calculators

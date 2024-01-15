@@ -793,6 +793,7 @@ class PetabImporter(AmiciObjectBuilder):
             startpoint_method=self.create_startpoint_method(
                 **startpoint_kwargs
             ),
+            hierarchical=self._hierarchical,
             **problem_kwargs,
         )
 

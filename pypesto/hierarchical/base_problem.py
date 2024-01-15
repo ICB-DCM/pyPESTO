@@ -74,7 +74,7 @@ class InnerProblem:
 
         Interpretable parameters need to be easily interpretable by the user.
         Examples are scaling factors, offsets, or noise parameters. An example
-        for a non-interpretable inner parameters are spline heights of spline
+        of a non-interpretable inner parameters are spline heights of spline
         approximation for semiquantitative data: it is hard to interpret what
         the spline heights are just by looking at the parameter value.
         """

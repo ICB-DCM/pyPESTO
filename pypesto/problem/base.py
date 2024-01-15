@@ -72,6 +72,20 @@ class Problem:
     startpoint_method:
         Method for how to choose start points. ``False`` means the optimizer
         does not require start points, e.g. for the ``PyswarmOptimizer``.
+    hierarchical:
+        A flag indicating whether the problem is hierarchical. If True,
+        the objective function's calculator will collect the objective
+        values of all inner optimization problems.
+    inner_x_names:
+        Names of the inner optimization parameters. Only relevant if
+        hierarchical is True. Contains the names of easily interpretable
+        inner parameters only, e.g. noise parameters, scaling factors, offsets.
+    inner_lb, inner_ub:
+        The lower and upper bounds for the inner optimization parameters.
+        Only relevant if hierarchical is True. Contains the bounds of easily
+        interpretable inner parameters only, e.g. noise parameters, scaling
+        factors, offsets.
+
 
     Notes
     -----
@@ -103,6 +117,10 @@ class Problem:
         ub_init: Union[np.ndarray, List[float], None] = None,
         copy_objective: bool = True,
         startpoint_method: Union[StartpointMethod, Callable, bool] = None,
+        hierarchical: bool = False,
+        inner_x_names: Optional[Iterable[str]] = None,
+        inner_lb: Optional[Union[np.ndarray, List[float]]] = None,
+        inner_ub: Optional[Union[np.ndarray, List[float]]] = None,
     ):
         if copy_objective:
             objective = copy.deepcopy(objective)
@@ -165,6 +183,29 @@ class Problem:
             startpoint_method = uniform
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
+
+        self.hierarchical = hierarchical
+
+        if inner_x_names is None and hierarchical:
+            inner_x_names = (
+                self.objective.calculator.get_interpretable_inner_par_ids()
+            )
+        if inner_x_names is not None and len(set(inner_x_names)) != len(
+            inner_x_names
+        ):
+            raise ValueError("Parameter names inner_x_names must be unique")
+        self.inner_x_names = inner_x_names
+
+        if (inner_lb is None or inner_ub is None) and hierarchical:
+            (
+                default_inner_lb,
+                default_inner_ub,
+            ) = self.objective.calculator.get_interpretable_inner_par_bounds()
+            inner_lb = default_inner_lb if inner_lb is None else inner_lb
+            inner_ub = default_inner_ub if inner_ub is None else inner_ub
+
+        self.inner_lb = np.array(inner_lb)
+        self.inner_ub = np.array(inner_ub)
 
     @property
     def lb(self) -> np.ndarray:
