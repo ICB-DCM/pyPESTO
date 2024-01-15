@@ -45,7 +45,7 @@ from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
-from ..problem import Problem
+from ..problem import HierarchicalProblem, Problem
 from ..result import PredictionResult
 from ..startpoint import CheckedStartpoints, StartpointMethod
 
@@ -780,7 +780,12 @@ class PetabImporter(AmiciObjectBuilder):
                 )
             objective = AggregatedObjective([objective, prior])
 
-        problem = Problem(
+        if self._hierarchical:
+            problem_class = HierarchicalProblem
+        else:
+            problem_class = Problem
+
+        problem = problem_class(
             objective=objective,
             lb=lb,
             ub=ub,
@@ -793,7 +798,6 @@ class PetabImporter(AmiciObjectBuilder):
             startpoint_method=self.create_startpoint_method(
                 **startpoint_kwargs
             ),
-            hierarchical=self._hierarchical,
             **problem_kwargs,
         )
 

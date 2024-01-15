@@ -8,3 +8,4 @@ describing the problem to be solved.
 """
 
 from .base import Problem
+from .hierarchical import HierarchicalProblem
