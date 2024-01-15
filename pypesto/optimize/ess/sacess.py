@@ -482,7 +482,6 @@ class SacessWorker:
     _loglevel: Logging level for sacess
     _ess_loglevel: Logging level for ESS runs
     _tmp_result_file: Path of a temporary file to be created.
-
     """
 
     def __init__(

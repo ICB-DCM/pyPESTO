@@ -383,17 +383,17 @@ class ESSOptimizer:
     def _combine_solutions(self) -> tuple[np.array, np.array]:
         """Combine solutions and evaluate.
 
-        Creates the next generation from the RefSet by pair-wise combinations
+        Creates the next generation from the RefSet by pair-wise combination
         of all RefSet members. Creates ``RefSet.dim ** 2 - RefSet.dim`` new
         parameter vectors, tests them, and keeps the best child of each parent.
 
         Returns
         -------
         y:
-            Contains the best of all pairwise combinations of all RefSet
-            members, for each RefSet members.
+            The next generation of parameter vectors
+            (`dim_refset` x `dim_problem`).
         fy:
-            The corresponding objective values.
+            The objective values corresponding to the parameters in `y`.
         """
         y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
