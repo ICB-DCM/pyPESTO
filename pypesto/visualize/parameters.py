@@ -462,9 +462,10 @@ def _handle_inner_inputs(
     inner_lb = None
     inner_ub = None
 
-    if (
-        any(inner_x is not None for inner_x in inner_xs)
-        and result.problem.hierarchical
+    from ..problem import HierarchicalProblem
+
+    if any(inner_x is not None for inner_x in inner_xs) and isinstance(
+        result.problem, HierarchicalProblem
     ):
         inner_xs_names = result.problem.inner_x_names
         # replace None with a list of nans

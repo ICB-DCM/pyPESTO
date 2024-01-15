@@ -252,9 +252,9 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         Interpretable parameters need to be easily interpretable by the user.
         Examples are scaling factors, offsets, or noise parameters. An example
-        of a non-interpretable inner parameters are spline heights of spline
-        approximation for semiquantitative data: it is hard to interpret what
-        the spline heights are just by looking at the parameter value.
+        of non-interpretable inner parameters is the spline heights of spline
+        approximation for semiquantitative data. It is challenging to interpret
+        the meaning of these parameters based solely on their value.
         """
         return [
             parameter_id

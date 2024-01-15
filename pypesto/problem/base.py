@@ -72,10 +72,6 @@ class Problem:
     startpoint_method:
         Method for how to choose start points. ``False`` means the optimizer
         does not require start points, e.g. for the ``PyswarmOptimizer``.
-    hierarchical:
-        A flag indicating whether the problem is hierarchical. If True,
-        the objective function's calculator will collect the objective
-        values of all inner optimization problems.
 
     Notes
     -----
@@ -170,9 +166,6 @@ class Problem:
             startpoint_method = uniform
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
-
-        # a flag indicating whether the problem is hierarchical
-        self.hierarchical = hierarchical
 
     @property
     def lb(self) -> np.ndarray:

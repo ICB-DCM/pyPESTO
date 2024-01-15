@@ -43,7 +43,7 @@ class HierarchicalProblem(Problem):
         inner_ub: Optional[Union[np.ndarray, List[float]]] = None,
         **problem_kwargs: dict,
     ):
-        super().__init__(**problem_kwargs, hierarchical=True)
+        super().__init__(**problem_kwargs)
 
         if inner_x_names is None:
             inner_x_names = (
@@ -60,6 +60,13 @@ class HierarchicalProblem(Problem):
             ) = self.objective.calculator.get_interpretable_inner_par_bounds()
             inner_lb = default_inner_lb if inner_lb is None else inner_lb
             inner_ub = default_inner_ub if inner_ub is None else inner_ub
+
+        if len(inner_lb) != len(inner_ub):
+            raise ValueError("Parameter bounds must have same length")
+        if len(inner_lb) != len(inner_x_names):
+            raise ValueError(
+                "Parameter bounds must have same length as parameter names"
+            )
 
         self.inner_lb = np.array(inner_lb)
         self.inner_ub = np.array(inner_ub)
