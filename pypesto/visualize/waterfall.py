@@ -22,7 +22,7 @@ from .reference_points import ReferencePoint, create_references
 def waterfall(
     results: Union[Result, Sequence[Result]],
     ax: Optional[plt.Axes] = None,
-    size: Optional[Tuple[float]] = (18.5, 10.5),
+    size: Optional[tuple[float, float]] = (18.5, 10.5),
     y_limits: Optional[Tuple[float]] = None,
     scale_y: Optional[str] = 'log10',
     offset_y: Optional[float] = None,
