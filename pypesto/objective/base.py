@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
-from ..history import NoHistory
+from ..history import NoHistory, create_history
 from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
 ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
@@ -118,6 +118,10 @@ class ObjectiveBase(ABC):
         optimization, and can e.g. reset the objective memory.
         By default does nothing.
         """
+
+    def create_history(self, id, x_names, options):
+        """See `history.generate.create_history` documentation."""
+        return create_history(id, x_names, options)
 
     def __call__(
         self,
