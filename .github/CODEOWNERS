@@ -1,8 +1,9 @@
 # see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# default owners
-* @ICB-DCM/pypesto-maintainers
+# default owners = active maintainers
+* @Doresic @PaulJonasJost @m-philipps
 
+# Examples
 /doc/example/censored_data.ipynb @Doresic
 /doc/example/hdf5_storage.ipynb @PaulJonasJost
 /doc/example/julia.ipynb @PaulJonasJost
@@ -16,6 +17,8 @@
 /doc/example/store.ipynb @PaulJonasJost
 /doc/example/synthetic_data.ipynb @dilpath
 /docker/ @dweindl
+
+# Code
 /pypesto/engine/ @PaulJonasJost
 /pypesto/engine/mpi_pool.py @PaulJonasJost
 /pypesto/ensemble/ @dilpath @PaulJonasJost
@@ -39,6 +42,8 @@
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
 /pypesto/visualize/ @stephanmg @m-philipps
+
+# Tests
 /test/base/ @PaulJonasJost @m-philipps
 /test/doc/ @PaulJonasJost
 /test/hierarchical/ @dweindl @doresic
