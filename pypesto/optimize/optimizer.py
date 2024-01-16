@@ -12,12 +12,7 @@ import numpy as np
 import scipy.optimize
 
 from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES
-from ..history import (
-    HistoryOptions,
-    NoHistory,
-    OptimizerHistory,
-    create_history,
-)
+from ..history import HistoryOptions, NoHistory, OptimizerHistory
 from ..objective import Objective
 from ..problem import Problem
 from ..result import OptimizerResult
@@ -102,7 +97,7 @@ def history_decorator(minimize):
         objective.initialize()
 
         # initialize the history
-        history = create_history(
+        history = objective.create_history(
             id=id,
             x_names=[problem.x_names[ix] for ix in problem.x_free_indices],
             options=history_options,

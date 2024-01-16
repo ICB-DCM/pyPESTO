@@ -232,6 +232,12 @@ SUFFIXES_CSV = ["csv"]
 SUFFIXES_HDF5 = ["hdf5", "h5"]
 SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
 
+CPU_TIME_TOTAL = 'cpu_time_total'
+PREEQ_CPU_TIME = 'preeq_cpu_time'
+PREEQ_CPU_TIME_BACKWARD = 'preeq_cpu_timeB'
+POSTEQ_CPU_TIME = 'posteq_cpu_time'
+POSTEQ_CPU_TIME_BACKWARD = 'posteq_cpu_timeB'
+
 
 ###############################################################################
 # PRIOR
