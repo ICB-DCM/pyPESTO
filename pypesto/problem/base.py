@@ -103,7 +103,6 @@ class Problem:
         ub_init: Union[np.ndarray, List[float], None] = None,
         copy_objective: bool = True,
         startpoint_method: Union[StartpointMethod, Callable, bool] = None,
-        hierarchical: bool = False,
     ):
         if copy_objective:
             objective = copy.deepcopy(objective)
