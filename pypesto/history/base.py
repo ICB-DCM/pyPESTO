@@ -249,7 +249,7 @@ class HistoryBase(ABC):
         trim: bool = False,
     ) -> Union[Sequence[float], float]:
         """
-        Cumulative execution times.
+        Cumulative execution times [s].
 
         Takes as parameter an index or indices and returns corresponding trace
         values. If only a single value is requested, the list is flattened.

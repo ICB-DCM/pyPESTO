@@ -10,6 +10,7 @@ import tempfile
 import warnings
 from dataclasses import dataclass
 from functools import partial
+from importlib.metadata import version
 from typing import (
     Any,
     Callable,
@@ -64,7 +65,7 @@ try:
     )
     from petab.models import MODEL_TYPE_SBML
 except ImportError:
-    pass
+    amici = None
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class PetabImporter(AmiciObjectBuilder):
     `PEtab documentation <https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions>`_.
     """  # noqa
 
-    MODEL_BASE_DIR = "amici_models"
+    MODEL_BASE_DIR = f"amici_models/{version('amici') if amici else ''}"
 
     def __init__(
         self,
