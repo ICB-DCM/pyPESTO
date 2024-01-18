@@ -302,6 +302,19 @@ class Hdf5History(HistoryBase):
         except KeyError:
             return None
 
+    @staticmethod
+    def _simulation_to_values(x, result, used_time):
+        values = {
+            X: x,
+            FVAL: result[FVAL],
+            GRAD: result[GRAD],
+            RES: result[RES],
+            SRES: result[SRES],
+            HESS: result[HESS],
+            TIME: used_time,
+        }
+        return values
+
     @with_h5_file("a")
     def _update_trace(
         self,
@@ -322,15 +335,7 @@ class Hdf5History(HistoryBase):
 
         used_time = time.time() - self.start_time
 
-        values = {
-            X: x,
-            FVAL: result[FVAL],
-            GRAD: result[GRAD],
-            RES: result[RES],
-            SRES: result[SRES],
-            HESS: result[HESS],
-            TIME: used_time,
-        }
+        values = self._simulation_to_values(x, result, used_time)
 
         iteration = self._require_group().attrs[N_ITERATIONS]
 

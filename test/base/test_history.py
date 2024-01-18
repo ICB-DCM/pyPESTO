@@ -14,7 +14,9 @@ from numpy.testing import assert_array_almost_equal
 import pypesto
 import pypesto.optimize as optimize
 from pypesto import (
+    CsvAmiciHistory,
     CsvHistory,
+    Hdf5AmiciHistory,
     Hdf5History,
     HistoryOptions,
     MemoryHistory,
@@ -687,6 +689,70 @@ def test_hdf5_history_mp():
                                 mem_entry_trace[iteration],
                                 hdf5_entry_trace[iteration],
                             )
+
+
+def test_hdf5_amici_history():
+    objective1 = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
+    objective2 = load_amici_objective('conversion_reaction')[0]
+    lb = -2 * np.ones((1, 2))
+    ub = 2 * np.ones((1, 2))
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub)
+    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub)
+
+    optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+
+    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+        for f_ext, amici_history_class in zip(
+            [".csv", ".hdf5"], [CsvAmiciHistory, Hdf5AmiciHistory]
+        ):
+            _, fn = tempfile.mkstemp(f_ext, '{id}', dir=f"{tmpdirname}")
+
+            history_options = pypesto.HistoryOptions(
+                trace_record=True, storage_file=fn
+            )
+
+            result1 = pypesto.optimize.minimize(
+                problem=problem1,
+                optimizer=optimizer,
+                n_starts=1,
+                history_options=history_options,
+                progress_bar=False,
+            )
+            assert not isinstance(
+                result1.optimize_result.list[0].history, amici_history_class
+            )
+            os.remove(fn)
+            os.remove(fn.replace('{id}', '0'))
+
+            # optimizing with amici history saved in hdf5
+            result2 = pypesto.optimize.minimize(
+                problem=problem2,
+                optimizer=optimizer,
+                n_starts=1,
+                history_options=history_options,
+                progress_bar=False,
+            )
+            history = result2.optimize_result.list[0].history
+            assert isinstance(history, amici_history_class)
+
+            assert np.all(
+                history.get_cpu_time_total_trace()
+                >= history.get_preeq_time_trace()
+            )
+            assert np.all(
+                history.get_cpu_time_total_trace()
+                >= history.get_preeq_timeB_trace()
+            )
+            assert np.all(
+                history.get_cpu_time_total_trace()
+                >= history.get_posteq_time_trace()
+            )
+            assert np.all(
+                history.get_cpu_time_total_trace()
+                >= history.get_posteq_timeB_trace()
+            )
 
 
 def test_trim_history():

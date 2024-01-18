@@ -248,7 +248,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         ]
 
     def get_interpretable_inner_par_ids(self) -> list[str]:
-        """Return the ids of interpretable inner parameters of all inner problems."""
+        """Return the ids of interpretable inner parameters of all inner problems.
+
+        See :func:`InnerProblem.get_interpretable_x_ids`.
+        """
         return [
             parameter_id
             for inner_calculator in self.inner_calculators

@@ -10,6 +10,7 @@ import tempfile
 import warnings
 from dataclasses import dataclass
 from functools import partial
+from importlib.metadata import version
 from typing import (
     Any,
     Callable,
@@ -45,7 +46,7 @@ from ..objective import AggregatedObjective, AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
-from ..problem import Problem
+from ..problem import HierarchicalProblem, Problem
 from ..result import PredictionResult
 from ..startpoint import CheckedStartpoints, StartpointMethod
 
@@ -64,7 +65,7 @@ try:
     )
     from petab.models import MODEL_TYPE_SBML
 except ImportError:
-    pass
+    amici = None
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +82,7 @@ class PetabImporter(AmiciObjectBuilder):
     `PEtab documentation <https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions>`_.
     """  # noqa
 
-    MODEL_BASE_DIR = "amici_models"
+    MODEL_BASE_DIR = f"amici_models/{version('amici') if amici else ''}"
 
     def __init__(
         self,
@@ -780,7 +781,12 @@ class PetabImporter(AmiciObjectBuilder):
                 )
             objective = AggregatedObjective([objective, prior])
 
-        problem = Problem(
+        if self._hierarchical:
+            problem_class = HierarchicalProblem
+        else:
+            problem_class = Problem
+
+        problem = problem_class(
             objective=objective,
             lb=lb,
             ub=ub,
