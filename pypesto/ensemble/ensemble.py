@@ -94,8 +94,6 @@ class EnsemblePrediction:
             array of potential upper bounds for the parameters
         """
         self.predictor = predictor
-        if predictor is None:
-            logger.info("This `EnsemblePrediction` has no predictor.")
         self.prediction_id = prediction_id
         self.prediction_results = prediction_results
         if prediction_results is None:
