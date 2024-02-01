@@ -244,6 +244,7 @@ class MethodCaller:
         # TODO deprecated
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
         model_problem_options: dict = None,
+        previously_calibrated_models=None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
@@ -254,6 +255,10 @@ class MethodCaller:
         self.predecessor_model = predecessor_model
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
+
+        self.previously_calibrated_models = {}
+        if previously_calibrated_models is not None:
+            self.previously_calibrated_models = previously_calibrated_models
 
         self.logger = MethodLogger()
 
@@ -381,8 +386,19 @@ class MethodCaller:
         #      `self.select_first_improvement`)
         newly_calibrated_models = {}
         for candidate_model in candidate_space.models:
-            # autoruns calibration
-            self.new_model_problem(model=candidate_model)
+            # If the user has previously calibrated this model,
+            # skip calibration.
+            if candidate_model.get_hash() in self.previously_calibrated_models:
+                _model_problem = self.new_model_problem(
+                    model=candidate_model,
+                    autorun=False,
+                )
+                _model_problem.set_result_from_model(
+                    self.previously_calibrated_models[candidate_model.get_hash()]
+                )
+            else:
+                self.new_model_problem(model=candidate_model)
+
             newly_calibrated_models[
                 candidate_model.get_hash()
             ] = candidate_model
