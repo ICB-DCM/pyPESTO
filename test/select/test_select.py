@@ -24,12 +24,14 @@ import pypesto.visualize.select
 from pypesto.select import model_problem
 from pypesto.select.misc import correct_x_guesses
 
-# Options sent to `pypesto.optimize.optimize.minimize`, to reduce run time.
-minimize_options = {
-    'engine': pypesto.engine.MultiProcessEngine(),
-    'n_starts': 20,
-    'filename': None,
-    'progress_bar': False,
+model_problem_options = {
+    # Options sent to `pypesto.optimize.optimize.minimize`, to reduce run time.
+    'minimize_options': {
+        'engine': pypesto.engine.MultiProcessEngine(),
+        'n_starts': 20,
+        'filename': None,
+        'progress_bar': False,
+    }
 }
 # Tolerances for the differences between expected and test values.
 tolerances = {
@@ -137,7 +139,7 @@ def test_problem_select(pypesto_select_problem):
     for expected_result in expected_results:
         best_model, _ = pypesto_select_problem.select(
             criterion=criterion,
-            minimize_options=minimize_options,
+            model_problem_options=model_problem_options,
             predecessor_model=best_model,
             candidate_space=candidate_space,
         )
@@ -186,7 +188,7 @@ def test_problem_select_to_completion(pypesto_select_problem):
         criterion=Criterion.BIC,
         select_first_improvement=True,
         startpoint_latest_mle=True,
-        minimize_options=minimize_options,
+        model_problem_options=model_problem_options,
         candidate_space=candidate_space,
     )
 
@@ -258,7 +260,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
         method=Method.FORWARD,
         criterion=criterion,
         predecessor_models=initial_models,
-        minimize_options=minimize_options,
+        model_problem_options=model_problem_options,
     )
 
     expected_best_model_subspace_id = 'M1_3'
@@ -336,7 +338,7 @@ def test_postprocessors(petab_select_problem):
     best_model_1, newly_calibrated_models_1 = pypesto_select_problem.select(
         method=Method.FORWARD,
         criterion=Criterion.AIC,
-        minimize_options=minimize_options,
+        model_problem_options=model_problem_options,
     )
 
     expected_newly_calibrated_models_subspace_ids = ['M1_0']
@@ -403,7 +405,7 @@ def test_vis(pypesto_select_problem):
     best_models = pypesto_select_problem.select_to_completion(
         method=Method.FORWARD,
         criterion=criterion,
-        minimize_options=minimize_options,
+        model_problem_options=model_problem_options,
     )
     labels = {
         model.get_hash(): model.model_subspace_id
