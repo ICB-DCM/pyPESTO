@@ -862,9 +862,12 @@ def _calculate_regularization_for_group(
     c_squares_sum = np.sum(c**2)
     c_dot_xi = np.dot(c, xi)
     # Calculate the optimal linear function offset
-    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
-        N * c_squares_sum - c_sum**2
-    )
+    if np.isclose(N * c_squares_sum - c_sum**2, 0):
+        beta_opt = xi_sum / N
+    else:
+        beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+            N * c_squares_sum - c_sum**2
+        )
 
     # If the offset is smaller than 0, we set it to 0
     if beta_opt < 0:
@@ -900,9 +903,12 @@ def _calculate_regularization_gradient_for_group(
     c_dot_xi = np.dot(c, xi)
 
     # Calculate the optimal linear function offset
-    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
-        N * c_squares_sum - c_sum**2
-    )
+    if np.isclose(N * c_squares_sum - c_sum**2, 0):
+        beta_opt = xi_sum / N
+    else:
+        beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+            N * c_squares_sum - c_sum**2
+        )
 
     # If the offset is smaller than 0, we set it to 0.
     # Otherwise, we calculate the gradient of the offset.
