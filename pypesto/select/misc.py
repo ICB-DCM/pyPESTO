@@ -99,6 +99,22 @@ def correct_x_guesses(
     should be corrected by replacing them with
     - their corresponding values in `row` if possible, else
     - their corresponding nominal values in the `petab_problem.parameter_df`.
+
+    Parameters
+    ----------
+    x_guesses:
+        The startpoints to correct.
+    model:
+        The startpoints will be corrected to match this model.
+    petab_problem:
+        The model's corresponding PEtab problem. If this is not provided,
+        it will be created from the `model`.
+    hierarchical:
+        Whether hierarchical optimization is used.
+
+    Returns
+    -------
+    The corrected startpoint guesses.
     """
     # TODO reconsider whether correcting is a good idea (`x_guess` is no longer
     # the latest MLE then). Similar todo exists in
