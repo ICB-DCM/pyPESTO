@@ -15,7 +15,7 @@ Release notes
     * GHA/Codeowner changes (#1260, #1261, #1259, #1262, #1285)
     * Update utility functions (#1243)
     * Refactor progress bars (#1272)
-    * Clear Notebook output(#1246, #1277, #1274, #1271, #1276, #1278,)
+    * Clear Notebook output(#1246, #1277, #1274, #1271, #1276, #1278)
 * Optimize
     * (Sac)ESSOptimizer: History of best objective values (#1212)
     * Fix missing fixed parameters in scatter search results (#1265)
