@@ -1,4 +1,5 @@
 """Utility function for profile module."""
+
 from typing import Any, Iterable
 
 import numpy as np

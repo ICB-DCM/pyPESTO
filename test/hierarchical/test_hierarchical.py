@@ -1,4 +1,5 @@
 """Tests for hierarchical optimization."""
+
 import copy
 import time
 
@@ -353,12 +354,16 @@ def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
             ixs=mask,
         )
         for inner_parameter_id, inner_parameter_type in [
-            ('offset_', InnerParameterType.OFFSET)
-            if add_offset
-            else (None, None),
-            ('scaling_', InnerParameterType.SCALING)
-            if add_scaling
-            else (None, None),
+            (
+                ('offset_', InnerParameterType.OFFSET)
+                if add_offset
+                else (None, None)
+            ),
+            (
+                ('scaling_', InnerParameterType.SCALING)
+                if add_scaling
+                else (None, None)
+            ),
             ('sigma_', InnerParameterType.SIGMA),
         ]
         if inner_parameter_id is not None

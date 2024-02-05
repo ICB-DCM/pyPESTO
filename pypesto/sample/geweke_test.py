@@ -1,4 +1,5 @@
 """Helper function for `geweke_test`."""
+
 import logging
 import warnings
 from typing import Tuple

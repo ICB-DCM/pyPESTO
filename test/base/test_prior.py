@@ -62,9 +62,11 @@ def test_mode(scale, prior_type_list):
         get_parameter_prior_dict(
             iprior,
             prior_type,
-            [1, 2]
-            if prior_type in ['uniform', 'parameterScaleUniform']
-            else [1, 1],
+            (
+                [1, 2]
+                if prior_type in ['uniform', 'parameterScaleUniform']
+                else [1, 1]
+            ),
             scale,
         )
         for iprior, prior_type in enumerate(prior_type_list)
@@ -141,9 +143,11 @@ def test_derivatives(prior_type_list, scale):
         get_parameter_prior_dict(
             iprior,
             prior_type,
-            [-1, 1]
-            if prior_type in ['uniform', 'parameterScaleUniform']
-            else [1, 1],
+            (
+                [-1, 1]
+                if prior_type in ['uniform', 'parameterScaleUniform']
+                else [1, 1]
+            ),
             scale,
         )
         for iprior, prior_type in enumerate(prior_type_list)

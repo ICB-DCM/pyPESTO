@@ -1,4 +1,5 @@
 """Inner optimization problem in hierarchical optimization."""
+
 import copy
 import logging
 from typing import Union
@@ -104,9 +105,11 @@ class InnerProblem:
             or on linear scale (``False``).
         """
         return {
-            x.inner_parameter_id: scale_value(x.dummy_value, x.scale)
-            if scaled
-            else x.dummy_value
+            x.inner_parameter_id: (
+                scale_value(x.dummy_value, x.scale)
+                if scaled
+                else x.dummy_value
+            )
             for x in self.xs.values()
         }
 

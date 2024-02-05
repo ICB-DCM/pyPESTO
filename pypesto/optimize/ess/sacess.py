@@ -1,4 +1,5 @@
 """Self-adaptive cooperative enhanced scatter search (SACESS)."""
+
 import itertools
 import logging
 import logging.handlers

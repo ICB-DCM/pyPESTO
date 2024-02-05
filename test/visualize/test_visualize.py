@@ -236,10 +236,12 @@ def post_processor(
     routines.
     """
     outputs = [
-        amici_output[output_type]
-        if amici_output[pypesto.C.AMICI_STATUS] == 0
-        else np.full(
-            (len(amici_output[pypesto.C.AMICI_T]), len(output_ids)), np.nan
+        (
+            amici_output[output_type]
+            if amici_output[pypesto.C.AMICI_STATUS] == 0
+            else np.full(
+                (len(amici_output[pypesto.C.AMICI_T]), len(output_ids)), np.nan
+            )
         )
         for amici_output in amici_outputs
     ]

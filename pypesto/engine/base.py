@@ -1,4 +1,5 @@
 """Abstract engine base class."""
+
 import abc
 from typing import Any
 

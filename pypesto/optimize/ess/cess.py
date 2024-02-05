@@ -1,4 +1,5 @@
 """Cooperative Enhanced Scatter Search."""
+
 import logging
 import multiprocessing
 import os

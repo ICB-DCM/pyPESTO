@@ -1,4 +1,5 @@
 """Contains the PetabImporter class."""
+
 from __future__ import annotations
 
 import importlib
