@@ -25,6 +25,7 @@ Release notes
 * Select
     * Allow for hierarchical problems (#1241)
     * custom minimize method (#1264)
+    * Set estimated parameters in petab_select.Models (#1287)
 * Hierarchical
     * Log space startpoint sampling (#1242)
     * Support for box constraints on offset and scaling parameters (#1238)
