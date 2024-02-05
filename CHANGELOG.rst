@@ -10,7 +10,7 @@ Release notes
 -------------------
 
 * General
-    * Stabilize tests (#1240, #1254, #1300, #1302)
+    * Stabilize tests (#1240, #1254, #1300, #1302, #1303)
     * Update type annotations and documentations (#1239, #1248, #1255, #1258, #1251, #1268, #1275)
     * GHA/Codeowner changes (#1260, #1261, #1259, #1262, #1285)
     * Update utility functions (#1243)
@@ -25,6 +25,7 @@ Release notes
 * Select
     * Allow for hierarchical problems (#1241)
     * custom minimize method (#1264)
+    * Set estimated parameters in petab_select.Models (#1287)
 * Hierarchical
     * Log space startpoint sampling (#1242)
     * Support for box constraints on offset and scaling parameters (#1238)

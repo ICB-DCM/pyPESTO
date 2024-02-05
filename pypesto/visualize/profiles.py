@@ -493,15 +493,15 @@ def process_profile_indices(
 
     # get the profiles, which should be plotted and sanitize, if not plottable
     if profile_indices is None:
-        profile_indices = list(plottable_indices)
+        profile_indices_ret = list(plottable_indices)
     else:
+        profile_indices_ret = list(profile_indices)
         for ind in profile_indices:
             if ind not in plottable_indices:
-                profile_indices = list(profile_indices)
-                profile_indices.remove(ind)
+                profile_indices_ret.remove(ind)
                 warn(
                     'Requested to plot profile for parameter index %i, '
                     'but profile has not been computed.' % ind
                 )
 
-    return profile_indices
+    return profile_indices_ret
