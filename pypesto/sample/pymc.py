@@ -1,4 +1,5 @@
 """Pymc v4 Sampler."""
+
 from __future__ import annotations
 
 import logging

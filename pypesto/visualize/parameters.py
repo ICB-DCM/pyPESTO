@@ -470,9 +470,11 @@ def _handle_inner_inputs(
         inner_xs_names = result.problem.inner_x_names
         # replace None with a list of nans
         inner_xs = [
-            np.full(len(inner_xs_names), np.nan)
-            if inner_xs_idx is None
-            else np.asarray(inner_xs_idx)
+            (
+                np.full(len(inner_xs_names), np.nan)
+                if inner_xs_idx is None
+                else np.asarray(inner_xs_idx)
+            )
             for inner_xs_idx in inner_xs
         ]
         # set bounds for inner parameters

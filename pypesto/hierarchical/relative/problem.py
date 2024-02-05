@@ -1,4 +1,5 @@
 """Inner optimization problem in hierarchical optimization."""
+
 import logging
 
 import numpy as np

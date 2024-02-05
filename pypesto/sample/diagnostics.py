@@ -1,4 +1,5 @@
 """Calculate different diagnostics of the sampling result."""
+
 import logging
 
 import numpy as np

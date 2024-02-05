@@ -1,4 +1,5 @@
 """Process a model selection :class:`ModelProblem` after calibration."""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt

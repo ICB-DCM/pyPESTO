@@ -195,9 +195,11 @@ def read_result_from_file(
         id=identifier,
         message='loaded from file',
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(opt_hist.history.get_time_trace())
-        if len(opt_hist.history)
-        else 0.0,
+        time=(
+            max(opt_hist.history.get_time_trace())
+            if len(opt_hist.history)
+            else 0.0
+        ),
     )
     result.id = identifier
     result = fill_result_from_history(

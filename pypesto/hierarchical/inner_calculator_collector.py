@@ -3,6 +3,7 @@
 In case of semi-quantitative or qualitative measurements, this class is used
 to collect hierarchical inner calculators for each data type and merge their results.
 """
+
 from __future__ import annotations
 
 import copy

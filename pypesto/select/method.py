@@ -1,4 +1,5 @@
 """Functionality related to using a PEtab Select model selection method."""
+
 import logging
 from dataclasses import dataclass
 from enum import Enum
@@ -299,9 +300,11 @@ class MethodCaller:
         self.method = (
             method
             if method is not None
-            else candidate_space.method
-            if candidate_space is not None
-            else self.petab_select_problem.method
+            else (
+                candidate_space.method
+                if candidate_space is not None
+                else self.petab_select_problem.method
+            )
         )
         # Require either a candidate space or a method.
         if candidate_space is None and self.method is None:

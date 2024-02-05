@@ -1,4 +1,5 @@
 """Definition of an optimal scaling calculator class."""
+
 import copy
 from typing import Sequence
 

@@ -1,4 +1,5 @@
 """Calibrate a PEtab Select model with pyPESTO."""
+
 import time
 from typing import Any, Callable, Optional
 
