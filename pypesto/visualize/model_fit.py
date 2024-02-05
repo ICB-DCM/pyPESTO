@@ -3,6 +3,7 @@ Visualization of the model fit after optimization.
 
 Currently only for PEtab problems.
 """
+
 import copy
 from typing import Sequence, Union
 

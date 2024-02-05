@@ -1,4 +1,5 @@
 """Manage all components of a pyPESTO model selection problem."""
+
 import warnings
 from typing import Any, Iterable, Optional
 

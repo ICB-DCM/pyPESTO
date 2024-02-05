@@ -1,4 +1,5 @@
 """Miscellaneous methods."""
+
 import logging
 from typing import Iterable
 

@@ -142,9 +142,11 @@ class PredictionResult:
         """
         # cast the result per condition
         self.conditions = [
-            cond
-            if isinstance(cond, PredictionConditionResult)
-            else PredictionConditionResult(**cond)
+            (
+                cond
+                if isinstance(cond, PredictionConditionResult)
+                else PredictionConditionResult(**cond)
+            )
             for cond in conditions
         ]
 

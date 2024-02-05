@@ -1,4 +1,5 @@
 """Definition of an optimal scaling parameter class."""
+
 import numpy as np
 import pandas as pd
 

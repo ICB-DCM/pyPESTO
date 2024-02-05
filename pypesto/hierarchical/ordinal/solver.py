@@ -1,4 +1,5 @@
 """Definition of an optimal scaling solver class."""
+
 import warnings
 
 import numpy as np
@@ -264,9 +265,11 @@ class OrdinalInnerSolver(InnerSolver):
                 par_opt_idx = par_opt_ids.index(par_opt)
                 par_sim_idx = par_sim_ids.index(par_sim)
                 par_edata_idx = [
-                    par_edata_indices.index(par_sim_idx)
-                    if par_sim_idx in par_edata_indices
-                    else None
+                    (
+                        par_edata_indices.index(par_sim_idx)
+                        if par_sim_idx in par_edata_indices
+                        else None
+                    )
                     for par_edata_indices in par_edatas_indices
                 ]
 
@@ -1231,9 +1234,11 @@ def calculate_censored_grad(
     )
     quantitative_sy = np.concatenate(
         [
-            sy_i[:, edata_idx, :][mask_i]
-            if edata_idx is not None
-            else np.full(sy_i[:, 0, :][mask_i].shape, 0)
+            (
+                sy_i[:, edata_idx, :][mask_i]
+                if edata_idx is not None
+                else np.full(sy_i[:, 0, :][mask_i].shape, 0)
+            )
             for sy_i, mask_i, edata_idx in zip(
                 sy, quantitative_ixs, par_edata_idx
             )
@@ -1241,9 +1246,11 @@ def calculate_censored_grad(
     )
     quantitative_ssigma = np.concatenate(
         [
-            ssigma_i[:, edata_idx, :][mask_i]
-            if edata_idx is not None
-            else np.full(ssigma_i[:, 0, :][mask_i].shape, 0)
+            (
+                ssigma_i[:, edata_idx, :][mask_i]
+                if edata_idx is not None
+                else np.full(ssigma_i[:, 0, :][mask_i].shape, 0)
+            )
             for ssigma_i, mask_i, edata_idx in zip(
                 ssigma, quantitative_ixs, par_edata_idx
             )

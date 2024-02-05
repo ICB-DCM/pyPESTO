@@ -1,4 +1,5 @@
 """Engines without parallelization."""
+
 from typing import Any
 
 from ..util import tqdm

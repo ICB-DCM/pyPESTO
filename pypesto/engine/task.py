@@ -1,4 +1,5 @@
 """Abstract Task class."""
+
 import abc
 from typing import Any
 

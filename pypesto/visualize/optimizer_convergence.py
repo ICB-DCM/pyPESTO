@@ -52,14 +52,16 @@ def optimizer_convergence(
 
     fvals = result.optimize_result.fval
     grad_norms = [
-        np.linalg.norm(
-            result.problem.get_reduced_vector(
-                grad, result.problem.x_free_indices
-            ),
-            2,
+        (
+            np.linalg.norm(
+                result.problem.get_reduced_vector(
+                    grad, result.problem.x_free_indices
+                ),
+                2,
+            )
+            if grad is not None
+            else np.NaN
         )
-        if grad is not None
-        else np.NaN
         for grad in result.optimize_result.grad
     ]
     msgs = result.optimize_result.message

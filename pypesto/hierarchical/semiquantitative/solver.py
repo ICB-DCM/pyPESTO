@@ -217,17 +217,21 @@ class SemiquantInnerSolver(InnerSolver):
                 grad = 0.0
 
                 sy_for_outer_parameter = [
-                    sy_cond[:, par_edata_indices.index(par_sim_idx), :]
-                    if par_sim_idx in par_edata_indices
-                    else np.zeros(sy_cond[:, 0, :].shape)
+                    (
+                        sy_cond[:, par_edata_indices.index(par_sim_idx), :]
+                        if par_sim_idx in par_edata_indices
+                        else np.zeros(sy_cond[:, 0, :].shape)
+                    )
                     for sy_cond, par_edata_indices in zip(
                         sy, par_edatas_indices
                     )
                 ]
                 ssigma_for_outer_parameter = [
-                    ssigma_cond[:, par_edata_indices.index(par_sim_idx), :]
-                    if par_sim_idx in par_edata_indices
-                    else np.zeros(ssigma_cond[:, 0, :].shape)
+                    (
+                        ssigma_cond[:, par_edata_indices.index(par_sim_idx), :]
+                        if par_sim_idx in par_edata_indices
+                        else np.zeros(ssigma_cond[:, 0, :].shape)
+                    )
                     for ssigma_cond, par_edata_indices in zip(
                         amici_ssigma, par_edatas_indices
                     )
@@ -292,9 +296,11 @@ class SemiquantInnerSolver(InnerSolver):
                     min_diff_all[0] = 0.0
                     mu = np.asarray(
                         [
-                            mu[i]
-                            if np.isclose(s[i] - min_diff_all[i], 0)
-                            else 0
+                            (
+                                mu[i]
+                                if np.isclose(s[i] - min_diff_all[i], 0)
+                                else 0
+                            )
                             for i in range(len(s))
                         ]
                     )

@@ -1,6 +1,5 @@
 """HDF5 history."""
 
-
 import contextlib
 import time
 from functools import wraps

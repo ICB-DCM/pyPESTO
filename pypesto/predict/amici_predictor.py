@@ -371,42 +371,52 @@ class AmiciPredictor:
             outputs_weights = []
             outputs_sigmay = []
             timepoints = [
-                amici_output[AMICI_T]
-                if amici_output[AMICI_STATUS] == 0
-                else np.full((amici_nt[i_condition],), np.nan)
+                (
+                    amici_output[AMICI_T]
+                    if amici_output[AMICI_STATUS] == 0
+                    else np.full((amici_nt[i_condition],), np.nan)
+                )
                 for i_condition, amici_output in enumerate(amici_outputs)
             ]
             # add outputs and sensitivities if requested
             if 0 in sensi_orders:
                 outputs = [
-                    amici_output[AMICI_Y]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    (
+                        amici_output[AMICI_Y]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             if 1 in sensi_orders:
                 outputs_sensi = [
-                    amici_output[AMICI_SY]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full(
-                        (amici_nt[i_condition], amici_np, amici_ny), np.nan
+                    (
+                        amici_output[AMICI_SY]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full(
+                            (amici_nt[i_condition], amici_np, amici_ny), np.nan
+                        )
                     )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             # add likelihood as weights if requested
             if include_llh_weights:
                 outputs_weights = [
-                    amici_output[AMICI_LLH]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.nan
+                    (
+                        amici_output[AMICI_LLH]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.nan
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             # add standard deviations if requested
             if include_sigmay:
                 outputs_sigmay = [
-                    amici_output[AMICI_SIGMAY]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full((1, amici_ny), np.nan)
+                    (
+                        amici_output[AMICI_SIGMAY]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full((1, amici_ny), np.nan)
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
 

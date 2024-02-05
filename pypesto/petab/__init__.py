@@ -4,6 +4,7 @@ PEtab
 
 pyPESTO support for the PEtab data format.
 """
+
 import warnings
 
 from .importer import PetabImporter

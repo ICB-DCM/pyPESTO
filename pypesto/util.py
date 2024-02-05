@@ -5,6 +5,7 @@ Utilities
 Package-wide utilities.
 
 """
+
 from numbers import Number
 from operator import itemgetter
 from typing import Any, Callable, Optional, Sequence, Tuple, Union
@@ -288,11 +289,13 @@ def delete_nan_inf(
             x = np.empty(
                 (
                     0,
-                    x.shape[1]
-                    if x.ndim == 2
-                    else x[0].shape[0]
-                    if x[0] is not None
-                    else xdim,
+                    (
+                        x.shape[1]
+                        if x.ndim == 2
+                        else x[0].shape[0]
+                        if x[0] is not None
+                        else xdim
+                    ),
                 )
             )
     return x, fvals[finite_fvals]
