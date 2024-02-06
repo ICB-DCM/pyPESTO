@@ -29,7 +29,7 @@ def minimize(
     startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     result: Result = None,
     engine: Engine = None,
-    progress_bar: bool = True,
+    progress_bar: bool = None,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
     filename: Union[str, Callable, None] = None,

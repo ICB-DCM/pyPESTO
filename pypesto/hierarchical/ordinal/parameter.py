@@ -1,4 +1,5 @@
 """Definition of an optimal scaling inner parameter class."""
+
 import logging
 from typing import Literal
 
@@ -8,13 +9,13 @@ from ...C import (
     RIGHT_CENSORED,
     InnerParameterType,
 )
-from ..parameter import InnerParameter
+from ..base_parameter import InnerParameter
 
 logger = logging.getLogger(__name__)
 
 
-class OptimalScalingParameter(InnerParameter):
-    """Inner parameter of the optimal scaling hierarchical optimization problem.
+class OrdinalParameter(InnerParameter):
+    """Inner parameter of the optimal scaling inner optimization problem for ordinal data.
 
     Attributes
     ----------
@@ -69,9 +70,9 @@ class OptimalScalingParameter(InnerParameter):
         See class attributes.
         """
         super().__init__(*args, **kwargs)
-        if self.inner_parameter_type != InnerParameterType.OPTIMAL_SCALING:
+        if self.inner_parameter_type != InnerParameterType.ORDINAL:
             raise ValueError(
-                f"For the OptimalScalingParameter class, the parameter type has to be {InnerParameterType.OPTIMAL_SCALING}."
+                f"For the OptimalScalingParameter class, the parameter type has to be {InnerParameterType.ORDINAL}."
             )
 
         if group is None:

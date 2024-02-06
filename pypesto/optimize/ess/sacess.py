@@ -1,4 +1,5 @@
 """Self-adaptive cooperative enhanced scatter search (SACESS)."""
+
 import itertools
 import logging
 import logging.handlers
@@ -49,6 +50,13 @@ class SacessOptimizer:
 
     .. footbibliography::
 
+    Attributes
+    ----------
+    histories:
+        List of the histories of the best values/parameters
+        found by each worker. (Monotonously decreasing objective values.)
+        See :func:`pypesto.visualize.optimizer_history.sacess_history` for
+        visualization.
     """
 
     def __init__(
@@ -82,7 +90,7 @@ class SacessOptimizer:
             See :func:`get_default_ess_options` for details on the default
             settings.
         max_walltime_s:
-            Maximum walltime in seconds. Will only be checked between local
+            Maximum walltime in seconds. It will only be checked between local
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search. Defaults to no limit.
             Note that in order to impose the wall time limit also on the local
@@ -93,10 +101,10 @@ class SacessOptimizer:
         sacess_loglevel:
             Loglevel for SACESS runs.
         tmpdir:
-            Directory for temporary files. Defaults to a directory in the current
-            working directory named ``SacessOptimizerTemp-{random suffix}``.
-            When setting this option, make sure any optimizers running in parallel
-            have unique tmpdirs.
+            Directory for temporary files. This defaults to a directory in the
+            current working directory named ``SacessOptimizerTemp-{random suffix}``.
+            When setting this option, make sure any optimizers running in
+            parallel have a unique `tmpdir`.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -124,21 +132,44 @@ class SacessOptimizer:
                 self._tmpdir = Path(f"SacessOptimizerTemp-{str(uuid1())[:8]}")
         self._tmpdir = Path(self._tmpdir).absolute()
         self._tmpdir.mkdir(parents=True, exist_ok=True)
+        self.histories: Optional[
+            list["pypesto.history.memory.MemoryHistory"]
+        ] = None
 
     def minimize(
         self,
         problem: Problem,
         startpoint_method: StartpointMethod = None,
-    ):
+    ) -> pypesto.Result:
         """Solve the given optimization problem.
+
+        Note that if this function is called from a multithreaded program (
+        multiple threads running at the time of calling this function) and
+        the :mod:`multiprocessing` `start method` is set to ``fork``, there is
+        a good chance for deadlocks. Postpone spawning threads until after
+        `minimize` or change the *start method* to ``spawn``.
 
         Parameters
         ----------
         problem:
             Minimization problem.
+            :meth:`Problem.startpoint_method` will be used to sample random
+            points. `SacessOptimizer` will deal with non-evaluable points.
+            Therefore, using :class:`pypesto.startpoint.CheckedStartpoints`
+            with ``check_fval=True`` or ``check_grad=True`` is not recommended
+            since it would create significant overhead.
+
         startpoint_method:
             Method for choosing starting points.
             **Deprecated. Use ``problem.startpoint_method`` instead.**
+
+        Returns
+        -------
+        Result object with optimized parameters in
+        :attr:`pypesto.Result.optimize_result`.
+        Results are sorted by objective. At least the best parameters are
+        included. Additional results may be included - this is subject to
+        change.
         """
         if startpoint_method is not None:
             warn(
@@ -210,11 +241,16 @@ class SacessOptimizer:
             logging_thread.start()
 
             # wait for finish
+            # collect results
+            histories = [
+                sacess_manager._result_queue.get()
+                for _ in range(self.num_workers)
+            ]
+            self.histories = histories
             for p in worker_processes:
                 p.join()
 
         logging_thread.stop()
-
         result = self._create_result(problem)
 
         walltime = time.time() - start_time
@@ -320,6 +356,7 @@ class SacessManager:
         self._worker_comms = shmem_manager.Array("i", [0] * self._num_workers)
         self._lock = shmem_manager.RLock()
         self._logger = logging.getLogger()
+        self._result_queue = shmem_manager.Queue()
 
     def get_best_solution(self) -> Tuple[np.array, float]:
         """Get the best objective value and corresponding parameters."""
@@ -507,7 +544,6 @@ class SacessWorker:
             )
         )
 
-        ess_results = pypesto.Result(problem=problem)
         ess = self._setup_ess(startpoint_method)
 
         # run ESS until exit criteria are met, but start at least one iteration
@@ -515,17 +551,9 @@ class SacessWorker:
             # perform one ESS iteration
             ess._do_iteration()
 
-            # TODO maybe not in every iteration?
-            # drop all but the 50 best results
-            cur_ess_results = ess._create_result()
-            ess_results.optimize_result.append(
-                cur_ess_results.optimize_result,
-                prefix=f"{self._worker_idx}_{ess.n_iter}_",
-            )
-            ess_results.optimize_result.list = (
-                ess_results.optimize_result.list[:50]
-            )
             if self._tmp_result_file:
+                # TODO maybe not in every iteration?
+                ess_results = ess._create_result()
                 write_result(
                     ess_results,
                     self._tmp_result_file,
@@ -545,6 +573,8 @@ class SacessWorker:
                 f"(best: {self._best_known_fx})."
             )
 
+        ess.history.finalize(exitflag=ess.exit_flag.name)
+        self._manager._result_queue.put(ess.history)
         ess._report_final()
 
     def _setup_ess(self, startpoint_method: StartpointMethod) -> ESSOptimizer:
@@ -596,7 +626,7 @@ class SacessWorker:
 
         Update ESS settings if conditions are met.
         """
-        # Update ESS settings if we received way more solutions than we  sent
+        # Update ESS settings if we received way more solutions than we sent
         # Magic numbers from [PenasGon2017]_ algorithm 5
         if (
             self._n_received_solutions > 10 * self._n_sent_solutions + 20
@@ -744,8 +774,12 @@ def get_default_ess_options(
     num_workers: Number of configurations to return.
     dim: Problem dimension (number of optimized parameters).
     local_optimizer: The local optimizer to use
-        (see same argument in :class:`ESSOptimizer`), or a boolean indicating
-        whether to set the default local optimizer (currently :class:`FidesOptimizer`).
+        (see same argument in :class:`ESSOptimizer`), a boolean indicating
+        whether to set the default local optimizer
+        (currently :class:`FidesOptimizer`), a :class:`Optimizer` instance,
+        or a :obj:`Callable` returning an optimizer instance.
+        The latter can be used to propagate walltime limits to the local
+        optimizers. See :meth:`SacessFidesFactory.__call__` for an example.
     """
     min_dimrefset = 5
 
@@ -905,7 +939,9 @@ def get_default_ess_options(
     # Set local optimizer
     for cur_settings in settings:
         if local_optimizer is True:
-            cur_settings['local_optimizer'] = SacessFidesFactory()
+            cur_settings['local_optimizer'] = SacessFidesFactory(
+                fides_kwargs={"verbose": logging.WARNING}
+            )
         elif local_optimizer is not False:
             cur_settings['local_optimizer'] = local_optimizer
 

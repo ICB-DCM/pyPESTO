@@ -1,12 +1,13 @@
 """Engines with multi-process parallelization."""
+
 import logging
 import multiprocessing
 import os
 from typing import Any, Union
 
 import cloudpickle as pickle
-from tqdm import tqdm
 
+from ..util import tqdm
 from .base import Engine
 from .task import Task
 
@@ -52,7 +53,7 @@ class MultiProcessEngine(Engine):
         self.method: str = method
 
     def execute(
-        self, tasks: list[Task], progress_bar: bool = True
+        self, tasks: list[Task], progress_bar: bool = None
     ) -> list[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
@@ -61,7 +62,7 @@ class MultiProcessEngine(Engine):
         tasks:
             List of :class:`pypesto.engine.Task` to execute.
         progress_bar:
-            Whether to display a progress bar. Defaults to ``True``.
+            Whether to display a progress bar.
 
         Returns
         -------
@@ -81,7 +82,7 @@ class MultiProcessEngine(Engine):
                 tqdm(
                     pool.imap(work, pickled_tasks),
                     total=len(pickled_tasks),
-                    disable=not progress_bar,
+                    enable=progress_bar,
                 ),
             )
 

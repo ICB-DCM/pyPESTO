@@ -3,16 +3,18 @@
 See papers on ESS :footcite:p:`EgeaBal2009,EgeaMar2010`,
 CESS :footcite:p:`VillaverdeEge2012`, and saCeSS :footcite:p:`PenasGon2017`.
 """
+
 import enum
 import logging
 import time
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 from warnings import warn
 
 import numpy as np
 
 import pypesto.optimize
 from pypesto import OptimizerResult, Problem
+from pypesto.history import MemoryHistory
 from pypesto.startpoint import StartpointMethod
 
 from .function_evaluator import FunctionEvaluator, create_function_evaluator
@@ -64,6 +66,7 @@ class ESSOptimizer:
         n_procs=None,
         n_threads=None,
         max_walltime_s=None,
+        result_includes_refset: bool = False,
     ):
         """Construct new ESS instance.
 
@@ -109,6 +112,13 @@ class ESSOptimizer:
         n_threads:
             Number of parallel threads to use for parallel function evaluation.
             Mutually exclusive with `n_procs`.
+        history:
+            History of the best values/parameters found so far.
+            (Monotonously decreasing objective values.)
+        result_includes_refset:
+            Whether the :meth:`minimize` result should include the final
+            RefSet, or just the local search results and the overall best
+            parameters.
         """
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
@@ -147,6 +157,7 @@ class ESSOptimizer:
         self.logger = logging.getLogger(
             f"{self.__class__.__name__}-{id(self)}"
         )
+        self._result_includes_refset = result_includes_refset
 
     def _initialize(self):
         """(Re-)Initialize."""
@@ -156,8 +167,8 @@ class ESSOptimizer:
         self.x_best: Optional[np.array] = None
         # Overall best function value found so far
         self.fx_best: float = np.inf
-        # Final parameters from local searches
-        self.local_solutions: List[np.array] = []
+        # Results from local searches
+        self.local_solutions: list[OptimizerResult] = []
         # Index of current iteration
         self.n_iter: int = 0
         # ESS iteration at which the last local search took place
@@ -167,6 +178,7 @@ class ESSOptimizer:
         self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
         self.evaluator: Optional[FunctionEvaluator] = None
         self.starttime: Optional[float] = None
+        self.history: MemoryHistory = MemoryHistory()
 
     def _initialize_minimize(
         self,
@@ -250,6 +262,7 @@ class ESSOptimizer:
             self._do_iteration()
 
         self._report_final()
+        self.history.finalize(exitflag=self.exit_flag.name)
         return self._create_result()
 
     def _do_iteration(self):
@@ -306,24 +319,30 @@ class ESSOptimizer:
             message="Global best",
             **common_result_fields,
         )
-        # TODO DW: Create a single History with the global best?
+        optimizer_result.update_to_full(result.problem)
         result.optimize_result.append(optimizer_result)
 
-        # save refset
-        for i in range(self.refset.dim):
+        # save local solutions
+        for i, optimizer_result in enumerate(self.local_solutions):
             i_result += 1
-            result.optimize_result.append(
-                pypesto.OptimizerResult(
-                    id=str(i_result),
-                    x=self.refset.x[i],
-                    fval=self.refset.fx[i],
-                    message=f"RefSet[{i}]",
-                    **common_result_fields,
-                )
-            )
+            optimizer_result.id = f"Local solution {i}"
+            optimizer_result.optimizer = str(self.local_optimizer)
+            result.optimize_result.append(optimizer_result)
 
-        # TODO DW: also save local solutions?
-        #  (need to track fvals or re-evaluate)
+        if self._result_includes_refset:
+            # save refset
+            for i in range(self.refset.dim):
+                i_result += 1
+                result.optimize_result.append(
+                    pypesto.OptimizerResult(
+                        id=str(i_result),
+                        x=self.refset.x[i],
+                        fval=self.refset.fx[i],
+                        message=f"RefSet[{i}]",
+                        **common_result_fields,
+                    )
+                )
+                result.optimize_result[-1].update_to_full(result.problem)
 
         return result
 
@@ -362,20 +381,20 @@ class ESSOptimizer:
             return np.inf
         return self.max_eval - self.evaluator.n_eval
 
-    def _combine_solutions(self) -> Tuple[np.array, np.array]:
+    def _combine_solutions(self) -> tuple[np.array, np.array]:
         """Combine solutions and evaluate.
 
-        Creates the next generation from the RefSet by pair-wise combinations
+        Creates the next generation from the RefSet by pair-wise combination
         of all RefSet members. Creates ``RefSet.dim ** 2 - RefSet.dim`` new
         parameter vectors, tests them, and keeps the best child of each parent.
 
         Returns
         -------
         y:
-            Contains the best of all pairwise combinations of all RefSet
-            members, for each RefSet members.
+            The next generation of parameter vectors
+            (`dim_refset` x `dim_problem`).
         fy:
-            The corresponding objective values.
+            The objective values corresponding to the parameters in `y`.
         """
         y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
@@ -463,8 +482,10 @@ class ESSOptimizer:
             #  optima found so far
             min_distances = np.array(
                 np.min(
-                    np.linalg.norm(y_i - local_solution)
-                    for local_solution in self.local_solutions
+                    np.linalg.norm(
+                        y_i - optimizer_result.x[optimizer_result.free_indices]
+                    )
+                    for optimizer_result in self.local_solutions
                 )
                 for y_i in x_best_children
             )
@@ -513,15 +534,11 @@ class ESSOptimizer:
                 f"{optimizer_result.exitflag}: {optimizer_result.message}"
             )
             if np.isfinite(optimizer_result.fval):
-                local_solution_x = optimizer_result.x[
-                    optimizer_result.free_indices
-                ]
-                local_solution_fx = optimizer_result.fval
-
-                self.local_solutions.append(local_solution_x)
+                self.local_solutions.append(optimizer_result)
 
                 self._maybe_update_global_best(
-                    local_solution_x, local_solution_fx
+                    optimizer_result.x[optimizer_result.free_indices],
+                    optimizer_result.fval,
                 )
                 break
 
@@ -534,6 +551,12 @@ class ESSOptimizer:
             self.x_best = x[:]
             self.fx_best = fx
             self.x_best_has_changed = True
+            self.history.update(
+                self.x_best,
+                (0,),
+                pypesto.C.MODE_FUN,
+                {pypesto.C.FVAL: self.fx_best},
+            )
 
     def _go_beyond(self, x_best_children, fx_best_children):
         """Apply go-beyond strategy.

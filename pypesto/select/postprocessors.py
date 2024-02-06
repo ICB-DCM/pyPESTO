@@ -1,6 +1,6 @@
 """Process a model selection :class:`ModelProblem` after calibration."""
+
 from pathlib import Path
-from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +20,7 @@ __all__ = [
 
 def multi_postprocessor(
     problem: ModelProblem,
-    postprocessors: List[TYPE_POSTPROCESSOR] = None,
+    postprocessors: list[TYPE_POSTPROCESSOR] = None,
 ):
     """Combine multiple postprocessors into a single postprocessor.
 
@@ -118,7 +118,7 @@ def model_id_binary_postprocessor(problem: ModelProblem):
 def report_postprocessor(
     problem: ModelProblem,
     output_filepath: TYPE_PATH,
-    criteria: List[Criterion] = None,
+    criteria: list[Criterion] = None,
 ):
     """Create a TSV table of model selection results.
 

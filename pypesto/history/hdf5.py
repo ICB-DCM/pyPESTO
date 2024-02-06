@@ -1,6 +1,5 @@
 """HDF5 history."""
 
-
 import contextlib
 import time
 from functools import wraps
@@ -151,7 +150,9 @@ class Hdf5History(HistoryBase):
 
     @staticmethod
     def load(
-        id: str, file: str, options: Union[HistoryOptions, dict] = None
+        id: str,
+        file: Union[str, Path],
+        options: Union[HistoryOptions, dict] = None,
     ) -> 'Hdf5History':
         """Load the History object from memory."""
         history = Hdf5History(id=id, file=file, options=options)
@@ -159,7 +160,7 @@ class Hdf5History(HistoryBase):
             history.recover_options(file)
         return history
 
-    def recover_options(self, file: str):
+    def recover_options(self, file: Union[str, Path]):
         """Recover options when loading the hdf5 history from memory.
 
         Done by testing which entries were recorded.
@@ -300,6 +301,19 @@ class Hdf5History(HistoryBase):
         except KeyError:
             return None
 
+    @staticmethod
+    def _simulation_to_values(x, result, used_time):
+        values = {
+            X: x,
+            FVAL: result[FVAL],
+            GRAD: result[GRAD],
+            RES: result[RES],
+            SRES: result[SRES],
+            HESS: result[HESS],
+            TIME: used_time,
+        }
+        return values
+
     @with_h5_file("a")
     def _update_trace(
         self,
@@ -320,15 +334,7 @@ class Hdf5History(HistoryBase):
 
         used_time = time.time() - self.start_time
 
-        values = {
-            X: x,
-            FVAL: result[FVAL],
-            GRAD: result[GRAD],
-            RES: result[RES],
-            SRES: result[SRES],
-            HESS: result[HESS],
-            TIME: used_time,
-        }
+        values = self._simulation_to_values(x, result, used_time)
 
         iteration = self._require_group().attrs[N_ITERATIONS]
 

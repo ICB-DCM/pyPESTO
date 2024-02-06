@@ -3,11 +3,29 @@ import copy
 import os
 import tempfile
 from collections import OrderedDict
+from pathlib import Path
 from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from ...C import FVAL, INNER_PARAMETERS, MODE_FUN, MODE_RES, RDATAS, ModeType
+from ...C import (
+    FVAL,
+    INNER_PARAMETERS,
+    MODE_FUN,
+    MODE_RES,
+    RDATAS,
+    SUFFIXES_CSV,
+    SUFFIXES_HDF5,
+    ModeType,
+)
+from ...history import (
+    CountHistory,
+    CsvAmiciHistory,
+    Hdf5AmiciHistory,
+    HistoryOptions,
+    HistoryTypeError,
+    MemoryHistory,
+)
 from ..base import ObjectiveBase, ResultDict
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
@@ -215,7 +233,7 @@ class AmiciObjective(ObjectiveBase):
         self.custom_timepoints = None
 
         # Initialize the dictionary for saving of inner parameters.
-        self.inner_parameters: Dict[str, float] = {}
+        self.inner_parameters: list[float] = None
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
@@ -226,6 +244,33 @@ class AmiciObjective(ObjectiveBase):
         info['sensi_order'] = self.max_sensi_order
 
         return info
+
+    def create_history(
+        self, id: str, x_names: Sequence[str], options: HistoryOptions
+    ):
+        """See `history.generate.create_history` documentation."""
+        # create different history types based on the inputs
+        if options.storage_file is None:
+            if options.trace_record:
+                return MemoryHistory(options=options)
+            else:
+                return CountHistory(options=options)
+
+        # replace id template in storage file
+        storage_file = options.storage_file.replace("{id}", id)
+
+        # evaluate type
+        suffix = Path(storage_file).suffix[1:]
+
+        # create history type based on storage type
+        if suffix in SUFFIXES_CSV:
+            return CsvAmiciHistory(
+                x_names=x_names, file=storage_file, options=options
+            )
+        elif suffix in SUFFIXES_HDF5:
+            return Hdf5AmiciHistory(id=id, file=storage_file, options=options)
+        else:
+            raise HistoryTypeError(suffix)
 
     def initialize(self):
         """See `ObjectiveBase` documentation."""
@@ -456,7 +501,7 @@ class AmiciObjective(ObjectiveBase):
 
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]
-        if INNER_PARAMETERS in ret and ret[INNER_PARAMETERS]:
+        if ret.get(INNER_PARAMETERS, None) is not None:
             self.inner_parameters = ret[INNER_PARAMETERS]
 
         # check whether we should update data for preequilibration guesses

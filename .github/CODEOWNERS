@@ -1,27 +1,31 @@
 # see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-# default owners
-* @ICB-DCM/pypesto-maintainers
+# default owners = active maintainers
+* @Doresic @PaulJonasJost @m-philipps
 
-/doc/example/censored.ipynb @Doresic
+# Examples
+/doc/example/censored_data.ipynb @Doresic
 /doc/example/hdf5_storage.ipynb @PaulJonasJost
-/doc/example/hierarchical.ipynb @dilpath @dweindl
 /doc/example/julia.ipynb @PaulJonasJost
 /doc/example/model_selection.ipynb @dilpath
-/doc/example/nonlinear_monotone.ipynb @Doresic
-/doc/example/ordinal.ipynb @Doresic
+/doc/example/ordinal_data.ipynb @Doresic
 /doc/example/petab_import.ipynb @dweindl @FFroehlich
+/doc/example/relative_data.ipynb @dilpath @dweindl
 /doc/example/sampler_study.ipynb @dilpath
 /doc/example/sampling_diagnostics.ipynb @dilpath
+/doc/example/semiquantitative_data.ipynb @Doresic
 /doc/example/store.ipynb @PaulJonasJost
 /doc/example/synthetic_data.ipynb @dilpath
 /docker/ @dweindl
+
+# Code
 /pypesto/engine/ @PaulJonasJost
 /pypesto/engine/mpi_pool.py @PaulJonasJost
 /pypesto/ensemble/ @dilpath @PaulJonasJost
 /pypesto/hierarchical/ @dweindl @Doresic
-/pypesto/hierarchical/optimal_scaling_approach/ @Doresic
-/pypesto/hierarchical/spline_approximation/ @Doresic
+/pypesto/hierarchical/ordinal/ @Doresic
+/pypesto/hierarchical/relative/ @dweindl @Doresic
+/pypesto/hierarchical/semiquantitative/ @Doresic
 /pypesto/history/ @PaulJonasJost
 /pypesto/objective/ @PaulJonasJost
 /pypesto/objective/amici/ @dweindl @FFroehlich
@@ -38,6 +42,8 @@
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
 /pypesto/visualize/ @stephanmg @m-philipps
+
+# Tests
 /test/base/ @PaulJonasJost @m-philipps
 /test/doc/ @PaulJonasJost
 /test/hierarchical/ @dweindl @doresic

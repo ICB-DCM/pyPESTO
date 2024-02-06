@@ -1,4 +1,5 @@
 """Visualization routines for model selection with pyPESTO."""
+
 from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt

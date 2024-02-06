@@ -6,6 +6,50 @@ Release notes
 ..........
 
 
+0.4.2 (2024-01-30)
+-------------------
+
+* General
+    * Stabilize tests (#1240, #1254, #1300, #1302, #1303)
+    * Update type annotations and documentations (#1239, #1248, #1255, #1258, #1251, #1268, #1275)
+    * GHA/Codeowner changes (#1260, #1261, #1259, #1262, #1285)
+    * Update utility functions (#1243)
+    * Refactor progress bars (#1272)
+    * Clear Notebook output(#1246, #1277, #1274, #1271, #1276, #1278)
+* Optimize
+    * (Sac)ESSOptimizer: History of best objective values (#1212)
+    * Fix missing fixed parameters in scatter search results (#1265)
+    * Fix TypeError in pypesto.result.optimize.OptimizerResult.summary if x0 is None (#1266)
+    * ESSOptimizer: Include results for local searches in OptimizeResult (#1270)
+* **New Feature**: Spline Approximation (#1222)
+* Select
+    * Allow for hierarchical problems (#1241)
+    * custom minimize method (#1264)
+    * Set estimated parameters in petab_select.Models (#1287)
+* Hierarchical
+    * Log space startpoint sampling (#1242)
+    * Support for box constraints on offset and scaling parameters (#1238)
+    * restructuring and add relative to InnerCalculatorCollector (#1245)
+    * Semiquantitative: Robust regularization calculation (#1297)
+* History
+    * Support pathlib.Path for result/history files (#1247)
+    * Extended Amici history (#1263)
+* Visualize
+    * Fix time trajectories for hierarchical problems (#1213)
+    * Fix hierarchical parameter plotting for all optimizers (#1244)
+    * Sacess history plot (#1250)
+* Objective
+    * Fix PEtab.jl version to before 2.5.0 (temporarily) (#1256)
+* PEtab
+    * Enable Importer passing verbose to create_model (#1269)
+    * PetabImporter: version-specific amici model directories (#1283)
+* Problem
+    * Problem: add inner problem names, bounds and hierarchical flag (#1282)
+    * Use warnings.warn instead of logging.warn when loading Problem from HDF5 without an Objective (#1253)
+* Ensemble
+    * EnsemblePrediction: remove "no predictor" warning (#1293)
+
+
 0.4.1 (2023-12-05)
 -------------------
 

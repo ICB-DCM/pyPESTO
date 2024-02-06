@@ -1,4 +1,5 @@
 """Cooperative Enhanced Scatter Search."""
+
 import logging
 import multiprocessing
 import os
@@ -225,6 +226,7 @@ class CESSOptimizer:
             message="Global best",
             **common_result_fields,
         )
+        optimizer_result.update_to_full(problem)
         # TODO DW: Create a single History with the global best?
         result.optimize_result.append(optimizer_result)
 
@@ -241,6 +243,7 @@ class CESSOptimizer:
                         **common_result_fields,
                     )
                 )
+                result.optimize_result[-1].update_to_full(result.problem)
 
         # TODO DW: also save local solutions?
         #  (need to track fvals or re-evaluate)

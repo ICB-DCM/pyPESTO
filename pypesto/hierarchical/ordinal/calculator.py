@@ -1,6 +1,7 @@
 """Definition of an optimal scaling calculator class."""
+
 import copy
-from typing import Dict, List, Sequence, Tuple
+from typing import Sequence
 
 import numpy as np
 
@@ -27,8 +28,8 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
-from .problem import OptimalScalingProblem
-from .solver import OptimalScalingInnerSolver
+from .problem import OrdinalProblem
+from .solver import OrdinalInnerSolver
 
 try:
     import amici
@@ -37,7 +38,7 @@ except ImportError:
     pass
 
 
-class OptimalScalingAmiciCalculator(AmiciCalculator):
+class OrdinalCalculator(AmiciCalculator):
     """A calculator is passed as `calculator` to the pypesto.AmiciObjective.
 
     The object is called by :func:`pypesto.AmiciObjective.call_unprocessed`
@@ -46,8 +47,8 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
 
     def __init__(
         self,
-        inner_problem: OptimalScalingProblem,
-        inner_solver: OptimalScalingInnerSolver = None,
+        inner_problem: OrdinalProblem,
+        inner_solver: OrdinalInnerSolver = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -63,7 +64,7 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         self.inner_problem = inner_problem
 
         if inner_solver is None:
-            inner_solver = OptimalScalingInnerSolver()
+            inner_solver = OrdinalInnerSolver()
         self.inner_solver = inner_solver
         if (
             self.inner_problem.method
@@ -78,23 +79,19 @@ class OptimalScalingAmiciCalculator(AmiciCalculator):
         self.inner_solver.initialize()
         self.inner_problem.initialize()
 
-    def get_inner_parameter_ids(self) -> List[str]:
-        """Get the ids of the inner parameters."""
-        return self.inner_problem.get_x_ids()
-
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int, ...],
+        x_dct: dict,
+        sensi_orders: tuple[int, ...],
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: List['amici.ReturnData'] = None,
+        rdatas: list['amici.ReturnData'] = None,
     ):
         """Perform the actual AMICI call.
 

@@ -1,5 +1,3 @@
-from typing import Dict, List, Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -14,16 +12,16 @@ from ...C import (
     MEASUREMENT_TYPE,
     MIN_DATAPOINT,
     N_SPLINE_PARS,
-    NONLINEAR_MONOTONE,
     NUM_DATAPOINTS,
     OPTIMIZE_NOISE,
     PARAMETER_TYPE,
+    SEMIQUANTITATIVE,
     SPLINE_PAR_TYPE,
     TIME,
     InnerParameterType,
 )
-from ..problem import (
-    InnerProblem,
+from ..base_problem import (
+    AmiciInnerProblem,
     _get_timepoints_with_replicates,
     ix_matrices_from_arrays,
     scale_value,
@@ -45,8 +43,12 @@ except ImportError:
     pass
 
 
-class SplineInnerProblem(InnerProblem):
-    """Inner optimization problem for spline approximation.
+class SemiquantProblem(AmiciInnerProblem):
+    r"""Inner optimization problem for semi-quantitative data.
+
+    The inner problem for semi-quantitative data consists of spline parameters
+    and noise parameters for semi-quantitative observables. The unknown
+    nonlinear measurement mapping is estimated using a piece-wise linear spline.
 
     Attributes
     ----------
@@ -55,6 +57,8 @@ class SplineInnerProblem(InnerProblem):
     data:
         Measurement data. One matrix (`num_timepoints` x `num_observables`)
         per simulation condition. Missing observations as NaN.
+    edatas:
+        AMICI ``ExpData``\s for each simulation condition.
     groups:
         A dictionary of the groups of the subproblem.
     spline_ratio:
@@ -63,12 +67,11 @@ class SplineInnerProblem(InnerProblem):
 
     def __init__(
         self,
-        xs: List[SplineInnerParameter],
-        data: List[np.ndarray],
         spline_ratio: float = 0.5,
+        **kwargs,
     ):
         """Construct."""
-        super().__init__(xs, data)
+        super().__init__(**kwargs)
         self.spline_ratio = spline_ratio
 
         if spline_ratio <= 0:
@@ -122,9 +125,9 @@ class SplineInnerProblem(InnerProblem):
     def from_petab_amici(
         petab_problem: petab.Problem,
         amici_model: 'amici.Model',
-        edatas: List['amici.ExpData'],
+        edatas: list['amici.ExpData'],
         spline_ratio: float = None,
-    ) -> 'SplineInnerProblem':
+    ) -> 'SemiquantProblem':
         """Construct the inner problem from the `petab_problem`."""
         if spline_ratio is None:
             spline_ratio = get_default_options()
@@ -132,12 +135,24 @@ class SplineInnerProblem(InnerProblem):
             petab_problem, amici_model, edatas, spline_ratio
         )
 
-    def get_groups_for_xs(self, inner_parameter_type: str) -> List[int]:
+    def get_interpretable_x_ids(self) -> list[str]:
+        """Get IDs of interpretable inner parameters.
+
+        The interpretable inner parameters of the semiquantitative
+        problem are the noise parameters.
+        """
+        return [
+            x.inner_parameter_id
+            for x in self.xs.values()
+            if x.inner_parameter_type == InnerParameterType.SIGMA
+        ]
+
+    def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
         """Get unique list of ``SplineParameter.group`` values."""
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
         return list(set(groups))
 
-    def get_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
+    def get_xs_for_group(self, group: int) -> list[SplineInnerParameter]:
         r"""Get ``SplineParameter``\s that belong to the given group."""
         return [
             x
@@ -146,7 +161,7 @@ class SplineInnerProblem(InnerProblem):
             and x.inner_parameter_type == InnerParameterType.SPLINE
         ]
 
-    def get_free_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
+    def get_free_xs_for_group(self, group: int) -> list[SplineInnerParameter]:
         r"""Get ``SplineParameter``\s that are free and belong to the given group."""
         return [
             x
@@ -156,7 +171,7 @@ class SplineInnerProblem(InnerProblem):
             and x.inner_parameter_type == InnerParameterType.SPLINE
         ]
 
-    def get_fixed_xs_for_group(self, group: int) -> List[SplineInnerParameter]:
+    def get_fixed_xs_for_group(self, group: int) -> list[SplineInnerParameter]:
         r"""Get ``SplineParameter``\s that are fixed and belong to the given group."""
         return [
             x
@@ -164,6 +179,12 @@ class SplineInnerProblem(InnerProblem):
             if x.group == group
             and x.estimate is False
             and x.inner_parameter_type == InnerParameterType.SPLINE
+        ]
+
+    def get_inner_noise_parameters(self) -> list[float]:
+        """Get a list with all noise parameter values."""
+        return [
+            x.value for x in self.get_xs_for_type(InnerParameterType.SIGMA)
         ]
 
     def get_noise_parameters_for_group(
@@ -177,18 +198,11 @@ class SplineInnerProblem(InnerProblem):
             and x.inner_parameter_type == InnerParameterType.SIGMA
         ]
 
-    def get_inner_parameter_dictionary(self) -> Dict:
+    def get_inner_parameter_dictionary(self) -> dict:
         """Get a dictionary with all inner parameter ids and their values."""
         inner_par_dict = {}
         for x_id, x in self.xs.items():
             inner_par_dict[x_id] = x.value
-        return inner_par_dict
-
-    def get_inner_noise_parameter_dictionary(self) -> Dict:
-        """Get a dictionary with all noise inner parameter ids and their values."""
-        inner_par_dict = {}
-        for x in self.get_xs_for_type(InnerParameterType.SIGMA):
-            inner_par_dict[x.inner_parameter_id] = x.value
         return inner_par_dict
 
     def get_measurements_for_group(self, gr) -> np.ndarray:
@@ -204,8 +218,8 @@ class SplineInnerProblem(InnerProblem):
             ]
         )
 
-    def get_noise_dummy_values(self, scaled: bool) -> Dict[str, float]:
-        """Get dummy values for noise parameters of the nonlinear-monotone observable."""
+    def get_noise_dummy_values(self, scaled: bool) -> dict[str, float]:
+        """Get dummy values for noise parameters of the semiquantitative observable."""
         return {
             x_id: scale_value(x.value, x.scale) if scaled else x.value
             for x_id, x in self.xs.items()
@@ -213,7 +227,7 @@ class SplineInnerProblem(InnerProblem):
         }
 
 
-def get_default_options() -> Dict:
+def get_default_options() -> dict:
     """Return the default spline problem options dictionary."""
     spline_ratio = 1 / 2
     return spline_ratio
@@ -222,7 +236,7 @@ def get_default_options() -> Dict:
 def spline_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
     amici_model: 'amici.Model',
-    edatas: List['amici.ExpData'],
+    edatas: list['amici.ExpData'],
     spline_ratio: float = None,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -236,7 +250,7 @@ def spline_inner_problem_from_petab_problem(
         petab_problem.measurement_df, spline_ratio, amici_model
     )
 
-    # noise parameters for nonlinear-monotone observables
+    # noise parameters for semiquantitative observables
     noise_parameters = noise_inner_parameters_from_parameter_df(
         petab_problem, amici_model
     )
@@ -248,21 +262,20 @@ def spline_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    edatas = [
-        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-    ]
+    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
 
     # matrixify
-    ix_matrices = ix_matrices_from_arrays(ixs, edatas)
+    ix_matrices = ix_matrices_from_arrays(ixs, data)
 
     # assign matrices
     for par in inner_parameters:
         par.ixs = ix_matrices[par.inner_parameter_id]
 
-    return SplineInnerProblem(
-        inner_parameters,
-        edatas,
-        spline_ratio,
+    return SemiquantProblem(
+        xs=inner_parameters,
+        data=data,
+        edatas=edatas,
+        spline_ratio=spline_ratio,
     )
 
 
@@ -270,7 +283,7 @@ def spline_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     spline_ratio: float,
     amici_model: 'amici.Model',
-) -> List[SplineInnerParameter]:
+) -> list[SplineInnerParameter]:
     """Create list of inner free spline parameters from PEtab measurement table."""
     df = df.reset_index()
 
@@ -282,8 +295,8 @@ def spline_inner_parameters_from_measurement_df(
 
     inner_parameters = []
 
-    # Select the nonlinear monotone measurements.
-    df = df[df[MEASUREMENT_TYPE] == NONLINEAR_MONOTONE]
+    # Select the semiquantitative measurements.
+    df = df[df[MEASUREMENT_TYPE] == SEMIQUANTITATIVE]
 
     # Iterate over groups.
     for observable_id in observable_ids:
@@ -317,12 +330,12 @@ def spline_inner_parameters_from_measurement_df(
 def noise_inner_parameters_from_parameter_df(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-) -> List[SplineInnerParameter]:
+) -> list[SplineInnerParameter]:
     """Create list of inner free noise parameters from PEtab parameter table."""
-    # Select the nonlinear monotone measurements.
+    # Select the semiquantitative measurements.
     measurement_df = petab_problem.measurement_df
     measurement_df = measurement_df[
-        measurement_df[MEASUREMENT_TYPE] == NONLINEAR_MONOTONE
+        measurement_df[MEASUREMENT_TYPE] == SEMIQUANTITATIVE
     ]
 
     observable_ids = amici_model.getObservableIds()
@@ -367,8 +380,8 @@ def noise_inner_parameters_from_parameter_df(
 def spline_ixs_for_measurement_specific_parameters(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-    inner_parameters: List[SplineInnerParameter],
-) -> Dict[str, List[Tuple[int, int, int]]]:
+    inner_parameters: list[SplineInnerParameter],
+) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.
 
     Returns
@@ -438,8 +451,8 @@ def spline_ixs_for_measurement_specific_parameters(
 
 
 def get_spline_inner_par_ids_for_measurement(
-    measurement: Dict,
-    inner_parameters: List[SplineInnerParameter],
+    measurement: dict,
+    inner_parameters: list[SplineInnerParameter],
 ):
     """Return inner parameter ids of parameters which are related to the measurement."""
     return [

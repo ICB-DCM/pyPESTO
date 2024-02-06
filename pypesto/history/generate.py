@@ -13,9 +13,7 @@ from .util import HistoryTypeError
 
 
 def create_history(
-    id: str,
-    x_names: Sequence[str],
-    options: HistoryOptions,
+    id: str, x_names: Sequence[str], options: HistoryOptions
 ) -> HistoryBase:
     """Create a :class:`HistoryBase` object; Factory method.
 

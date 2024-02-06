@@ -100,6 +100,20 @@ class CsvHistory(CountHistoryBase):
         super().finalize(message=message, exitflag=exitflag)
         self._save_trace(finalize=True)
 
+    def _simulation_to_values(self, result, used_time):
+        values = {
+            TIME: used_time,
+            N_FVAL: self._n_fval,
+            N_GRAD: self._n_grad,
+            N_HESS: self._n_hess,
+            N_RES: self._n_res,
+            N_SRES: self._n_sres,
+            FVAL: result[FVAL],
+            RES: result[RES],
+            HESS: result[HESS],
+        }
+        return values
+
     def _update_trace(
         self,
         x: np.ndarray,
@@ -127,17 +141,7 @@ class CsvHistory(CountHistoryBase):
             name=len(self._trace), index=self._trace.columns, dtype='object'
         )
 
-        values = {
-            TIME: used_time,
-            N_FVAL: self._n_fval,
-            N_GRAD: self._n_grad,
-            N_HESS: self._n_hess,
-            N_RES: self._n_res,
-            N_SRES: self._n_sres,
-            FVAL: result[FVAL],
-            RES: result[RES],
-            HESS: result[HESS],
-        }
+        values = self._simulation_to_values(result, used_time)
 
         for var, val in values.items():
             row[(var, np.nan)] = val
@@ -162,12 +166,8 @@ class CsvHistory(CountHistoryBase):
         # save trace to file
         self._save_trace()
 
-    def _init_trace(self, x: np.ndarray):
-        """Initialize the trace."""
-        if self.x_names is None:
-            self.x_names = [f'x{i}' for i, _ in enumerate(x)]
-
-        columns: list[tuple] = [
+    def _trace_columns(self) -> list[tuple]:
+        return [
             (c, np.nan)
             for c in [
                 TIME,
@@ -182,6 +182,13 @@ class CsvHistory(CountHistoryBase):
                 HESS,
             ]
         ]
+
+    def _init_trace(self, x: np.ndarray):
+        """Initialize the trace."""
+        if self.x_names is None:
+            self.x_names = [f'x{i}' for i, _ in enumerate(x)]
+
+        columns = self._trace_columns()
 
         for var in [X, GRAD]:
             if var == X or self.options[f'trace_record_{var}']:

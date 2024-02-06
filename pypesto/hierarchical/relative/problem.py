@@ -1,12 +1,22 @@
 """Inner optimization problem in hierarchical optimization."""
+
 import logging
-from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
 
-from ..C import PARAMETER_TYPE, InnerParameterType
-from .parameter import InnerParameter
+from ...C import (
+    MEASUREMENT_TYPE,
+    PARAMETER_TYPE,
+    SEMIQUANTITATIVE,
+    InnerParameterType,
+)
+from ..base_parameter import InnerParameter
+from ..base_problem import (
+    AmiciInnerProblem,
+    _get_timepoints_with_replicates,
+    ix_matrices_from_arrays,
+)
 
 try:
     import amici
@@ -28,9 +38,8 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class InnerProblem:
-    """
-    Inner optimization problem in hierarchical optimization.
+class RelativeInnerProblem(AmiciInnerProblem):
+    r"""Inner optimization problem for relative data with scaling/offset.
 
     Attributes
     ----------
@@ -39,101 +48,25 @@ class InnerProblem:
     data:
         Measurement data. One matrix (`num_timepoints` x `num_observables`)
         per simulation condition. Missing observations as NaN.
+    edatas:
+        AMICI ``ExpData``\s for each simulation condition.
     """
 
-    def __init__(self, xs: List[InnerParameter], data: List[np.ndarray]):
-        self.xs: Dict[str, InnerParameter] = {
-            x.inner_parameter_id: x for x in xs
-        }
-        self.data = data
-
-        logger.debug(f"Created InnerProblem with ids {self.get_x_ids()}")
-
-        if self.is_empty():
-            raise ValueError(
-                'There are no parameters in the inner problem of hierarchical '
-                'optimization.'
-            )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     @staticmethod
     def from_petab_amici(
         petab_problem: 'petab.Problem',
         amici_model: 'amici.Model',
-        edatas: List['amici.ExpData'],
-    ) -> 'InnerProblem':
+        edatas: list['amici.ExpData'],
+    ) -> 'RelativeInnerProblem':
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
         return inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas
         )
 
-    def get_x_ids(self) -> List[str]:
-        """Get IDs of inner parameters."""
-        return list(self.xs.keys())
-
-    def get_xs_for_type(
-        self, inner_parameter_type: str
-    ) -> List[InnerParameter]:
-        """Get inner parameters of the given type."""
-        return [
-            x
-            for x in self.xs.values()
-            if x.inner_parameter_type == inner_parameter_type
-        ]
-
-    def get_dummy_values(self, scaled: bool) -> Dict[str, float]:
-        """
-        Get dummy parameter values.
-
-        Get parameter values to be used for simulation before their optimal
-        values are computed.
-
-        Parameters
-        ----------
-        scaled:
-            Whether the parameters should be returned on parameter or linear
-            scale.
-        """
-        return {
-            x.inner_parameter_id: scale_value(x.dummy_value, x.scale)
-            if scaled
-            else x.dummy_value
-            for x in self.xs.values()
-        }
-
-    def get_for_id(self, inner_parameter_id: str) -> InnerParameter:
-        """Get InnerParameter for the given parameter ID."""
-        try:
-            return self.xs[inner_parameter_id]
-        except KeyError:
-            raise KeyError(f"Cannot find parameter with id {id}.")
-
-    def is_empty(self) -> bool:
-        """Check for emptiness.
-
-        Returns
-        -------
-        ``True`` if there aren't any parameters associated with this problem,
-        ``False`` otherwise.
-        """
-        return len(self.xs) == 0
-
-
-class AmiciInnerProblem(InnerProblem):
-    """
-    Inner optimization problem in hierarchical optimization.
-
-    For use with AMICI objects.
-
-    Attributes
-    ----------
-    edataviews:
-        AMICI ``ExpDataView``s for each simulation condition.
-    """
-
-    def __init__(self, edatas: List[amici.ExpData], **kwargs):
-        super().__init__(**kwargs)
-
-    def check_edatas(self, edatas: List[amici.ExpData]) -> bool:
+    def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
         """Check for consistency in data.
 
         Currently only checks for the actual data values. e.g., timepoints are
@@ -165,35 +98,11 @@ class AmiciInnerProblem(InnerProblem):
         return True
 
 
-def scale_value_dict(
-    dct: Dict[str, float], problem: InnerProblem
-) -> Dict[str, float]:
-    """Scale a value dictionary."""
-    scaled_dct = {}
-    for key, val in dct.items():
-        x = problem.get_for_id(key)
-        scaled_dct[key] = scale_value(val, x.scale)
-    return scaled_dct
-
-
-def scale_value(
-    val: Union[float, np.array], scale: str
-) -> Union[float, np.array]:
-    """Scale a single value."""
-    if scale == 'lin':
-        return val
-    if scale == 'log':
-        return np.log(val)
-    if scale == 'log10':
-        return np.log10(val)
-    raise ValueError(f"Scale {scale} not recognized.")
-
-
 def inner_problem_from_petab_problem(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-    edatas: List['amici.ExpData'],
-) -> InnerProblem:
+    edatas: list['amici.ExpData'],
+) -> AmiciInnerProblem:
     """
     Create inner problem from PEtab problem.
 
@@ -203,7 +112,7 @@ def inner_problem_from_petab_problem(
 
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
-        petab_problem.parameter_df
+        petab_problem.parameter_df, petab_problem.measurement_df
     )
 
     x_ids = [x.inner_parameter_id for x in inner_parameters]
@@ -224,10 +133,10 @@ def inner_problem_from_petab_problem(
         par.ixs = ix_matrices[par.inner_parameter_id]
 
     par_group_types = {
-        tuple(obs_pars.split(';')): {
+        tuple(obs_pars.split(';')): (
             petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
             for obs_par in obs_pars.split(';')
-        }
+        )
         for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby(
             [petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS], dropna=True
         )
@@ -235,30 +144,46 @@ def inner_problem_from_petab_problem(
     }
 
     coupled_pars = {
-        par
+        group
         for group, types in par_group_types.items()
         if (
             (InnerParameterType.SCALING in types)
             and (InnerParameterType.OFFSET in types)
         )
-        for par in group
     }
 
+    # Check each group is of length 2
+    for group in coupled_pars:
+        if len(group) != 2:
+            raise ValueError(
+                f"Expected exactly 2 parameters in group {group}: a scaling "
+                f"and an offset parameter."
+            )
+
+    id_to_par = {par.inner_parameter_id: par for par in inner_parameters}
+
+    # assign coupling
     for par in inner_parameters:
         if par.inner_parameter_type not in [
             InnerParameterType.SCALING,
             InnerParameterType.OFFSET,
         ]:
             continue
-        if par.inner_parameter_id in coupled_pars:
-            par.coupled = True
+        for group in coupled_pars:
+            if par.inner_parameter_id in group:
+                coupled_parameter_id = group[
+                    group.index(par.inner_parameter_id) - 1
+                ]
+                par.coupled = id_to_par[coupled_parameter_id]
+                break
 
     return AmiciInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
 
 
 def inner_parameters_from_parameter_df(
-    df: pd.DataFrame,
-) -> List[InnerParameter]:
+    par_df: pd.DataFrame,
+    meas_df: pd.DataFrame,
+) -> list[InnerParameter]:
     """
     Create list of inner free parameters from PEtab parameter table.
 
@@ -266,19 +191,33 @@ def inner_parameters_from_parameter_df(
     PEtab problem.
     """
     # create list of hierarchical parameters
-    df = df.reset_index()
+    par_df = par_df.reset_index()
 
     for col in (PARAMETER_TYPE,):
-        if col not in df:
-            df[col] = None
+        if col not in par_df:
+            par_df[col] = None
 
     parameters = []
 
-    for _, row in df.iterrows():
+    for _, row in par_df.iterrows():
         if not row[ESTIMATE]:
             continue
         if petab.is_empty(row[PARAMETER_TYPE]):
             continue
+        # If a sigma parameter belongs to a semiquantitative
+        # observable, it is not a relative inner parameter.
+        if row[PARAMETER_TYPE] == InnerParameterType.SIGMA:
+            if MEASUREMENT_TYPE in meas_df.columns:
+                par_id = row[PARAMETER_ID]
+                corresponding_measurements = meas_df[
+                    meas_df[NOISE_PARAMETERS] == par_id
+                ]
+                if any(
+                    corresponding_measurements[MEASUREMENT_TYPE]
+                    == SEMIQUANTITATIVE
+                ):
+                    continue
+
         parameters.append(
             InnerParameter(
                 inner_parameter_id=row[PARAMETER_ID],
@@ -295,14 +234,14 @@ def inner_parameters_from_parameter_df(
 def ixs_for_measurement_specific_parameters(
     petab_problem: 'petab.Problem',
     amici_model: 'amici.Model',
-    x_ids: List[str],
-) -> Dict[str, List[Tuple[int, int, int]]]:
+    x_ids: list[str],
+) -> dict[str, list[tuple[int, int, int]]]:
     """
     Create mapping of parameters to measurements.
 
     Returns
     -------
-    A dictionary mapping parameter ID to a List of
+    A dictionary mapping parameter ID to a list of
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.
@@ -366,56 +305,3 @@ def ixs_for_measurement_specific_parameters(
                             (condition_ix, time_w_reps_ix, observable_ix)
                         )
     return ixs_for_par
-
-
-def ix_matrices_from_arrays(
-    ixs: Dict[str, List[Tuple[int, int, int]]], edatas: List[np.array]
-) -> Dict[str, List[np.array]]:
-    """
-    Convert mapping of parameters to measurements to matrix form.
-
-    Returns
-    -------
-    A dictionary mapping parameter ID to a list of Boolean matrices, one per
-    simulation condition. Therein, ``True`` indicates that the respective
-    parameter is used for the model output at the respective timepoint,
-    observable and condition index.
-    """
-    ix_matrices = {
-        id: [np.zeros_like(edata, dtype=bool) for edata in edatas]
-        for id in ixs
-    }
-    for id, arr in ixs.items():
-        matrices = ix_matrices[id]
-        for condition_ix, time_ix, observable_ix in arr:
-            matrices[condition_ix][time_ix, observable_ix] = True
-    return ix_matrices
-
-
-def _get_timepoints_with_replicates(
-    measurement_df: pd.DataFrame,
-) -> List[float]:
-    """
-    Get list of timepoints including replicate measurements.
-
-    :param measurement_df:
-        PEtab measurement table subset for a single condition.
-
-    :return:
-        Sorted list of timepoints, including multiple timepoints accounting
-        for replicate measurements.
-    """
-    # create sorted list of all timepoints for which measurements exist
-    timepoints = sorted(measurement_df[TIME].unique().astype(float))
-
-    # find replicate numbers of time points
-    timepoints_w_reps = []
-    for time in timepoints:
-        # subselect for time
-        df_for_time = measurement_df[measurement_df.time == time]
-        # rep number is maximum over rep numbers for observables
-        n_reps = max(df_for_time.groupby([OBSERVABLE_ID, TIME]).size())
-        # append time point n_rep times
-        timepoints_w_reps.extend([time] * n_reps)
-
-    return timepoints_w_reps
