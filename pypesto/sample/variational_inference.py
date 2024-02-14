@@ -129,7 +129,9 @@ def variational_fit(
     # return result
 
 
-def eval_log_density(x_points: np.ndarray, vi_approx) -> np.ndarray:
+def eval_variational_log_density(
+    x_points: np.ndarray, vi_approx
+) -> np.ndarray:
     """
     Evaluate the log density of the variational approximation at x_points.
 

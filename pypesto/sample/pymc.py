@@ -222,6 +222,7 @@ class PymcSampler(Sampler):
         method: str = 'advi',
         random_seed: int = None,
         start_sigma=None,
+        inf_kwargs=None,
         beta: float = 1.0,
     ):
         """
@@ -241,6 +242,10 @@ class PymcSampler(Sampler):
             random seed for reproducibility
         start_sigma: `dict[str, np.ndarray]`
             starting standard deviation for inference, only available for method 'advi'
+        inf_kwargs: dict
+            additional kwargs passed to pymc.Inference
+        beta:
+            Inverse temperature (e.g. in parallel tempering).
         """
         try:
             import pymc
@@ -282,11 +287,12 @@ class PymcSampler(Sampler):
 
             # perform the actual sampling
             data = pymc.fit(
-                draws=int(n_iterations),
+                n=int(n_iterations),
                 method=method,
-                start=x0,
                 random_seed=random_seed,
+                start=x0,
                 start_sigma=start_sigma,
+                inf_kwargs=inf_kwargs,
             )
 
         self.data = data
