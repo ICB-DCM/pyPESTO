@@ -10,30 +10,6 @@ class McmcPtResult(dict):
     The result of a sampler run using Markov-chain Monte Carlo.
 
     Currently result object of all supported samplers. Can be used like a dict.
-
-    Parameters
-    ----------
-    trace_x: [n_chain, n_iter, n_par]
-        Parameters.
-    trace_neglogpost: [n_chain, n_iter]
-        Negative log posterior values.
-    trace_neglogprior: [n_chain, n_iter]
-        Negative log prior values.
-    betas: [n_chain]
-        The associated inverse temperatures.
-    burn_in: [n_chain]
-        The burn in index.
-    time: [n_chain]
-        The computation time.
-    auto_correlation: [n_chain]
-        The estimated chain autcorrelation.
-    effective_sample_size: [n_chain]
-        The estimated effective sample size.
-    message: str
-        Textual comment on the profile result.
-
-    Here, `n_chain` denotes the number of chains, `n_iter` the number of
-    iterations (i.e., the chain length), and `n_par` the number of parameters.
     """
 
     def __init__(
@@ -48,6 +24,34 @@ class McmcPtResult(dict):
         effective_sample_size: float = None,
         message: str = None,
     ):
+        """
+        Initialize the McmcPtResult.
+
+        Parameters
+        ----------
+        trace_x: [n_chain, n_iter, n_par]
+            Parameters.
+        trace_neglogpost: [n_chain, n_iter]
+            Negative log posterior values.
+        trace_neglogprior: [n_chain, n_iter]
+            Negative log prior values.
+        betas: [n_chain]
+            The associated inverse temperatures.
+        burn_in: [n_chain]
+            The burn in index.
+        time: [n_chain]
+            The computation time.
+        auto_correlation: [n_chain]
+            The estimated chain autcorrelation.
+        effective_sample_size: [n_chain]
+            The estimated effective sample size.
+        message: str
+            Textual comment on the profile result.
+
+        Here, `n_chain` denotes the number of chains, `n_iter` the number of
+        iterations (i.e., the chain length), and `n_par` the number of
+        parameters.
+        """
         super().__init__()
 
         self.trace_x = trace_x
