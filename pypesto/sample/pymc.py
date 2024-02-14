@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import Optional, Union
 
 import arviz as az
 import numpy as np
@@ -220,10 +220,11 @@ class PymcSampler(Sampler):
         self,
         n_iterations: int,
         method: str = 'advi',
-        random_seed: int = None,
-        start_sigma=None,
-        inf_kwargs=None,
+        random_seed: Optional[int] = None,
+        start_sigma: Optional = None,
+        inf_kwargs: Optional = None,
         beta: float = 1.0,
+        **kwargs,
     ):
         """
         Sample the problem.
@@ -233,7 +234,7 @@ class PymcSampler(Sampler):
         n_iterations:
             Number of iterations.
         method: str or :class:`Inference`
-            string name is case insensitive in:
+            string name is case-insensitive in:
             -   'advi'  for ADVI
             -   'fullrank_advi'  for FullRankADVI
             -   'svgd'  for Stein Variational Gradient Descent
@@ -293,6 +294,7 @@ class PymcSampler(Sampler):
                 start=x0,
                 start_sigma=start_sigma,
                 inf_kwargs=inf_kwargs,
+                **kwargs,
             )
 
         self.data = data

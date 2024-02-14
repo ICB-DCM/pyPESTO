@@ -26,6 +26,7 @@ def variational_fit(
     result: Result = None,
     # filename: Union[str, Callable, None] = None,
     # overwrite: bool = False,
+    **kwargs,
 ) -> Result:
     """
     Call to do parameter sampling.
@@ -38,7 +39,7 @@ def variational_fit(
     n_iterations:
         Number of iterations for the optimization.
     method: str or :class:`Inference`
-        string name is case insensitive in:
+        string name is case-insensitive in:
             -   'advi'  for ADVI
             -   'fullrank_advi'  for FullRankADVI
             -   'svgd'  for Stein Variational Gradient Descent
@@ -50,10 +51,8 @@ def variational_fit(
     start_sigma: `dict[str, np.ndarray]`
         starting standard deviation for inference, only available for method 'advi'
     x0:
-        Initial parameter for the Markov chain. If None, the best parameter
-        found in optimization is used. Note that some samplers require an
-        initial parameter, some may ignore it. x0 can also be a list,
-        to have separate starting points for parallel tempering chains.
+        Initial parameter for the variational optimization. If None, the best parameter
+        found in optimization is used.
     result:
         A result to write to. If None provided, one is created from the
         problem.
@@ -102,6 +101,7 @@ def variational_fit(
         method=method,
         random_seed=random_seed,
         start_sigma=start_sigma,
+        **kwargs,
     )
     t_elapsed = process_time() - t_start
     logger.info("Elapsed time: " + str(t_elapsed))
@@ -144,10 +144,10 @@ def eval_variational_log_density(
     """
     if x_points.ndim == 1:
         x_points = x_points.reshape(1, -1)
-    density_at_points = np.zeros_like(x_points)
+    log_density_at_points = np.zeros_like(x_points)
     for i, point in enumerate(x_points):
-        density_at_points[i] = stats.multivariate_normal.pdf(
+        log_density_at_points[i] = stats.multivariate_normal.logpdf(
             point, mean=vi_approx.mean.eval(), cov=vi_approx.cov.eval()
         )
-    vi_log_density = np.sum(np.log(density_at_points), axis=-1)
+    vi_log_density = np.sum(log_density_at_points, axis=-1)
     return vi_log_density
