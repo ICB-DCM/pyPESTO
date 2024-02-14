@@ -216,6 +216,81 @@ class PymcSampler(Sampler):
 
         self.data = data
 
+    def fit(
+        self,
+        n_iterations: int,
+        method: str = 'advi',
+        random_seed: int = None,
+        start_sigma=None,
+        beta: float = 1.0,
+    ):
+        """
+        Sample the problem.
+
+        Parameters
+        ----------
+        n_iterations:
+            Number of iterations.
+        method: str or :class:`Inference`
+            string name is case insensitive in:
+            -   'advi'  for ADVI
+            -   'fullrank_advi'  for FullRankADVI
+            -   'svgd'  for Stein Variational Gradient Descent
+            -   'asvgd'  for Amortized Stein Variational Gradient Descent
+        random_seed: int
+            random seed for reproducibility
+        start_sigma: `dict[str, np.ndarray]`
+            starting standard deviation for inference, only available for method 'advi'
+        """
+        try:
+            import pymc
+        except ImportError:
+            raise SamplerImportError("pymc")
+
+        problem = self.problem
+        log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
+
+        x0 = None
+        x_names_free = problem.get_reduced_vector(problem.x_names)
+        if self.x0 is not None:
+            x0 = {
+                x_name: val
+                for x_name, val in zip(problem.x_names, self.x0)
+                if x_name in x_names_free
+            }
+
+        # create model context
+        with pymc.Model():
+            # parameter bounds as uniform prior
+            _k = [
+                pymc.Uniform(x_name, lower=lb, upper=ub)
+                for x_name, lb, ub in zip(
+                    x_names_free,
+                    problem.lb,
+                    problem.ub,
+                )
+            ]
+
+            # convert parameters to PyTensor tensor variable
+            theta = pt.as_tensor_variable(_k)
+
+            # define distribution with log-posterior as density
+            pymc.Potential("potential", log_post(theta))
+
+            # record function values
+            pymc.Deterministic("loggyposty", log_post(theta))
+
+            # perform the actual sampling
+            data = pymc.fit(
+                draws=int(n_iterations),
+                method=method,
+                start=x0,
+                random_seed=random_seed,
+                start_sigma=start_sigma,
+            )
+
+        self.data = data
+
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
         # dimensions
