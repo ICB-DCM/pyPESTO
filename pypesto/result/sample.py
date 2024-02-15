@@ -6,11 +6,7 @@ import numpy as np
 
 
 class McmcPtResult(dict):
-    """
-    The result of a sampler run using Markov-chain Monte Carlo.
-
-    Currently result object of all supported samplers. Can be used like a dict.
-    """
+    """The result of a sampler run using Markov-chain Monte Carlo."""
 
     def __init__(
         self,
@@ -26,6 +22,10 @@ class McmcPtResult(dict):
     ):
         """
         Initialize the McmcPtResult.
+
+        Here, `n_chain` denotes the number of chains, `n_iter` the number of
+        iterations (i.e., the chain length), and `n_par` the number of
+        parameters.
 
         Parameters
         ----------
@@ -47,10 +47,6 @@ class McmcPtResult(dict):
             The estimated effective sample size.
         message: str
             Textual comment on the profile result.
-
-        Here, `n_chain` denotes the number of chains, `n_iter` the number of
-        iterations (i.e., the chain length), and `n_par` the number of
-        parameters.
         """
         super().__init__()
 
