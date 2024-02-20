@@ -18,7 +18,6 @@ from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
-# __all__ definition for Sphinx
 __all__ = [
     'PymcSampler',
     'PymcObjectiveWithGradientOp',
