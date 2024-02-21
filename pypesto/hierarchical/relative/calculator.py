@@ -135,7 +135,8 @@ class RelativeAmiciCalculator(AmiciCalculator):
             )
 
         if (
-            amici_solver.getSensitivityMethod() == amici.SensitivityMethod_adjoint
+            amici_solver.getSensitivityMethod()
+            == amici.SensitivityMethod_adjoint
             or 2 in sensi_orders
         ):
             inner_result, inner_parameters = self.call_amici_twice(
@@ -220,7 +221,9 @@ class RelativeAmiciCalculator(AmiciCalculator):
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(shape=dim, fill_value=np.nan)
             if 2 in sensi_orders:
-                inner_result[HESS] = np.full(shape=(dim, dim), fill_value=np.nan)
+                inner_result[HESS] = np.full(
+                    shape=(dim, dim), fill_value=np.nan
+                )
             inner_result[INNER_PARAMETERS] = None
             return inner_result
 
@@ -321,7 +324,9 @@ class RelativeAmiciCalculator(AmiciCalculator):
         if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
             if 1 in sensi_orders:
-                inner_result[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
+                inner_result[GRAD] = np.full(
+                    shape=len(x_ids), fill_value=np.nan
+                )
             return filter_return_dict(inner_result)
 
         inner_parameters = self.inner_solver.solve(

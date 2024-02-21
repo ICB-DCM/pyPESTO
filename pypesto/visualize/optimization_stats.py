@@ -283,9 +283,13 @@ def optimization_run_property_per_multistart(
         ncols = 2 if plot_type == "both" else 1
         fig, axes = plt.subplots(1, ncols)
         fig.set_size_inches(*size)
-        fig.suptitle(f"{supported_properties[opt_run_property]} per optimizer run")
+        fig.suptitle(
+            f"{supported_properties[opt_run_property]} per optimizer run"
+        )
     else:
-        axes.set_title(f"{supported_properties[opt_run_property]} per optimizer run")
+        axes.set_title(
+            f"{supported_properties[opt_run_property]} per optimizer run"
+        )
 
     # loop over results
     for j, result in enumerate(results):

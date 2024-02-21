@@ -185,7 +185,10 @@ class OptimizerHistory:
             return
 
         # update if fval is better
-        if not is_none_or_nan(fval := result.get(FVAL)) and fval < self.fval_min:
+        if (
+            not is_none_or_nan(fval := result.get(FVAL))
+            and fval < self.fval_min
+        ):
             # need to update all values, as better fval found
             for key in HistoryBase.RESULT_KEYS:
                 setattr(self, f"{key}_min", result.get(key))

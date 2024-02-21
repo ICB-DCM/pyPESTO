@@ -154,7 +154,8 @@ class NegLogParameterPriors(ObjectiveBase):
             return True
         elif mode == C.MODE_RES:
             return all(
-                prior.get("residual", None) is not None for prior in self.prior_list
+                prior.get("residual", None) is not None
+                for prior in self.prior_list
             )
         else:
             raise ValueError(
@@ -216,7 +217,9 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         sres = np.zeros((len(self.prior_list), len(x)))
         for iprior, prior in enumerate(self.prior_list):
-            sres[iprior, prior["index"]] = prior["residual_dx"](x[prior["index"]])
+            sres[iprior, prior["index"]] = prior["residual_dx"](
+                x[prior["index"]]
+            )
 
         return sres
 
@@ -272,7 +275,8 @@ def get_parameter_prior_dict(
         def dd_log_f_log(x_log):
             """Second derivative of log-prior w.r.t. log-parameters."""
             return np.exp(x_log) * (
-                d_log_f_dx(np.exp(x_log)) + np.exp(x_log) * dd_log_f_ddx(np.exp(x_log))
+                d_log_f_dx(np.exp(x_log))
+                + np.exp(x_log) * dd_log_f_ddx(np.exp(x_log))
             )
 
         if res is not None:
@@ -318,7 +322,10 @@ def get_parameter_prior_dict(
             return (
                 log10**2
                 * 10**x_log10
-                * (dd_log_f_ddx(10**x_log10) * 10**x_log10 + d_log_f_dx(10**x_log10))
+                * (
+                    dd_log_f_ddx(10**x_log10) * 10**x_log10
+                    + d_log_f_dx(10**x_log10)
+                )
             )
 
         res_log = None
@@ -457,7 +464,9 @@ def _prior_densities(
         sigma2 = sigma**2
 
         def log_f(x):
-            return -np.log(2 * np.pi * sigma2) / 2 - (x - mean) ** 2 / (2 * sigma2)
+            return -np.log(2 * np.pi * sigma2) / 2 - (x - mean) ** 2 / (
+                2 * sigma2
+            )
 
         d_log_f_dx = _get_linear_function(-1 / sigma2, mean / sigma2)
         dd_log_f_ddx = _get_constant_function(-1 / sigma2)
@@ -490,7 +499,9 @@ def _prior_densities(
 
         def d_res_dx(x):
             if x == mean:
-                logger.warning("x == mean in d_res_dx of Laplace prior. Returning NaN.")
+                logger.warning(
+                    "x == mean in d_res_dx of Laplace prior. Returning NaN."
+                )
                 return math.nan
             return 1 / 2 * (x - mean) / np.sqrt(scale * abs(x - mean) ** 3)
 

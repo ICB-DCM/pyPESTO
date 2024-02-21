@@ -32,7 +32,9 @@ except ImportError:
     pass
 
 
-def plot_splines_from_pypesto_result(pypesto_result: Result, start_index=0, **kwargs):
+def plot_splines_from_pypesto_result(
+    pypesto_result: Result, start_index=0, **kwargs
+):
     """Plot the inner solutions from a pypesto result.
 
     Parameters
@@ -68,7 +70,9 @@ def plot_splines_from_pypesto_result(pypesto_result: Result, start_index=0, **kw
         )
     )
 
-    x_dct.update(pypesto_result.problem.objective.calculator.necessary_par_dummy_values)
+    x_dct.update(
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
+    )
 
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_result.problem.objective.edatas
@@ -107,7 +111,9 @@ def plot_splines_from_pypesto_result(pypesto_result: Result, start_index=0, **kw
     sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
 
     spline_calculator = None
-    for calculator in pypesto_result.problem.objective.calculator.inner_calculators:
+    for (
+        calculator
+    ) in pypesto_result.problem.objective.calculator.inner_calculators:
         if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
@@ -204,8 +210,12 @@ def plot_splines_from_inner_result(
             s, simulation, len(inner_parameters), delta_c, spline_bases, n
         )
 
-        axs[group_idx].plot(simulation, measurements, "bs", label="Measurements")
-        axs[group_idx].plot(spline_bases, inner_parameters, "g.", label="Spline knots")
+        axs[group_idx].plot(
+            simulation, measurements, "bs", label="Measurements"
+        )
+        axs[group_idx].plot(
+            spline_bases, inner_parameters, "g.", label="Spline knots"
+        )
         axs[group_idx].plot(
             spline_bases,
             inner_parameters,
@@ -321,7 +331,9 @@ def _add_spline_mapped_simulations_to_model_fit(
             result.optimize_result.list[start_index]["x"],
         )
     )
-    x_dct.update(pypesto_problem.objective.calculator.necessary_par_dummy_values)
+    x_dct.update(
+        pypesto_problem.objective.calculator.necessary_par_dummy_values
+    )
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_problem.objective.edatas
     parameter_mapping = pypesto_problem.objective.parameter_mapping
@@ -470,7 +482,9 @@ def _obtain_regularization_for_start(
         )
     )
 
-    x_dct.update(pypesto_result.problem.objective.calculator.necessary_par_dummy_values)
+    x_dct.update(
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
+    )
 
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_result.problem.objective.edatas
@@ -508,7 +522,9 @@ def _obtain_regularization_for_start(
     sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
 
     spline_calculator = None
-    for calculator in pypesto_result.problem.objective.calculator.inner_calculators:
+    for (
+        calculator
+    ) in pypesto_result.problem.objective.calculator.inner_calculators:
         if isinstance(calculator, SemiquantCalculator):
             spline_calculator = calculator
             break
@@ -548,7 +564,9 @@ def _obtain_regularization_for_start(
                 s=s,
                 N=len(inner_parameters),
                 c=spline_bases,
-                regularization_factor=inner_solver.options["regularization_factor"],
+                regularization_factor=inner_solver.options[
+                    "regularization_factor"
+                ],
             )
             reg_term_sum += reg_term
 

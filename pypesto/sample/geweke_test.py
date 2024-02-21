@@ -39,7 +39,9 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
     n_overlap = np.floor(nw / 2).astype(int)
 
     # Hanning window
-    w = 0.5 * (1 - np.cos(2 * np.pi * np.transpose(np.arange(1, nw + 1)) / (nw + 1)))
+    w = 0.5 * (
+        1 - np.cos(2 * np.pi * np.transpose(np.arange(1, nw + 1)) / (nw + 1))
+    )
     n = len(x)
     if n < nw:
         x[nw] = 0
@@ -161,7 +163,9 @@ def calculate_zscore(
     return z_score, p
 
 
-def burn_in_by_sequential_geweke(chain: np.ndarray, zscore: float = 2.0) -> int:
+def burn_in_by_sequential_geweke(
+    chain: np.ndarray, zscore: float = 2.0
+) -> int:
     """
     Calculate the burn-in of MCMC chains.
 

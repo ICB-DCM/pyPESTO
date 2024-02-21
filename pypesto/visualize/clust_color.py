@@ -89,7 +89,9 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     return colors
 
 
-def assign_colors(vals, colors=None, balance_alpha=True, highlight_global=True):
+def assign_colors(
+    vals, colors=None, balance_alpha=True, highlight_global=True
+):
     """
     Assign colors or format user specified colors.
 

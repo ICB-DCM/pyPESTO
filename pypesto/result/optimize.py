@@ -287,7 +287,9 @@ class OptimizeResult:
 
         # special handling in case there are only non-finite fvals
         num_best_value = int(clustsize[0]) if len(clustsize) else len(self)
-        num_plateaus = (1 + max(clust) - sum(clustsize == 1)) if len(clustsize) else 0
+        num_plateaus = (
+            (1 + max(clust) - sum(clustsize == 1)) if len(clustsize) else 0
+        )
 
         summary = (
             "## Optimization Result \n\n"
@@ -307,7 +309,10 @@ class OptimizeResult:
                 f"{self[0].summary(full, show_hess=show_hess)}"
             )
         if disp_worst:
-            summary += f"\nA summary of the worst run:\n\n" f"{self[-1].summary(full)}"
+            summary += (
+                f"\nA summary of the worst run:\n\n"
+                f"{self[-1].summary(full)}"
+            )
         return summary
 
     def append(

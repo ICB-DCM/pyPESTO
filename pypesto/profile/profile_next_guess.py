@@ -60,7 +60,9 @@ def next_guess(
 
     """
     if update_type == "fixed_step":
-        return fixed_step(x, par_index, par_direction, profile_options, problem)
+        return fixed_step(
+            x, par_index, par_direction, profile_options, problem
+        )
 
     if update_type == "adaptive_step_order_0":
         order = 0
@@ -69,7 +71,9 @@ def next_guess(
     elif update_type == "adaptive_step_regression":
         order = np.nan
     else:
-        raise ValueError(f"Unsupported `update_type` {update_type} for `next_guess`.")
+        raise ValueError(
+            f"Unsupported `update_type` {update_type} for `next_guess`."
+        )
 
     return adaptive_step(
         x,
@@ -176,7 +180,9 @@ def adaptive_step(
 
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
-        return np.clip(step_size_proposal, options.min_step_size, options.max_step_size)
+        return np.clip(
+            step_size_proposal, options.min_step_size, options.max_step_size
+        )
 
     # restrict step proposal to bounds
     def clip_to_bounds(step_proposal):
@@ -234,7 +240,9 @@ def adaptive_step(
                     # extrapolate
                     cur_par_extrapol = np.poly1d(reg_par[i_par])
                     x_step.append(
-                        cur_par_extrapol(x[par_index] + step_length * par_direction)
+                        cur_par_extrapol(
+                            x[par_index] + step_length * par_direction
+                        )
                     )
             return clip_to_bounds(x_step)
 
@@ -324,11 +332,15 @@ def handle_profile_history(
 
         if order == 1 or (np.isnan(order) and n_profile_points < 3):
             # set the update direction (extrapolate with order 1)
-            last_delta_x = current_profile.x_path[:, -1] - current_profile.x_path[:, -2]
+            last_delta_x = (
+                current_profile.x_path[:, -1] - current_profile.x_path[:, -2]
+            )
             delta_x_dir = last_delta_x / step_size_guess
         elif np.isnan(order):
             # compute the regression polynomial for parameter extrapolation
-            reg_par = get_reg_polynomial(par_index, current_profile, problem, options)
+            reg_par = get_reg_polynomial(
+                par_index, current_profile, problem, options
+            )
 
     return step_size_guess, delta_x_dir, reg_par, delta_obj_value
 
@@ -443,9 +455,15 @@ def do_line_search(
         next_x = clip_to_bounds(par_extrapol(step_size_guess))
 
         # Check if we hit the bounds
-        if direction == "decrease" and step_size_guess == options.min_step_size:
+        if (
+            direction == "decrease"
+            and step_size_guess == options.min_step_size
+        ):
             return next_x
-        if direction == "increase" and step_size_guess == options.max_step_size:
+        if (
+            direction == "increase"
+            and step_size_guess == options.max_step_size
+        ):
             return next_x
 
         # compute new objective value

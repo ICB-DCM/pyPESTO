@@ -74,10 +74,9 @@ def plot_selected_models(
     ]
 
     criterion_values = {
-        labels.get(model.get_hash(), default_label_maker(model)): model.get_criterion(
-            criterion
-        )
-        - zero
+        labels.get(
+            model.get_hash(), default_label_maker(model)
+        ): model.get_criterion(criterion) - zero
         for model in selected_models
     }
 
@@ -91,7 +90,9 @@ def plot_selected_models(
 
     ax.get_xticks()
     ax.set_xticks(list(range(len(criterion_values))))
-    ax.set_ylabel(criterion + ("(relative)" if relative else "(absolute)"), fontsize=fz)
+    ax.set_ylabel(
+        criterion + ("(relative)" if relative else "(absolute)"), fontsize=fz
+    )
     # could change to compared_model_ids, if all models are plotted
     ax.set_xticklabels(
         criterion_values.keys(),
@@ -109,7 +110,9 @@ def plot_selected_models(
 
 def plot_history_digraph(*args, **kwargs):
     """Ignore me. Renamed to `plot_calibrated_models_digraph`."""
-    raise NotImplementedError("This method is now `plot_calibrated_models_digraph`.")
+    raise NotImplementedError(
+        "This method is now `plot_calibrated_models_digraph`."
+    )
 
 
 def plot_calibrated_models_digraph(

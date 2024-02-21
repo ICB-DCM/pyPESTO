@@ -108,8 +108,12 @@ class InnerParameter:
     def check_bounds(self):
         """Check bounds."""
 
-        expected_lb = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][LOWER_BOUND]
-        expected_ub = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][UPPER_BOUND]
+        expected_lb = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][
+            LOWER_BOUND
+        ]
+        expected_ub = INNER_PARAMETER_BOUNDS[self.inner_parameter_type][
+            UPPER_BOUND
+        ]
         if self.lb != expected_lb or self.ub != expected_ub:
             raise ValueError(
                 "Invalid bounds for inner parameters. Parameter ID: "

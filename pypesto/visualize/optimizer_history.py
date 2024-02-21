@@ -97,7 +97,9 @@ def optimizer_history(
         vals = get_trace(result, trace_x, trace_y)
 
         # compute the necessary offset for the y-axis
-        (vals, offset_y) = get_vals(vals, scale_y, offset_y, trace_y, start_indices)
+        (vals, offset_y) = get_vals(
+            vals, scale_y, offset_y, trace_y, start_indices
+        )
 
         x_label, y_label = get_labels(trace_x, trace_y, offset_y)
 
@@ -281,7 +283,9 @@ def get_trace(
                 raise ValueError("No function value trace has been recorded.")
             fvals = history.get_fval_trace()
             indices = [
-                i for i, val in enumerate(fvals) if val is not None and np.isfinite(val)
+                i
+                for i, val in enumerate(fvals)
+                if val is not None and np.isfinite(val)
             ]
 
             y_vals = np.array([fvals[i] for i in indices])

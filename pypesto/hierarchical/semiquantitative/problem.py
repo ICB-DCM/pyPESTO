@@ -87,10 +87,18 @@ class SemiquantProblem(AmiciInnerProblem):
 
             self.groups[group] = {}
             self.groups[group][N_SPLINE_PARS] = len({x.index for x in xs})
-            self.groups[group][DATAPOINTS] = self.get_measurements_for_group(group)
-            self.groups[group][NUM_DATAPOINTS] = len(self.groups[group][DATAPOINTS])
-            self.groups[group][MIN_DATAPOINT] = np.min(self.groups[group][DATAPOINTS])
-            self.groups[group][MAX_DATAPOINT] = np.max(self.groups[group][DATAPOINTS])
+            self.groups[group][DATAPOINTS] = self.get_measurements_for_group(
+                group
+            )
+            self.groups[group][NUM_DATAPOINTS] = len(
+                self.groups[group][DATAPOINTS]
+            )
+            self.groups[group][MIN_DATAPOINT] = np.min(
+                self.groups[group][DATAPOINTS]
+            )
+            self.groups[group][MAX_DATAPOINT] = np.max(
+                self.groups[group][DATAPOINTS]
+            )
 
             self.groups[group][EXPDATA_MASK] = xs[0].ixs
             self.groups[group][CURRENT_SIMULATION] = np.zeros(
@@ -150,7 +158,8 @@ class SemiquantProblem(AmiciInnerProblem):
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.inner_parameter_type == InnerParameterType.SPLINE
+            if x.group == group
+            and x.inner_parameter_type == InnerParameterType.SPLINE
         ]
 
     def get_free_xs_for_group(self, group: int) -> list[SplineInnerParameter]:
@@ -175,14 +184,19 @@ class SemiquantProblem(AmiciInnerProblem):
 
     def get_inner_noise_parameters(self) -> list[float]:
         """Get a list with all noise parameter values."""
-        return [x.value for x in self.get_xs_for_type(InnerParameterType.SIGMA)]
+        return [
+            x.value for x in self.get_xs_for_type(InnerParameterType.SIGMA)
+        ]
 
-    def get_noise_parameters_for_group(self, group: int) -> SplineInnerParameter:
+    def get_noise_parameters_for_group(
+        self, group: int
+    ) -> SplineInnerParameter:
         r"""Get the ``SplineParameter``\ that is a noise parameters and belongs to the given group."""
         return [
             x
             for x in self.xs.values()
-            if x.group == group and x.inner_parameter_type == InnerParameterType.SIGMA
+            if x.group == group
+            and x.inner_parameter_type == InnerParameterType.SIGMA
         ]
 
     def get_inner_parameter_dictionary(self) -> dict:
@@ -409,7 +423,9 @@ def spline_ixs_for_measurement_specific_parameters(
             # iterate over measurements
             for _, measurement in df_for_time.iterrows():
                 # extract observable index
-                observable_ix = observable_ids.index(measurement[OBSERVABLE_ID])
+                observable_ix = observable_ids.index(
+                    measurement[OBSERVABLE_ID]
+                )
 
                 # as the time indices have to account for replicates, we need
                 #  to track which time indices have already been assigned for
@@ -422,8 +438,10 @@ def spline_ixs_for_measurement_specific_parameters(
                     time_ix_for_obs_ix[observable_ix] = time_ix_0
                 time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
 
-                inner_par_ids_for_meas = get_spline_inner_par_ids_for_measurement(
-                    measurement, inner_parameters
+                inner_par_ids_for_meas = (
+                    get_spline_inner_par_ids_for_measurement(
+                        measurement, inner_parameters
+                    )
                 )
 
                 # try to insert if hierarchical parameter

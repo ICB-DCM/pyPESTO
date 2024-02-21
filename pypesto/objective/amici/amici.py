@@ -246,7 +246,9 @@ class AmiciObjective(ObjectiveBase):
 
         return info
 
-    def create_history(self, id: str, x_names: Sequence[str], options: HistoryOptions):
+    def create_history(
+        self, id: str, x_names: Sequence[str], options: HistoryOptions
+    ):
         """See `history.generate.create_history` documentation."""
         # create different history types based on the inputs
         if options.storage_file is None:
@@ -263,7 +265,9 @@ class AmiciObjective(ObjectiveBase):
 
         # create history type based on storage type
         if suffix in SUFFIXES_CSV:
-            return CsvAmiciHistory(x_names=x_names, file=storage_file, options=options)
+            return CsvAmiciHistory(
+                x_names=x_names, file=storage_file, options=options
+            )
         elif suffix in SUFFIXES_HDF5:
             return Hdf5AmiciHistory(id=id, file=storage_file, options=options)
         else:
@@ -330,7 +334,9 @@ class AmiciObjective(ObjectiveBase):
             os.close(_fd)
             os.remove(_file)
 
-        state["AMICI_model_settings"] = amici.get_model_settings(self.amici_model)
+        state["AMICI_model_settings"] = amici.get_model_settings(
+            self.amici_model
+        )
 
         return state
 
@@ -458,7 +464,9 @@ class AmiciObjective(ObjectiveBase):
 
         # only ask amici to compute required quantities
         amici_reporting = (
-            self.amici_reporting if amici_reporting is None else amici_reporting
+            self.amici_reporting
+            if amici_reporting is None
+            else amici_reporting
         )
         if amici_reporting is None:
             amici_reporting = (
@@ -469,7 +477,10 @@ class AmiciObjective(ObjectiveBase):
         self.amici_solver.setReturnDataReportingMode(amici_reporting)
 
         # update steady state
-        if self.guess_steadystate and self.steadystate_guesses["fval"] < np.inf:
+        if (
+            self.guess_steadystate
+            and self.steadystate_guesses["fval"] < np.inf
+        ):
             for data_ix in range(len(self.edatas)):
                 self.apply_steadystate_guess(data_ix, x_dct)
 
@@ -561,8 +572,12 @@ class AmiciObjective(ObjectiveBase):
         preeq_guesses = self.steadystate_guesses["data"][condition_ix]
 
         # update parameter
-        condition_map_sim_var = self.parameter_mapping[condition_ix].map_sim_var
-        x_sim = map_par_opt_to_par_sim(condition_map_sim_var, x_dct, self.amici_model)
+        condition_map_sim_var = self.parameter_mapping[
+            condition_ix
+        ].map_sim_var
+        x_sim = map_par_opt_to_par_sim(
+            condition_map_sim_var, x_dct, self.amici_model
+        )
         preeq_guesses["x"] = x_sim
 
         # update steadystates

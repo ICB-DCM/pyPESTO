@@ -142,7 +142,9 @@ class ESSOptimizer:
         self.local_optimizer = local_optimizer
         self.n_diverse: int = n_diverse
         if n_procs is not None and n_threads is not None:
-            raise ValueError("`n_procs` and `n_threads` are mutually exclusive.")
+            raise ValueError(
+                "`n_procs` and `n_threads` are mutually exclusive."
+            )
         self.n_procs: Optional[int] = n_procs
         self.n_threads: Optional[int] = n_threads
         self.balance: float = balance
@@ -153,7 +155,9 @@ class ESSOptimizer:
         self.local_only_best_sol: bool = False
         self.max_walltime_s = max_walltime_s
         self._initialize()
-        self.logger = logging.getLogger(f"{self.__class__.__name__}-{id(self)}")
+        self.logger = logging.getLogger(
+            f"{self.__class__.__name__}-{id(self)}"
+        )
         self._result_includes_refset = result_includes_refset
 
     def _initialize(self):
@@ -199,12 +203,16 @@ class ESSOptimizer:
         if (refset is None and problem is None) or (
             refset is not None and problem is not None
         ):
-            raise ValueError("Exactly one of `problem` or `refset` has to be provided.")
+            raise ValueError(
+                "Exactly one of `problem` or `refset` has to be provided."
+            )
 
         # generate initial RefSet if not provided
         if refset is None:
             if self.dim_refset is None:
-                raise ValueError("Either refset or dim_refset have to be provided.")
+                raise ValueError(
+                    "Either refset or dim_refset have to be provided."
+                )
             # [EgeaMar2010]_ 2.1
             self.n_diverse = self.n_diverse or 10 * problem.dim
             self.evaluator = create_function_evaluator(
@@ -221,7 +229,9 @@ class ESSOptimizer:
             self.refset = refset
 
         self.evaluator = self.refset.evaluator
-        self.x_best = np.full(shape=(self.evaluator.problem.dim,), fill_value=np.nan)
+        self.x_best = np.full(
+            shape=(self.evaluator.problem.dim,), fill_value=np.nan
+        )
         # initialize global best from initial refset
         for x, fx in zip(self.refset.x, self.refset.fx):
             self._maybe_update_global_best(x, fx)
@@ -394,7 +404,11 @@ class ESSOptimizer:
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
         for i in range(self.refset.dim):
             xs_new = np.vstack(
-                tuple(self._combine(i, j) for j in range(self.refset.dim) if i != j),
+                tuple(
+                    self._combine(i, j)
+                    for j in range(self.refset.dim)
+                    if i != j
+                ),
             )
             fxs_new = self.evaluator.multiple(xs_new)
             best_idx = np.argmin(fxs_new)
@@ -442,7 +456,9 @@ class ESSOptimizer:
         c1 = np.fmax(np.fmin(c1, ub), lb)
         c2 = np.fmax(np.fmin(c2, ub), lb)
 
-        return np.random.uniform(low=c1, high=c2, size=self.evaluator.problem.dim)
+        return np.random.uniform(
+            low=c1, high=c2, size=self.evaluator.problem.dim
+        )
 
     def _do_local_search(
         self, x_best_children: np.array, fx_best_children: np.array
@@ -486,7 +502,8 @@ class ESSOptimizer:
                 1 - self.balance
             ) * quality_order + self.balance * diversity_order
             local_search_x0_fx0_candidates = (
-                (x_best_children[i], fx_best_children[i]) for i in np.argsort(priority)
+                (x_best_children[i], fx_best_children[i])
+                for i in np.argsort(priority)
             )
         else:
             return
@@ -595,7 +612,9 @@ class ESSOptimizer:
                     improvement = 0
 
             # update overall best?
-            self._maybe_update_global_best(x_best_children[i], fx_best_children[i])
+            self._maybe_update_global_best(
+                x_best_children[i], fx_best_children[i]
+            )
             if not self._keep_going():
                 break
 

@@ -55,7 +55,9 @@ def optimizer_convergence(
     grad_norms = [
         (
             np.linalg.norm(
-                result.problem.get_reduced_vector(grad, result.problem.x_free_indices),
+                result.problem.get_reduced_vector(
+                    grad, result.problem.x_free_indices
+                ),
                 2,
             )
             if grad is not None

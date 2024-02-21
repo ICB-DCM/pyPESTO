@@ -151,7 +151,9 @@ def parameters(
         # reduce parameter vector in reference point, if necessary
         if len(parameter_indices) < results[0].problem.dim_full:
             x_ref = np.array(
-                results[0].problem.get_reduced_vector(i_ref["x"], parameter_indices)
+                results[0].problem.get_reduced_vector(
+                    i_ref["x"], parameter_indices
+                )
             )
         else:
             x_ref = np.array(i_ref["x"])
@@ -291,7 +293,9 @@ def parameters_lowlevel(
         fig.set_size_inches(*size)
 
     # assign colors
-    colors = assign_colors(vals=fvals, colors=colors, balance_alpha=balance_alpha)
+    colors = assign_colors(
+        vals=fvals, colors=colors, balance_alpha=balance_alpha
+    )
 
     # parameter indices
     parameters_ind = list(range(1, xs.shape[1] + 1))[::-1]
@@ -409,7 +413,9 @@ def handle_inputs(
     # handle fixed and free indices
     if len(parameter_indices) < result.problem.dim_full:
         for ix, x in enumerate(xs_out):
-            xs_out[ix] = result.problem.get_reduced_vector(x, parameter_indices)
+            xs_out[ix] = result.problem.get_reduced_vector(
+                x, parameter_indices
+            )
         lb = result.problem.get_reduced_vector(lb, parameter_indices)
         ub = result.problem.get_reduced_vector(ub, parameter_indices)
         x_labels = [x_labels[int(i)] for i in parameter_indices]
@@ -454,7 +460,9 @@ def _handle_inner_inputs(
         Inner parameter upper bounds.
 
     """
-    inner_xs = [res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list]
+    inner_xs = [
+        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
+    ]
     inner_xs_names = None
     inner_lb = None
     inner_ub = None
@@ -524,7 +532,9 @@ def parameters_correlation_matrix(
     """
     import seaborn as sns
 
-    start_indices = process_start_indices(start_indices=start_indices, result=result)
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
@@ -534,7 +544,8 @@ def parameters_correlation_matrix(
         for i_start in start_indices
     ]
     x_labels = [
-        result.problem.x_names[parameter_index] for parameter_index in parameter_indices
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
     ]
     df = pd.DataFrame(parameters, columns=x_labels)
     corr_matrix = df.corr(method=method)
@@ -543,7 +554,9 @@ def parameters_correlation_matrix(
             data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
         )
     else:
-        ax = sns.heatmap(data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap)
+        ax = sns.heatmap(
+            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
+        )
     if return_table:
         return ax, df
     return ax
@@ -588,14 +601,19 @@ def optimization_scatter(
     """
     import seaborn as sns
 
-    start_indices = process_start_indices(start_indices=start_indices, result=result)
+    start_indices = process_start_indices(
+        start_indices=start_indices, result=result
+    )
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
     # remove all start indices that encounter an inf value at the start
     # resulting in optimize_result[start]["x"] being None
     start_indices_finite = start_indices[
-        [result.optimize_result[i_start]["x"] is not None for i_start in start_indices]
+        [
+            result.optimize_result[i_start]["x"] is not None
+            for i_start in start_indices
+        ]
     ]
     # compare start_indices with start_indices_finite and log a warning
     if len(start_indices) != len(start_indices_finite):
@@ -608,7 +626,8 @@ def optimization_scatter(
         for i_start in start_indices_finite
     ]
     x_labels = [
-        result.problem.x_names[parameter_index] for parameter_index in parameter_indices
+        result.problem.x_names[parameter_index]
+        for parameter_index in parameter_indices
     ]
     df = pd.DataFrame(parameters, columns=x_labels)
 

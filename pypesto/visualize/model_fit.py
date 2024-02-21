@@ -72,7 +72,9 @@ def visualize_optimized_model_fit(
     None: In case subplots are saved to file
 
     """
-    x = result.optimize_result.list[start_index]["x"][pypesto_problem.x_free_indices]
+    x = result.optimize_result.list[start_index]["x"][
+        pypesto_problem.x_free_indices
+    ]
     objective_result = pypesto_problem.objective(x, return_dict=True)
 
     simulation_df = rdatas_to_simulation_df(
@@ -97,7 +99,9 @@ def visualize_optimized_model_fit(
         **kwargs,
     )
 
-    non_quantitative_data_types = get_petab_non_quantitative_data_types(petab_problem)
+    non_quantitative_data_types = get_petab_non_quantitative_data_types(
+        petab_problem
+    )
 
     if non_quantitative_data_types is not None:
         if (
@@ -242,7 +246,9 @@ def _get_simulation_rdatas(
     # simulate with custom timepoints for hierarchical model
     if isinstance(problem.objective.calculator, RelativeAmiciCalculator):
         # get parameter dictionary
-        x_dct = dict(zip(problem.x_names, result.optimize_result.list[start_index].x))
+        x_dct = dict(
+            zip(problem.x_names, result.optimize_result.list[start_index].x)
+        )
 
         # evaluate objective with return dict = True to get inner parameters
         ret = problem.objective(
@@ -284,7 +290,9 @@ def _get_simulation_rdatas(
         )
 
         # evaluate objective with return dict = True to get data
-        ret = obj(parameters, mode="mode_fun", sensi_orders=(0,), return_dict=True)
+        ret = obj(
+            parameters, mode="mode_fun", sensi_orders=(0,), return_dict=True
+        )
         rdatas = ret["rdatas"]
 
     return rdatas
@@ -333,7 +341,8 @@ def _time_trajectory_model_with_states(
         ]
     if state_names is not None:
         state_indices_by_name = [
-            model.getStateNames().index(state_name) for state_name in state_names
+            model.getStateNames().index(state_name)
+            for state_name in state_names
         ]
     state_indices = list(set(state_indices_by_id + state_indices_by_name))
     if state_indices == []:

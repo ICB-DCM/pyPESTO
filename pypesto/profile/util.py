@@ -214,6 +214,10 @@ def fill_profile_list(
             # We append to an existing list
             if i_parameter in profile_index:
                 # Do we have to create a new profile?
-                create_new = profile_result.list[profile_list][i_parameter] is None
+                create_new = (
+                    profile_result.list[profile_list][i_parameter] is None
+                )
                 if create_new:
-                    profile_result.set_profiler_result(new_profile, i_parameter)
+                    profile_result.set_profiler_result(
+                        new_profile, i_parameter
+                    )

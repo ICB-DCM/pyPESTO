@@ -213,25 +213,33 @@ def write_ensemble_prediction_to_h5(
         if ensemble_prediction.lower_bound is not None:
             if isinstance(ensemble_prediction.lower_bound[0], np.ndarray):
                 lb_grp = f.require_group(LOWER_BOUND)
-                for i_cond, lower_bounds in enumerate(ensemble_prediction.lower_bound):
+                for i_cond, lower_bounds in enumerate(
+                    ensemble_prediction.lower_bound
+                ):
                     condition_id = ensemble_prediction.prediction_results[
                         0
                     ].condition_ids[i_cond]
                     write_array(lb_grp, condition_id, lower_bounds)
             elif isinstance(ensemble_prediction.lower_bound[0], float):
-                f.create_dataset(LOWER_BOUND, data=ensemble_prediction.lower_bound)
+                f.create_dataset(
+                    LOWER_BOUND, data=ensemble_prediction.lower_bound
+                )
 
         # write upper bounds per condition, if available
         if ensemble_prediction.upper_bound is not None:
             if isinstance(ensemble_prediction.upper_bound[0], np.ndarray):
                 ub_grp = f.require_group(UPPER_BOUND)
-                for i_cond, upper_bounds in enumerate(ensemble_prediction.upper_bound):
+                for i_cond, upper_bounds in enumerate(
+                    ensemble_prediction.upper_bound
+                ):
                     condition_id = ensemble_prediction.prediction_results[
                         0
                     ].condition_ids[i_cond]
                     write_array(ub_grp, condition_id, upper_bounds)
             elif isinstance(ensemble_prediction.upper_bound[0], float):
-                f.create_dataset(UPPER_BOUND, data=ensemble_prediction.upper_bound)
+                f.create_dataset(
+                    UPPER_BOUND, data=ensemble_prediction.upper_bound
+                )
 
         # write summary statistics to h5 file
         for (
@@ -245,8 +253,12 @@ def write_ensemble_prediction_to_h5(
             summary.write_to_h5(output_file, base_path=tmp_base_path)
 
         # write the single prediction results
-        for i_result, result in enumerate(ensemble_prediction.prediction_results):
-            tmp_base_path = os.path.join(base, f"{PREDICTION_RESULTS}_{i_result}")
+        for i_result, result in enumerate(
+            ensemble_prediction.prediction_results
+        ):
+            tmp_base_path = os.path.join(
+                base, f"{PREDICTION_RESULTS}_{i_result}"
+            )
             result.write_to_h5(output_file, base_path=tmp_base_path)
 
 
@@ -307,7 +319,9 @@ def read_ensemble_prediction_from_h5(
                 if isinstance(f[key], h5py._hl.dataset.Dataset):
                     bounds[key] = f[key][:]
                     continue
-                bounds[key] = [f[f"{key}/{cond}"][()] for cond in f[key].keys()]
+                bounds[key] = [
+                    f[f"{key}/{cond}"][()] for cond in f[key].keys()
+                ]
                 bounds[key] = np.array(bounds[key])
                 continue
             x_names = list(decode_array(f[f"{key}/{X_NAMES}"][()]))
@@ -315,7 +329,9 @@ def read_ensemble_prediction_from_h5(
             pred_cond_res_list = []
             for id, _ in enumerate(condition_ids):
                 output = f[f"{key}/{id}/{OUTPUT}"][:]
-                output_ids = tuple(decode_array(f[f"{key}/{id}" f"/{OUTPUT_IDS}"][:]))
+                output_ids = tuple(
+                    decode_array(f[f"{key}/{id}" f"/{OUTPUT_IDS}"][:])
+                )
                 timepoints = f[f"{key}/{id}/{TIMEPOINTS}"][:]
                 try:
                     output_weight = f[f"{key}/{id}/{OUTPUT_WEIGHT}"][()]

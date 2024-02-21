@@ -19,6 +19,7 @@ line_length = 79
 multi_line_output = 3
 
 [tool.ruff]
+line-length = 79
 exclude = ["amici_models"]
 lint.ignore = [
     "B027",
@@ -33,8 +34,10 @@ lint.ignore = [
 lint.select = [
     "F",  # Pyflakes
     "I",  # isort
-    "D413",  # pydocstyle
+    "D",  # pydocstyle (PEP 257)
 ]
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
 
 [tool.ruff.lint.per-file-ignores]
 "test/julia/test_pyjulia.py" = ["E402"]
@@ -67,4 +70,7 @@ lint.select = [
     "D400",
     "D205",
     "D107",
+]
+"doc/example/*.py" = [  # ignore docstyle in example pthon files.
+    "D",
 ]

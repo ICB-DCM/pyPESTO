@@ -61,7 +61,8 @@ def map_par_opt_to_par_sim(
 
     """
     par_sim_vals = [
-        condition_map_sim_var[par_id] for par_id in amici_model.getParameterIds()
+        condition_map_sim_var[par_id]
+        for par_id in amici_model.getParameterIds()
     ]
 
     # iterate over simulation parameter indices
@@ -135,9 +136,11 @@ def create_identity_parameter_mapping(
             for x_id, x_scale in zip(x_ids, x_scales)
         }
         # assumes fixed parameters are filled in already
-        mapping_for_condition = amici.parameter_mapping.ParameterMappingForCondition(
-            map_sim_var=condition_map_sim_var,
-            scale_map_sim_var=condition_scale_map_sim_var,
+        mapping_for_condition = (
+            amici.parameter_mapping.ParameterMappingForCondition(
+                map_sim_var=condition_map_sim_var,
+                scale_map_sim_var=condition_scale_map_sim_var,
+            )
         )
 
         parameter_mapping.append(mapping_for_condition)
@@ -176,7 +179,10 @@ def par_index_slices(
     # bool array indicating which simulation parameters map to any estimated
     #  parameters
     par_sim_maps_to_str = np.fromiter(
-        (isinstance(condition_map_sim_var[par_id], str) for par_id in par_sim_ids),
+        (
+            isinstance(condition_map_sim_var[par_id], str)
+            for par_id in par_sim_ids
+        ),
         dtype=bool,
         count=len(par_sim_ids),
     )
@@ -237,7 +243,9 @@ def add_sim_grad_to_opt_grad(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
 
-    par_opt_slice_unique, unique_index = np.unique(par_opt_slice, return_index=True)
+    par_opt_slice_unique, unique_index = np.unique(
+        par_opt_slice, return_index=True
+    )
     opt_grad[par_opt_slice_unique] += (
         coefficient * sim_grad[par_sim_slice[unique_index]]
     )
@@ -270,7 +278,9 @@ def add_sim_hess_to_opt_hess(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
 
-    par_opt_slice_unique, unique_index = np.unique(par_opt_slice, return_index=True)
+    par_opt_slice_unique, unique_index = np.unique(
+        par_opt_slice, return_index=True
+    )
 
     non_unique_indices = [
         idx for idx in range(len(par_opt_slice)) if idx not in unique_index
@@ -278,20 +288,25 @@ def add_sim_hess_to_opt_hess(
 
     opt_hess[np.ix_(par_opt_slice_unique, par_opt_slice_unique)] += (
         coefficient
-        * sim_hess[np.ix_(par_sim_slice[unique_index], par_sim_slice[unique_index])]
+        * sim_hess[
+            np.ix_(par_sim_slice[unique_index], par_sim_slice[unique_index])
+        ]
     )
 
     if par_opt_slice_unique.size < par_opt_slice.size:
         for idx in non_unique_indices:
             opt_hess[par_opt_slice[idx], par_opt_slice_unique] += (
-                coefficient * sim_hess[par_sim_slice[idx], par_sim_slice[unique_index]]
+                coefficient
+                * sim_hess[par_sim_slice[idx], par_sim_slice[unique_index]]
             )
             opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += (
-                coefficient * sim_hess[par_sim_slice[unique_index], par_sim_slice[idx]]
+                coefficient
+                * sim_hess[par_sim_slice[unique_index], par_sim_slice[idx]]
             )
             for jdx in non_unique_indices:
                 opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += (
-                    coefficient * sim_hess[par_sim_slice[idx], par_sim_slice[jdx]]
+                    coefficient
+                    * sim_hess[par_sim_slice[idx], par_sim_slice[jdx]]
                 )
 
 
@@ -318,7 +333,9 @@ def sim_sres_to_opt_sres(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
 
-    par_opt_slice_unique, unique_index = np.unique(par_opt_slice, return_index=True)
+    par_opt_slice_unique, unique_index = np.unique(
+        par_opt_slice, return_index=True
+    )
     opt_sres[:, par_opt_slice_unique] += (
         coefficient * sim_sres[:, par_sim_slice[unique_index]]
     )
@@ -363,7 +380,9 @@ def get_error_output(
     if not amici_model.nt():
         nt = sum(data.nt() for data in edatas)
     else:
-        nt = sum(data.nt() if data.nt() else amici_model.nt() for data in edatas)
+        nt = sum(
+            data.nt() if data.nt() else amici_model.nt() for data in edatas
+        )
     n_res = nt * amici_model.nytrue
     if amici_model.getAddSigmaResiduals():
         n_res *= 2

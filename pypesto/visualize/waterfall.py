@@ -116,7 +116,9 @@ def waterfall(
 
         # remove colors where value is infinite if colors were passed on
         if colors[j] is not None and fvals_raw.size == colors[j].shape[0]:
-            colors[j] = colors[j][np.isfinite(np.transpose(fvals_raw)).flatten()]
+            colors[j] = colors[j][
+                np.isfinite(np.transpose(fvals_raw)).flatten()
+            ]
 
         # parse input
         if order_by_id:
@@ -167,7 +169,9 @@ def waterfall(
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
     if inset_axes is not None:
-        inset_axes = handle_options(inset_axes, n_starts_to_zoom, refs, None, offset_y)
+        inset_axes = handle_options(
+            inset_axes, n_starts_to_zoom, refs, None, offset_y
+        )
 
     if any(legends):
         ax.legend()
@@ -254,9 +258,13 @@ def waterfall_lowlevel(
 
         # line plot (linear or logarithmic)
         if scale_y == "log10":
-            ax.semilogy(j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0)
+            ax.semilogy(
+                j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0
+            )
         else:
-            ax.plot(j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0)
+            ax.plot(
+                j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0
+            )
 
     # check if y-axis has a reasonable scale
     y_min, y_max = ax.get_ylim()

@@ -56,12 +56,15 @@ def projection_scatter_umap(
         # We got more than two components. Plot a cross-classification table
         # Create the labels first
         component_labels = [
-            f"UMAP component {components[i_comp] + 1}" for i_comp in range(n_components)
+            f"UMAP component {components[i_comp] + 1}"
+            for i_comp in range(n_components)
         ]
         # reduce pca components
         dataset = umap_coordinates[:, components]
         # run lowlevel plot
-        return ensemble_crosstab_scatter_lowlevel(dataset, component_labels, **kwargs)
+        return ensemble_crosstab_scatter_lowlevel(
+            dataset, component_labels, **kwargs
+        )
 
 
 def projection_scatter_umap_original(
@@ -141,12 +144,15 @@ def projection_scatter_pca(
         # We got more than two components. Plot a cross-classification table
         # Create the labels first
         component_labels = [
-            f"PCA component {components[i_comp] + 1}" for i_comp in range(n_components)
+            f"PCA component {components[i_comp] + 1}"
+            for i_comp in range(n_components)
         ]
         # reduce pca components
         dataset = pca_coordinates[:, components]
         # run lowlevel plot
-        return ensemble_crosstab_scatter_lowlevel(dataset, component_labels, **kwargs)
+        return ensemble_crosstab_scatter_lowlevel(
+            dataset, component_labels, **kwargs
+        )
 
 
 def ensemble_crosstab_scatter_lowlevel(

@@ -127,7 +127,9 @@ class ModelProblem:
                 if not self.pypesto_problem.x_free_indices:
                     fake_result_start_time = time.time()
                     fake_result_fval = self.pypesto_problem.objective([])
-                    fake_result_evaluation_time = time.time() - fake_result_start_time
+                    fake_result_evaluation_time = (
+                        time.time() - fake_result_start_time
+                    )
                     self.set_result(
                         create_fake_pypesto_result_from_fval(
                             fval=fake_result_fval,

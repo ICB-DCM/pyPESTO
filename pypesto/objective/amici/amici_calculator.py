@@ -168,9 +168,13 @@ def calculate_function_values(
 
     # check if the simulation failed
     if any(rdata["status"] < 0.0 for rdata in rdatas):
-        return get_error_output(amici_model, edatas, rdatas, sensi_orders, mode, dim)
+        return get_error_output(
+            amici_model, edatas, rdatas, sensi_orders, mode, dim
+        )
 
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_orders, mode, dim)
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+        sensi_orders, mode, dim
+    )
 
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()
@@ -208,7 +212,10 @@ def calculate_function_values(
 
                 # Hessian
             if 2 in sensi_orders:
-                if sensi_method != amici.SensitivityMethod_forward or not fim_for_hess:
+                if (
+                    sensi_method != amici.SensitivityMethod_forward
+                    or not fim_for_hess
+                ):
                     raise ValueError("AMICI cannot compute Hessians yet.")
                     # add FIM for Hessian
                 add_sim_hess_to_opt_hess(
@@ -227,7 +234,11 @@ def calculate_function_values(
         elif mode == MODE_RES:
             if 0 in sensi_orders:
                 chi2 += rdata["chi2"]
-                res = np.hstack([res, rdata["res"]]) if res.size else rdata["res"]
+                res = (
+                    np.hstack([res, rdata["res"]])
+                    if res.size
+                    else rdata["res"]
+                )
             if 1 in sensi_orders:
                 opt_sres = sim_sres_to_opt_sres(
                     x_ids,

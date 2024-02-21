@@ -175,7 +175,9 @@ def report_postprocessor(
         )
     )
 
-    for start_index, start_optimization_time in enumerate(start_optimization_times):
+    for start_index, start_optimization_time in enumerate(
+        start_optimization_times
+    ):
         header.append(f"start_time_{start_index}")
         row.append(str(start_optimization_time))
 

@@ -118,7 +118,9 @@ class Problem:
             ub_init = ub
         self.ub_init_full: np.ndarray = np.array(ub_init).flatten()
 
-        self.dim_full: int = dim_full if dim_full is not None else self.lb_full.size
+        self.dim_full: int = (
+            dim_full if dim_full is not None else self.lb_full.size
+        )
 
         if x_fixed_indices is None:
             x_fixed_indices = []
@@ -214,13 +216,17 @@ class Problem:
             elif value.size == self.dim:
                 # in this case the bounds only holds the values of the
                 # reduced bounds.
-                self.__setattr__(attr, self.get_full_vector(value, self.x_fixed_vals))
+                self.__setattr__(
+                    attr, self.get_full_vector(value, self.x_fixed_vals)
+                )
 
             if self.__getattribute__(attr).size != self.dim_full:
                 raise AssertionError(f"{attr} dimension invalid.")
 
         if self.x_guesses_full.shape[1] != self.dim_full:
-            x_guesses_full = np.empty((self.x_guesses_full.shape[0], self.dim_full))
+            x_guesses_full = np.empty(
+                (self.x_guesses_full.shape[0], self.dim_full)
+            )
             x_guesses_full[:] = np.nan
             x_guesses_full[:, self.x_free_indices] = self.x_guesses_full
             self.x_guesses_full = x_guesses_full
@@ -295,8 +301,12 @@ class Problem:
         ):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
-            index = _type_conversion_with_check(iter_index, x_index, "indices", "int")
-            val = _type_conversion_with_check(iter_index, x_value, "values", "float")
+            index = _type_conversion_with_check(
+                iter_index, x_index, "indices", "int"
+            )
+            val = _type_conversion_with_check(
+                iter_index, x_value, "values", "float"
+            )
             if index in self.x_fixed_indices:
                 self.x_fixed_vals[self.x_fixed_indices.index(index)] = val
             else:
@@ -305,14 +315,18 @@ class Problem:
 
         self.normalize()
 
-    def unfix_parameters(self, parameter_indices: SupportsIntIterableOrValue) -> None:
+    def unfix_parameters(
+        self, parameter_indices: SupportsIntIterableOrValue
+    ) -> None:
         """Free specified parameters."""
         # check and adapt input
         parameter_indices = _make_iterable_if_value(parameter_indices, "int")
 
         # first clean to-be-freed indices
         for iter_index, x_index in enumerate(parameter_indices):
-            index = _type_conversion_with_check(iter_index, x_index, "indices", "int")
+            index = _type_conversion_with_check(
+                iter_index, x_index, "indices", "int"
+            )
             if index in self.x_fixed_indices:
                 fixed_x_index = self.x_fixed_indices.index(index)
                 self.x_fixed_indices.pop(fixed_x_index)
@@ -354,7 +368,9 @@ class Problem:
             x_full[..., self.x_fixed_indices] = x_fixed_vals
         return x_full
 
-    def get_full_matrix(self, x: Union[np.ndarray, None]) -> Union[np.ndarray, None]:
+    def get_full_matrix(
+        self, x: Union[np.ndarray, None]
+    ) -> Union[np.ndarray, None]:
         """
         Map matrix from dim to dim_full. Usually used for hessian.
 
@@ -446,7 +462,9 @@ class Problem:
         """
         fixed_indices = np.asarray(self.x_fixed_indices)
         if full_index in fixed_indices:
-            raise ValueError("Cannot compute index in free vector: Index is fixed.")
+            raise ValueError(
+                "Cannot compute index in free vector: Index is fixed."
+            )
         return full_index - sum(fixed_indices < full_index)
 
     def print_parameter_summary(self) -> None:
@@ -460,7 +478,8 @@ class Problem:
                 index=self.x_names,
                 data={
                     "free": [
-                        idx in self.x_free_indices for idx in range(self.dim_full)
+                        idx in self.x_free_indices
+                        for idx in range(self.dim_full)
                     ],
                     "lb_full": self.lb_full,
                     "ub_full": self.ub_full,

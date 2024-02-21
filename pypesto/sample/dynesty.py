@@ -121,7 +121,10 @@ class DynestySampler(Sampler):
         The transformed prior sample.
 
         """
-        return prior_sample * (self.problem.ub - self.problem.lb) + self.problem.lb
+        return (
+            prior_sample * (self.problem.ub - self.problem.lb)
+            + self.problem.lb
+        )
 
     def loglikelihood(self, x):
         """Log-probability density function."""

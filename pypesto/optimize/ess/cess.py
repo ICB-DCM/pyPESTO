@@ -328,7 +328,9 @@ class CESSOptimizer:
             self.x_best = x[:]
             self.fx_best = fx
 
-    def _update_refsets(self, refsets: List[RefSet], evaluator: FunctionEvaluator):
+    def _update_refsets(
+        self, refsets: List[RefSet], evaluator: FunctionEvaluator
+    ):
         """
         Update refsets.
 
@@ -346,6 +348,8 @@ class CESSOptimizer:
         evaluator.n_eval_round = 0
 
         for i, ess_init_args in enumerate(self.ess_init_args):
-            refsets[i] = RefSet(dim=ess_init_args["dim_refset"], evaluator=evaluator)
+            refsets[i] = RefSet(
+                dim=ess_init_args["dim_refset"], evaluator=evaluator
+            )
             refsets[i].initialize_from_array(x_diverse=x, fx_diverse=fx)
             refsets[i].sort()

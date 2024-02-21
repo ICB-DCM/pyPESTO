@@ -69,7 +69,9 @@ def autosave(
         )
     # set the type to True and pass it on to write_result
     to_save = {store_type: True}
-    write_result(result=result, overwrite=overwrite, filename=filename, **to_save)
+    write_result(
+        result=result, overwrite=overwrite, filename=filename, **to_save
+    )
 
 
 def default_filename(**kwargs) -> str:

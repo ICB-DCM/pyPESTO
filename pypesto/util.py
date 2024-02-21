@@ -136,7 +136,9 @@ def is_none_or_nan_array(x: Union[Number, np.ndarray, None]) -> bool:
     return x is None or np.isnan(x).all()
 
 
-def allclose(x: Union[Number, np.ndarray], y: Union[Number, np.ndarray]) -> bool:
+def allclose(
+    x: Union[Number, np.ndarray], y: Union[Number, np.ndarray]
+) -> bool:
     """
     Check if two arrays are close.
 
@@ -334,7 +336,9 @@ def tqdm(*args, enable: bool = None, **kwargs):
 
     if enable is not None:
         if disable is not None and enable != disable:
-            raise ValueError("Contradicting values for `enable` and `disable` passed.")
+            raise ValueError(
+                "Contradicting values for `enable` and `disable` passed."
+            )
         disable = not enable
 
     if disable is not None:

@@ -155,7 +155,8 @@ class PredictionResult:
         self.condition_ids = condition_ids
         if self.condition_ids is None:
             self.condition_ids = [
-                get_condition_label(i_cond) for i_cond in range(len(conditions))
+                get_condition_label(i_cond)
+                for i_cond in range(len(conditions))
             ]
 
         # add a comment to this prediction if available
@@ -221,7 +222,9 @@ class PredictionResult:
             # create
             output_path.mkdir(parents=True, exist_ok=False)
             # add the suffix
-            output_dummy = Path(output_path.stem).with_suffix(f".{output_suffix}")
+            output_dummy = Path(output_path.stem).with_suffix(
+                f".{output_suffix}"
+            )
 
             return output_path, output_dummy
 
@@ -249,7 +252,9 @@ class PredictionResult:
                 for i_par in range(cond.output_sensi.shape[1]):
                     # create filename for this condition and parameter
                     filename = output_path.joinpath(
-                        output_dummy.stem + f"_{i_cond}__s{i_par}" + output_dummy.suffix
+                        output_dummy.stem
+                        + f"_{i_cond}__s{i_par}"
+                        + output_dummy.suffix
                     )
                     # create DataFrame and write to file
                     result = pd.DataFrame(

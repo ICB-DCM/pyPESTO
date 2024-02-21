@@ -245,7 +245,9 @@ class AmiciPredictor:
 
             condition_results.append(result)
         # create result object
-        results = PredictionResult(condition_results, condition_ids=self.condition_ids)
+        results = PredictionResult(
+            condition_results, condition_ids=self.condition_ids
+        )
 
         # Should the results be saved to a file?
         if output_file:
@@ -361,7 +363,8 @@ class AmiciPredictor:
             to AMICI was successful (``status == 0``), before writing the output.
             """
             amici_nt = [
-                len(edata.getTimepoints()) for edata in self.amici_objective.edatas
+                len(edata.getTimepoints())
+                for edata in self.amici_objective.edatas
             ]
             amici_ny = len(self.output_ids)
             amici_np = len(self.amici_objective.x_names)

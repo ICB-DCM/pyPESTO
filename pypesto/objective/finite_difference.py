@@ -133,7 +133,8 @@ class FDDelta:
                     and self.steps > 1
                 )
                 or (
-                    self.update_condition == FDDelta.CONSTANT and self.delta is not None
+                    self.update_condition == FDDelta.CONSTANT
+                    and self.delta is not None
                 )
             ):
                 return
@@ -201,9 +202,9 @@ class FDDelta:
         #  entries, to constrain the worst deviation
         if stab_vec.ndim > 2:
             # flatten all dimensions > 1
-            stab_vec = stab_vec.reshape(stab_vec.shape[0], stab_vec.shape[1], -1).max(
-                axis=2
-            )
+            stab_vec = stab_vec.reshape(
+                stab_vec.shape[0], stab_vec.shape[1], -1
+            ).max(axis=2)
 
         # minimum delta index for each parameter
         min_ixs = np.argmin(stab_vec, axis=0)
@@ -385,9 +386,13 @@ class FD(ObjectiveBase):
         delegates the actual objective evaluation.
         """
         if mode == MODE_FUN:
-            result = self._call_mode_fun(x=x, sensi_orders=sensi_orders, **kwargs)
+            result = self._call_mode_fun(
+                x=x, sensi_orders=sensi_orders, **kwargs
+            )
         elif mode == MODE_RES:
-            result = self._call_mode_res(x=x, sensi_orders=sensi_orders, **kwargs)
+            result = self._call_mode_res(
+                x=x, sensi_orders=sensi_orders, **kwargs
+            )
         else:
             raise ValueError("This mode is not supported.")
 
@@ -420,7 +425,9 @@ class FD(ObjectiveBase):
             return result
 
         # whether the Hessian should be based on 2nd order FD from fval
-        hess_via_fd_fval = hess_via_fd and (self.hess_via_fval or not self.obj.has_grad)
+        hess_via_fd_fval = hess_via_fd and (
+            self.hess_via_fval or not self.obj.has_grad
+        )
         hess_via_fd_grad = hess_via_fd and not hess_via_fd_fval
 
         def f_fval(x):

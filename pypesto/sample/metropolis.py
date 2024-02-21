@@ -154,7 +154,9 @@ class MetropolisSampler(InternalSampler):
             lprior = lprior_new
 
         # update proposal
-        self._update_proposal(x, lpost, log_p_acc, len(self.trace_neglogpost) + 1)
+        self._update_proposal(
+            x, lpost, log_p_acc, len(self.trace_neglogpost) + 1
+        )
 
         return x, lpost, lprior
 

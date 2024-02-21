@@ -63,7 +63,9 @@ class RelativeInnerProblem(AmiciInnerProblem):
         edatas: list["amici.ExpData"],
     ) -> "RelativeInnerProblem":
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
-        return inner_problem_from_petab_problem(petab_problem, amici_model, edatas)
+        return inner_problem_from_petab_problem(
+            petab_problem, amici_model, edatas
+        )
 
     def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
         """Check for consistency in data.
@@ -84,7 +86,9 @@ class RelativeInnerProblem(AmiciInnerProblem):
         """
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
-        data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
+        data = [
+            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
+        ]
 
         if len(self.data) != len(data):
             return False
@@ -116,7 +120,9 @@ def inner_problem_from_petab_problem(
     x_ids = [x.inner_parameter_id for x in inner_parameters]
 
     # used indices for all measurement specific parameters
-    ixs = ixs_for_measurement_specific_parameters(petab_problem, amici_model, x_ids)
+    ixs = ixs_for_measurement_specific_parameters(
+        petab_problem, amici_model, x_ids
+    )
 
     # transform experimental data
     data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
@@ -167,7 +173,9 @@ def inner_problem_from_petab_problem(
             continue
         for group in coupled_pars:
             if par.inner_parameter_id in group:
-                coupled_parameter_id = group[group.index(par.inner_parameter_id) - 1]
+                coupled_parameter_id = group[
+                    group.index(par.inner_parameter_id) - 1
+                ]
                 par.coupled = id_to_par[coupled_parameter_id]
                 break
 
@@ -207,7 +215,8 @@ def inner_parameters_from_parameter_df(
                     meas_df[NOISE_PARAMETERS] == par_id
                 ]
                 if any(
-                    corresponding_measurements[MEASUREMENT_TYPE] == SEMIQUANTITATIVE
+                    corresponding_measurements[MEASUREMENT_TYPE]
+                    == SEMIQUANTITATIVE
                 ):
                     continue
 
@@ -270,7 +279,9 @@ def ixs_for_measurement_specific_parameters(
             # iterate over measurements
             for _, measurement in df_for_time.iterrows():
                 # extract observable index
-                observable_ix = observable_ids.index(measurement[OBSERVABLE_ID])
+                observable_ix = observable_ids.index(
+                    measurement[OBSERVABLE_ID]
+                )
 
                 # as the time indices have to account for replicates, we need
                 #  to track which time indices have already been assigned for

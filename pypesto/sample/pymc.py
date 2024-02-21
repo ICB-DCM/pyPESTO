@@ -224,7 +224,9 @@ class PymcSampler(Sampler):
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
         # dimensions
-        n_par, n_chain, n_iter = np.asarray(self.data.posterior.to_array()).shape
+        n_par, n_chain, n_iter = np.asarray(
+            self.data.posterior.to_array()
+        ).shape
         n_par -= 1  # remove log-posterior
 
         # parameters

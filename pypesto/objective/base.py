@@ -106,7 +106,9 @@ class ObjectiveBase(ABC):
         # to avoid issues when writing to hdf (and correctness of typehint)
         return [
             str(name)
-            for name in self.pre_post_processor.reduce(np.asarray(self._x_names))
+            for name in self.pre_post_processor.reduce(
+                np.asarray(self._x_names)
+            )
         ]
 
     def initialize(self):
@@ -171,7 +173,9 @@ class ObjectiveBase(ABC):
 
         # check input
         if not self.check_mode(mode):
-            raise ValueError(f"This Objective cannot be called with mode" f"={mode}.")
+            raise ValueError(
+                f"This Objective cannot be called with mode" f"={mode}."
+            )
         if not self.check_sensi_orders(sensi_orders, mode):
             raise ValueError(
                 f"This Objective cannot be called with "
@@ -190,7 +194,9 @@ class ObjectiveBase(ABC):
         result = self.pre_post_processor.postprocess(result=result)
 
         # update history
-        self.history.update(x=x, sensi_orders=sensi_orders, mode=mode, result=result)
+        self.history.update(
+            x=x, sensi_orders=sensi_orders, mode=mode, result=result
+        )
 
         # map to output format
         if not return_dict:
@@ -464,7 +470,9 @@ class ObjectiveBase(ABC):
             # Replace rows in `combined_result` with corresponding rows
             # in `result` that have an improved value in column `label`.
             mask_improvements = result[label] < combined_result[label]
-            combined_result.loc[mask_improvements, :] = result.loc[mask_improvements, :]
+            combined_result.loc[mask_improvements, :] = result.loc[
+                mask_improvements, :
+            ]
 
         return combined_result
 
@@ -560,7 +568,9 @@ class ObjectiveBase(ABC):
             rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
 
             if detailed:
-                std_check_ix = (grad_ix - fd_c_ix) / np.std([fd_f_ix, fd_b_ix, fd_c_ix])
+                std_check_ix = (grad_ix - fd_c_ix) / np.std(
+                    [fd_f_ix, fd_b_ix, fd_c_ix]
+                )
                 mean_check_ix = abs(grad_ix - fd_c_ix) / np.mean(
                     [
                         abs(fd_f_ix - fd_b_ix),

@@ -60,7 +60,9 @@ class AesaraObjective(ObjectiveBase):
         if not isinstance(objective, ObjectiveBase):
             raise TypeError("objective must be an ObjectiveBase instance")
         if not objective.check_mode(MODE_FUN):
-            raise NotImplementedError(f"objective must support mode={MODE_FUN}")
+            raise NotImplementedError(
+                f"objective must support mode={MODE_FUN}"
+            )
         super().__init__(x_names)
         self.base_objective = objective
 

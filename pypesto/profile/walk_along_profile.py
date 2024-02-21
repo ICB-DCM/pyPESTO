@@ -103,7 +103,9 @@ def walk_along_profile(
                     problem=problem,
                     x0=startpoint,
                     id=str(i_optimize_attempt),
-                    optimize_options=OptimizeOptions(allow_failed_starts=False),
+                    optimize_options=OptimizeOptions(
+                        allow_failed_starts=False
+                    ),
                 )
                 if np.isfinite(optimizer_result.fval):
                     break
@@ -115,7 +117,9 @@ def walk_along_profile(
                 #  might be preferable to stay close to the previous point, at least initially,
                 #  but for now, we just sample from anywhere within the parameter bounds
                 # alternatively, run multi-start optimization
-                startpoint = problem.startpoint_method(n_starts=1, problem=problem)[0]
+                startpoint = problem.startpoint_method(
+                    n_starts=1, problem=problem
+                )[0]
             else:
                 raise RuntimeError(
                     f"Computing profile point failed. Could not find a finite solution after {max_tries} attempts."
@@ -139,7 +143,9 @@ def walk_along_profile(
             optimizer_result.update_to_full(problem=problem)
 
         if optimizer_result[GRAD] is not None:
-            gradnorm = np.linalg.norm(optimizer_result[GRAD][problem.x_free_indices])
+            gradnorm = np.linalg.norm(
+                optimizer_result[GRAD][problem.x_free_indices]
+            )
         else:
             gradnorm = np.nan
 

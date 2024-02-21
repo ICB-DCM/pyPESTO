@@ -46,7 +46,9 @@ class ReferencePoint(dict):
 
         # assign legend, may be None
         self.legend = legend
-        if isinstance(reference, dict) or isinstance(reference, ReferencePoint):
+        if isinstance(reference, dict) or isinstance(
+            reference, ReferencePoint
+        ):
             # Handle case of dict or ReferencePoint
             self.x = np.array(reference["x"])
             self.fval = reference["fval"]

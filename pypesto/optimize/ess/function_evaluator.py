@@ -286,7 +286,9 @@ def create_function_evaluator(
     returned.
     """
     if n_procs and n_threads:
-        raise ValueError("Only one of `n_procs` and `n_threads` may be specified.")
+        raise ValueError(
+            "Only one of `n_procs` and `n_threads` may be specified."
+        )
 
     if n_procs:
         return FunctionEvaluatorMP(

@@ -131,7 +131,9 @@ class CsvHistory(CountHistoryBase):
 
         # calculating function values from residuals
         #  and reduce via requested history options
-        result = reduce_result_via_options(add_fun_from_res(result), self.options)
+        result = reduce_result_via_options(
+            add_fun_from_res(result), self.options
+        )
 
         used_time = time.time() - self._start_time
 
@@ -213,7 +215,9 @@ class CsvHistory(CountHistoryBase):
         }
 
         for var, dtype in trace_dtypes.items():
-            self._trace[(var, np.nan)] = self._trace[(var, np.nan)].astype(dtype)
+            self._trace[(var, np.nan)] = self._trace[(var, np.nan)].astype(
+                dtype
+            )
 
     def _save_trace(self, finalize: bool = False):
         """
@@ -232,7 +236,9 @@ class CsvHistory(CountHistoryBase):
             # save
             trace_copy = copy.deepcopy(self._trace)
             for field in [(HESS, np.nan), (RES, np.nan), (SRES, np.nan)]:
-                trace_copy[field] = trace_copy[field].apply(ndarray2string_full)
+                trace_copy[field] = trace_copy[field].apply(
+                    ndarray2string_full
+                )
             trace_copy.to_csv(self.file)
 
     def __len__(self) -> int:
@@ -308,7 +314,9 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
     """
     if not isinstance(x, np.ndarray):
         return x
-    return np.array2string(x, threshold=x.size, precision=16, max_line_width=np.inf)
+    return np.array2string(
+        x, threshold=x.size, precision=16, max_line_width=np.inf
+    )
 
 
 def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
@@ -327,6 +335,8 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
     if not isinstance(x, str):
         return x
     if x.startswith("[["):
-        return np.vstack([np.fromstring(xx, sep=" ") for xx in x[2:-2].split("]\n [")])
+        return np.vstack(
+            [np.fromstring(xx, sep=" ") for xx in x[2:-2].split("]\n [")]
+        )
     else:
         return np.fromstring(x[1:-1], sep=" ")

@@ -304,7 +304,9 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
 
                 # calculate the optimal coupled scaling
                 coupled_scaling = x.coupled
-                x_opt[coupled_scaling.inner_parameter_id] = compute_optimal_scaling(
+                x_opt[
+                    coupled_scaling.inner_parameter_id
+                ] = compute_optimal_scaling(
                     data=data,
                     sim=sim,
                     sigma=sigma,
@@ -425,7 +427,9 @@ class NumericalInnerSolver(RelativeInnerSolver):
         if self.problem_kwargs is None:
             self.problem_kwargs = {}
 
-        self.minimize_kwargs["n_starts"] = self.minimize_kwargs.get("n_starts", 1)
+        self.minimize_kwargs["n_starts"] = self.minimize_kwargs.get(
+            "n_starts", 1
+        )
         self.minimize_kwargs["progress_bar"] = self.minimize_kwargs.get(
             "progress_bar", False
         )
@@ -500,7 +504,8 @@ class NumericalInnerSolver(RelativeInnerSolver):
                     apply_sigma(x_val, _sigma, mask)
                 else:
                     raise ValueError(
-                        "Can't handle parameter type " f"`{par.inner_parameter_type}`."
+                        "Can't handle parameter type "
+                        f"`{par.inner_parameter_type}`."
                     )
 
             return compute_nllh(_data, _sim, _sigma)
@@ -512,7 +517,9 @@ class NumericalInnerSolver(RelativeInnerSolver):
         pypesto_problem = Problem(
             objective, lb=lb, ub=ub, x_names=x_names, **self.problem_kwargs
         )
-        pypesto_problem.set_x_guesses(x_guesses[:, pypesto_problem.x_free_indices])
+        pypesto_problem.set_x_guesses(
+            x_guesses[:, pypesto_problem.x_free_indices]
+        )
 
         # perform the actual optimization
         result = minimize(pypesto_problem, **self.minimize_kwargs)
@@ -543,7 +550,10 @@ class NumericalInnerSolver(RelativeInnerSolver):
 
         # cache
         self.x_guesses = np.array(
-            [entry["x"] for entry in result.optimize_result.list[: self.n_cached]]
+            [
+                entry["x"]
+                for entry in result.optimize_result.list[: self.n_cached]
+            ]
         )
 
         # scale
@@ -573,7 +583,9 @@ class NumericalInnerSolver(RelativeInnerSolver):
 
         """
         if self.minimize_kwargs["n_starts"] == 1 and self.x_guesses is None:
-            return np.array([list(problem.get_dummy_values(scaled=False).values())])
+            return np.array(
+                [list(problem.get_dummy_values(scaled=False).values())]
+            )
         elif self.x_guesses is not None:
             n_samples = self.minimize_kwargs["n_starts"] - len(self.x_guesses)
         else:
@@ -610,7 +622,9 @@ class NumericalInnerSolver(RelativeInnerSolver):
         else:
             startpoints = np.vstack(
                 (
-                    np.array([list(problem.get_dummy_values(scaled=False).values())]),
+                    np.array(
+                        [list(problem.get_dummy_values(scaled=False).values())]
+                    ),
                     startpoints,
                 )
             )

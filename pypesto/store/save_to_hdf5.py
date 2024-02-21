@@ -15,7 +15,9 @@ from .hdf5 import write_array, write_float_array
 logger = logging.getLogger(__name__)
 
 
-def check_overwrite(f: Union[h5py.File, h5py.Group], overwrite: bool, target: str):
+def check_overwrite(
+    f: Union[h5py.File, h5py.Group], overwrite: bool, target: str
+):
     """
     Check whether target already exists.
 
@@ -195,7 +197,9 @@ class SamplingResultHDF5Writer:
 
             for key in result.sample_result.keys():
                 if isinstance(result.sample_result[key], np.ndarray):
-                    write_float_array(results_grp, key, result.sample_result[key])
+                    write_float_array(
+                        results_grp, key, result.sample_result[key]
+                    )
                 elif result.sample_result[key] is not None:
                     results_grp.attrs[key] = result.sample_result[key]
             f.flush()

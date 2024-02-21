@@ -44,9 +44,9 @@ def read_hdf5_profile(
                 f"/profiling/{profile_id}/{parameter_id}/{profile_key}"
             ][:]
         elif profile_key in f[f"/profiling/{profile_id}/{parameter_id}"].attrs:
-            result[profile_key] = f[f"/profiling/{profile_id}/{parameter_id}"].attrs[
-                profile_key
-            ]
+            result[profile_key] = f[
+                f"/profiling/{profile_id}/{parameter_id}"
+            ].attrs[profile_key]
     return result
 
 
@@ -80,9 +80,9 @@ def read_hdf5_optimization(
                 f"/optimization/results/{opt_id}/{optimization_key}"
             ][:]
         elif optimization_key in f[f"/optimization/results/{opt_id}"].attrs:
-            result[optimization_key] = f[f"/optimization/results/{opt_id}"].attrs[
-                optimization_key
-            ]
+            result[optimization_key] = f[
+                f"/optimization/results/{opt_id}"
+            ].attrs[optimization_key]
     return result
 
 
@@ -138,7 +138,9 @@ class ProblemHDF5Reader:
                     continue
                 setattr(problem, problem_key, f[f"/problem/{problem_key}"][:])
             for problem_attr in f["/problem"].attrs:
-                setattr(problem, problem_attr, f["/problem"].attrs[problem_attr])
+                setattr(
+                    problem, problem_attr, f["/problem"].attrs[problem_attr]
+                )
 
         # h5 uses numpy for everything; convert to lists where necessary
         problem.x_fixed_vals = [float(val) for val in problem.x_fixed_vals]
@@ -176,7 +178,9 @@ class OptimizationResultHDF5Reader:
         """Read HDF5 result file and return pyPESTO result object."""
         with h5py.File(self.storage_filename, "r") as f:
             for opt_id in f["/optimization/results"]:
-                result = read_hdf5_optimization(f, self.storage_filename, opt_id)
+                result = read_hdf5_optimization(
+                    f, self.storage_filename, opt_id
+                )
                 self.results.optimize_result.append(result)
             self.results.optimize_result.sort()
         return self.results
@@ -252,9 +256,13 @@ class ProfileResultHDF5Reader:
         profiling_list = []
         with h5py.File(self.storage_filename, "r") as f:
             for profile_id in f["/profiling"]:
-                profiling_list.append([None for _ in f[f"/profiling/{profile_id}"]])
+                profiling_list.append(
+                    [None for _ in f[f"/profiling/{profile_id}"]]
+                )
                 for parameter_id in f[f"/profiling/{profile_id}"]:
-                    if f[f"/profiling/{profile_id}/" f"{parameter_id}"].attrs["IsNone"]:
+                    if f[f"/profiling/{profile_id}/" f"{parameter_id}"].attrs[
+                        "IsNone"
+                    ]:
                         continue
                     profiling_list[int(profile_id)][
                         int(parameter_id)

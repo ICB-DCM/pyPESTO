@@ -47,11 +47,15 @@ class MultiProcessEngine(Engine):
 
         if n_procs is None:
             n_procs = os.cpu_count()
-            logger.info(f"Engine will use up to {n_procs} processes (= CPU count).")
+            logger.info(
+                f"Engine will use up to {n_procs} processes (= CPU count)."
+            )
         self.n_procs: int = n_procs
         self.method: str = method
 
-    def execute(self, tasks: list[Task], progress_bar: bool = None) -> list[Any]:
+    def execute(
+        self, tasks: list[Task], progress_bar: bool = None
+    ) -> list[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
         Parameters

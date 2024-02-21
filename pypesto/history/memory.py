@@ -50,7 +50,9 @@ class MemoryHistory(CountHistoryBase):
         """Update internal trace representation."""
         # calculating function values from residuals
         #  and reduce via requested history options
-        result: dict = reduce_result_via_options(add_fun_from_res(result), self.options)
+        result: dict = reduce_result_via_options(
+            add_fun_from_res(result), self.options
+        )
 
         result[X] = x
 

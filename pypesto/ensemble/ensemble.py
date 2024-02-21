@@ -156,7 +156,9 @@ class EnsemblePrediction:
             # use first element as dummy, to see if outputs have been computed
             if result.conditions[0].output is not None:
                 output.append(
-                    np.concatenate([cond.output for cond in result.conditions], axis=0)
+                    np.concatenate(
+                        [cond.output for cond in result.conditions], axis=0
+                    )
                 )
             else:
                 output = None
@@ -172,7 +174,9 @@ class EnsemblePrediction:
                 output_sensi = None
 
             timepoints.append(
-                np.concatenate([cond.timepoints for cond in result.conditions], axis=0)
+                np.concatenate(
+                    [cond.timepoints for cond in result.conditions], axis=0
+                )
             )
 
         # stack results in third dimension
@@ -220,12 +224,15 @@ class EnsemblePrediction:
         # check if prediction results are available
         if not self.prediction_results:
             raise ArithmeticError(
-                "Cannot compute summary statistics from " "empty prediction results."
+                "Cannot compute summary statistics from "
+                "empty prediction results."
             )
         # if weightings shall be used, check whether weights are there
         if weighting:
             if not self.prediction_results[0].conditions[0].output_weight:
-                raise ValueError("There are no weights in the prediction results.")
+                raise ValueError(
+                    "There are no weights in the prediction results."
+                )
 
         n_conditions = len(self.prediction_results[0].conditions)
 
@@ -314,7 +321,9 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_sigmay_list, axis=-1)
 
-        def _compute_summary(tmp_array, percentiles_list, weights, tmp_sigmas=None):
+        def _compute_summary(
+            tmp_array, percentiles_list, weights, tmp_sigmas=None
+        ):
             """
             Compute summary for a set of stacked simulations.
 
@@ -379,7 +388,9 @@ class EnsemblePrediction:
                     tmp_output_sensi, percentiles_list
                 )
             else:
-                output_sensi_summary = {i_key: None for i_key in cond_lists.keys()}
+                output_sensi_summary = {
+                    i_key: None for i_key in cond_lists.keys()
+                }
 
             # create some PredictionConditionResult to have an easier creation
             # of PredictionResults for the summaries later on
@@ -424,7 +435,9 @@ class EnsemblePrediction:
             self.prediction_summary[WEIGHTED_SIGMA] is None
         ):
             try:
-                self.compute_summary(weighting=True, compute_weighted_sigma=True)
+                self.compute_summary(
+                    weighting=True, compute_weighted_sigma=True
+                )
             except TypeError:
                 raise ValueError("Computing a summary failed.")
         n_conditions = len(self.prediction_results[0].conditions)
@@ -440,13 +453,18 @@ class EnsemblePrediction:
             )
             mean_traj = self.prediction_summary[MEAN].conditions[i_cond].output
             weighted_sigmas = (
-                self.prediction_summary[WEIGHTED_SIGMA].conditions[i_cond].output
+                self.prediction_summary[WEIGHTED_SIGMA]
+                .conditions[i_cond]
+                .output
             )
             if y_meas.shape != mean_traj.shape:
                 raise ValueError(
-                    "Shape of trajectory and shape " "of measurements does not match."
+                    "Shape of trajectory and shape "
+                    "of measurements does not match."
                 )
-            chi_2.append(np.nansum(((y_meas - mean_traj) / weighted_sigmas) ** 2))
+            chi_2.append(
+                np.nansum(((y_meas - mean_traj) / weighted_sigmas) ** 2)
+            )
         return np.sum(chi_2)
 
 
@@ -573,7 +591,10 @@ class Ensemble:
         """
         x_vectors = result.sample_result.trace_x[0]
         if x_names is None:
-            x_names = [result.problem.x_names[i] for i in result.problem.x_free_indices]
+            x_names = [
+                result.problem.x_names[i]
+                for i in result.problem.x_free_indices
+            ]
         if lower_bound is None:
             lower_bound = result.problem.lb
         if upper_bound is None:
@@ -631,13 +652,16 @@ class Ensemble:
             abs_cutoff = result.optimize_result[0].fval + rel_cutoff
             if percentile is not None:
                 logger.warning(
-                    "percentile is going to be ignored as " "rel_cutoff is not `None`."
+                    "percentile is going to be ignored as "
+                    "rel_cutoff is not `None`."
                 )
         else:
             abs_cutoff = calculate_cutoff(result=result, percentile=percentile)
         x_vectors = []
         vector_tags = []
-        x_names = [result.problem.x_names[i] for i in result.problem.x_free_indices]
+        x_names = [
+            result.problem.x_names[i] for i in result.problem.x_free_indices
+        ]
 
         for start in result.optimize_result.list:
             # add the parameters from the next start as long as we
@@ -743,17 +767,22 @@ class Ensemble:
             )
         x_vectors = []
         vector_tags = []
-        x_names = [result.problem.x_names[i] for i in result.problem.x_free_indices]
+        x_names = [
+            result.problem.x_names[i] for i in result.problem.x_free_indices
+        ]
         lb = result.problem.lb
         ub = result.problem.ub
 
         # calculate the number of starts whose final nllh is below cutoff
         n_starts = sum(
-            start["fval"] <= abs_cutoff for start in result.optimize_result.list
+            start["fval"] <= abs_cutoff
+            for start in result.optimize_result.list
         )
 
         fval_trace = [
-            np.array(result.optimize_result.list[i_ms][HISTORY].get_fval_trace())
+            np.array(
+                result.optimize_result.list[i_ms][HISTORY].get_fval_trace()
+            )
             for i_ms in range(n_starts)
         ]
         x_trace = [
@@ -840,7 +869,9 @@ class Ensemble:
         for parameter_id_objective in parameter_ids_objective:
             if parameter_id_objective in parameter_ids_ensemble:
                 # Append index of parameter in ensemble.
-                mapping.append(parameter_ids_ensemble.index(parameter_id_objective))
+                mapping.append(
+                    parameter_ids_ensemble.index(parameter_id_objective)
+                )
             elif default_value is not None:
                 mapping.append(default_value)
         return mapping
@@ -940,7 +971,9 @@ class Ensemble:
         # Execute tasks and flatten chunked results.
         prediction_results = [
             prediction_result
-            for prediction_chunk in engine.execute(tasks, progress_bar=progress_bar)
+            for prediction_chunk in engine.execute(
+                tasks, progress_bar=progress_bar
+            )
             for prediction_result in prediction_chunk
         ]
 
@@ -1013,7 +1046,9 @@ class Ensemble:
             std = self.summary[STANDARD_DEVIATION][ix]
             median = self.summary[MEAN][ix]
             perc_list = [
-                int(i_key[11:]) for i_key in self.summary.keys() if i_key[0:4] == "perc"
+                int(i_key[11:])
+                for i_key in self.summary.keys()
+                if i_key[0:4] == "perc"
             ]
             perc_lower = [perc for perc in perc_list if perc < 50]
             perc_upper = [perc for perc in perc_list if perc > 50]
@@ -1047,7 +1082,9 @@ class Ensemble:
 
         # create DataFrame
         parameter_identifiability = pd.DataFrame(parameter_identifiability)
-        parameter_identifiability.index = parameter_identifiability["parameterId"]
+        parameter_identifiability.index = parameter_identifiability[
+            "parameterId"
+        ]
 
         return parameter_identifiability
 
@@ -1100,7 +1137,9 @@ def entries_per_start(
     to_add = np.where(n_theo > n_equally)[0]
     if len(to_add) > n_left:
         to_add = to_add[0:n_left]
-    n_per_start = [n + 1 if i in to_add else n for i, n in enumerate(n_per_start)]
+    n_per_start = [
+        n + 1 if i in to_add else n for i, n in enumerate(n_per_start)
+    ]
 
     return n_per_start
 
@@ -1209,10 +1248,13 @@ def calculate_cutoff(
     """
     if percentile > 100:
         raise ValueError(
-            f"percentile={percentile} is too large. Choose " f"0<=percentile<=100."
+            f"percentile={percentile} is too large. Choose "
+            f"0<=percentile<=100."
         )
     if cr_option not in [SIMULTANEOUS, POINTWISE]:
-        raise ValueError("Confidence region must be either simultaneous or pointwise.")
+        raise ValueError(
+            "Confidence region must be either simultaneous or pointwise."
+        )
 
     # optimal point as base:
     fval_opt = result.optimize_result[0].fval

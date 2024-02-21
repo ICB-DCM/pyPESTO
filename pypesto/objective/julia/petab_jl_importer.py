@@ -101,7 +101,9 @@ class PetabJlImporter:
             source_file=source_file,
         )
 
-    def create_objective(self, precompile: Optional[bool] = True) -> PEtabJlObjective:
+    def create_objective(
+        self, precompile: Optional[bool] = True
+    ) -> PEtabJlObjective:
         """
         Create a `pypesto.objective.PEtabJlObjective` from the PEtab.jl problem.
 
@@ -264,7 +266,9 @@ def _get_default_options(
     return options
 
 
-def _write_julia_file(yaml_file: str, options: dict, directory: str) -> Tuple[str, str]:
+def _write_julia_file(
+    yaml_file: str, options: dict, directory: str
+) -> Tuple[str, str]:
     """
     Write the Julia file.
 

@@ -83,7 +83,8 @@ def check_editable(fun):
     def wrapper(self, *args, **kwargs):
         if not self.editable:
             raise ValueError(
-                f'ID "{self.id}" is already used in history file ' f'"{self.file}".'
+                f'ID "{self.id}" is already used in history file '
+                f'"{self.file}".'
             )
         return fun(self, *args, **kwargs)
 
@@ -329,7 +330,9 @@ class Hdf5History(HistoryBase):
 
         # calculating function values from residuals
         #  and reduce via requested history options
-        result = reduce_result_via_options(add_fun_from_res(result), self.options)
+        result = reduce_result_via_options(
+            add_fun_from_res(result), self.options
+        )
 
         used_time = time.time() - self.start_time
 
@@ -395,7 +398,9 @@ class Hdf5History(HistoryBase):
 
         for iteration in ix:
             try:
-                dataset = self._f[f"{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}"]
+                dataset = self._f[
+                    f"{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}"
+                ]
                 if dataset.shape == ():
                     entry = dataset[()]  # scalar
                 else:
@@ -536,7 +541,9 @@ class Hdf5History(HistoryBase):
                 getter = getattr(other, f"get_{trace_key}_trace")
                 trace = getter()
                 for iteration, value in enumerate(trace):
-                    trace_group.require_group(str(iteration))[trace_key] = value
+                    trace_group.require_group(str(iteration))[
+                        trace_key
+                    ] = value
         finally:
             history._f.close()
             history._f = None

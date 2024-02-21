@@ -75,13 +75,16 @@ def fill_result_from_history(
     x_match = x_exist and np.allclose(history_x, result_x)
     if x_exist and not x_match:
         logger.debug(
-            f"Optimal parameter mismatch: history {history_x}, " f"result {result_x}"
+            f"Optimal parameter mismatch: history {history_x}, "
+            f"result {result_x}"
         )
 
     # counters
     # we only use our own counters here as optimizers may report differently
     for key in (FVAL, GRAD, HESS, RES, SRES):
-        setattr(result, f"n_{key}", getattr(optimizer_history.history, f"n_{key}"))
+        setattr(
+            result, f"n_{key}", getattr(optimizer_history.history, f"n_{key}")
+        )
 
     # initial values
     result.x0 = optimizer_history.x0
@@ -195,7 +198,11 @@ def read_result_from_file(
         id=identifier,
         message="loaded from file",
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=(max(opt_hist.history.get_time_trace()) if len(opt_hist.history) else 0.0),
+        time=(
+            max(opt_hist.history.get_time_trace())
+            if len(opt_hist.history)
+            else 0.0
+        ),
     )
     result.id = identifier
     result = fill_result_from_history(

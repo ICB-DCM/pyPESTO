@@ -128,7 +128,9 @@ def _device_fun_hess(obj: "JaxObjective", x: jnp.array):
 
 
 @_device_fun.defjvp
-def _device_fun_jvp(obj: "JaxObjective", primals: jnp.array, tangents: jnp.array):
+def _device_fun_jvp(
+    obj: "JaxObjective", primals: jnp.array, tangents: jnp.array
+):
     """JVP implementation for device_fun."""
     (x,) = primals
     (x_dot,) = tangents
@@ -136,7 +138,9 @@ def _device_fun_jvp(obj: "JaxObjective", primals: jnp.array, tangents: jnp.array
 
 
 @_device_fun_grad.defjvp
-def _device_fun_grad_jvp(obj: "JaxObjective", primals: jnp.array, tangents: jnp.array):
+def _device_fun_grad_jvp(
+    obj: "JaxObjective", primals: jnp.array, tangents: jnp.array
+):
     """JVP implementation for device_fun_grad."""
     (x,) = primals
     (x_dot,) = tangents
@@ -166,7 +170,9 @@ class JaxObjective(ObjectiveBase):
         if not isinstance(objective, ObjectiveBase):
             raise TypeError("objective must be an ObjectiveBase instance")
         if not objective.check_mode(MODE_FUN):
-            raise NotImplementedError(f"objective must support mode={MODE_FUN}")
+            raise NotImplementedError(
+                f"objective must support mode={MODE_FUN}"
+            )
         super().__init__(x_names)
         self.base_objective = objective
 

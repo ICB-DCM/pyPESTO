@@ -17,7 +17,9 @@ class SingleCoreEngine(Engine):
     def __init__(self):
         super().__init__()
 
-    def execute(self, tasks: list[Task], progress_bar: bool = None) -> list[Any]:
+    def execute(
+        self, tasks: list[Task], progress_bar: bool = None
+    ) -> list[Any]:
         """Execute all tasks in a simple for loop sequentially.
 
         Parameters

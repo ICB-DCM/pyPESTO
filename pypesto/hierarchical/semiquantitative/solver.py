@@ -61,9 +61,13 @@ class SemiquantInnerSolver(InnerSolver):
             raise TypeError(f"{REGULARIZE_SPLINE} must be of type bool.")
         if self.options[REGULARIZE_SPLINE]:
             if type(self.options[REGULARIZATION_FACTOR]) is not float:
-                raise TypeError(f"{REGULARIZATION_FACTOR} must be of type float.")
+                raise TypeError(
+                    f"{REGULARIZATION_FACTOR} must be of type float."
+                )
             elif self.options[REGULARIZATION_FACTOR] < 0:
-                raise ValueError(f"{REGULARIZATION_FACTOR} must not be negative.")
+                raise ValueError(
+                    f"{REGULARIZATION_FACTOR} must not be negative."
+                )
 
         for key in self.options:
             if key not in self.get_default_options():
@@ -143,7 +147,10 @@ class SemiquantInnerSolver(InnerSolver):
             warnings.warn("Inner optimization failed.")
         else:
             obj = np.sum(
-                [x_inner_opt[idx][SCIPY_FUN] for idx in range(len(x_inner_opt))]
+                [
+                    x_inner_opt[idx][SCIPY_FUN]
+                    for idx in range(len(x_inner_opt))
+                ]
             )
         return obj
 
@@ -199,7 +206,10 @@ class SemiquantInnerSolver(InnerSolver):
             cond_par_map.map_sim_var for cond_par_map in parameter_mapping
         ]:
             for par_sim, par_opt in condition_map_sim_var.items():
-                if not isinstance(par_opt, str) or par_opt in already_calculated:
+                if (
+                    not isinstance(par_opt, str)
+                    or par_opt in already_calculated
+                ):
                     continue
                 elif par_opt not in par_opt_ids:
                     continue
@@ -215,7 +225,9 @@ class SemiquantInnerSolver(InnerSolver):
                         if par_sim_idx in par_edata_indices
                         else np.zeros(sy_cond[:, 0, :].shape)
                     )
-                    for sy_cond, par_edata_indices in zip(sy, par_edatas_indices)
+                    for sy_cond, par_edata_indices in zip(
+                        sy, par_edatas_indices
+                    )
                 ]
                 ssigma_for_outer_parameter = [
                     (
@@ -267,7 +279,9 @@ class SemiquantInnerSolver(InnerSolver):
                         delta_c=delta_c,
                         c=c,
                         n=n,
-                        regularization_factor=self.options[REGULARIZATION_FACTOR],
+                        regularization_factor=self.options[
+                            REGULARIZATION_FACTOR
+                        ],
                         regularize_spline=self.options[REGULARIZE_SPLINE],
                         group_dict=group_dict,
                     )
@@ -285,7 +299,11 @@ class SemiquantInnerSolver(InnerSolver):
                     min_diff_all[0] = 0.0
                     mu = np.asarray(
                         [
-                            (mu[i] if np.isclose(s[i] - min_diff_all[i], 0) else 0)
+                            (
+                                mu[i]
+                                if np.isclose(s[i] - min_diff_all[i], 0)
+                                else 0
+                            )
                             for i in range(len(s))
                         ]
                     )
@@ -315,7 +333,9 @@ class SemiquantInnerSolver(InnerSolver):
                             c=c,
                             n=n,
                         )
-                        dJ_dsigma2 = K / (2 * sigma**2) - residual_squared / sigma**4
+                        dJ_dsigma2 = (
+                            K / (2 * sigma**2) - residual_squared / sigma**4
+                        )
                         dsigma2_dtheta = ssigma_all[0] * sigma
                         dsigma_grad_term = dJ_dsigma2 * dsigma2_dtheta
                     # If we optimize the noise hierarchically,
@@ -367,7 +387,8 @@ class SemiquantInnerSolver(InnerSolver):
         )
 
         min_diff = self._get_minimal_difference(
-            measurement_range=group_dict[MAX_DATAPOINT] - group_dict[MIN_DATAPOINT],
+            measurement_range=group_dict[MAX_DATAPOINT]
+            - group_dict[MIN_DATAPOINT],
             N=group_dict[N_SPLINE_PARS],
             min_diff_factor=self.options[MIN_DIFF_FACTOR],
         )
@@ -545,7 +566,11 @@ class SemiquantInnerSolver(InnerSolver):
         else:
             x0 = np.full(
                 N,
-                (max_meas + 0.3 * range_all - np.max([min_meas - 0.3 * range_all, 0]))
+                (
+                    max_meas
+                    + 0.3 * range_all
+                    - np.max([min_meas - 0.3 * range_all, 0])
+                )
                 / (N - 1),
             )
             x0[0] = np.max([min_meas - 0.3 * range_all, 0])
@@ -726,11 +751,13 @@ def _calculate_nllh_gradient_for_group(
 
     # Calculate gradient of regularization term
     if regularize_spline:
-        regularization_term_gradient = _calculate_regularization_gradient_for_group(
-            s=s,
-            N=N,
-            c=c,
-            regularization_factor=regularization_factor,
+        regularization_term_gradient = (
+            _calculate_regularization_gradient_for_group(
+                s=s,
+                N=N,
+                c=c,
+                regularization_factor=regularization_factor,
+            )
         )
     else:
         regularization_term_gradient = np.zeros_like(s)
@@ -863,7 +890,9 @@ def _calculate_regularization_for_group(
     alpha_opt = (c_dot_xi - beta_opt * c_sum) / c_squares_sum
 
     # Calculate the sum of squared residuals for the optimal linear function
-    regularization_term = np.sum((xi - alpha_opt * c - beta_opt) ** 2) / (2 * N)
+    regularization_term = np.sum((xi - alpha_opt * c - beta_opt) ** 2) / (
+        2 * N
+    )
 
     return regularization_term * regularization_factor
 
@@ -991,7 +1020,10 @@ def calculate_dy_term(
             df_dy += (
                 ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
                 * s[i]
-                * ((y_dot_k - c_dot[i - 1]) * delta_c - (y_k - c[i - 1]) * delta_c_dot)
+                * (
+                    (y_dot_k - c_dot[i - 1]) * delta_c
+                    - (y_k - c[i - 1]) * delta_c_dot
+                )
                 / delta_c**2
             )
         # There is no i==0 case, because in this case
@@ -999,7 +1031,9 @@ def calculate_dy_term(
     return df_dy
 
 
-def calculate_spline_bases_gradient(sim_all: np.ndarray, sy_all: np.ndarray, N: int):
+def calculate_spline_bases_gradient(
+    sim_all: np.ndarray, sy_all: np.ndarray, N: int
+):
     """Calculate gradient of the rescaled spline bases."""
 
     min_idx = np.argmin(sim_all)
@@ -1023,7 +1057,9 @@ def calculate_spline_bases_gradient(sim_all: np.ndarray, sy_all: np.ndarray, N: 
     return delta_c_dot, c_dot
 
 
-def extract_expdata_using_mask(expdata: list[np.ndarray], mask: list[np.ndarray]):
+def extract_expdata_using_mask(
+    expdata: list[np.ndarray], mask: list[np.ndarray]
+):
     """Extract data from expdata list of arrays for the given mask."""
     return np.concatenate(
         [
@@ -1054,7 +1090,9 @@ def save_inner_parameters_to_inner_problem(
     """
     group_dict = inner_problem.groups[group]
     inner_spline_parameters = inner_problem.get_xs_for_group(group)
-    inner_noise_parameters = inner_problem.get_noise_parameters_for_group(group)
+    inner_noise_parameters = inner_problem.get_noise_parameters_for_group(
+        group
+    )
 
     lower_trian = np.tril(np.ones((len(s), len(s))))
     xi = np.dot(lower_trian, s)
@@ -1088,10 +1126,15 @@ def get_monotonicity_measure(measurement, simulation):
 
     """
     if len(measurement) != len(simulation):
-        raise ValueError("Measurement and simulation data must have the same length.")
+        raise ValueError(
+            "Measurement and simulation data must have the same length."
+        )
 
     ordered_simulation = [
-        x for _, x in sorted(zip(measurement, simulation), key=lambda pair: pair[0])
+        x
+        for _, x in sorted(
+            zip(measurement, simulation), key=lambda pair: pair[0]
+        )
     ]
     ordered_measurement = sorted(simulation)
 

@@ -79,7 +79,9 @@ def write_float_array(
         dset[:] = values
 
 
-def write_int_array(f: h5py.Group, path: str, values: Collection[int], dtype="<i4"):
+def write_int_array(
+    f: h5py.Group, path: str, values: Collection[int], dtype="<i4"
+):
     """
     Write integer array to hdf5.
 

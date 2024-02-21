@@ -203,13 +203,23 @@ class OrdinalProblem(AmiciInnerProblem):
 
     def get_free_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are free and belong to the given group."""
-        return [x for x in self.xs.values() if x.group == group and x.estimate is True]
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group and x.estimate is True
+        ]
 
     def get_fixed_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are fixed and belong to the given group."""
-        return [x for x in self.xs.values() if x.group == group and x.estimate is False]
+        return [
+            x
+            for x in self.xs.values()
+            if x.group == group and x.estimate is False
+        ]
 
-    def get_cat_ub_parameters_for_group(self, group: int) -> list[OrdinalParameter]:
+    def get_cat_ub_parameters_for_group(
+        self, group: int
+    ) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category upper boundaries and belong to the given group."""
         return [
             x
@@ -217,7 +227,9 @@ class OrdinalProblem(AmiciInnerProblem):
             if x.group == group and x.inner_parameter_id[:6] == CAT_UB
         ]
 
-    def get_cat_lb_parameters_for_group(self, group: int) -> list[OrdinalParameter]:
+    def get_cat_lb_parameters_for_group(
+        self, group: int
+    ) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category lower boundaries and belong to the given group."""
         return [
             x
@@ -250,19 +262,30 @@ class OrdinalProblem(AmiciInnerProblem):
         data_idx = 0
 
         # Iterate over categories.
-        for cat_idx, category in enumerate(self.get_cat_ub_parameters_for_group(group)):
+        for cat_idx, category in enumerate(
+            self.get_cat_ub_parameters_for_group(group)
+        ):
             num_data_in_cat = int(
-                np.sum([np.sum(category.ixs[idx]) for idx in range(len(category.ixs))])
+                np.sum(
+                    [
+                        np.sum(category.ixs[idx])
+                        for idx in range(len(category.ixs))
+                    ]
+                )
             )
 
             # Constrain the surrogate data of this category to stay within it.
             for _ in range(num_data_in_cat):
                 # lb - y_surr <= 0
                 constr[data_idx, data_idx] = -1
-                constr[data_idx, cat_idx + self.groups[group][NUM_DATAPOINTS]] = 1
+                constr[
+                    data_idx, cat_idx + self.groups[group][NUM_DATAPOINTS]
+                ] = 1
 
                 # y_surr - ub <= 0
-                constr[data_idx + self.groups[group][NUM_DATAPOINTS], data_idx] = 1
+                constr[
+                    data_idx + self.groups[group][NUM_DATAPOINTS], data_idx
+                ] = 1
                 constr[
                     data_idx + self.groups[group][NUM_DATAPOINTS],
                     cat_idx
@@ -339,7 +362,11 @@ class OrdinalProblem(AmiciInnerProblem):
             np.block(
                 [
                     np.ones(self.groups[group][NUM_DATAPOINTS])
-                    * (-1 * np.sum(sy_all) / ((np.sum(np.abs(y_sim_all)) + 1e-8) ** 2)),
+                    * (
+                        -1
+                        * np.sum(sy_all)
+                        / ((np.sum(np.abs(y_sim_all)) + 1e-8) ** 2)
+                    ),
                     np.zeros(2 * self.groups[group][NUM_CATEGORIES]),
                 ]
             )
@@ -426,7 +453,9 @@ class OrdinalProblem(AmiciInnerProblem):
 
         # Set to True all datapoints of the corresponding observable.
         if np.ndim(quantitative_ixs) == 2:
-            quantitative_ixs = [np.full(ixs_i.shape, True) for ixs_i in xs[0].ixs]
+            quantitative_ixs = [
+                np.full(ixs_i.shape, True) for ixs_i in xs[0].ixs
+            ]
         else:
             for quantitative_ixs_i in quantitative_ixs:
                 quantitative_ixs_i[:, observable_index] = True
@@ -510,7 +539,8 @@ def optimal_scaling_inner_parameters_from_measurement_df(
 
                     # Create only one set of bound parameters per category of a group.
                     if par_id not in [
-                        inner_par.inner_parameter_id for inner_par in inner_parameters
+                        inner_par.inner_parameter_id
+                        for inner_par in inner_parameters
                     ]:
                         inner_parameters.append(
                             OrdinalParameter(
@@ -539,14 +569,14 @@ def optimal_scaling_inner_parameters_from_measurement_df(
             for par_type in par_types:
                 for _, row in censored_df.iterrows():
                     category = int(
-                        unique_censoring_bounds.index(row[CENSORING_BOUNDS]) + 1
+                        unique_censoring_bounds.index(row[CENSORING_BOUNDS])
+                        + 1
                     )
-                    par_id = (
-                        f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}"
-                    )
+                    par_id = f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}"
                     # Create only one set of bound parameters per category of a group.
                     if par_id not in [
-                        inner_par.inner_parameter_id for inner_par in inner_parameters
+                        inner_par.inner_parameter_id
+                        for inner_par in inner_parameters
                     ]:
                         inner_parameters.append(
                             OrdinalParameter(
@@ -643,7 +673,9 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
             # iterate over measurements
             for _, measurement in df_for_time.iterrows():
                 # extract observable index
-                observable_ix = observable_ids.index(measurement[OBSERVABLE_ID])
+                observable_ix = observable_ids.index(
+                    measurement[OBSERVABLE_ID]
+                )
 
                 # as the time indices have to account for replicates, we need
                 #  to track which time indices have already been assigned for

@@ -97,7 +97,9 @@ def sampling_fval_traces(
             kwargs["palette"] = ["#868686", "#477ccd"]
         kwargs["legend"] = False
 
-    sns.scatterplot(x="iteration", y="logPosterior", data=params_fval, ax=ax, **kwargs)
+    sns.scatterplot(
+        x="iteration", y="logPosterior", data=params_fval, ax=ax, **kwargs
+    )
 
     if result.sample_result.burn_in is None:
         _burn_in = 0
@@ -193,7 +195,9 @@ def _plot_trajectories_by_condition(
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
-    grouped_measurements: Dict[Tuple[str, str], Sequence[Sequence[float]]] = None,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
@@ -307,7 +311,8 @@ def _plot_trajectories_by_condition(
                     lower_data,
                     upper_data,
                     facecolor=rgba2rgb(
-                        variable_colors[output_index] + [level_opacities[level_index]]
+                        variable_colors[output_index]
+                        + [level_opacities[level_index]]
                     ),
                     lw=0,
                 )
@@ -320,7 +325,9 @@ def _plot_trajectories_by_condition(
                     marker="o",
                     facecolor=facecolor0,
                     edgecolor=(
-                        "white" if rgb_to_hls(*facecolor0)[1] < 0.5 else "black"
+                        "white"
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
+                        else "black"
                     ),
                 )
 
@@ -336,7 +343,9 @@ def _plot_trajectories_by_output(
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
-    grouped_measurements: Dict[Tuple[str, str], Sequence[Sequence[float]]] = None,
+    grouped_measurements: Dict[
+        Tuple[str, str], Sequence[Sequence[float]]
+    ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
 
@@ -437,7 +446,9 @@ def _plot_trajectories_by_output(
                     t_lower_shifted,
                     lower_data,
                     upper_data,
-                    facecolor=rgba2rgb(facecolor0 + [level_opacities[level_index]]),
+                    facecolor=rgba2rgb(
+                        facecolor0 + [level_opacities[level_index]]
+                    ),
                     lw=0,
                 )
                 t_max = max(t_max, *t_lower_shifted, *t_upper_shifted)
@@ -450,7 +461,9 @@ def _plot_trajectories_by_output(
                     marker="o",
                     facecolor=facecolor0,
                     edgecolor=(
-                        "white" if rgb_to_hls(*facecolor0)[1] < 0.5 else "black"
+                        "white"
+                        if rgb_to_hls(*facecolor0)[1] < 0.5
+                        else "black"
                     ),
                 )
             # Set t0 to the last plotted timepoint of the current condition
@@ -477,7 +490,9 @@ def _get_condition_and_output_ids(
     """
     # For now, all prediction results must predict for the same set of
     # conditions. Can support different conditions later.
-    all_condition_ids = [prediction.condition_ids for prediction in summary.values()]
+    all_condition_ids = [
+        prediction.condition_ids for prediction in summary.values()
+    ]
     if not (
         np.array(
             [
@@ -514,7 +529,9 @@ def _handle_legends(
     n_col: int,
     average: str,
     add_sd: bool,
-    grouped_measurements: Optional[Dict[Tuple[str, str], Sequence[Sequence[float]]]],
+    grouped_measurements: Optional[
+        Dict[Tuple[str, str], Sequence[Sequence[float]]]
+    ],
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -583,7 +600,9 @@ def _handle_legends(
                 f"{level}% CI",
                 Line2D(
                     *fake_data,
-                    color=rgba2rgb([*RGBA_BLACK[:LEN_RGB], level_opacities[index]]),
+                    color=rgba2rgb(
+                        [*RGBA_BLACK[:LEN_RGB], level_opacities[index]]
+                    ),
                     lw=4,
                 ),
             ]
@@ -696,7 +715,8 @@ def _handle_colors(
 
     # define colormap
     variable_colors = [
-        list(cmap(v))[:LEN_RGB] for v in np.linspace(cmap_min, cmap_max, n_variables)
+        list(cmap(v))[:LEN_RGB]
+        for v in np.linspace(cmap_min, cmap_max, n_variables)
     ]
 
     return level_opacities, variable_colors
@@ -783,7 +803,9 @@ def sampling_prediction_trajectories(
     levels = sorted(levels, reverse=True)
     # Get the percentiles that correspond to the requested credibility levels.
     percentiles = [
-        percentile for level in levels for percentile in _get_level_percentiles(level)
+        percentile
+        for level in levels
+        for percentile in _get_level_percentiles(level)
     ]
 
     summary = ensemble_prediction.compute_summary(
@@ -920,7 +942,11 @@ def sampling_prediction_trajectories(
     # X and Y labels
     xmin = min(ax.get_position().xmin for ax in axes.flat)
     ymin = min(ax.get_position().ymin for ax in axes.flat)
-    xlabel = "Cumulative time across all conditions" if groupby == OUTPUT else "Time"
+    xlabel = (
+        "Cumulative time across all conditions"
+        if groupby == OUTPUT
+        else "Time"
+    )
     fig.text(
         0.5,
         ymin - artist_padding,
@@ -1033,7 +1059,9 @@ def sampling_parameter_cis(
             _step += step
 
     ax.set_yticks(range(n_pars))
-    ax.set_yticklabels(result.problem.get_reduced_vector(result.problem.x_names))
+    ax.set_yticklabels(
+        result.problem.get_reduced_vector(result.problem.x_names)
+    )
     ax.set_xlabel("Parameter value")
     ax.set_ylabel("Parameter name")
 
@@ -1293,10 +1321,14 @@ def sampling_1d_marginals(
     for idx, par_id in enumerate(param_names):
         if plot_type == "kde":
             # TODO: add bw_adjust as option?
-            sns.kdeplot(params_fval[par_id], bw_method=bw_method, ax=par_ax[par_id])
+            sns.kdeplot(
+                params_fval[par_id], bw_method=bw_method, ax=par_ax[par_id]
+            )
         elif plot_type == "hist":
             # fixes usage of sns distplot which throws a future warning
-            sns.histplot(x=params_fval[par_id], ax=par_ax[par_id], stat="density")
+            sns.histplot(
+                x=params_fval[par_id], ax=par_ax[par_id], stat="density"
+            )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
         elif plot_type == "both":
             sns.histplot(

@@ -135,7 +135,9 @@ def minimize(
 
     # change to one hdf5 storage file per start if parallel and if hdf5
     history_file = history_options.storage_file
-    history_requires_postprocessing = preprocess_hdf5_history(history_options, engine)
+    history_requires_postprocessing = preprocess_hdf5_history(
+        history_options, engine
+    )
 
     # define tasks
     tasks = []

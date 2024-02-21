@@ -34,11 +34,15 @@ class InnerProblem:
     """
 
     def __init__(self, xs: list[InnerParameter], data: list[np.ndarray]):
-        self.xs: dict[str, InnerParameter] = {x.inner_parameter_id: x for x in xs}
+        self.xs: dict[str, InnerParameter] = {
+            x.inner_parameter_id: x for x in xs
+        }
         self.data = copy.deepcopy(data)
 
         # create the joint mask of all inner problem parameters
-        self.data_mask = [np.zeros_like(cond_data, dtype=bool) for cond_data in data]
+        self.data_mask = [
+            np.zeros_like(cond_data, dtype=bool) for cond_data in data
+        ]
         for x in xs:
             for condition_ix, cond_mask in enumerate(self.data_mask):
                 cond_mask[x.ixs[condition_ix]] = True
@@ -78,7 +82,9 @@ class InnerProblem:
         """
         return list(self.xs.keys())
 
-    def get_xs_for_type(self, inner_parameter_type: str) -> list[InnerParameter]:
+    def get_xs_for_type(
+        self, inner_parameter_type: str
+    ) -> list[InnerParameter]:
         """Get inner parameters of the given type."""
         return [
             x
@@ -102,7 +108,9 @@ class InnerProblem:
         """
         return {
             x.inner_parameter_id: (
-                scale_value(x.dummy_value, x.scale) if scaled else x.dummy_value
+                scale_value(x.dummy_value, x.scale)
+                if scaled
+                else x.dummy_value
             )
             for x in self.xs.values()
         }
@@ -186,7 +194,9 @@ class AmiciInnerProblem(InnerProblem):
         """
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
-        data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
+        data = [
+            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
+        ]
 
         if len(self.data) != len(data):
             return False
@@ -198,7 +208,9 @@ class AmiciInnerProblem(InnerProblem):
         return True
 
 
-def scale_value_dict(dct: dict[str, float], problem: InnerProblem) -> dict[str, float]:
+def scale_value_dict(
+    dct: dict[str, float], problem: InnerProblem
+) -> dict[str, float]:
     """Scale a value dictionary."""
     scaled_dct = {}
     for key, val in dct.items():
@@ -207,7 +219,9 @@ def scale_value_dict(dct: dict[str, float], problem: InnerProblem) -> dict[str, 
     return scaled_dct
 
 
-def scale_value(val: Union[float, np.array], scale: str) -> Union[float, np.array]:
+def scale_value(
+    val: Union[float, np.array], scale: str
+) -> Union[float, np.array]:
     """Scale a single value."""
     if scale == "lin":
         return val
@@ -233,7 +247,8 @@ def ix_matrices_from_arrays(
 
     """
     ix_matrices = {
-        id: [np.zeros_like(edata, dtype=bool) for edata in edatas] for id in ixs
+        id: [np.zeros_like(edata, dtype=bool) for edata in edatas]
+        for id in ixs
     }
     for id, arr in ixs.items():
         matrices = ix_matrices[id]

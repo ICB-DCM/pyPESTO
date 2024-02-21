@@ -77,7 +77,9 @@ def approximate_parameter_profile(
     # we need the hessian - compute if not provided or fishy
     if hess is None or np.isnan(hess).any():
         logger.info("Computing Hessian/FIM as not available in result.")
-        hess = problem.objective(problem.get_reduced_vector(x), sensi_orders=(2,))
+        hess = problem.objective(
+            problem.get_reduced_vector(x), sensi_orders=(2,)
+        )
 
     # inverse of the hessian
     sigma = np.linalg.inv(hess)

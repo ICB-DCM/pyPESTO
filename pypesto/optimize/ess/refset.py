@@ -98,7 +98,9 @@ class RefSet:
         rest with a random selection from the remaining points.
         """
         if len(x_diverse) != len(fx_diverse):
-            raise ValueError("Lengths of `x_diverse` and `fx_diverse` do " "not match.")
+            raise ValueError(
+                "Lengths of `x_diverse` and `fx_diverse` do " "not match."
+            )
         if self.dim > len(x_diverse):
             raise ValueError(
                 "Cannot create RefSet with dimension "
@@ -138,7 +140,8 @@ class RefSet:
                 # zero-division may occur here
                 with np.errstate(divide="ignore", invalid="ignore"):
                     while (
-                        np.max(np.abs((x[i] - x[j]) / x[j])) <= self.proximity_threshold
+                        np.max(np.abs((x[i] - x[j]) / x[j]))
+                        <= self.proximity_threshold
                     ):
                         # too close. replace x_j.
                         x[j], self.fx[j] = self.evaluator.single_random()
@@ -193,7 +196,9 @@ class RefSet:
             new_x, new_fx = self.evaluator.multiple_random(new_dim - self.dim)
             self.fx = np.append(self.fx, new_fx)
             self.x = np.vstack((self.x, new_x))
-            self.n_stuck = np.append(self.n_stuck, np.zeros(shape=(new_dim - self.dim)))
+            self.n_stuck = np.append(
+                self.n_stuck, np.zeros(shape=(new_dim - self.dim))
+            )
             for attribute_name, attribute_values in self.attributes.items():
                 self.attributes[attribute_name] = np.append(
                     attribute_values, np.zeros(shape=(new_dim - self.dim))

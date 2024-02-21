@@ -34,9 +34,12 @@ class AggregatedObjective(ObjectiveBase):
                 f"Objectives must be a Sequence, " f"was {type(objectives)}."
             )
 
-        if not all(isinstance(objective, ObjectiveBase) for objective in objectives):
+        if not all(
+            isinstance(objective, ObjectiveBase) for objective in objectives
+        ):
             raise TypeError(
-                "Objectives must only contain elements of type" "pypesto.Objective"
+                "Objectives must only contain elements of type"
+                "pypesto.Objective"
             )
 
         if not objectives:
@@ -59,7 +62,9 @@ class AggregatedObjective(ObjectiveBase):
 
     def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
-        return all(objective.check_mode(mode) for objective in self._objectives)
+        return all(
+            objective.check_mode(mode) for objective in self._objectives
+        )
 
     def check_sensi_orders(
         self,

@@ -181,9 +181,9 @@ def update_history_statistics(
     mean = (1 - update_rate) * mean + update_rate * x_new
 
     dx = x_new - mean
-    cov = (1 - update_rate) * cov + update_rate * dx.reshape((-1, 1)) @ dx.reshape(
-        (1, -1)
-    )
+    cov = (1 - update_rate) * cov + update_rate * dx.reshape(
+        (-1, 1)
+    ) @ dx.reshape((1, -1))
 
     return mean, cov
 

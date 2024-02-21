@@ -140,7 +140,9 @@ def parameter_profile(
         # only compute profiles for free parameters
         if i_par in problem.x_fixed_indices:
             # log a warning
-            logger.warning(f"Parameter {i_par} is fixed and will not be profiled.")
+            logger.warning(
+                f"Parameter {i_par} is fixed and will not be profiled."
+            )
             continue
 
         current_profile = result.profile_result.get_profiler_result(
@@ -164,9 +166,9 @@ def parameter_profile(
 
     # fill in the ProfilerResults at the right index
     for indexed_profile in indexed_profiles:
-        result.profile_result.list[-1][indexed_profile["index"]] = indexed_profile[
-            "profile"
-        ]
+        result.profile_result.list[-1][
+            indexed_profile["index"]
+        ] = indexed_profile["profile"]
 
     autosave(
         filename=filename,

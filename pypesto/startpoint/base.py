@@ -110,7 +110,9 @@ class CheckedStartpoints(StartpointMethod, ABC):
         xs[n_guesses:n_starts, :] = x_sampled
 
         # check, resample and order startpoints
-        xs = self.check_and_resample(xs=xs, lb=lb, ub=ub, objective=problem.objective)
+        xs = self.check_and_resample(
+            xs=xs, lb=lb, ub=ub, objective=problem.objective
+        )
 
         return xs
 

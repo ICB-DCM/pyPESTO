@@ -112,12 +112,15 @@ class SacessOptimizer:
             num_workers is not None and ess_init_args is not None
         ):
             raise ValueError(
-                "Exactly one of `num_workers` or `ess_init_args` " "has to be provided."
+                "Exactly one of `num_workers` or `ess_init_args` "
+                "has to be provided."
             )
 
         self.num_workers = num_workers or len(ess_init_args)
         if self.num_workers < 2:
-            raise ValueError(f"{self.__class__.__name__} needs at least 2 workers.")
+            raise ValueError(
+                f"{self.__class__.__name__} needs at least 2 workers."
+            )
         self.ess_init_args = ess_init_args
         self.max_walltime_s = max_walltime_s
         self.exit_flag = ESSExitFlag.DID_NOT_RUN
@@ -131,7 +134,9 @@ class SacessOptimizer:
                 self._tmpdir = Path(f"SacessOptimizerTemp-{str(uuid1())[:8]}")
         self._tmpdir = Path(self._tmpdir).absolute()
         self._tmpdir.mkdir(parents=True, exist_ok=True)
-        self.histories: Optional[list["pypesto.history.memory.MemoryHistory"]] = None
+        self.histories: Optional[
+            list["pypesto.history.memory.MemoryHistory"]
+        ] = None
 
     def minimize(
         self,
@@ -186,7 +191,9 @@ class SacessOptimizer:
 
         logging_handler = logging.StreamHandler()
         logging_handler.setFormatter(
-            logging.Formatter("%(asctime)s %(name)s %(levelname)-8s %(message)s")
+            logging.Formatter(
+                "%(asctime)s %(name)s %(levelname)-8s %(message)s"
+            )
         )
         logging_thread = logging.handlers.QueueListener(
             multiprocessing.Queue(-1), logging_handler
@@ -239,7 +246,8 @@ class SacessOptimizer:
             # wait for finish
             # collect results
             histories = [
-                sacess_manager._result_queue.get() for _ in range(self.num_workers)
+                sacess_manager._result_queue.get()
+                for _ in range(self.num_workers)
             ]
             self.histories = histories
             for p in worker_processes:
@@ -289,7 +297,9 @@ class SacessOptimizer:
 
         # delete temporary files only after successful consolidation
         for worker_idx in range(self.num_workers):
-            filename = SacessWorker.get_temp_result_filename(worker_idx, self._tmpdir)
+            filename = SacessWorker.get_temp_result_filename(
+                worker_idx, self._tmpdir
+            )
             os.remove(filename)
         # delete tmpdir if empty
         try:
@@ -344,7 +354,9 @@ class SacessManager:
         self._rejection_threshold = shmem_manager.Value("d", 0.1)
         # scores of the workers, ordered by worker-index
         # initial score is the worker index
-        self._worker_scores = shmem_manager.Array("d", range(self._num_workers))
+        self._worker_scores = shmem_manager.Array(
+            "d", range(self._num_workers)
+        )
         self._worker_comms = shmem_manager.Array("i", [0] * self._num_workers)
         self._lock = shmem_manager.RLock()
         self._logger = logging.getLogger()
@@ -362,10 +374,14 @@ class SacessManager:
         the top of the scoreboard and returns those settings.
         """
         with self._lock:
-            leader_options = self._ess_options[np.argmax(self._worker_scores)].copy()
+            leader_options = self._ess_options[
+                np.argmax(self._worker_scores)
+            ].copy()
             for setting in ["local_n2", "balance", "dim_refset"]:
                 if setting in leader_options:
-                    self._ess_options[worker_idx][setting] = leader_options[setting]
+                    self._ess_options[worker_idx][setting] = leader_options[
+                        setting
+                    ]
             return self._ess_options[worker_idx].copy()
 
     def submit_solution(
@@ -393,7 +409,10 @@ class SacessManager:
             # solution improves best value by at least a factor of ...
             if (
                 # initially _best_known_fx is NaN
-                (np.isfinite(fx) and not np.isfinite(self._best_known_fx.value))
+                (
+                    np.isfinite(fx)
+                    and not np.isfinite(self._best_known_fx.value)
+                )
                 # avoid division by 0. just accept any improvement if best
                 # known value is 0.
                 or (self._best_known_fx.value == 0 and fx < 0)
@@ -404,7 +423,9 @@ class SacessManager:
                 )
             ):
                 # accept solution
-                self._logger.debug(f"Accepted solution from worker {sender_idx}: {fx}.")
+                self._logger.debug(
+                    f"Accepted solution from worker {sender_idx}: {fx}."
+                )
                 # accept
                 if len(x) != len(self._best_known_x):
                     raise AssertionError(
@@ -507,7 +528,9 @@ class SacessWorker:
         # Set the manager logger to one created within the current process
         self._manager._logger = self._logger
 
-        self._logger.debug(f"#{self._worker_idx} starting " f"({self._ess_kwargs}).")
+        self._logger.debug(
+            f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
+        )
 
         evaluator = create_function_evaluator(
             problem,
@@ -517,7 +540,9 @@ class SacessWorker:
         )
 
         # create initial refset
-        self._refset = RefSet(dim=self._ess_kwargs["dim_refset"], evaluator=evaluator)
+        self._refset = RefSet(
+            dim=self._ess_kwargs["dim_refset"], evaluator=evaluator
+        )
         self._refset.initialize_random(
             n_diverse=max(
                 self._ess_kwargs.get("n_diverse", 10 * problem.dim),
@@ -568,7 +593,9 @@ class SacessWorker:
         )
 
         ess = ESSOptimizer(**ess_kwargs)
-        ess.logger = self._logger.getChild(f"sacess-{self._worker_idx:02d}-ess")
+        ess.logger = self._logger.getChild(
+            f"sacess-{self._worker_idx:02d}-ess"
+        )
         ess.logger.setLevel(self._ess_loglevel)
 
         ess._initialize_minimize(
@@ -590,7 +617,9 @@ class SacessWorker:
             not np.isfinite(self._best_known_fx) and np.isfinite(recv_fx)
         ):
             if not np.isfinite(recv_x).all():
-                raise AssertionError(f"Received non-finite parameters {recv_x}.")
+                raise AssertionError(
+                    f"Received non-finite parameters {recv_x}."
+                )
             self._logger.debug(
                 f"Worker {self._worker_idx} received better solution {recv_fx}."
             )
@@ -609,7 +638,9 @@ class SacessWorker:
             self._n_received_solutions > 10 * self._n_sent_solutions + 20
             and self._neval > problem.dim * 5000
         ):
-            self._ess_kwargs = self._manager.reconfigure_worker(self._worker_idx)
+            self._ess_kwargs = self._manager.reconfigure_worker(
+                self._worker_idx
+            )
             self._refset.resize(self._ess_kwargs["dim_refset"])
             self._logger.debug(
                 f"Updated settings on worker {self._worker_idx} to "
@@ -631,10 +662,13 @@ class SacessWorker:
             or (self._best_known_fx == 0 and fx < 0)
             or (
                 fx < self._best_known_fx
-                and abs((self._best_known_fx - fx) / fx) > self._acceptance_threshold
+                and abs((self._best_known_fx - fx) / fx)
+                > self._acceptance_threshold
             )
         ):
-            self._logger.debug(f"Worker {self._worker_idx} sending solution {fx}.")
+            self._logger.debug(
+                f"Worker {self._worker_idx} sending solution {fx}."
+            )
             self._n_sent_solutions += 1
             self._best_known_fx = fx
 
@@ -686,13 +720,17 @@ class SacessWorker:
         # elapsed time
         if time.time() - self._start_time >= self._max_walltime_s:
             self.exit_flag = ESSExitFlag.MAX_TIME
-            self._logger.debug(f"Max walltime ({self._max_walltime_s}s) exceeded.")
+            self._logger.debug(
+                f"Max walltime ({self._max_walltime_s}s) exceeded."
+            )
             return False
 
         return True
 
     @staticmethod
-    def get_temp_result_filename(worker_idx: int, tmpdir: Union[str, Path]) -> str:
+    def get_temp_result_filename(
+        worker_idx: int, tmpdir: Union[str, Path]
+    ) -> str:
         return str(Path(tmpdir, f"sacess-{worker_idx:02d}_tmp.h5").absolute())
 
 
@@ -974,7 +1012,9 @@ class SacessFidesFactory:
         # only accepts int
         if np.isfinite(max_eval):
             options[FidesOptions.MAXITER] = int(max_eval)
-        return pypesto.optimize.FidesOptimizer(**self._fides_kwargs, options=options)
+        return pypesto.optimize.FidesOptimizer(
+            **self._fides_kwargs, options=options
+        )
 
     def __repr__(self):
         return f"{self.__class__.__name__}(fides_options={self._fides_options}, fides_kwargs={self._fides_kwargs})"

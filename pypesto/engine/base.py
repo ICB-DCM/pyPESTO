@@ -13,7 +13,9 @@ class Engine(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def execute(self, tasks: list[Task], progress_bar: bool = None) -> list[Any]:
+    def execute(
+        self, tasks: list[Task], progress_bar: bool = None
+    ) -> list[Any]:
         """Execute tasks.
 
         Parameters

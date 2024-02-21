@@ -55,7 +55,9 @@ def log_to_console(level: int = logging.INFO):
     log(level=level, console=True)
 
 
-def log_to_file(level: int = logging.INFO, filename: str = ".pypesto_logging.log"):
+def log_to_file(
+    level: int = logging.INFO, filename: str = ".pypesto_logging.log"
+):
     """
     Log to file.
 

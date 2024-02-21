@@ -88,7 +88,9 @@ def compute_optimal_scaling(
     )
 
 
-def apply_scaling(scaling_value: float, sim: list[np.ndarray], mask: list[np.ndarray]):
+def apply_scaling(
+    scaling_value: float, sim: list[np.ndarray], mask: list[np.ndarray]
+):
     """Apply scaling to simulations (in-place).
 
     Parameters
@@ -294,7 +296,9 @@ def compute_optimal_sigma(
     return np.sqrt(num / den)
 
 
-def apply_sigma(sigma_value: float, sigma: list[np.ndarray], mask: list[np.ndarray]):
+def apply_sigma(
+    sigma_value: float, sigma: list[np.ndarray], mask: list[np.ndarray]
+):
     """Apply optimal sigma to pre-existing sigma arrays (in-place).
 
     Parameters
@@ -414,7 +418,9 @@ def compute_bounded_optimal_scaling_offset_coupled(
         ]
         # The constrained solution is the candidate point with the lowest
         # objective value
-        constrained_solution = candidate_points[np.argmin(candidate_objective_values)]
+        constrained_solution = candidate_points[
+            np.argmin(candidate_objective_values)
+        ]
 
     # If only one parameter is unsatisfied, we need to solve a
     # unconstrained problem, clipped to its boundary

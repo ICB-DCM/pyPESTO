@@ -72,14 +72,18 @@ def plot_categories_from_pypesto_result(
             pypesto_result.optimize_result.list[start_index]["x"],
         )
     )
-    x_dct.update(pypesto_result.problem.objective.calculator.necessary_par_dummy_values)
+    x_dct.update(
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
+    )
 
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_result.problem.objective.edatas
     parameter_mapping = pypesto_result.problem.objective.parameter_mapping
     amici_model = pypesto_result.problem.objective.amici_model
     amici_solver = pypesto_result.problem.objective.amici_solver
-    petab_problem = pypesto_result.problem.objective.amici_object_builder.petab_problem
+    petab_problem = (
+        pypesto_result.problem.objective.amici_object_builder.petab_problem
+    )
     n_threads = pypesto_result.problem.objective.n_threads
 
     # Fill in the parameters.
@@ -120,7 +124,9 @@ def plot_categories_from_pypesto_result(
     )
 
     optimal_scaling_calculator = None
-    for calculator in pypesto_result.problem.objective.calculator.inner_calculators:
+    for (
+        calculator
+    ) in pypesto_result.problem.objective.calculator.inner_calculators:
         if isinstance(calculator, OrdinalCalculator):
             optimal_scaling_calculator = calculator
             break
@@ -206,7 +212,9 @@ def plot_categories_from_inner_result(
     for result, group in zip(results, inner_problem.groups):
         if observable_ids is not None and use_given_axes:
             observable_id = observable_ids[group - 1]
-            meas_obs_idx = measurement_df_observable_ordering.index(observable_id)
+            meas_obs_idx = measurement_df_observable_ordering.index(
+                observable_id
+            )
 
             # Get the ax for the current observable.
             ax = axes["plot" + str(meas_obs_idx + 1)]
@@ -328,7 +336,9 @@ def _plot_category_rectangles_across_conditions(
     ), timepoints in category_timepoints_dict.items():
         # If the largest timepoint is not the last unique timepoint, add the next unique timepoint
         # to the list of timepoints
-        max_timepoint_unique_ind = np.where(unique_timepoints == max(timepoints))[0][0]
+        max_timepoint_unique_ind = np.where(
+            unique_timepoints == max(timepoints)
+        )[0][0]
         if max_timepoint_unique_ind + 1 < len(unique_timepoints):
             timepoints.append(unique_timepoints[max_timepoint_unique_ind + 1])
 
@@ -679,7 +689,8 @@ def _plot_observable_fit_across_conditions(
         ]
 
     petab_condition_ordering = [
-        condition_ids.index(condition_id) for condition_id in condition_ids_from_petab
+        condition_ids.index(condition_id)
+        for condition_id in condition_ids_from_petab
     ]
 
     # Merge the simulation, surrogate, and bounds across conditions
@@ -724,7 +735,9 @@ def _plot_observable_fit_across_conditions(
         )
 
         quantitative_data = inner_problem.groups[group][QUANTITATIVE_DATA]
-        quantitative_data = quantitative_data[petab_quantitative_condition_ordering]
+        quantitative_data = quantitative_data[
+            petab_quantitative_condition_ordering
+        ]
         ax.plot(
             petab_quantitative_conditions,
             quantitative_data,
@@ -804,7 +817,9 @@ def _plot_observable_fit_for_one_condition(
     elif measurement_type == CENSORED:
         quantitative_data = inner_problem.groups[group][QUANTITATIVE_DATA]
         quantitative_ixs = inner_problem.groups[group][QUANTITATIVE_IXS]
-        quantitative_timepoints = timepoints[0][quantitative_ixs[0].T[observable_index]]
+        quantitative_timepoints = timepoints[0][
+            quantitative_ixs[0].T[observable_index]
+        ]
 
         if not use_given_axes:
             ax.plot(
@@ -868,7 +883,9 @@ def _plot_observable_fit_for_multiple_conditions(
         colors = plt.cm.rainbow(np.linspace(0, 1, len(simulation_all)))
 
     if measurement_type == CENSORED:
-        quantitative_data_flattened = inner_problem.groups[group][QUANTITATIVE_DATA]
+        quantitative_data_flattened = inner_problem.groups[group][
+            QUANTITATIVE_DATA
+        ]
         quantitative_ixs = inner_problem.groups[group][QUANTITATIVE_IXS]
         quantitative_timepoints = [
             timepoints[cond_i][quantitative_ixs[cond_i].T[observable_index]]
@@ -880,7 +897,8 @@ def _plot_observable_fit_for_multiple_conditions(
         for cond_i in range(len(timepoints)):
             quantitative_data.append(
                 quantitative_data_flattened[
-                    index_offset : index_offset + len(quantitative_timepoints[cond_i])
+                    index_offset : index_offset
+                    + len(quantitative_timepoints[cond_i])
                 ]
             )
 
@@ -940,9 +958,13 @@ def _plot_observable_fit_for_multiple_conditions(
                 upper_bound,
                 lower_bound,
             ) not in category_timepoints_dict:
-                category_timepoints_dict[(upper_bound, lower_bound)] = [timepoint]
+                category_timepoints_dict[(upper_bound, lower_bound)] = [
+                    timepoint
+                ]
             else:
-                category_timepoints_dict[(upper_bound, lower_bound)].append(timepoint)
+                category_timepoints_dict[(upper_bound, lower_bound)].append(
+                    timepoint
+                )
 
     # Plot the category rectangles
     _plot_category_rectangles_across_conditions(

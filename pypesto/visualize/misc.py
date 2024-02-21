@@ -102,7 +102,9 @@ def process_result_list(
     return results, colors, legends
 
 
-def process_offset_y(offset_y: Optional[float], scale_y: str, min_val: float) -> float:
+def process_offset_y(
+    offset_y: Optional[float], scale_y: str, min_val: float
+) -> float:
     """
     Compute offset for y-axis, depend on user settings.
 
@@ -253,7 +255,9 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     if len(fg) == LEN_RGB or fg[RGBA_ALPHA] == RGBA_MAX:
         return fg
     if len(fg) != LEN_RGBA:
-        raise IndexError("A foreground color of unexpected length was provided: {fg}")
+        raise IndexError(
+            "A foreground color of unexpected length was provided: {fg}"
+        )
 
     def apparent_composite_color_component(
         fg_component: float,
@@ -283,10 +287,14 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
 
         """
         return (
-            fg_component * fg_alpha + bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
+            fg_component * fg_alpha
+            + bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
         ) / (fg_alpha + bg_alpha * (RGBA_MAX - fg_alpha))
 
-    return [apparent_composite_color_component(fg[i], bg[i]) for i in range(LEN_RGB)]
+    return [
+        apparent_composite_color_component(fg[i], bg[i])
+        for i in range(LEN_RGB)
+    ]
 
 
 def process_start_indices(
@@ -324,15 +332,17 @@ def process_start_indices(
             )
             # get all clusters that have size >= 2 and cluster of best start:
             clust_gr2 = np.where(clust_size > 2)[0]
-            clust_gr2 = np.append(clust_gr2, 0) if 0 not in clust_gr2 else clust_gr2
+            clust_gr2 = (
+                np.append(clust_gr2, 0) if 0 not in clust_gr2 else clust_gr2
+            )
             start_indices = np.concatenate(
                 [np.where(clust_ind == i_clust)[0] for i_clust in clust_gr2]
             )
             return start_indices
         elif start_indices == FIRST_CLUSTER:
-            clust_ind = assign_clusters(delete_nan_inf(result.optimize_result.fval)[1])[
-                0
-            ]
+            clust_ind = assign_clusters(
+                delete_nan_inf(result.optimize_result.fval)[1]
+            )[0]
             return np.where(clust_ind == 0)[0]
         else:
             raise ValueError(

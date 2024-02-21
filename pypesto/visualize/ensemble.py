@@ -46,7 +46,9 @@ def ensemble_identifiability(
     none_hit, lb_hit, ub_hit, both_hit = _prepare_identifiability_plot(id_df)
 
     # call lowlevel routine which works with np arrays only
-    ax = ensemble_identifiability_lowlevel(none_hit, lb_hit, ub_hit, both_hit, ax, size)
+    ax = ensemble_identifiability_lowlevel(
+        none_hit, lb_hit, ub_hit, both_hit, ax, size
+    )
 
     return ax
 
@@ -378,7 +380,9 @@ def _create_patches(
             # create a list of rectangles
             patches_lb_hit.append(Rectangle((x, 0.0), h, lb_par))
             x += h
-        patches_lb_hit = PatchCollection(patches_lb_hit, facecolors=COLOR_HIT_ONE_BOUND)
+        patches_lb_hit = PatchCollection(
+            patches_lb_hit, facecolors=COLOR_HIT_ONE_BOUND
+        )
 
     # creates patches for parameters which hit upper bound
     patches_ub_hit = []
@@ -389,7 +393,9 @@ def _create_patches(
             # create a list of rectangles
             patches_ub_hit.append(Rectangle((x, ub_par), h, 1.0 - ub_par))
             x += h
-        patches_ub_hit = PatchCollection(patches_ub_hit, facecolors=COLOR_HIT_ONE_BOUND)
+        patches_ub_hit = PatchCollection(
+            patches_ub_hit, facecolors=COLOR_HIT_ONE_BOUND
+        )
 
     # creates patches for parameters which hit no bounds
     patches_none_hit = []

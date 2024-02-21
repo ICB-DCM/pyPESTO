@@ -73,7 +73,9 @@ class ParallelTemperingSampler(Sampler):
             "show_progress": None,
         }
 
-    def initialize(self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]):
+    def initialize(
+        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+    ):
         """Initialize all samplers."""
         n_chains = len(self.samplers)
         if isinstance(x0, list):
@@ -105,7 +107,9 @@ class ParallelTemperingSampler(Sampler):
         """Concatenate all chains."""
         results = [sampler.get_samples() for sampler in self.samplers]
         trace_x = np.array([result.trace_x[0] for result in results])
-        trace_neglogpost = np.array([result.trace_neglogpost[0] for result in results])
+        trace_neglogpost = np.array(
+            [result.trace_neglogpost[0] for result in results]
+        )
         trace_neglogprior = np.array(
             [result.trace_neglogprior[0] for result in results]
         )
@@ -180,7 +184,9 @@ def near_exponential_decay_betas(
     if n_chains == 1:
         return np.array([1.0])
 
-    temperatures = np.linspace(1, max_temp ** (1 / exponent), n_chains) ** exponent
+    temperatures = (
+        np.linspace(1, max_temp ** (1 / exponent), n_chains) ** exponent
+    )
     betas = 1 / temperatures
 
     return betas

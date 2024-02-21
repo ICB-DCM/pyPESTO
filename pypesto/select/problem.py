@@ -208,7 +208,9 @@ class Problem:
                 )
                 best_models.append(previous_best_model)
             except StopIteration:
-                previous_best_model = method_caller.candidate_space.predecessor_model
+                previous_best_model = (
+                    method_caller.candidate_space.predecessor_model
+                )
                 best_models.append(previous_best_model)
                 break
 
@@ -254,16 +256,24 @@ class Problem:
 
         method_caller = self.create_method_caller(**kwargs)
         for start_index, predecessor_model in enumerate(predecessor_models):
-            method_caller.candidate_space.previous_predecessor_model = predecessor_model
+            method_caller.candidate_space.previous_predecessor_model = (
+                predecessor_model
+            )
             (
                 best_model,
                 newly_calibrated_models_list[start_index],
             ) = method_caller(
-                newly_calibrated_models=newly_calibrated_models_list[start_index],
+                newly_calibrated_models=newly_calibrated_models_list[
+                    start_index
+                ],
             )
-            self.calibrated_models.update(newly_calibrated_models_list[start_index])
+            self.calibrated_models.update(
+                newly_calibrated_models_list[start_index]
+            )
 
-            model_lists.append(newly_calibrated_models_list[start_index].values())
+            model_lists.append(
+                newly_calibrated_models_list[start_index].values()
+            )
             method_caller.candidate_space.reset()
 
         best_model = petab_select.ui.best(

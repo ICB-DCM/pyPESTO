@@ -38,10 +38,14 @@ class MultiThreadEngine(Engine):
 
         if n_threads is None:
             n_threads = os.cpu_count()
-            logger.info(f"Engine will use up to {n_threads} threads (= CPU count).")
+            logger.info(
+                f"Engine will use up to {n_threads} threads (= CPU count)."
+            )
         self.n_threads: int = n_threads
 
-    def execute(self, tasks: list[Task], progress_bar: bool = None) -> list[Any]:
+    def execute(
+        self, tasks: list[Task], progress_bar: bool = None
+    ) -> list[Any]:
         """Deepcopy tasks and distribute work over parallel threads.
 
         Parameters

@@ -397,8 +397,12 @@ def handle_inputs(
             i_par in profile_indices
             and result.profile_result.list[profile_list][i_par] is not None
         ):
-            xs = result.profile_result.list[profile_list][i_par].x_path[i_par, :]
-            ratios = result.profile_result.list[profile_list][i_par].ratio_path[:]
+            xs = result.profile_result.list[profile_list][i_par].x_path[
+                i_par, :
+            ]
+            ratios = result.profile_result.list[profile_list][
+                i_par
+            ].ratio_path[:]
 
             # constrain
             indices = np.where(ratios > ratio_min)
@@ -449,7 +453,9 @@ def process_result_list_profiles(
     if isinstance(results, list):
         if len(results) != 1:
             # if we have no single result, then use the standard api
-            results, colors, legends = process_result_list(results, colors, legends)
+            results, colors, legends = process_result_list(
+                results, colors, legends
+            )
             return results, profile_list_ids, colors, legends
     else:
         # a single results was provided, so make a list out of it
