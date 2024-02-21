@@ -525,7 +525,9 @@ class PetabImporter(AmiciObjectBuilder):
             # FIXME: currently not supported with hierarchical
             if "guess_steadystate" in kwargs and kwargs["guess_steadystate"]:
                 warnings.warn(
-                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
+                    "`guess_steadystate` not supported with hierarchical "
+                    "optimization. Disabling `guess_steadystate`.",
+                    stacklevel=1,
                 )
             kwargs["guess_steadystate"] = False
             inner_parameter_ids = calculator.get_inner_par_ids()

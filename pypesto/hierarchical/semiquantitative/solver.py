@@ -144,7 +144,10 @@ class SemiquantInnerSolver(InnerSolver):
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
         ):
             obj = np.inf
-            warnings.warn("Inner optimization failed.")
+            warnings.warn(
+                "Inner optimization failed.",
+                stacklevel=2,
+            )
         else:
             obj = np.sum(
                 [
@@ -496,7 +499,9 @@ class SemiquantInnerSolver(InnerSolver):
                 if n[i] > N:
                     n[i] = N
                     warnings.warn(
-                        "Interval for a simulation has been set to a larger value than the number of spline parameters."
+                        "Interval for a simulation has been set to a larger "
+                        "value than the number of spline parameters.",
+                        stacklevel=2,
                     )
         # In case the simulations are sufficiently apart:
         else:

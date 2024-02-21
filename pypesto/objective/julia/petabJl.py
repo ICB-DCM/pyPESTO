@@ -45,7 +45,7 @@ class PEtabJlObjective(JuliaObjective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
 
         self.module = module
         self.source_file = source_file
@@ -98,7 +98,7 @@ class PEtabJlObjective(JuliaObjective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         # Include module if not already included
         _read_source(self.module, self.source_file)
 
@@ -144,7 +144,7 @@ class PEtabJlObjective(JuliaObjective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         # setting up a local project, where the precompilation will be done in
         from julia import Pkg
 

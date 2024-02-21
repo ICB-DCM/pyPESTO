@@ -506,8 +506,9 @@ def process_profile_indices(
             if ind not in plottable_indices:
                 profile_indices_ret.remove(ind)
                 warn(
-                    "Requested to plot profile for parameter index %i, "
-                    "but profile has not been computed." % ind
+                    f"Requested to plot profile for parameter index {ind}, "
+                    "but profile has not been computed.",
+                    stacklevel=2,
                 )
 
     return profile_indices_ret

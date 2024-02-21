@@ -102,7 +102,9 @@ def plot_splines_from_pypesto_result(
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
-            "Warning: Some AMICI simulations failed. Cannot plot inner solutions."
+            "Warning: Some AMICI simulations failed. Cannot plot inner "
+            "solutions.",
+            stacklevel=2,
         )
         return None
 
@@ -361,7 +363,9 @@ def _add_spline_mapped_simulations_to_model_fit(
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
-            "Warning: Some AMICI simulations failed. Cannot plot inner solutions."
+            "Warning: Some AMICI simulations failed. Cannot plot inner "
+            "solutions.",
+            stacklevel=2,
         )
         return None
 
@@ -513,7 +517,9 @@ def _obtain_regularization_for_start(
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
-            "Warning: Some AMICI simulations failed. Cannot plot inner solutions."
+            "Warning: Some AMICI simulations failed. Cannot plot inner "
+            "solutions.",
+            stacklevel=2,
         )
         return None
 

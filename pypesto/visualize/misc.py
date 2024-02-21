@@ -133,7 +133,8 @@ def process_offset_y(
                 "Offset specified by user is insufficient. "
                 "Ignoring specified offset and using "
                 + str(np.abs(min_val) + 1.0)
-                + " instead."
+                + " instead.",
+                stacklevel=2,
             )
         else:
             return offset_y
@@ -184,13 +185,15 @@ def process_y_limits(ax, y_limits):
                 y_limits = tmp_y_limits
                 warnings.warn(
                     "Invalid bounds for plotting in "
-                    "log-scale. Using defaults bounds."
+                    "log-scale. Using defaults bounds.",
+                    stacklevel=2,
                 )
             else:
                 y_limits = [tmp_y_limits[0], y_limits[1]]
                 warnings.warn(
                     "Invalid lower bound for plotting in "
-                    "log-scale. Using only upper bound."
+                    "log-scale. Using only upper bound.",
+                    stacklevel=2,
                 )
 
         # set limits

@@ -347,7 +347,8 @@ class PredictionResult:
             )
             warn(
                 "Output name already existed! Changed the name of the output "
-                "by appending the unix timestampp to make it unique!"
+                "by appending the unix timestamp to make it unique!",
+                stacklevel=3,
             )
 
         return output_path_out

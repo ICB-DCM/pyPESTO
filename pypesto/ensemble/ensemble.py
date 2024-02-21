@@ -439,7 +439,7 @@ class EnsemblePrediction:
                     weighting=True, compute_weighted_sigma=True
                 )
             except TypeError:
-                raise ValueError("Computing a summary failed.")
+                raise ValueError("Computing a summary failed.") from None
         n_conditions = len(self.prediction_results[0].conditions)
         chi_2 = []
         for i_cond in range(n_conditions):

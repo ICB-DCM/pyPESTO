@@ -53,7 +53,9 @@ class Problem:
             warnings.warn(
                 "Specifying `model_postprocessor` directly is deprecated. "
                 "Please specify it with `model_problem_options`, e.g. "
-                'model_problem_options={"postprocessor": ...}`.'
+                'model_problem_options={"postprocessor": ...}`.',
+                DeprecationWarning,
+                stacklevel=1,
             )
             self.model_problem_options["postprocessor"] = model_postprocessor
 

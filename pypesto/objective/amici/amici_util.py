@@ -103,6 +103,7 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
     warnings.warn(
         "This function will be removed in future releases. ",
         DeprecationWarning,
+        stacklevel=2,
     )
     plist = []
 

@@ -123,7 +123,7 @@ class OptimizerResult(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
@@ -215,7 +215,7 @@ class OptimizeResult:
         try:
             return [res[key] for res in self.list]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     def __getitem__(self, index):
         """Define `optimize_result[i]` to access the i-th result."""
@@ -225,7 +225,7 @@ class OptimizeResult:
             raise IndexError(
                 f"{index} out of range for optimize result of "
                 f"length {len(self.list)}."
-            )
+            ) from None
 
     def __getstate__(self):
         # while we override __getattr__ as we do now, this is required to keep
@@ -416,7 +416,9 @@ class OptimizeResult:
         warnings.warn(
             "get_for_key() is deprecated in favour of "
             "optimize_result.key and will be removed in future "
-            "releases."
+            "releases.",
+            DeprecationWarning,
+            stacklevel=1,
         )
         return [res[key] for res in self.list]
 

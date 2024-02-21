@@ -124,7 +124,7 @@ class PetabJlImporter:
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         if self.source_file is None:
             self.source_file = f"{self.module}.jl"
 

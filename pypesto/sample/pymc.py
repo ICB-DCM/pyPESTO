@@ -169,7 +169,7 @@ class PymcSampler(Sampler):
         try:
             import pymc
         except ImportError:
-            raise SamplerImportError("pymc")
+            raise SamplerImportError("pymc") from None
 
         problem = self.problem
         log_post = PymcObjectiveOp.create_instance(problem.objective, beta)

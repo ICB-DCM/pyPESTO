@@ -24,7 +24,7 @@ except ImportError:
         "Using an aeasara objective requires an installation of "
         "the python package aesara. Please install aesara via "
         "`pip install aesara`."
-    )
+    ) from None
 
 
 class AesaraObjective(ObjectiveBase):

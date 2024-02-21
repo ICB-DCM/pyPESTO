@@ -97,7 +97,8 @@ class OrdinalInnerSolver(InnerSolver):
         elif self.options[METHOD] == STANDARD:
             warnings.warn(
                 "Standard approach is not recommended, as it is less efficient."
-                "Please consider using the reduced approach instead."
+                "Please consider using the reduced approach instead.",
+                stacklevel=2,
             )
         # Check for any other options
         for key in self.options:
@@ -187,7 +188,7 @@ class OrdinalInnerSolver(InnerSolver):
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
         ]:
             obj = np.inf
-            warnings.warn("Inner optimization failed.")
+            warnings.warn("Inner optimization failed.", stacklevel=2)
         else:
             obj = np.sum(
                 [
@@ -572,7 +573,8 @@ def optimize_surrogate_data_per_group(
         results = minimize(obj_surr, jac=grad_surr, **inner_options)
     except ValueError:
         warnings.warn(
-            "x0 violate bound constraints. Retrying with array of zeros."
+            "x0 violate bound constraints. Retrying with array of zeros.",
+            stacklevel=2,
         )
         inner_options["x0"] = np.zeros(len(inner_options["x0"]))
         results = minimize(obj_surr, jac=grad_surr, **inner_options)

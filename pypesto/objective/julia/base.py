@@ -110,7 +110,7 @@ class JuliaObjective(Objective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
 
         # store module name and source file
         self.module: str = module

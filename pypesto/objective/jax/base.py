@@ -25,7 +25,7 @@ except ImportError:
         "Using a jax objective requires an installation of "
         "the python package jax. Please install jax via "
         "`pip install jax jaxlib`."
-    )
+    ) from None
 
 # jax compatible (jittable) objective function using host callback, see
 # https://jax.readthedocs.io/en/latest/jax.experimental.host_callback.html

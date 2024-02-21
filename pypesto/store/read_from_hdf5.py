@@ -128,7 +128,8 @@ class ProblemHDF5Reader:
             # raise warning that objective is not loaded.
             warnings.warn(
                 "You are loading a problem. This problem is not to be used "
-                "without a separately created objective."
+                "without a separately created objective.",
+                stacklevel=2,
             )
         problem = Problem(objective, [], [])
 

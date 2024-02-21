@@ -120,7 +120,7 @@ class InnerProblem:
         try:
             return self.xs[inner_parameter_id]
         except KeyError:
-            raise KeyError(f"Cannot find parameter with id {id}.")
+            raise KeyError(f"Cannot find parameter with id {id}.") from None
 
     def is_empty(self) -> bool:
         """Check for emptiness.

@@ -36,6 +36,7 @@ lint.select = [
     "I",  # isort
     "D",  # pydocstyle (PEP 257)
     "S",  # flake8-bandit
+    "B",  # flake8-bugbear
 ]
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

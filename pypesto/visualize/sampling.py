@@ -1396,7 +1396,8 @@ def get_data_to_plot(
         warnings.warn(
             "Burn in index not found in the results, the full chain "
             "will be shown.\nYou may want to use, e.g., "
-            "`pypesto.sample.geweke_test`."
+            "`pypesto.sample.geweke_test`.",
+            stacklevel=2,
         )
         _burn_in = 0
     else:
