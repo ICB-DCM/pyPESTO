@@ -356,8 +356,8 @@ def test_mpipoolengine():
         # get the path to this file:
         path = os.path.dirname(__file__)
         # run the example file.
-        subprocess.check_call(  # noqa: S603,S607
-            [
+        subprocess.check_call(
+            [  # noqa: S603,S607
                 "mpiexec",
                 "--oversubscribe",
                 "-np",
