@@ -58,6 +58,7 @@ class ModelProblem:
     x_guess:
         A single startpoint, that will be used as one of the
         startpoints in the multi-start optimization.
+
     """
 
     def __init__(
@@ -85,6 +86,7 @@ class ModelProblem:
             options, then :meth:`set_result()`.
 
         TODO: constraints
+
         """
         self.model = model
         self.criterion = criterion
@@ -125,9 +127,7 @@ class ModelProblem:
                 if not self.pypesto_problem.x_free_indices:
                     fake_result_start_time = time.time()
                     fake_result_fval = self.pypesto_problem.objective([])
-                    fake_result_evaluation_time = (
-                        time.time() - fake_result_start_time
-                    )
+                    fake_result_evaluation_time = time.time() - fake_result_start_time
                     self.set_result(
                         create_fake_pypesto_result_from_fval(
                             fval=fake_result_fval,
@@ -144,6 +144,7 @@ class ModelProblem:
 
         Returns:
             The optimization result.
+
         """
         return self.minimize_method(
             self.pypesto_problem,
@@ -157,6 +158,7 @@ class ModelProblem:
         ----------
         result:
             A pyPESTO result with an `optimize` result.
+
         """
         self.minimize_result = result
         # TODO extract best parameter estimates, to use as start point for
@@ -195,6 +197,7 @@ def create_fake_pypesto_result_from_fval(
     ----------
     fval:
         The objective function value.
+
     """
     result = Result()
 

@@ -118,6 +118,7 @@ class AmiciPredictor:
         condition_ids:
             List of identifiers for the conditions of the edata objects of the
             amici objective, will be passed to the :class:`PredictionResult` at call.
+
         """
         # save settings and objective
         self.amici_objective = amici_objective
@@ -156,7 +157,7 @@ class AmiciPredictor:
         x: np.ndarray,
         sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
-        output_file: str = '',
+        output_file: str = "",
         output_format: str = CSV,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
@@ -195,12 +196,13 @@ class AmiciPredictor:
         -------
         PredictionResult object containing timepoints, outputs, and
         output sensitivities if requested.
+
         """
         # sanity check for output
         if 2 in sensi_orders:
             raise Exception(
-                'Prediction simulation does currently not support '
-                'second order output.'
+                "Prediction simulation does currently not support "
+                "second order output."
             )
         # add llh and sigmay to amici output fields if requested
         if include_llh_weights and AMICI_LLH not in self.amici_output_fields:
@@ -243,9 +245,7 @@ class AmiciPredictor:
 
             condition_results.append(result)
         # create result object
-        results = PredictionResult(
-            condition_results, condition_ids=self.condition_ids
-        )
+        results = PredictionResult(condition_results, condition_ids=self.condition_ids)
 
         # Should the results be saved to a file?
         if output_file:
@@ -257,8 +257,8 @@ class AmiciPredictor:
                 results.write_to_h5(output_file=output_file)
             else:
                 raise ValueError(
-                    f'Call to unknown format {output_format} for '
-                    f'output of pyPESTO prediction.'
+                    f"Call to unknown format {output_format} for "
+                    f"output of pyPESTO prediction."
                 )
 
         # return dependent on sensitivity order
@@ -311,6 +311,7 @@ class AmiciPredictor:
             Boolean whether standard deviations should be included in the
             prediction output. Necessary for evaluation of weighted means
             of Ensembles.
+
         """
         # Do we have a maximum number of simulations allowed?
         n_edatas = len(self.amici_objective.edatas)
@@ -345,7 +346,7 @@ class AmiciPredictor:
             )
 
         def _default_output(
-            amici_outputs: list[dict[str, np.array]]
+            amici_outputs: list[dict[str, np.array]],
         ) -> tuple[
             list[np.array],
             list[np.array],
@@ -360,8 +361,7 @@ class AmiciPredictor:
             to AMICI was successful (``status == 0``), before writing the output.
             """
             amici_nt = [
-                len(edata.getTimepoints())
-                for edata in self.amici_objective.edatas
+                len(edata.getTimepoints()) for edata in self.amici_objective.edatas
             ]
             amici_ny = len(self.output_ids)
             amici_np = len(self.amici_objective.x_names)

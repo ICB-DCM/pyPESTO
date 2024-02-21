@@ -46,6 +46,7 @@ class AesaraObjective(ObjectiveBase):
         Aesara function that maps `aet_x` to the variables of `objective`
     coeff:
         Multiplicative coefficient for objective
+
     """
 
     def __init__(
@@ -57,11 +58,9 @@ class AesaraObjective(ObjectiveBase):
         x_names: Sequence[str] = None,
     ):
         if not isinstance(objective, ObjectiveBase):
-            raise TypeError('objective must be an ObjectiveBase instance')
+            raise TypeError("objective must be an ObjectiveBase instance")
         if not objective.check_mode(MODE_FUN):
-            raise NotImplementedError(
-                f'objective must support mode={MODE_FUN}'
-            )
+            raise NotImplementedError(f"objective must support mode={MODE_FUN}")
         super().__init__(x_names)
         self.base_objective = objective
 
@@ -125,14 +124,14 @@ class AesaraObjective(ObjectiveBase):
         # them accessible to aesara compiled functions
 
         set_return_dict, return_dict = (
-            'return_dict' in kwargs,
-            kwargs.pop('return_dict', False),
+            "return_dict" in kwargs,
+            kwargs.pop("return_dict", False),
         )
         self.cached_base_ret = self.base_objective(
             self.infun(x), sensi_orders, mode, return_dict=True, **kwargs
         )
         if set_return_dict:
-            kwargs['return_dict'] = return_dict
+            kwargs["return_dict"] = return_dict
         ret = {}
         if RDATAS in self.cached_base_ret:
             ret[RDATAS] = self.cached_base_ret[RDATAS]
@@ -166,6 +165,7 @@ class AesaraObjectiveOp(Op):
         Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
+
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
@@ -215,6 +215,7 @@ class AesaraObjectiveGradOp(Op):
         Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
+
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
@@ -263,6 +264,7 @@ class AesaraObjectiveHessOp(Op):
         Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
+
     """
 
     itypes = [aet.dvector]

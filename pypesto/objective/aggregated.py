@@ -26,23 +26,21 @@ class AggregatedObjective(ObjectiveBase):
             Sequence of names of the (optimized) parameters.
             (Details see documentation of x_names in
             :class:`pypesto.ObjectiveBase`)
+
         """
         # input typechecks
         if not isinstance(objectives, Sequence):
             raise TypeError(
-                f'Objectives must be a Sequence, ' f'was {type(objectives)}.'
+                f"Objectives must be a Sequence, " f"was {type(objectives)}."
             )
 
-        if not all(
-            isinstance(objective, ObjectiveBase) for objective in objectives
-        ):
+        if not all(isinstance(objective, ObjectiveBase) for objective in objectives):
             raise TypeError(
-                'Objectives must only contain elements of type'
-                'pypesto.Objective'
+                "Objectives must only contain elements of type" "pypesto.Objective"
             )
 
         if not objectives:
-            raise ValueError('Length of objectives must be at least one')
+            raise ValueError("Length of objectives must be at least one")
 
         self._objectives = objectives
 
@@ -54,16 +52,14 @@ class AggregatedObjective(ObjectiveBase):
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
         )
-        for key in set(self.__dict__.keys()) - {'_objectives', 'x_names'}:
+        for key in set(self.__dict__.keys()) - {"_objectives", "x_names"}:
             other.__dict__[key] = deepcopy(self.__dict__[key])
 
         return other
 
     def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
-        return all(
-            objective.check_mode(mode) for objective in self._objectives
-        )
+        return all(objective.check_mode(mode) for objective in self._objectives)
 
     def check_sensi_orders(
         self,
@@ -95,6 +91,7 @@ class AggregatedObjective(ObjectiveBase):
         kwargs_list:
             Objective-specific keyword arguments, where the dictionaries are
             ordered by the objectives.
+
         """
         if kwargs_list is None:
             kwargs_list = [{}] * len(self._objectives)
@@ -125,7 +122,7 @@ class AggregatedObjective(ObjectiveBase):
         """Return basic information of the objective configuration."""
         info = super().get_config()
         for n_obj, obj in enumerate(self._objectives):
-            info[f'objective_{n_obj}'] = obj.get_config()
+            info[f"objective_{n_obj}"] = obj.get_config()
         return info
 
 
@@ -137,6 +134,7 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     ----------
     rvals:
         results to aggregate
+
     """
     # sum over fval/grad/hess, if available in all rvals
     result = {

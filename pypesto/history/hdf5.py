@@ -47,6 +47,7 @@ def with_h5_file(mode: str):
     mode:
         Access mode, see
         https://docs.h5py.org/en/stable/high/file.html.
+
     """
     modes = ["r", "a"]
     if mode not in modes:
@@ -82,8 +83,7 @@ def check_editable(fun):
     def wrapper(self, *args, **kwargs):
         if not self.editable:
             raise ValueError(
-                f'ID "{self.id}" is already used in history file '
-                f'"{self.file}".'
+                f'ID "{self.id}" is already used in history file ' f'"{self.file}".'
             )
         return fun(self, *args, **kwargs)
 
@@ -102,6 +102,7 @@ class Hdf5History(HistoryBase):
         HDF5 file name.
     options:
         History options. Defaults to ``None``.
+
     """
 
     def __init__(
@@ -142,7 +143,7 @@ class Hdf5History(HistoryBase):
         super().finalize()
 
         # add message and exitflag to trace
-        grp = self._f.require_group(f'{HISTORY}/{self.id}/{MESSAGES}/')
+        grp = self._f.require_group(f"{HISTORY}/{self.id}/{MESSAGES}/")
         if message is not None:
             grp.attrs[MESSAGE] = message
         if exitflag is not None:
@@ -153,7 +154,7 @@ class Hdf5History(HistoryBase):
         id: str,
         file: Union[str, Path],
         options: Union[HistoryOptions, dict] = None,
-    ) -> 'Hdf5History':
+    ) -> "Hdf5History":
         """Load the History object from memory."""
         history = Hdf5History(id=id, file=file, options=options)
         if options is None:
@@ -288,7 +289,7 @@ class Hdf5History(HistoryBase):
     def message(self) -> str:
         """Optimizer message in case of finished optimization."""
         try:
-            return self._f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[MESSAGE]
+            return self._f[f"{HISTORY}/{self.id}/{MESSAGES}/"].attrs[MESSAGE]
         except KeyError:
             return None
 
@@ -297,7 +298,7 @@ class Hdf5History(HistoryBase):
     def exitflag(self) -> str:
         """Optimizer exitflag in case of finished optimization."""
         try:
-            return self._f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[EXITFLAG]
+            return self._f[f"{HISTORY}/{self.id}/{MESSAGES}/"].attrs[EXITFLAG]
         except KeyError:
             return None
 
@@ -328,9 +329,7 @@ class Hdf5History(HistoryBase):
 
         # calculating function values from residuals
         #  and reduce via requested history options
-        result = reduce_result_via_options(
-            add_fun_from_res(result), self.options
-        )
+        result = reduce_result_via_options(add_fun_from_res(result), self.options)
 
         used_time = time.time() - self.start_time
 
@@ -340,22 +339,22 @@ class Hdf5History(HistoryBase):
 
         for key in values.keys():
             if values[key] is not None:
-                self._require_group()[f'{iteration}/{key}'] = values[key]
+                self._require_group()[f"{iteration}/{key}"] = values[key]
 
         self._require_group().attrs[N_ITERATIONS] += 1
 
     @with_h5_file("r")
     def _get_group(self) -> h5py.Group:
         """Get the HDF5 group for the current history."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/']
+        return self._f[f"{HISTORY}/{self.id}/{TRACE}/"]
 
     @with_h5_file("a")
     def _require_group(self) -> h5py.Group:
         """Get, or if necessary create, the group in the hdf5 file."""
         with contextlib.suppress(KeyError):
-            return self._f[f'{HISTORY}/{self.id}/{TRACE}/']
+            return self._f[f"{HISTORY}/{self.id}/{TRACE}/"]
 
-        grp = self._f.create_group(f'{HISTORY}/{self.id}/{TRACE}/')
+        grp = self._f.create_group(f"{HISTORY}/{self.id}/{TRACE}/")
         grp.attrs[N_ITERATIONS] = 0
         grp.attrs[N_FVAL] = 0
         grp.attrs[N_GRAD] = 0
@@ -388,6 +387,7 @@ class Hdf5History(HistoryBase):
         Returns
         -------
         The entries ix for the key entry_id.
+
         """
         if ix is None:
             ix = range(len(self))
@@ -395,9 +395,7 @@ class Hdf5History(HistoryBase):
 
         for iteration in ix:
             try:
-                dataset = self._f[
-                    f'{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}'
-                ]
+                dataset = self._f[f"{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}"]
                 if dataset.shape == ():
                     entry = dataset[()]  # scalar
                 else:
@@ -464,6 +462,7 @@ class Hdf5History(HistoryBase):
         Returns
         -------
         True if the file is editable, False otherwise.
+
         """
         try:
             with h5py.File(self.file, "a") as f:
@@ -499,6 +498,7 @@ class Hdf5History(HistoryBase):
         Returns
         -------
         The newly created :class:`Hdf5History`.
+
         """
         history = Hdf5History(file=file, id=id_)
         history._f = h5py.File(history.file, mode="a")
@@ -536,9 +536,7 @@ class Hdf5History(HistoryBase):
                 getter = getattr(other, f"get_{trace_key}_trace")
                 trace = getter()
                 for iteration, value in enumerate(trace):
-                    trace_group.require_group(str(iteration))[
-                        trace_key
-                    ] = value
+                    trace_group.require_group(str(iteration))[trace_key] = value
         finally:
             history._f.close()
             history._f = None

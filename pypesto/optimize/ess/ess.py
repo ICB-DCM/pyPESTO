@@ -22,7 +22,7 @@ from .refset import RefSet
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['ESSOptimizer', 'ESSExitFlag']
+__all__ = ["ESSOptimizer", "ESSExitFlag"]
 
 
 class ESSExitFlag(int, enum.Enum):
@@ -119,6 +119,7 @@ class ESSOptimizer:
             Whether the :meth:`minimize` result should include the final
             RefSet, or just the local search results and the overall best
             parameters.
+
         """
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
@@ -141,9 +142,7 @@ class ESSOptimizer:
         self.local_optimizer = local_optimizer
         self.n_diverse: int = n_diverse
         if n_procs is not None and n_threads is not None:
-            raise ValueError(
-                "`n_procs` and `n_threads` are mutually exclusive."
-            )
+            raise ValueError("`n_procs` and `n_threads` are mutually exclusive.")
         self.n_procs: Optional[int] = n_procs
         self.n_threads: Optional[int] = n_threads
         self.balance: float = balance
@@ -154,9 +153,7 @@ class ESSOptimizer:
         self.local_only_best_sol: bool = False
         self.max_walltime_s = max_walltime_s
         self._initialize()
-        self.logger = logging.getLogger(
-            f"{self.__class__.__name__}-{id(self)}"
-        )
+        self.logger = logging.getLogger(f"{self.__class__.__name__}-{id(self)}")
         self._result_includes_refset = result_includes_refset
 
     def _initialize(self):
@@ -202,16 +199,12 @@ class ESSOptimizer:
         if (refset is None and problem is None) or (
             refset is not None and problem is not None
         ):
-            raise ValueError(
-                "Exactly one of `problem` or `refset` has to be provided."
-            )
+            raise ValueError("Exactly one of `problem` or `refset` has to be provided.")
 
         # generate initial RefSet if not provided
         if refset is None:
             if self.dim_refset is None:
-                raise ValueError(
-                    "Either refset or dim_refset have to be provided."
-                )
+                raise ValueError("Either refset or dim_refset have to be provided.")
             # [EgeaMar2010]_ 2.1
             self.n_diverse = self.n_diverse or 10 * problem.dim
             self.evaluator = create_function_evaluator(
@@ -228,9 +221,7 @@ class ESSOptimizer:
             self.refset = refset
 
         self.evaluator = self.refset.evaluator
-        self.x_best = np.full(
-            shape=(self.evaluator.problem.dim,), fill_value=np.nan
-        )
+        self.x_best = np.full(shape=(self.evaluator.problem.dim,), fill_value=np.nan)
         # initialize global best from initial refset
         for x, fx in zip(self.refset.x, self.refset.fx):
             self._maybe_update_global_best(x, fx)
@@ -252,6 +243,7 @@ class ESSOptimizer:
             **Deprecated. Use ``problem.startpoint_method`` instead.**
         refset:
             The initial RefSet or ``None`` to auto-generate.
+
         """
         self._initialize_minimize(
             problem=problem, startpoint_method=startpoint_method, refset=refset
@@ -301,12 +293,12 @@ class ESSOptimizer:
         Currently, this returns the overall best value and the final RefSet.
         """
         common_result_fields = {
-            'exitflag': self.exit_flag,
+            "exitflag": self.exit_flag,
             # meaningful? this is the overall time, and identical for all
             #  reported points
-            'time': time.time() - self.starttime,
-            'n_fval': self.evaluator.n_eval,
-            'optimizer': str(self),
+            "time": time.time() - self.starttime,
+            "n_fval": self.evaluator.n_eval,
+            "optimizer": str(self),
         }
         i_result = 0
         result = pypesto.Result(problem=self.evaluator.problem)
@@ -352,6 +344,7 @@ class ESSOptimizer:
         Returns
         -------
         ``True`` if not of the exit criteria is met, ``False`` otherwise.
+
         """
         # TODO DW which further stopping criteria: gtol, fatol, frtol?
 
@@ -395,16 +388,13 @@ class ESSOptimizer:
             (`dim_refset` x `dim_problem`).
         fy:
             The objective values corresponding to the parameters in `y`.
+
         """
         y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
         for i in range(self.refset.dim):
             xs_new = np.vstack(
-                tuple(
-                    self._combine(i, j)
-                    for j in range(self.refset.dim)
-                    if i != j
-                ),
+                tuple(self._combine(i, j) for j in range(self.refset.dim) if i != j),
             )
             fxs_new = self.evaluator.multiple(xs_new)
             best_idx = np.argmin(fxs_new)
@@ -435,6 +425,7 @@ class ESSOptimizer:
         Returns
         -------
         A new parameter vector.
+
         """
         if i == j:
             raise ValueError("i == j")
@@ -451,9 +442,7 @@ class ESSOptimizer:
         c1 = np.fmax(np.fmin(c1, ub), lb)
         c2 = np.fmax(np.fmin(c2, ub), lb)
 
-        return np.random.uniform(
-            low=c1, high=c2, size=self.evaluator.problem.dim
-        )
+        return np.random.uniform(low=c1, high=c2, size=self.evaluator.problem.dim)
 
     def _do_local_search(
         self, x_best_children: np.array, fx_best_children: np.array
@@ -497,8 +486,7 @@ class ESSOptimizer:
                 1 - self.balance
             ) * quality_order + self.balance * diversity_order
             local_search_x0_fx0_candidates = (
-                (x_best_children[i], fx_best_children[i])
-                for i in np.argsort(priority)
+                (x_best_children[i], fx_best_children[i]) for i in np.argsort(priority)
             )
         else:
             return
@@ -607,9 +595,7 @@ class ESSOptimizer:
                     improvement = 0
 
             # update overall best?
-            self._maybe_update_global_best(
-                x_best_children[i], fx_best_children[i]
-            )
+            self._maybe_update_global_best(x_best_children[i], fx_best_children[i])
             if not self._keep_going():
                 break
 

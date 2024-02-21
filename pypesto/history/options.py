@@ -39,6 +39,7 @@ class HistoryOptions(dict):
         the :func:`create_history` method creates the appropriate object.
         Occurrences of "{id}" in the file name are replaced by the `id`
         upon creation of a history, if applicable. Defaults to ``None``.
+
     """
 
     def __init__(
@@ -91,14 +92,15 @@ class HistoryOptions(dict):
 
     @staticmethod
     def assert_instance(
-        maybe_options: Union['HistoryOptions', dict],
-    ) -> 'HistoryOptions':
+        maybe_options: Union["HistoryOptions", dict],
+    ) -> "HistoryOptions":
         """
         Return a valid options object.
 
         Parameters
         ----------
         maybe_options: :class:`HistoryOptions` or dict
+
         """
         if isinstance(maybe_options, HistoryOptions):
             return maybe_options

@@ -44,6 +44,7 @@ class ObjectiveBase(ABC):
     pre_post_processor:
         Preprocess input values to and postprocess output values from
         __call__. Configured in `update_from_problem()`.
+
     """
 
     def __init__(
@@ -55,7 +56,7 @@ class ObjectiveBase(ABC):
         self.pre_post_processor = PrePostProcessor()
         self.history = NoHistory()
 
-    def __deepcopy__(self, memodict=None) -> 'ObjectiveBase':
+    def __deepcopy__(self, memodict=None) -> "ObjectiveBase":
         """Create deepcopy of objective object."""
         other = type(self)()  # maintain type for derived classes
         for attr, val in self.__dict__.items():
@@ -105,9 +106,7 @@ class ObjectiveBase(ABC):
         # to avoid issues when writing to hdf (and correctness of typehint)
         return [
             str(name)
-            for name in self.pre_post_processor.reduce(
-                np.asarray(self._x_names)
-            )
+            for name in self.pre_post_processor.reduce(np.asarray(self._x_names))
         ]
 
     def initialize(self):
@@ -164,6 +163,7 @@ class ObjectiveBase(ABC):
             and derivatives in the requested order (if only 1 value, the tuple
             is flattened). If `return_dict`, then instead a dict is returned
             with function values and derivatives indicated by ids.
+
         """
         # copy parameter vector to prevent side effects
         # np.array creates a copy of x already
@@ -171,9 +171,7 @@ class ObjectiveBase(ABC):
 
         # check input
         if not self.check_mode(mode):
-            raise ValueError(
-                f"This Objective cannot be called with mode" f"={mode}."
-            )
+            raise ValueError(f"This Objective cannot be called with mode" f"={mode}.")
         if not self.check_sensi_orders(sensi_orders, mode):
             raise ValueError(
                 f"This Objective cannot be called with "
@@ -192,9 +190,7 @@ class ObjectiveBase(ABC):
         result = self.pre_post_processor.postprocess(result=result)
 
         # update history
-        self.history.update(
-            x=x, sensi_orders=sensi_orders, mode=mode, result=result
-        )
+        self.history.update(x=x, sensi_orders=sensi_orders, mode=mode, result=result)
 
         # map to output format
         if not return_dict:
@@ -228,6 +224,7 @@ class ObjectiveBase(ABC):
         -------
         result:
             A dict containing the results.
+
         """
 
     def check_mode(self, mode: ModeType) -> bool:
@@ -246,6 +243,7 @@ class ObjectiveBase(ABC):
         -------
         flag:
             Boolean indicating whether mode is supported
+
         """
         if mode == MODE_FUN:
             return self.has_fun
@@ -260,7 +258,7 @@ class ObjectiveBase(ABC):
 
         Return it as a dictionary.
         """
-        info = {'type': self.__class__.__name__}
+        info = {"type": self.__class__.__name__}
         return info
 
     def check_sensi_orders(
@@ -286,6 +284,7 @@ class ObjectiveBase(ABC):
         flag:
             Boolean indicating whether combination of sensi_orders and mode
             is supported
+
         """
         if not sensi_orders:
             return True
@@ -406,6 +405,7 @@ class ObjectiveBase(ABC):
         x_fixed_vals:
             Vector of the same length as x_fixed_indices, containing the values
             of the fixed parameters.
+
         """
         self.pre_post_processor = FixedParametersProcessor(
             dim_full=dim_full,
@@ -418,7 +418,7 @@ class ObjectiveBase(ABC):
         self,
         *args,
         multi_eps: Optional[Iterable] = None,
-        label: str = 'rel_err',
+        label: str = "rel_err",
         **kwargs,
     ):
         """
@@ -438,11 +438,12 @@ class ObjectiveBase(ABC):
             The label of the column that will be minimized for each parameter.
             Valid options are the column labels of the dataframe returned by
             the `ObjectiveBase.check_grad` method.
+
         """
-        if 'eps' in kwargs:
+        if "eps" in kwargs:
             raise KeyError(
-                'Please use the `multi_eps` (not the `eps`) argument with '
-                '`check_grad_multi_eps` to specify step sizes.'
+                "Please use the `multi_eps` (not the `eps`) argument with "
+                "`check_grad_multi_eps` to specify step sizes."
             )
 
         if multi_eps is None:
@@ -456,16 +457,14 @@ class ObjectiveBase(ABC):
         # the step size (`eps`) that produced the smallest error (`label`).
         combined_result = None
         for eps, result in results.items():
-            result['eps'] = eps
+            result["eps"] = eps
             if combined_result is None:
                 combined_result = result
                 continue
             # Replace rows in `combined_result` with corresponding rows
             # in `result` that have an improved value in column `label`.
             mask_improvements = result[label] < combined_result[label]
-            combined_result.loc[mask_improvements, :] = result.loc[
-                mask_improvements, :
-            ]
+            combined_result.loc[mask_improvements, :] = result.loc[mask_improvements, :]
 
         return combined_result
 
@@ -513,6 +512,7 @@ class ObjectiveBase(ABC):
         -------
         result:
             gradient, finite difference approximations and error estimates.
+
         """
         if x_indices is None:
             x_indices = list(range(len(x)))
@@ -560,9 +560,7 @@ class ObjectiveBase(ABC):
             rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
 
             if detailed:
-                std_check_ix = (grad_ix - fd_c_ix) / np.std(
-                    [fd_f_ix, fd_b_ix, fd_c_ix]
-                )
+                std_check_ix = (grad_ix - fd_c_ix) / np.std([fd_f_ix, fd_b_ix, fd_c_ix])
                 mean_check_ix = abs(grad_ix - fd_c_ix) / np.mean(
                     [
                         abs(fd_f_ix - fd_b_ix),
@@ -574,14 +572,14 @@ class ObjectiveBase(ABC):
             # log for dimension ix
             if verbosity > 1:
                 logger.info(
-                    f'index:    {ix}\n'
-                    f'grad:     {grad_ix}\n'
-                    f'fd_f:     {fd_f_ix}\n'
-                    f'fd_b:     {fd_b_ix}\n'
-                    f'fd_c:     {fd_c_ix}\n'
-                    f'fd_err:   {fd_err_ix}\n'
-                    f'abs_err:  {abs_err_ix}\n'
-                    f'rel_err:  {rel_err_ix}\n'
+                    f"index:    {ix}\n"
+                    f"grad:     {grad_ix}\n"
+                    f"fd_f:     {fd_f_ix}\n"
+                    f"fd_b:     {fd_b_ix}\n"
+                    f"fd_c:     {fd_c_ix}\n"
+                    f"fd_err:   {fd_err_ix}\n"
+                    f"abs_err:  {abs_err_ix}\n"
+                    f"rel_err:  {rel_err_ix}\n"
                 )
 
             # append to lists
@@ -600,24 +598,24 @@ class ObjectiveBase(ABC):
 
         # create data dictionary for dataframe
         data = {
-            'grad': grad_list,
-            'fd_f': fd_f_list,
-            'fd_b': fd_b_list,
-            'fd_c': fd_c_list,
-            'fd_err': fd_err_list,
-            'abs_err': abs_err_list,
-            'rel_err': rel_err_list,
+            "grad": grad_list,
+            "fd_f": fd_f_list,
+            "fd_b": fd_b_list,
+            "fd_c": fd_c_list,
+            "fd_err": fd_err_list,
+            "abs_err": abs_err_list,
+            "rel_err": rel_err_list,
         }
 
         # update data dictionary if detailed output is requested
         if detailed:
             prefix_data = {
-                'fval': [fval] * len(x_indices),
-                'fval_p': fval_p_list,
-                'fval_m': fval_m_list,
+                "fval": [fval] * len(x_indices),
+                "fval_p": fval_p_list,
+                "fval_m": fval_m_list,
             }
-            std_str = '(grad-fd_c)/std({fd_f,fd_b,fd_c})'
-            mean_str = '|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)'
+            std_str = "(grad-fd_c)/std({fd_f,fd_b,fd_c})"
+            mean_str = "|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)"
             postfix_data = {
                 std_str: std_check_list,
                 mean_str: mean_check_list,
@@ -628,7 +626,7 @@ class ObjectiveBase(ABC):
         result = pd.DataFrame(
             data=data,
             index=[
-                self.x_names[ix] if self.x_names is not None else f'x_{ix}'
+                self.x_names[ix] if self.x_names is not None else f"x_{ix}"
                 for ix in x_indices
             ],
         )
@@ -668,6 +666,7 @@ class ObjectiveBase(ABC):
         -------
         bool
             Indicates whether gradients match (True) FDs or not (False)
+
         """
         par = np.asarray(x)
         if x_free is None:

@@ -40,6 +40,7 @@ def autosave(
         method the function is called in.
     overwrite:
         Whether to overwrite the currently existing results.
+
     """
     if filename is None:
         return
@@ -51,7 +52,7 @@ def autosave(
         filename = default_filename
     elif isinstance(filename, str):
         if os.path.exists(filename) and not overwrite:
-            with h5py.File(filename, 'r') as f:
+            with h5py.File(filename, "r") as f:
                 storage_used = store_type in f.keys()
             if storage_used:
                 logger.warning(
@@ -68,9 +69,7 @@ def autosave(
         )
     # set the type to True and pass it on to write_result
     to_save = {store_type: True}
-    write_result(
-        result=result, overwrite=overwrite, filename=filename, **to_save
-    )
+    write_result(result=result, overwrite=overwrite, filename=filename, **to_save)
 
 
 def default_filename(**kwargs) -> str:

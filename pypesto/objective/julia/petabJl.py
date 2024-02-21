@@ -24,6 +24,7 @@ class PEtabJlObjective(JuliaObjective):
         Julia source file. Defaults to "{module}.jl".
     petab_problem_name:
         Name of the petab problem variable in the julia module.
+
     """
 
     def __init__(

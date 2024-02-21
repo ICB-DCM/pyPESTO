@@ -36,7 +36,7 @@ def geweke_test(result: Result, zscore: float = 2.0) -> int:
     burn_in = burn_in_by_sequential_geweke(chain=chain, zscore=zscore)
 
     # Log
-    logger.info(f'Geweke burn-in index: {burn_in}')
+    logger.info(f"Geweke burn-in index: {burn_in}")
 
     # Fill in burn-in value into result
     result.sample_result.burn_in = burn_in
@@ -58,6 +58,7 @@ def auto_correlation(result: Result) -> float:
     auto_correlation:
         Estimate of the integrated autocorrelation time of
         the MCMC chains.
+
     """
     # Check if burn in index is available
     if result.sample_result.burn_in is None:
@@ -89,7 +90,7 @@ def auto_correlation(result: Result) -> float:
     _auto_correlation = max(auto_correlation_vector)
 
     # Log
-    logger.info(f'Estimated chain autocorrelation: {_auto_correlation}')
+    logger.info(f"Estimated chain autocorrelation: {_auto_correlation}")
 
     # Fill in autocorrelation value into result
     result.sample_result.auto_correlation = _auto_correlation
@@ -111,6 +112,7 @@ def effective_sample_size(result: Result) -> float:
     ess:
         Estimate of the effective sample size of
         the MCMC chains.
+
     """
     # Check if autocorrelation is available
     if result.sample_result.auto_correlation is None:
@@ -136,7 +138,7 @@ def effective_sample_size(result: Result) -> float:
     ess = N / (1 + _auto_correlation)
 
     # Log
-    logger.info(f'Estimated effective sample size: {ess}')
+    logger.info(f"Estimated effective sample size: {ess}")
 
     # Fill in effective sample size value into result
     result.sample_result.effective_sample_size = ess

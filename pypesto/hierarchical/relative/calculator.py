@@ -58,6 +58,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         inner_solver:
             A solver to solve ``inner_problem``.
             Defaults to ``pypesto.hierarchical.solver.AnalyticalInnerSolver``.
+
         """
         super().__init__()
 
@@ -84,7 +85,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -124,17 +125,17 @@ class RelativeAmiciCalculator(AmiciCalculator):
         -------
         inner_result:
             A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
+
         """
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError(
-                'The experimental data provided to this call differs from '
-                'the experimental data used to setup the hierarchical '
-                'optimizer.'
+                "The experimental data provided to this call differs from "
+                "the experimental data used to setup the hierarchical "
+                "optimizer."
             )
 
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
+            amici_solver.getSensitivityMethod() == amici.SensitivityMethod_adjoint
             or 2 in sensi_orders
         ):
             inner_result, inner_parameters = self.call_amici_twice(
@@ -219,9 +220,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(shape=dim, fill_value=np.nan)
             if 2 in sensi_orders:
-                inner_result[HESS] = np.full(
-                    shape=(dim, dim), fill_value=np.nan
-                )
+                inner_result[HESS] = np.full(shape=(dim, dim), fill_value=np.nan)
             inner_result[INNER_PARAMETERS] = None
             return inner_result
 
@@ -266,7 +265,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Calculate directly via solver calculate methods.
 
@@ -322,9 +321,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
             if 1 in sensi_orders:
-                inner_result[GRAD] = np.full(
-                    shape=len(x_ids), fill_value=np.nan
-                )
+                inner_result[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
             return filter_return_dict(inner_result)
 
         inner_parameters = self.inner_solver.solve(

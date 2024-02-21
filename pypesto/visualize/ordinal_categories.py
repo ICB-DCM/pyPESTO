@@ -62,27 +62,24 @@ def plot_categories_from_pypesto_result(
         The figure.
     axes:
         The axes.
+
     """
 
     # Get the parameters from the pypesto result for the start_index.
     x_dct = dict(
         zip(
             pypesto_result.problem.objective.x_ids,
-            pypesto_result.optimize_result.list[start_index]['x'],
+            pypesto_result.optimize_result.list[start_index]["x"],
         )
     )
-    x_dct.update(
-        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
-    )
+    x_dct.update(pypesto_result.problem.objective.calculator.necessary_par_dummy_values)
 
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_result.problem.objective.edatas
     parameter_mapping = pypesto_result.problem.objective.parameter_mapping
     amici_model = pypesto_result.problem.objective.amici_model
     amici_solver = pypesto_result.problem.objective.amici_solver
-    petab_problem = (
-        pypesto_result.problem.objective.amici_object_builder.petab_problem
-    )
+    petab_problem = pypesto_result.problem.objective.amici_object_builder.petab_problem
     n_threads = pypesto_result.problem.objective.n_threads
 
     # Fill in the parameters.
@@ -105,7 +102,7 @@ def plot_categories_from_pypesto_result(
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
-            'Warning: Some AMICI simulations failed. Cannot plot inner solutions.'
+            "Warning: Some AMICI simulations failed. Cannot plot inner solutions."
         )
         return None
 
@@ -123,9 +120,7 @@ def plot_categories_from_pypesto_result(
     )
 
     optimal_scaling_calculator = None
-    for (
-        calculator
-    ) in pypesto_result.problem.objective.calculator.inner_calculators:
+    for calculator in pypesto_result.problem.objective.calculator.inner_calculators:
         if isinstance(calculator, OrdinalCalculator):
             optimal_scaling_calculator = calculator
             break
@@ -152,8 +147,8 @@ def plot_categories_from_pypesto_result(
 
 
 def plot_categories_from_inner_result(
-    inner_problem: 'pypesto.hierarchical.ordinal.problem.OrdinalProblem',
-    inner_solver: 'pypesto.hierarchical.ordinal.solver.OrdinalInnerSolver',
+    inner_problem: "pypesto.hierarchical.ordinal.problem.OrdinalProblem",
+    inner_solver: "pypesto.hierarchical.ordinal.solver.OrdinalInnerSolver",
     results: list[dict],
     simulation: list[np.ndarray],
     timepoints: list[np.ndarray],
@@ -189,6 +184,7 @@ def plot_categories_from_inner_result(
         The figure.
     axes:
         The axes.
+
     """
 
     if len(results) != len(inner_problem.groups):
@@ -210,12 +206,10 @@ def plot_categories_from_inner_result(
     for result, group in zip(results, inner_problem.groups):
         if observable_ids is not None and use_given_axes:
             observable_id = observable_ids[group - 1]
-            meas_obs_idx = measurement_df_observable_ordering.index(
-                observable_id
-            )
+            meas_obs_idx = measurement_df_observable_ordering.index(observable_id)
 
             # Get the ax for the current observable.
-            ax = axes['plot' + str(meas_obs_idx + 1)]
+            ax = axes["plot" + str(meas_obs_idx + 1)]
         else:
             ax = axes[list(inner_problem.groups.keys()).index(group)]
 
@@ -313,10 +307,10 @@ def plot_categories_from_inner_result(
             ax.legend()
 
             if not use_given_axes:
-                ax.set_title(f'Group {group}, {measurement_type} data')
+                ax.set_title(f"Group {group}, {measurement_type} data")
 
-            ax.set_xlabel('Timepoints')
-            ax.set_ylabel('Simulation/Surrogate data')
+            ax.set_xlabel("Timepoints")
+            ax.set_ylabel("Simulation/Surrogate data")
 
     if not use_given_axes:
         for ax in axes[len(results) :]:
@@ -334,9 +328,7 @@ def _plot_category_rectangles_across_conditions(
     ), timepoints in category_timepoints_dict.items():
         # If the largest timepoint is not the last unique timepoint, add the next unique timepoint
         # to the list of timepoints
-        max_timepoint_unique_ind = np.where(
-            unique_timepoints == max(timepoints)
-        )[0][0]
+        max_timepoint_unique_ind = np.where(unique_timepoints == max(timepoints))[0][0]
         if max_timepoint_unique_ind + 1 < len(unique_timepoints):
             timepoints.append(unique_timepoints[max_timepoint_unique_ind + 1])
 
@@ -345,7 +337,7 @@ def _plot_category_rectangles_across_conditions(
             timepoints,
             [upper_bound] * len(timepoints),
             [lower_bound] * len(timepoints),
-            color='gray',
+            color="gray",
             alpha=0.5,
         )
 
@@ -354,9 +346,9 @@ def _plot_category_rectangles_across_conditions(
         [],
         [],
         [],
-        color='gray',
+        color="gray",
         alpha=0.5,
-        label='Categories',
+        label="Categories",
     )
 
 
@@ -383,23 +375,23 @@ def _plot_category_rectangles(
                     # Draw a vertical short grey arrow at the middle point of the interval
                     # at the upper_bounds[i] height
                     ax.annotate(
-                        '',
+                        "",
                         xy=(middle_timepoint, upper_bounds[i]),
                         xytext=(
                             middle_timepoint,
                             upper_bounds[i] + 0.1 * max(surrogate_data),
                         ),
                         arrowprops={
-                            'arrowstyle': '<-',
-                            'color': 'gray',
-                            'linewidth': 2,
+                            "arrowstyle": "<-",
+                            "color": "gray",
+                            "linewidth": 2,
                         },
                     )
                     ax.text(
                         middle_timepoint,
                         upper_bounds[i] + 0.1 * max(surrogate_data),
-                        'INF',
-                        color='gray',
+                        "INF",
+                        color="gray",
                         fontsize=12,
                     )
                     # Extend the ax to contain the text
@@ -414,7 +406,7 @@ def _plot_category_rectangles(
                     timepoints[i - interval_length : i + 1],
                     upper_bounds[i - interval_length : i + 1],
                     lower_bounds[i - interval_length : i + 1],
-                    color='gray',
+                    color="gray",
                     alpha=0.5,
                 )
             else:
@@ -427,23 +419,23 @@ def _plot_category_rectangles(
                     # Draw a vertical short grey arrow at the middle point of the interval
                     # at the upper_bounds[i] height
                     ax.annotate(
-                        '',
+                        "",
                         xy=(middle_timepoint, upper_bounds[i]),
                         xytext=(
                             middle_timepoint,
                             upper_bounds[i] + 0.1 * max(surrogate_data),
                         ),
                         arrowprops={
-                            'arrowstyle': '<-',
-                            'color': 'gray',
-                            'linewidth': 2,
+                            "arrowstyle": "<-",
+                            "color": "gray",
+                            "linewidth": 2,
                         },
                     )
                     ax.text(
                         middle_timepoint,
                         upper_bounds[i] + 0.1 * max(surrogate_data),
-                        'INF',
-                        color='gray',
+                        "INF",
+                        color="gray",
                         fontsize=12,
                     )
                     # Extend the ax to contain the text
@@ -469,7 +461,7 @@ def _plot_category_rectangles(
                             [lower_bounds[i]],
                         )
                     ),
-                    color='gray',
+                    color="gray",
                     alpha=0.5,
                 )
             interval_length = 0
@@ -481,9 +473,9 @@ def _plot_category_rectangles(
             [],
             [],
             [],
-            color='gray',
+            color="gray",
             alpha=0.5,
-            label='Categories',
+            label="Categories",
         )
     elif measurement_type == CENSORED:
         # Add to legend meaning of rectangles
@@ -491,14 +483,14 @@ def _plot_category_rectangles(
             [],
             [],
             [],
-            color='gray',
+            color="gray",
             alpha=0.5,
-            label='Censoring areas',
+            label="Censoring areas",
         )
 
 
 def _get_data_for_plotting(
-    inner_parameters: list['OrdinalParameter'],
+    inner_parameters: list["OrdinalParameter"],
     optimal_scaling_bounds: list,
     sim: list[np.ndarray],
     timepoints: list[np.ndarray],
@@ -687,8 +679,7 @@ def _plot_observable_fit_across_conditions(
         ]
 
     petab_condition_ordering = [
-        condition_ids.index(condition_id)
-        for condition_id in condition_ids_from_petab
+        condition_ids.index(condition_id) for condition_id in condition_ids_from_petab
     ]
 
     # Merge the simulation, surrogate, and bounds across conditions
@@ -712,16 +703,16 @@ def _plot_observable_fit_across_conditions(
             ax.plot(
                 condition_ids_from_petab,
                 whole_simulation,
-                linestyle='-',
-                marker='.',
-                color='b',
-                label='Simulation',
+                linestyle="-",
+                marker=".",
+                color="b",
+                label="Simulation",
             )
         ax.plot(
             petab_censored_conditions,
             surrogate_all,
-            'rx',
-            label='Surrogate data',
+            "rx",
+            label="Surrogate data",
         )
         _plot_category_rectangles(
             ax,
@@ -733,14 +724,12 @@ def _plot_observable_fit_across_conditions(
         )
 
         quantitative_data = inner_problem.groups[group][QUANTITATIVE_DATA]
-        quantitative_data = quantitative_data[
-            petab_quantitative_condition_ordering
-        ]
+        quantitative_data = quantitative_data[petab_quantitative_condition_ordering]
         ax.plot(
             petab_quantitative_conditions,
             quantitative_data,
-            'gs',
-            label='Quantitative data',
+            "gs",
+            label="Quantitative data",
         )
 
     elif measurement_type == ORDINAL:
@@ -755,16 +744,16 @@ def _plot_observable_fit_across_conditions(
             ax.plot(
                 condition_ids_from_petab,
                 simulation_all,
-                linestyle='-',
-                marker='.',
-                color='b',
-                label='Simulation',
+                linestyle="-",
+                marker=".",
+                color="b",
+                label="Simulation",
             )
         ax.plot(
             condition_ids_from_petab,
             surrogate_all,
-            'rx',
-            label='Surrogate data',
+            "rx",
+            label="Surrogate data",
         )
 
         _plot_category_rectangles(
@@ -777,13 +766,13 @@ def _plot_observable_fit_across_conditions(
         )
 
     # Set the condition xticks on an angle
-    ax.tick_params(axis='x', rotation=25)
+    ax.tick_params(axis="x", rotation=25)
     ax.legend()
     if not use_given_axes:
-        ax.set_title(f'Group {group}, {measurement_type} data')
+        ax.set_title(f"Group {group}, {measurement_type} data")
 
-    ax.set_xlabel('Conditions')
-    ax.set_ylabel('Simulation/Surrogate data')
+    ax.set_xlabel("Conditions")
+    ax.set_ylabel("Simulation/Surrogate data")
 
 
 def _plot_observable_fit_for_one_condition(
@@ -807,39 +796,37 @@ def _plot_observable_fit_for_one_condition(
             ax.plot(
                 timepoints_all[0],
                 simulation_all[0],
-                linestyle='-',
-                marker='.',
-                color='b',
-                label='Simulation',
+                linestyle="-",
+                marker=".",
+                color="b",
+                label="Simulation",
             )
     elif measurement_type == CENSORED:
         quantitative_data = inner_problem.groups[group][QUANTITATIVE_DATA]
         quantitative_ixs = inner_problem.groups[group][QUANTITATIVE_IXS]
-        quantitative_timepoints = timepoints[0][
-            quantitative_ixs[0].T[observable_index]
-        ]
+        quantitative_timepoints = timepoints[0][quantitative_ixs[0].T[observable_index]]
 
         if not use_given_axes:
             ax.plot(
                 timepoints[0],
                 simulation[0][:, observable_index],
-                linestyle='-',
-                marker='.',
-                color='b',
-                label='Simulation',
+                linestyle="-",
+                marker=".",
+                color="b",
+                label="Simulation",
             )
         ax.plot(
             quantitative_timepoints,
             quantitative_data,
-            'gs',
-            label='Quantitative data',
+            "gs",
+            label="Quantitative data",
         )
 
     ax.plot(
         timepoints_all[0],
         surrogate_all[0],
-        'rx',
-        label='Surrogate data',
+        "rx",
+        label="Surrogate data",
     )
 
     # Plot the categorie rectangles
@@ -874,16 +861,14 @@ def _plot_observable_fit_for_multiple_conditions(
     if use_given_axes:
         colors = []
         for line in ax.lines:
-            if 'simulation' in line.get_label():
+            if "simulation" in line.get_label():
                 colors.append(line.get_color())
     # Get as many colors as there are conditions
     else:
         colors = plt.cm.rainbow(np.linspace(0, 1, len(simulation_all)))
 
     if measurement_type == CENSORED:
-        quantitative_data_flattened = inner_problem.groups[group][
-            QUANTITATIVE_DATA
-        ]
+        quantitative_data_flattened = inner_problem.groups[group][QUANTITATIVE_DATA]
         quantitative_ixs = inner_problem.groups[group][QUANTITATIVE_IXS]
         quantitative_timepoints = [
             timepoints[cond_i][quantitative_ixs[cond_i].T[observable_index]]
@@ -895,8 +880,7 @@ def _plot_observable_fit_for_multiple_conditions(
         for cond_i in range(len(timepoints)):
             quantitative_data.append(
                 quantitative_data_flattened[
-                    index_offset : index_offset
-                    + len(quantitative_timepoints[cond_i])
+                    index_offset : index_offset + len(quantitative_timepoints[cond_i])
                 ]
             )
 
@@ -910,8 +894,8 @@ def _plot_observable_fit_for_multiple_conditions(
                 ax.plot(
                     timepoints_all[condition_index],
                     simulation_all[condition_index],
-                    linestyle='-',
-                    marker='.',
+                    linestyle="-",
+                    marker=".",
                     color=color,
                     label=condition_id,
                 )
@@ -920,22 +904,22 @@ def _plot_observable_fit_for_multiple_conditions(
                 ax.plot(
                     timepoints[condition_index],
                     simulation[condition_index][:, observable_index],
-                    linestyle='-',
-                    marker='.',
+                    linestyle="-",
+                    marker=".",
                     color=color,
                     label=condition_id,
                 )
             ax.plot(
                 quantitative_timepoints[condition_index],
                 quantitative_data[condition_index],
-                marker='s',
+                marker="s",
                 color=color,
             )
 
         ax.plot(
             timepoints_all[condition_index],
             surrogate_all[condition_index],
-            'x',
+            "x",
             color=color,
         )
 
@@ -956,13 +940,9 @@ def _plot_observable_fit_for_multiple_conditions(
                 upper_bound,
                 lower_bound,
             ) not in category_timepoints_dict:
-                category_timepoints_dict[(upper_bound, lower_bound)] = [
-                    timepoint
-                ]
+                category_timepoints_dict[(upper_bound, lower_bound)] = [timepoint]
             else:
-                category_timepoints_dict[(upper_bound, lower_bound)].append(
-                    timepoint
-                )
+                category_timepoints_dict[(upper_bound, lower_bound)].append(timepoint)
 
     # Plot the category rectangles
     _plot_category_rectangles_across_conditions(
@@ -975,24 +955,24 @@ def _plot_observable_fit_for_multiple_conditions(
     ax.plot(
         [],
         [],
-        'x',
-        color='black',
-        label='Surrogate data',
+        "x",
+        color="black",
+        label="Surrogate data",
     )
     if not use_given_axes:
         ax.plot(
             [],
             [],
-            linestyle='-',
-            marker='.',
-            color='black',
-            label='Simulation',
+            linestyle="-",
+            marker=".",
+            color="black",
+            label="Simulation",
         )
     if measurement_type == CENSORED:
         ax.plot(
             [],
             [],
-            marker='s',
-            color='black',
-            label='Quantitative data',
+            marker="s",
+            color="black",
+            label="Quantitative data",
         )

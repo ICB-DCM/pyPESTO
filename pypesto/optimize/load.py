@@ -54,6 +54,7 @@ def fill_result_from_history(
     Returns
     -------
     result: The in-place modified result.
+
     """
     if optimize_options is None:
         optimize_options = OptimizeOptions()
@@ -74,16 +75,13 @@ def fill_result_from_history(
     x_match = x_exist and np.allclose(history_x, result_x)
     if x_exist and not x_match:
         logger.debug(
-            f"Optimal parameter mismatch: history {history_x}, "
-            f"result {result_x}"
+            f"Optimal parameter mismatch: history {history_x}, " f"result {result_x}"
         )
 
     # counters
     # we only use our own counters here as optimizers may report differently
     for key in (FVAL, GRAD, HESS, RES, SRES):
-        setattr(
-            result, f"n_{key}", getattr(optimizer_history.history, f"n_{key}")
-        )
+        setattr(result, f"n_{key}", getattr(optimizer_history.history, f"n_{key}"))
 
     # initial values
     result.x0 = optimizer_history.x0
@@ -131,6 +129,7 @@ def read_history_from_file(
         Multistart id.
     history_options:
         Optimizer history options.
+
     """
     if history_options.storage_file is None:
         raise ValueError("No history file specified.")
@@ -187,19 +186,16 @@ def read_result_from_file(
         Multistart id.
     history_options:
         Optimizer history options.
+
     """
     opt_hist = read_history_from_file(
         problem=problem, history_options=history_options, identifier=identifier
     )
     result = OptimizerResult(
         id=identifier,
-        message='loaded from file',
+        message="loaded from file",
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=(
-            max(opt_hist.history.get_time_trace())
-            if len(opt_hist.history)
-            else 0.0
-        ),
+        time=(max(opt_hist.history.get_time_trace()) if len(opt_hist.history) else 0.0),
     )
     result.id = identifier
     result = fill_result_from_history(
@@ -226,6 +222,7 @@ def read_results_from_file(
         Number of performed multistarts.
     history_options:
         Optimizer history options.
+
     """
     if history_options.storage_file is None:
         raise ValueError("No history file specified.")
@@ -270,11 +267,12 @@ def optimization_result_from_history(
     -------
         A result object in which the optimization result is constructed from
         history. But missing "Time, Message and Exitflag" keys.
+
     """
     result = Result()
-    with h5py.File(filename, 'r') as f:
+    with h5py.File(filename, "r") as f:
         ids = list(f[HISTORY].keys())
-        x0s = [f[f'{HISTORY}/{id}/{TRACE}/0/{X}'][()] for id in ids]
+        x0s = [f[f"{HISTORY}/{id}/{TRACE}/0/{X}"][()] for id in ids]
 
     for id, x0 in zip(ids, x0s):
         history = Hdf5History(id=id, file=filename)

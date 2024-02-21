@@ -30,18 +30,15 @@ class InnerProblem:
     data:
         Measurement data. One matrix (`num_timepoints` x `num_observables`)
         per simulation condition. Missing observations as NaN.
+
     """
 
     def __init__(self, xs: list[InnerParameter], data: list[np.ndarray]):
-        self.xs: dict[str, InnerParameter] = {
-            x.inner_parameter_id: x for x in xs
-        }
+        self.xs: dict[str, InnerParameter] = {x.inner_parameter_id: x for x in xs}
         self.data = copy.deepcopy(data)
 
         # create the joint mask of all inner problem parameters
-        self.data_mask = [
-            np.zeros_like(cond_data, dtype=bool) for cond_data in data
-        ]
+        self.data_mask = [np.zeros_like(cond_data, dtype=bool) for cond_data in data]
         for x in xs:
             for condition_ix, cond_mask in enumerate(self.data_mask):
                 cond_mask[x.ixs[condition_ix]] = True
@@ -54,16 +51,16 @@ class InnerProblem:
 
         if self.is_empty():
             raise ValueError(
-                'There are no parameters in the inner problem of hierarchical '
-                'optimization.'
+                "There are no parameters in the inner problem of hierarchical "
+                "optimization."
             )
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: 'petab.Problem',
-        amici_model: 'amici.Model',
-        edatas: list['amici.ExpData'],
-    ) -> 'InnerProblem':
+        petab_problem: "petab.Problem",
+        amici_model: "amici.Model",
+        edatas: list["amici.ExpData"],
+    ) -> "InnerProblem":
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
     def get_x_ids(self) -> list[str]:
@@ -81,9 +78,7 @@ class InnerProblem:
         """
         return list(self.xs.keys())
 
-    def get_xs_for_type(
-        self, inner_parameter_type: str
-    ) -> list[InnerParameter]:
+    def get_xs_for_type(self, inner_parameter_type: str) -> list[InnerParameter]:
         """Get inner parameters of the given type."""
         return [
             x
@@ -103,12 +98,11 @@ class InnerProblem:
         scaled:
             Whether the parameters should be returned on parameter scale (``True``)
             or on linear scale (``False``).
+
         """
         return {
             x.inner_parameter_id: (
-                scale_value(x.dummy_value, x.scale)
-                if scaled
-                else x.dummy_value
+                scale_value(x.dummy_value, x.scale) if scaled else x.dummy_value
             )
             for x in self.xs.values()
         }
@@ -127,6 +121,7 @@ class InnerProblem:
         -------
         ``True`` if there aren't any parameters associated with this problem,
         ``False`` otherwise.
+
         """
         return len(self.xs) == 0
 
@@ -166,6 +161,7 @@ class AmiciInnerProblem(InnerProblem):
     ----------
     edatas:
         AMICI ``ExpDataView``s for each simulation condition.
+
     """
 
     def __init__(self, edatas: list[amici.ExpData], **kwargs):
@@ -186,12 +182,11 @@ class AmiciInnerProblem(InnerProblem):
         Returns
         -------
         Whether the data sets are consistent.
+
         """
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
-        data = [
-            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-        ]
+        data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
         if len(self.data) != len(data):
             return False
@@ -203,9 +198,7 @@ class AmiciInnerProblem(InnerProblem):
         return True
 
 
-def scale_value_dict(
-    dct: dict[str, float], problem: InnerProblem
-) -> dict[str, float]:
+def scale_value_dict(dct: dict[str, float], problem: InnerProblem) -> dict[str, float]:
     """Scale a value dictionary."""
     scaled_dct = {}
     for key, val in dct.items():
@@ -214,15 +207,13 @@ def scale_value_dict(
     return scaled_dct
 
 
-def scale_value(
-    val: Union[float, np.array], scale: str
-) -> Union[float, np.array]:
+def scale_value(val: Union[float, np.array], scale: str) -> Union[float, np.array]:
     """Scale a single value."""
-    if scale == 'lin':
+    if scale == "lin":
         return val
-    if scale == 'log':
+    if scale == "log":
         return np.log(val)
-    if scale == 'log10':
+    if scale == "log10":
         return np.log10(val)
     raise ValueError(f"Scale {scale} not recognized.")
 
@@ -239,10 +230,10 @@ def ix_matrices_from_arrays(
     simulation condition. Therein, ``True`` indicates that the respective
     parameter is used for the model output at the respective timepoint,
     observable and condition index.
+
     """
     ix_matrices = {
-        id: [np.zeros_like(edata, dtype=bool) for edata in edatas]
-        for id in ixs
+        id: [np.zeros_like(edata, dtype=bool) for edata in edatas] for id in ixs
     }
     for id, arr in ixs.items():
         matrices = ix_matrices[id]

@@ -49,6 +49,7 @@ class OrdinalParameter(InnerParameter):
     censoring_type:
         The censoring type of the measurements in the category with this
         inner parameter. In case of ordinal measurements, this is None.
+
     """
 
     def __init__(
@@ -68,6 +69,7 @@ class OrdinalParameter(InnerParameter):
         Parameters
         ----------
         See class attributes.
+
         """
         super().__init__(*args, **kwargs)
         if self.inner_parameter_type != InnerParameterType.ORDINAL:

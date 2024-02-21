@@ -34,6 +34,7 @@ class HierarchicalProblem(Problem):
         Only relevant if hierarchical is True. Contains the bounds of easily
         interpretable inner parameters only, e.g. noise parameters, scaling
         factors, offsets.
+
     """
 
     def __init__(
@@ -46,9 +47,7 @@ class HierarchicalProblem(Problem):
         super().__init__(**problem_kwargs)
 
         if inner_x_names is None:
-            inner_x_names = (
-                self.objective.calculator.get_interpretable_inner_par_ids()
-            )
+            inner_x_names = self.objective.calculator.get_interpretable_inner_par_ids()
         if len(set(inner_x_names)) != len(inner_x_names):
             raise ValueError("Parameter names inner_x_names must be unique")
         self.inner_x_names = inner_x_names

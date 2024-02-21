@@ -87,24 +87,20 @@ class OrdinalInnerSolver(InnerSolver):
             raise ValueError(
                 f"Inner solver option 'reparameterized' has to be a float, not {type(self.options[MIN_GAP])}."
             )
-        elif (
-            self.options[METHOD] == STANDARD and self.options[REPARAMETERIZED]
-        ):
+        elif self.options[METHOD] == STANDARD and self.options[REPARAMETERIZED]:
             raise NotImplementedError(
-                'Combining standard approach with '
-                'reparameterization not implemented.'
+                "Combining standard approach with "
+                "reparameterization not implemented."
             )
         elif self.options[METHOD] == STANDARD:
             warnings.warn(
-                'Standard approach is not recommended, as it is less efficient.'
-                'Please consider using the reduced approach instead.'
+                "Standard approach is not recommended, as it is less efficient."
+                "Please consider using the reduced approach instead."
             )
         # Check for any other options
         for key in self.options:
             if key not in self.get_default_options():
-                raise ValueError(
-                    f"Unknown OptimalScalingInnerSolver option {key}."
-                )
+                raise ValueError(f"Unknown OptimalScalingInnerSolver option {key}.")
 
     def solve(
         self,
@@ -126,15 +122,12 @@ class OrdinalInnerSolver(InnerSolver):
         Returns
         -------
         List of optimization results of the inner subproblem.
+
         """
         optimal_surrogates = []
         for group in problem.get_groups_for_xs(InnerParameterType.ORDINAL):
-            category_upper_bounds = problem.get_cat_ub_parameters_for_group(
-                group
-            )
-            category_lower_bounds = problem.get_cat_lb_parameters_for_group(
-                group
-            )
+            category_upper_bounds = problem.get_cat_ub_parameters_for_group(group)
+            category_lower_bounds = problem.get_cat_lb_parameters_for_group(group)
             if problem.groups[group][MEASUREMENT_TYPE] == ORDINAL:
                 surrogate_opt_results = optimize_surrogate_data_per_group(
                     category_upper_bounds=category_upper_bounds,
@@ -180,6 +173,7 @@ class OrdinalInnerSolver(InnerSolver):
         Returns
         -------
         Inner objective function value.
+
         """
         if False in [
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
@@ -188,10 +182,7 @@ class OrdinalInnerSolver(InnerSolver):
             warnings.warn("Inner optimization failed.")
         else:
             obj = np.sum(
-                [
-                    x_inner_opt[idx][SCIPY_FUN]
-                    for idx in range(len(x_inner_opt))
-                ]
+                [x_inner_opt[idx][SCIPY_FUN] for idx in range(len(x_inner_opt))]
             )
         return obj
 
@@ -244,6 +235,7 @@ class OrdinalInnerSolver(InnerSolver):
         Returns
         -------
         The gradients with respect to the outer parameters.
+
         """
         already_calculated = set()
 
@@ -252,10 +244,7 @@ class OrdinalInnerSolver(InnerSolver):
         ]:
             # Iterate over outer optimization parameters.
             for par_sim, par_opt in condition_map_sim_var.items():
-                if (
-                    not isinstance(par_opt, str)
-                    or par_opt in already_calculated
-                ):
+                if not isinstance(par_opt, str) or par_opt in already_calculated:
                     continue
                 elif par_opt not in par_opt_ids:
                     continue
@@ -280,18 +269,14 @@ class OrdinalInnerSolver(InnerSolver):
                     problem.get_groups_for_xs(InnerParameterType.ORDINAL)
                 ):
                     if problem.groups[group][MEASUREMENT_TYPE] == CENSORED:
-                        category_upper_bounds = (
-                            problem.get_cat_ub_parameters_for_group(group)
+                        category_upper_bounds = problem.get_cat_ub_parameters_for_group(
+                            group
                         )
-                        category_lower_bounds = (
-                            problem.get_cat_lb_parameters_for_group(group)
+                        category_lower_bounds = problem.get_cat_lb_parameters_for_group(
+                            group
                         )
-                        quantitative_data = problem.groups[group][
-                            QUANTITATIVE_DATA
-                        ]
-                        quantitative_ixs = problem.groups[group][
-                            QUANTITATIVE_IXS
-                        ]
+                        quantitative_data = problem.groups[group][QUANTITATIVE_DATA]
+                        quantitative_ixs = problem.groups[group][QUANTITATIVE_IXS]
 
                         grad += calculate_censored_grad(
                             category_upper_bounds=category_upper_bounds,
@@ -306,23 +291,18 @@ class OrdinalInnerSolver(InnerSolver):
                         )
                     elif problem.groups[group][MEASUREMENT_TYPE] == ORDINAL:
                         xs = problem.get_cat_ub_parameters_for_group(group)
-                        xi = get_xi(
-                            group, problem, x_inner_opt[idx], sim, self.options
-                        )
+                        xi = get_xi(group, problem, x_inner_opt[idx], sim, self.options)
                         sim_all = get_sim_all(xs, sim)
                         sy_all = get_sy_all(xs, sy, par_edata_idx)
 
-                        problem.groups[group][W_MATRIX] = problem.get_w(
-                            group, sim_all
-                        )
+                        problem.groups[group][W_MATRIX] = problem.get_w(group, sim_all)
                         problem.groups[group][W_DOT_MATRIX] = problem.get_wdot(
                             group, sim_all, sy_all
                         )
 
                         residual = np.block(
                             [
-                                xi[: problem.groups[group][NUM_DATAPOINTS]]
-                                - sim_all,
+                                xi[: problem.groups[group][NUM_DATAPOINTS]] - sim_all,
                                 np.zeros(
                                     problem.groups[group][NUM_INNER_PARAMS]
                                     - problem.groups[group][NUM_DATAPOINTS]
@@ -333,20 +313,15 @@ class OrdinalInnerSolver(InnerSolver):
 
                         df_dtheta = residual.dot(
                             residual.dot(problem.groups[group][W_DOT_MATRIX])
-                            - 2
-                            * problem.groups[group][W_MATRIX].dot(dy_dtheta)
+                            - 2 * problem.groups[group][W_MATRIX].dot(dy_dtheta)
                         )
-                        df_dxi = 2 * problem.groups[group][W_MATRIX].dot(
-                            residual
-                        )
+                        df_dxi = 2 * problem.groups[group][W_MATRIX].dot(residual)
 
                         if df_dxi.any():
                             dd_dtheta = problem.get_dd_dtheta(
                                 group, xs, sim_all, sy_all
                             )
-                            d = problem.get_d(
-                                group, xs, sim_all, self.options[MIN_GAP]
-                            )
+                            d = problem.get_d(group, xs, sim_all, self.options[MIN_GAP])
 
                             mu = get_mu(group, problem, residual)
 
@@ -410,6 +385,7 @@ def calculate_dxi_dtheta(
         Vector of interval gap and range.
     dd_theta:
         Derivative of vector of interval gap and range.
+
     """
     from scipy.sparse import csc_matrix, linalg
 
@@ -441,9 +417,7 @@ def calculate_dxi_dtheta(
 
 def get_dy_dtheta(group: int, problem: OrdinalProblem, sy_all: np.ndarray):
     """Restructure sensitivities into a numpy matrix of right dimension."""
-    return np.block(
-        [sy_all, np.zeros(2 * problem.groups[group][NUM_CATEGORIES])]
-    )
+    return np.block([sy_all, np.zeros(2 * problem.groups[group][NUM_CATEGORIES])])
 
 
 def get_mu(group: int, problem: OrdinalProblem, residual: np.ndarray):
@@ -457,13 +431,14 @@ def get_mu(group: int, problem: OrdinalProblem, residual: np.ndarray):
         Optimal scaling inner problem.
     residual:
         Residual for group.
+
     """
     from scipy import linalg
 
     mu = linalg.lstsq(
         problem.groups[group][C_MATRIX].transpose(),
         -2 * residual.dot(problem.groups[group][W_MATRIX]),
-        lapack_driver='gelsy',
+        lapack_driver="gelsy",
     )
     return mu[0]
 
@@ -489,11 +464,10 @@ def get_xi(
         Model simulation.
     options:
         Optimal scaling inner solver options.
+
     """
     xs = problem.get_cat_ub_parameters_for_group(group)
-    interval_range, interval_gap = compute_interval_constraints(
-        xs, sim, options
-    )
+    interval_range, interval_gap = compute_interval_constraints(xs, sim, options)
 
     xi = np.zeros(problem.groups[group][NUM_INNER_PARAMS])
     surrogate_all, x_lower, x_upper = get_surrogate_all(
@@ -523,6 +497,7 @@ def optimize_surrogate_data_per_group(
         Model simulations.
     options:
         Optimal scaling inner solver options.
+
     """
     from scipy.optimize import minimize
 
@@ -564,10 +539,8 @@ def optimize_surrogate_data_per_group(
     try:
         results = minimize(obj_surr, jac=grad_surr, **inner_options)
     except ValueError:
-        warnings.warn(
-            "x0 violate bound constraints. Retrying with array of zeros."
-        )
-        inner_options['x0'] = np.zeros(len(inner_options['x0']))
+        warnings.warn("x0 violate bound constraints. Retrying with array of zeros.")
+        inner_options["x0"] = np.zeros(len(inner_options["x0"]))
         results = minimize(obj_surr, jac=grad_surr, **inner_options)
 
     return results
@@ -600,6 +573,7 @@ def get_inner_optimization_options(
         Minimal constrained gap between categories.
     options:
         Optimal scaling inner solver options.
+
     """
     from scipy.optimize import Bounds
 
@@ -612,7 +586,7 @@ def get_inner_optimization_options(
                 np.asarray([x.value for x in category_lower_bounds]),
                 np.asarray([x.value for x in category_upper_bounds]),
             ],
-            'F',
+            "F",
         )
 
     if options[METHOD] == REDUCED:
@@ -651,10 +625,10 @@ def get_inner_optimization_options(
             * parameter_length,
         )
         inner_options = {
-            'x0': x0,
-            'method': 'L-BFGS-B',
-            'options': {'maxiter': 2000, 'ftol': 1e-10},
-            'bounds': bounds,
+            "x0": x0,
+            "method": "L-BFGS-B",
+            "options": {"maxiter": 2000, "ftol": 1e-10},
+            "bounds": bounds,
         }
     else:
         constraints = get_constraints_for_optimization(
@@ -662,10 +636,10 @@ def get_inner_optimization_options(
         )
 
         inner_options = {
-            'x0': x0,
-            'method': 'SLSQP',
-            'options': {'maxiter': 2000, 'ftol': 1e-10, 'disp': None},
-            'constraints': constraints,
+            "x0": x0,
+            "method": "SLSQP",
+            "options": {"maxiter": 2000, "ftol": 1e-10, "disp": None},
+            "constraints": constraints,
         }
     return inner_options
 
@@ -690,9 +664,7 @@ def get_sy_all(
     """Return model sensitivities for inner parameters and outer parameter index."""
     sy_all = []
     for inner_parameter in inner_parameters:
-        for sy_i, mask_i, edata_idx in zip(
-            sy, inner_parameter.ixs, par_edata_idx
-        ):
+        for sy_i, mask_i, edata_idx in zip(sy, inner_parameter.ixs, par_edata_idx):
             if edata_idx is not None:
                 sim_sy = sy_i[:, edata_idx, :][mask_i]
             else:
@@ -816,16 +788,12 @@ def reparameterize_inner_parameters(
     for inner_parameter in inner_parameters:
         inner_parameter_category = int(inner_parameter.category)
         if inner_parameter_category == 1:
-            reparameterized_inner_parameter_values[
-                inner_parameter_category - 1
-            ] = (
+            reparameterized_inner_parameter_values[inner_parameter_category - 1] = (
                 original_inner_parameter_values[inner_parameter_category - 1]
                 - interval_range
             )
         else:
-            reparameterized_inner_parameter_values[
-                inner_parameter_category - 1
-            ] = (
+            reparameterized_inner_parameter_values[inner_parameter_category - 1] = (
                 original_inner_parameter_values[inner_parameter_category - 1]
                 - original_inner_parameter_values[inner_parameter_category - 2]
                 - interval_gap
@@ -851,15 +819,11 @@ def undo_inner_parameter_reparameterization(
         if inner_parameter_category == 1:
             original_inner_parameter_values[inner_parameter_category - 1] = (
                 interval_range
-                + reparameterized_inner_parameter_values[
-                    inner_parameter_category - 1
-                ]
+                + reparameterized_inner_parameter_values[inner_parameter_category - 1]
             )
         else:
             original_inner_parameter_values[inner_parameter_category - 1] = (
-                reparameterized_inner_parameter_values[
-                    inner_parameter_category - 1
-                ]
+                reparameterized_inner_parameter_values[inner_parameter_category - 1]
                 + interval_gap
                 + interval_range
                 + original_inner_parameter_values[inner_parameter_category - 2]
@@ -999,7 +963,7 @@ def get_bounds_for_category(
         elif x_category > 1:
             x_lower = optimal_scaling_bounds[x_category - 2] + interval_gap
         else:
-            raise ValueError('Category value needs to be larger than 0.')
+            raise ValueError("Category value needs to be larger than 0.")
     elif options[METHOD] == STANDARD:
         x_lower = optimal_scaling_bounds[2 * x_category - 2]
         x_upper = optimal_scaling_bounds[2 * x_category - 1]
@@ -1016,13 +980,9 @@ def get_constraints_for_optimization(
 ) -> dict:
     """Return constraints for inner optimization."""
     num_categories = len(xs)
-    interval_range, interval_gap = compute_interval_constraints(
-        xs, sim, options
-    )
+    interval_range, interval_gap = compute_interval_constraints(xs, sim, options)
     if options[METHOD] == REDUCED:
-        a = np.diag(-np.ones(num_categories), -1) + np.diag(
-            np.ones(num_categories + 1)
-        )
+        a = np.diag(-np.ones(num_categories), -1) + np.diag(np.ones(num_categories + 1))
         a = a[:-1, :-1]
         b = np.empty((num_categories,))
         b[0] = interval_range
@@ -1036,7 +996,7 @@ def get_constraints_for_optimization(
         b[0] = 0
         b[1::2] = interval_range
         b[2::2] = interval_gap
-    ineq_cons = {'type': 'ineq', 'fun': lambda x: a.dot(x) - b}
+    ineq_cons = {"type": "ineq", "fun": lambda x: a.dot(x) - b}
 
     return ineq_cons
 
@@ -1097,6 +1057,7 @@ def calculate_censored_obj(
     -------
     Dictionary with the objective function value, dummy success
     and censoring category bounds.
+
     """
     cat_lb_values = np.array([x.value for x in category_lower_bounds])
     cat_ub_values = np.array([x.value for x in category_upper_bounds])
@@ -1142,7 +1103,7 @@ def calculate_censored_obj(
     return_dictionary = {
         SCIPY_SUCCESS: True,
         SCIPY_FUN: obj,
-        SCIPY_X: np.ravel([cat_lb_values, cat_ub_values], order='F'),
+        SCIPY_X: np.ravel([cat_lb_values, cat_ub_values], order="F"),
     }
     return return_dictionary
 
@@ -1178,6 +1139,7 @@ def calculate_censored_grad(
     Returns
     -------
     Gradient.
+
     """
     cat_lb_values = np.array([x.value for x in category_lower_bounds])
     cat_ub_values = np.array([x.value for x in category_upper_bounds])
@@ -1217,10 +1179,7 @@ def calculate_censored_grad(
 
     # Calculate the negative log likelihood gradient for censored data.
     gradient = np.nansum(
-        (
-            np.full(len(sim_all), 1)
-            - (surrogate_all - sim_all) ** 2 / sigma_all**2
-        )
+        (np.full(len(sim_all), 1) - (surrogate_all - sim_all) ** 2 / sigma_all**2)
         * ssigma_all
         / sigma_all
     ) - np.nansum((surrogate_all - sim_all) * sy_all / sigma_all**2)
@@ -1239,9 +1198,7 @@ def calculate_censored_grad(
                 if edata_idx is not None
                 else np.full(sy_i[:, 0, :][mask_i].shape, 0)
             )
-            for sy_i, mask_i, edata_idx in zip(
-                sy, quantitative_ixs, par_edata_idx
-            )
+            for sy_i, mask_i, edata_idx in zip(sy, quantitative_ixs, par_edata_idx)
         ]
     )
     quantitative_ssigma = np.concatenate(
@@ -1261,15 +1218,12 @@ def calculate_censored_grad(
     gradient += np.nansum(
         (
             np.full(len(quantitative_sim), 1)
-            - (quantitative_data - quantitative_sim) ** 2
-            / quantitative_sigma**2
+            - (quantitative_data - quantitative_sim) ** 2 / quantitative_sigma**2
         )
         * quantitative_ssigma
         / quantitative_sigma
     ) - np.nansum(
-        (quantitative_data - quantitative_sim)
-        * quantitative_sy
-        / quantitative_sigma**2
+        (quantitative_data - quantitative_sim) * quantitative_sy / quantitative_sigma**2
     )
 
     return gradient

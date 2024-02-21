@@ -50,6 +50,7 @@ class RelativeInnerProblem(AmiciInnerProblem):
         per simulation condition. Missing observations as NaN.
     edatas:
         AMICI ``ExpData``\s for each simulation condition.
+
     """
 
     def __init__(self, **kwargs):
@@ -57,14 +58,12 @@ class RelativeInnerProblem(AmiciInnerProblem):
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: 'petab.Problem',
-        amici_model: 'amici.Model',
-        edatas: list['amici.ExpData'],
-    ) -> 'RelativeInnerProblem':
+        petab_problem: "petab.Problem",
+        amici_model: "amici.Model",
+        edatas: list["amici.ExpData"],
+    ) -> "RelativeInnerProblem":
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
-        return inner_problem_from_petab_problem(
-            petab_problem, amici_model, edatas
-        )
+        return inner_problem_from_petab_problem(petab_problem, amici_model, edatas)
 
     def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
         """Check for consistency in data.
@@ -81,12 +80,11 @@ class RelativeInnerProblem(AmiciInnerProblem):
         Returns
         -------
         Whether the data sets are consistent.
+
         """
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
-        data = [
-            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-        ]
+        data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
         if len(self.data) != len(data):
             return False
@@ -99,9 +97,9 @@ class RelativeInnerProblem(AmiciInnerProblem):
 
 
 def inner_problem_from_petab_problem(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
-    edatas: list['amici.ExpData'],
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
+    edatas: list["amici.ExpData"],
 ) -> AmiciInnerProblem:
     """
     Create inner problem from PEtab problem.
@@ -118,12 +116,10 @@ def inner_problem_from_petab_problem(
     x_ids = [x.inner_parameter_id for x in inner_parameters]
 
     # used indices for all measurement specific parameters
-    ixs = ixs_for_measurement_specific_parameters(
-        petab_problem, amici_model, x_ids
-    )
+    ixs = ixs_for_measurement_specific_parameters(petab_problem, amici_model, x_ids)
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
+    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -133,14 +129,14 @@ def inner_problem_from_petab_problem(
         par.ixs = ix_matrices[par.inner_parameter_id]
 
     par_group_types = {
-        tuple(obs_pars.split(';')): (
+        tuple(obs_pars.split(";")): (
             petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
-            for obs_par in obs_pars.split(';')
+            for obs_par in obs_pars.split(";")
         )
         for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby(
             [petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS], dropna=True
         )
-        if ';' in obs_pars  # prefilter for at least 2 observable parameters
+        if ";" in obs_pars  # prefilter for at least 2 observable parameters
     }
 
     coupled_pars = {
@@ -171,9 +167,7 @@ def inner_problem_from_petab_problem(
             continue
         for group in coupled_pars:
             if par.inner_parameter_id in group:
-                coupled_parameter_id = group[
-                    group.index(par.inner_parameter_id) - 1
-                ]
+                coupled_parameter_id = group[group.index(par.inner_parameter_id) - 1]
                 par.coupled = id_to_par[coupled_parameter_id]
                 break
 
@@ -213,8 +207,7 @@ def inner_parameters_from_parameter_df(
                     meas_df[NOISE_PARAMETERS] == par_id
                 ]
                 if any(
-                    corresponding_measurements[MEASUREMENT_TYPE]
-                    == SEMIQUANTITATIVE
+                    corresponding_measurements[MEASUREMENT_TYPE] == SEMIQUANTITATIVE
                 ):
                     continue
 
@@ -232,8 +225,8 @@ def inner_parameters_from_parameter_df(
 
 
 def ixs_for_measurement_specific_parameters(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
     x_ids: list[str],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """
@@ -245,6 +238,7 @@ def ixs_for_measurement_specific_parameters(
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.
+
     """
     ixs_for_par = {}
     observable_ids = amici_model.getObservableIds()
@@ -276,9 +270,7 @@ def ixs_for_measurement_specific_parameters(
             # iterate over measurements
             for _, measurement in df_for_time.iterrows():
                 # extract observable index
-                observable_ix = observable_ids.index(
-                    measurement[OBSERVABLE_ID]
-                )
+                observable_ix = observable_ids.index(measurement[OBSERVABLE_ID])
 
                 # as the time indices have to account for replicates, we need
                 #  to track which time indices have already been assigned for

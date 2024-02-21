@@ -46,6 +46,7 @@ def process_result_list(
         One for each element in 'results'.
     legends: list of str
         labels for line plots
+
     """
     # check how many results were passed
     single_result = False
@@ -81,7 +82,7 @@ def process_result_list(
             # No legends were passed: create some custom legends
             legends = []
             for i_leg in range(len(results)):
-                legends.append('Result ' + str(i_leg))
+                legends.append("Result " + str(i_leg))
         else:
             # legends were passed by user: check length
             try:
@@ -89,8 +90,8 @@ def process_result_list(
                     legends = [legends]
                 if len(legends) != len(results):
                     raise ValueError(
-                        'List of results passed and list of labels do '
-                        'not have the same length.'
+                        "List of results passed and list of labels do "
+                        "not have the same length."
                     )
             except TypeError:
                 legend_type_error = True
@@ -101,9 +102,7 @@ def process_result_list(
     return results, colors, legends
 
 
-def process_offset_y(
-    offset_y: Optional[float], scale_y: str, min_val: float
-) -> float:
+def process_offset_y(offset_y: Optional[float], scale_y: str, min_val: float) -> float:
     """
     Compute offset for y-axis, depend on user settings.
 
@@ -123,10 +122,11 @@ def process_offset_y(
     offset_y: float
        value for offsetting the later plotted values, in order to ensure
        positivity if a semilog-plot is used
+
     """
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
-        if (scale_y == 'log10') and (min_val + offset_y <= 0.0):
+        if (scale_y == "log10") and (min_val + offset_y <= 0.0):
             warnings.warn(
                 "Offset specified by user is insufficient. "
                 "Ignoring specified offset and using "
@@ -137,7 +137,7 @@ def process_offset_y(
             return offset_y
     else:
         # check whether scaling is lin or log10
-        if scale_y == 'lin':
+        if scale_y == "lin":
             # linear scaling doesn't need any offset
             return 0.0
 
@@ -159,6 +159,7 @@ def process_y_limits(ax, y_limits):
     -------
     ax: matplotlib.Axes, optional
         Axes object to use.
+
     """
     # apply y-limits, if they were specified by the user
     if y_limits is not None:
@@ -175,7 +176,7 @@ def process_y_limits(ax, y_limits):
             y_limits = [y_limits[0], y_limits[1]]
 
         # check validity of bounds if plotting in log-scale
-        if ax.get_yscale() == 'log' and y_limits[0] <= 0.0:
+        if ax.get_yscale() == "log" and y_limits[0] <= 0.0:
             tmp_y_limits = ax.get_ylim()
             if y_limits[1] <= 0.0:
                 y_limits = tmp_y_limits
@@ -202,7 +203,7 @@ def process_y_limits(ax, y_limits):
         if ax_limits[0] > data_limits[0] or ax_limits[1] < data_limits[1]:
             # Get range of data
             data_range = data_limits[1] - data_limits[0]
-            if ax.get_yscale() == 'log':
+            if ax.get_yscale() == "log":
                 data_range = np.log10(data_range)
                 new_limits = (
                     np.power(10, np.log10(data_limits[0]) - 0.02 * data_range),
@@ -233,6 +234,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     Returns
     -------
     The combined color.
+
     """
     if bg is None:
         bg = RGBA_WHITE
@@ -243,7 +245,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     else:
         if len(bg) != LEN_RGB:
             raise IndexError(
-                'A background color of unexpected length was provided: {bg}'
+                "A background color of unexpected length was provided: {bg}"
             )
         bg = (*bg, RGBA_MAX)
 
@@ -251,9 +253,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     if len(fg) == LEN_RGB or fg[RGBA_ALPHA] == RGBA_MAX:
         return fg
     if len(fg) != LEN_RGBA:
-        raise IndexError(
-            'A foreground color of unexpected length was provided: {fg}'
-        )
+        raise IndexError("A foreground color of unexpected length was provided: {fg}")
 
     def apparent_composite_color_component(
         fg_component: float,
@@ -280,16 +280,13 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
         Returns
         -------
         The component of the new color.
+
         """
         return (
-            fg_component * fg_alpha
-            + bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
+            fg_component * fg_alpha + bg_component * bg_alpha * (RGBA_MAX - fg_alpha)
         ) / (fg_alpha + bg_alpha * (RGBA_MAX - fg_alpha))
 
-    return [
-        apparent_composite_color_component(fg[i], bg[i])
-        for i in range(LEN_RGB)
-    ]
+    return [apparent_composite_color_component(fg[i], bg[i]) for i in range(LEN_RGB)]
 
 
 def process_start_indices(
@@ -314,6 +311,7 @@ def process_start_indices(
             cluster.
     result:
         Result to determine maximum allowed length and/or clusters.
+
     """
     if start_indices is None:
         start_indices = ALL
@@ -326,17 +324,15 @@ def process_start_indices(
             )
             # get all clusters that have size >= 2 and cluster of best start:
             clust_gr2 = np.where(clust_size > 2)[0]
-            clust_gr2 = (
-                np.append(clust_gr2, 0) if 0 not in clust_gr2 else clust_gr2
-            )
+            clust_gr2 = np.append(clust_gr2, 0) if 0 not in clust_gr2 else clust_gr2
             start_indices = np.concatenate(
                 [np.where(clust_ind == i_clust)[0] for i_clust in clust_gr2]
             )
             return start_indices
         elif start_indices == FIRST_CLUSTER:
-            clust_ind = assign_clusters(
-                delete_nan_inf(result.optimize_result.fval)[1]
-            )[0]
+            clust_ind = assign_clusters(delete_nan_inf(result.optimize_result.fval)[1])[
+                0
+            ]
             return np.where(clust_ind == 0)[0]
         else:
             raise ValueError(
@@ -376,6 +372,7 @@ def process_parameter_indices(
         list of indices or str specifying the desired indices. Default is
         `free_only`. Other option is 'all', which included all estimated
         and fixed parameters.
+
     """
     if isinstance(parameter_indices, str):
         if parameter_indices == ALL:

@@ -60,6 +60,7 @@ def profiles(
     -------
     ax:
         The plot axes.
+
     """
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
@@ -160,6 +161,7 @@ def profiles_lowlevel(
     Returns
     -------
     The plot axes.
+
     """
     # axes
     if ax is None:
@@ -243,18 +245,18 @@ def profiles_lowlevel(
 
         # labels
         if x_labels is None:
-            ax[counter].set_xlabel(f'Parameter {i_plot}')
+            ax[counter].set_xlabel(f"Parameter {i_plot}")
         else:
             ax[counter].set_xlabel(x_labels[counter])
 
         if counter % columns == 0:
-            ax[counter].set_ylabel('Log-posterior ratio')
+            ax[counter].set_ylabel("Log-posterior ratio")
         else:
             # fix pyPESTO/pyPESTO/pypesto/visualize/profiles.py:228:
             # UserWarning: FixedFormatter should only be used
             # together with FixedLocator. Fix from matplotlib #18848.
             ax[counter].set_yticks(ax[counter].get_yticks())
-            ax[counter].set_yticklabels(['' for _ in ax[counter].get_yticks()])
+            ax[counter].set_yticklabels(["" for _ in ax[counter].get_yticks()])
 
         # increase counter and cleanup legend
         counter += 1
@@ -298,6 +300,7 @@ def profile_lowlevel(
     Returns
     -------
     The plot axes.
+
     """
     # parse input
     fvals = np.asarray(fvals)
@@ -308,8 +311,8 @@ def profile_lowlevel(
     # axes
     if ax is None:
         ax = plt.subplots()[1]
-        ax.set_xlabel('Parameter value')
-        ax.set_ylabel('Log-posterior ratio')
+        ax.set_xlabel("Parameter value")
+        ax.set_ylabel("Log-posterior ratio")
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
@@ -340,12 +343,13 @@ def handle_reference_points(ref, ax, profile_indices):
         Axes object to use.
     profile_indices: list of integer values
         List of integer values specifying which profiles should be plotted.
+
     """
     if len(ref) > 0:
         # loop over axes objects
         for i_par, i_ax in enumerate(ax):
             for i_ref in ref:
-                current_x = i_ref['x'][profile_indices[i_par]]
+                current_x = i_ref["x"][profile_indices[i_par]]
                 i_ax.plot(
                     [current_x, current_x],
                     [0.0, 1.0],
@@ -384,6 +388,7 @@ def handle_inputs(
     Returns
     -------
     List of parameter values and ratios that need to be plotted.
+
     """
     # extract ratio values from result
     fvals = []
@@ -392,12 +397,8 @@ def handle_inputs(
             i_par in profile_indices
             and result.profile_result.list[profile_list][i_par] is not None
         ):
-            xs = result.profile_result.list[profile_list][i_par].x_path[
-                i_par, :
-            ]
-            ratios = result.profile_result.list[profile_list][
-                i_par
-            ].ratio_path[:]
+            xs = result.profile_result.list[profile_list][i_par].x_path[i_par, :]
+            ratios = result.profile_result.list[profile_list][i_par].ratio_path[:]
 
             # constrain
             indices = np.where(ratios > ratio_min)
@@ -438,6 +439,7 @@ def process_result_list_profiles(
     profile_indices: list of integer values
         corrected list of integer values specifying which profiles should be
         plotted.
+
     """
     # ensure list of ids
     if isinstance(profile_list_ids, int):
@@ -447,9 +449,7 @@ def process_result_list_profiles(
     if isinstance(results, list):
         if len(results) != 1:
             # if we have no single result, then use the standard api
-            results, colors, legends = process_result_list(
-                results, colors, legends
-            )
+            results, colors, legends = process_result_list(results, colors, legends)
             return results, profile_list_ids, colors, legends
     else:
         # a single results was provided, so make a list out of it
@@ -500,8 +500,8 @@ def process_profile_indices(
             if ind not in plottable_indices:
                 profile_indices_ret.remove(ind)
                 warn(
-                    'Requested to plot profile for parameter index %i, '
-                    'but profile has not been computed.' % ind
+                    "Requested to plot profile for parameter index %i, "
+                    "but profile has not been computed." % ind
                 )
 
     return profile_indices_ret

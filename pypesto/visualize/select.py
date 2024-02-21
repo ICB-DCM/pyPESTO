@@ -55,6 +55,7 @@ def plot_selected_models(
     -------
     matplotlib.pyplot.Axes
         The plot axis.
+
     """
     zero = 0
     if relative:
@@ -73,9 +74,9 @@ def plot_selected_models(
     ]
 
     criterion_values = {
-        labels.get(
-            model.get_hash(), default_label_maker(model)
-        ): model.get_criterion(criterion)
+        labels.get(model.get_hash(), default_label_maker(model)): model.get_criterion(
+            criterion
+        )
         - zero
         for model in selected_models
     }
@@ -84,15 +85,13 @@ def plot_selected_models(
         criterion_values.keys(),
         criterion_values.values(),
         linewidth=linewidth,
-        color='lightgrey',
+        color="lightgrey",
         # edgecolor='k'
     )
 
     ax.get_xticks()
     ax.set_xticks(list(range(len(criterion_values))))
-    ax.set_ylabel(
-        criterion + ('(relative)' if relative else '(absolute)'), fontsize=fz
-    )
+    ax.set_ylabel(criterion + ("(relative)" if relative else "(absolute)"), fontsize=fz)
     # could change to compared_model_ids, if all models are plotted
     ax.set_xticklabels(
         criterion_values.keys(),
@@ -103,16 +102,14 @@ def plot_selected_models(
     ytl = ax.get_yticks()
     ax.set_ylim([min(ytl), max(ytl)])
     # removing top and right borders
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
     return ax
 
 
 def plot_history_digraph(*args, **kwargs):
     """Ignore me. Renamed to `plot_calibrated_models_digraph`."""
-    raise NotImplementedError(
-        "This method is now `plot_calibrated_models_digraph`."
-    )
+    raise NotImplementedError("This method is now `plot_calibrated_models_digraph`.")
 
 
 def plot_calibrated_models_digraph(
@@ -156,6 +153,7 @@ def plot_calibrated_models_digraph(
     -------
     matplotlib.pyplot.Axes
         The plot axis.
+
     """
     if criterion is None:
         criterion = problem.petab_select_problem.criterion
@@ -180,19 +178,19 @@ def plot_calibrated_models_digraph(
                 )
         else:
             raise NotImplementedError(
-                'Plots for models with `None` as their predecessor model are '
-                'not yet implemented.'
+                "Plots for models with `None` as their predecessor model are "
+                "not yet implemented."
             )
-            from_ = 'None'
+            from_ = "None"
         to = labels.get(model.get_hash(), default_label_maker(model))
         edges.append((from_, to))
 
     G.add_edges_from(edges)
     default_options = {
-        'node_color': 'lightgrey',
-        'arrowstyle': '-|>',
-        'node_shape': 's',
-        'node_size': 2500,
+        "node_color": "lightgrey",
+        "arrowstyle": "-|>",
+        "node_shape": "s",
+        "node_size": 2500,
     }
     if options is not None:
         default_options.update(options)

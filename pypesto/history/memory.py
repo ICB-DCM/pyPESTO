@@ -28,6 +28,7 @@ class MemoryHistory(CountHistoryBase):
     options:
         History options, see :class:`pypesto.history.HistoryOptions`. Defaults
         to `None`, which implies default options.
+
     """
 
     def __init__(self, options: Union[HistoryOptions, dict, None] = None):
@@ -49,9 +50,7 @@ class MemoryHistory(CountHistoryBase):
         """Update internal trace representation."""
         # calculating function values from residuals
         #  and reduce via requested history options
-        result: dict = reduce_result_via_options(
-            add_fun_from_res(result), self.options
-        )
+        result: dict = reduce_result_via_options(add_fun_from_res(result), self.options)
 
         result[X] = x
 

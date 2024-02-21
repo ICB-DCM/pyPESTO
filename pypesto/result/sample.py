@@ -34,6 +34,7 @@ class McmcPtResult(dict):
 
     Here, `n_chain` denotes the number of chains, `n_iter` the number of
     iterations (i.e., the chain length), and `n_par` the number of parameters.
+
     """
 
     def __init__(
@@ -64,13 +65,11 @@ class McmcPtResult(dict):
             raise ValueError(f"trace_x.ndim not as expected: {trace_x.ndim}")
         if trace_neglogpost.ndim != 2:
             raise ValueError(
-                "trace_neglogpost.ndim not as expected: "
-                f"{trace_neglogpost.ndim}"
+                "trace_neglogpost.ndim not as expected: " f"{trace_neglogpost.ndim}"
             )
         if trace_neglogprior.ndim != 2:
             raise ValueError(
-                "trace_neglogprior.ndim not as expected: "
-                f"{trace_neglogprior.ndim}"
+                "trace_neglogprior.ndim not as expected: " f"{trace_neglogprior.ndim}"
             )
         if (
             trace_x.shape[0] != trace_neglogpost.shape[0]

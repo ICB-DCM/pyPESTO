@@ -33,6 +33,7 @@ lint.ignore = [
 lint.select = [
     "F",  # Pyflakes
     "I",  # isort
+    "D413",  # pydocstyle
 ]
 
 [tool.ruff.lint.per-file-ignores]

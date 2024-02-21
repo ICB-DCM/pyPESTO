@@ -26,6 +26,7 @@ def _read_source(module_name: str, source_file: str) -> None:
     ----------
     module_name: Julia module name.
     source_file: Qualified Julia source file.
+
     """
     from julia import Main
 
@@ -89,6 +90,7 @@ class JuliaObjective(Objective):
     fun, grad, hess, res, sres:
         Names of callables within the Julia code of the corresponding
         objective functions and derivatives.
+
     """
 
     def __init__(
@@ -170,7 +172,7 @@ class JuliaObjective(Objective):
         fun, grad, hess, res, sres = self._get_callables()
         super().__init__(fun=fun, grad=grad, hess=hess, res=res, sres=sres)
 
-    def __deepcopy__(self, memodict=None) -> 'JuliaObjective':
+    def __deepcopy__(self, memodict=None) -> "JuliaObjective":
         return JuliaObjective(
             module=self.module,
             source_file=self.source_file,
@@ -195,7 +197,7 @@ def display_source_ipython(source_file: str):
     formatter = HtmlFormatter()
     return display.HTML(
         '<style type="text/css">{}</style>{}'.format(
-            formatter.get_style_defs('.highlight'),
+            formatter.get_style_defs(".highlight"),
             highlight(code, JuliaLexer(), formatter),
         )
     )

@@ -23,8 +23,8 @@ class MethodSignalProceed(str, Enum):
     """Indicators for how a model selection method should proceed."""
 
     # TODO move to PEtab Select?
-    STOP = 'stop'
-    CONTINUE = 'continue'
+    STOP = "stop"
+    CONTINUE = "continue"
 
 
 @dataclass
@@ -37,6 +37,7 @@ class MethodSignal:
         Whether to accept the model.
     proceed:
         How the method should proceed.
+
     """
 
     accept: bool
@@ -57,12 +58,13 @@ class MethodLogger:
         The logging level.
     logger:
         A logger from the :mod:`logging` module.
+
     """
 
     column_width: int = 12
     column_sep: str = " | "
 
-    def __init__(self, level: str = 'info'):
+    def __init__(self, level: str = "info"):
         self.logger = logging.getLogger(__name__)
         self.level = level
 
@@ -76,6 +78,7 @@ class MethodLogger:
         level:
             The logging level. Defaults to the value defined in the
             constructor.
+
         """
         if level is None:
             level = self.level
@@ -84,7 +87,7 @@ class MethodLogger:
     def new_selection(self) -> None:
         """Start logging a new model selection."""
         padding = 20
-        self.log('-' * padding + 'New Selection' + '-' * padding)
+        self.log("-" * padding + "New Selection" + "-" * padding)
         columns = {
             "Predecessor model subspace:ID": "model0",
             "Model subspace:ID": "model",
@@ -126,6 +129,7 @@ class MethodLogger:
             The predecessor model.
         precision:
             The number of decimal places to log.
+
         """
         model_criterion = model.get_criterion(criterion)
 
@@ -140,10 +144,11 @@ class MethodLogger:
             Returns
             -------
             The ID.
+
             """
-            model_subspace_id = model.model_subspace_id or ''
+            model_subspace_id = model.model_subspace_id or ""
             original_model_id = model.model_id or model.get_hash()
-            model_id = model_subspace_id + ':' + original_model_id
+            model_id = model_subspace_id + ":" + original_model_id
             return model_id
 
         def float_to_str(value: float, precision: int = 3) -> str:
@@ -151,15 +156,11 @@ class MethodLogger:
 
         if isinstance(predecessor_model, Model):
             predecessor_model_id = get_model_id(predecessor_model)
-            predecessor_model_criterion = predecessor_model.get_criterion(
-                criterion
-            )
+            predecessor_model_criterion = predecessor_model.get_criterion(criterion)
             criterion_difference = float_to_str(
                 model_criterion - predecessor_model_criterion
             )
-            predecessor_model_criterion = float_to_str(
-                predecessor_model_criterion
-            )
+            predecessor_model_criterion = float_to_str(predecessor_model_criterion)
         else:
             criterion_difference = None
             predecessor_model_criterion = None
@@ -219,6 +220,7 @@ class MethodCaller:
     startpoint_latest_mle:
         If ``True``, one of the startpoints in the multistart optimization
         will be the MLE of the latest model.
+
     """
 
     def __init__(
@@ -261,22 +263,22 @@ class MethodCaller:
         # TODO deprecated
         old_model_problem_options = {}
         for key, value in [
-            ('postprocessor', model_postprocessor),
+            ("postprocessor", model_postprocessor),
             (
-                'model_to_pypesto_problem_method',
+                "model_to_pypesto_problem_method",
                 model_to_pypesto_problem_method,
             ),
-            ('minimize_options', minimize_options),
-            ('objective_customizer', objective_customizer),
+            ("minimize_options", minimize_options),
+            ("objective_customizer", objective_customizer),
         ]:
             if value is not None:
                 old_model_problem_options[key] = value
                 self.logger.log(
-                    f'Specifying `{key}` as an individual argument is '
-                    'deprecated. Please instead specify it within some '
-                    '`model_problem_options` dictionary, e.g. '
+                    f"Specifying `{key}` as an individual argument is "
+                    "deprecated. Please instead specify it within some "
+                    "`model_problem_options` dictionary, e.g. "
                     f'`model_problem_options={{"{key}": ...}}`.',
-                    level='warning',
+                    level="warning",
                 )
         self.model_problem_options = {}
         self.model_problem_options |= old_model_problem_options
@@ -291,10 +293,10 @@ class MethodCaller:
         if candidate_space is not None and method is not None:
             self.logger.log(
                 (
-                    'Both `candidate_space` and `method` were provided. '
-                    'Please only provide one. The method will be ignored here.'
+                    "Both `candidate_space` and `method` were provided. "
+                    "Please only provide one. The method will be ignored here."
                 ),
-                level='warning',
+                level="warning",
             )
         # Get method.
         self.method = (
@@ -309,8 +311,8 @@ class MethodCaller:
         # Require either a candidate space or a method.
         if candidate_space is None and self.method is None:
             raise ValueError(
-                'Please provide one of either `candidate_space` or `method`, '
-                'or specify the `method` in the PEtab Select problem.'
+                "Please provide one of either `candidate_space` or `method`, "
+                "or specify the `method` in the PEtab Select problem."
             )
         # Use candidate space if provided.
         if candidate_space is not None:
@@ -320,17 +322,13 @@ class MethodCaller:
         # Else generate one based on the PEtab Select problem.
         else:
             if predecessor_model is not None:
-                self.candidate_space = (
-                    self.petab_select_problem.new_candidate_space(
-                        method=self.method,
-                        predecessor_model=self.predecessor_model,
-                    )
+                self.candidate_space = self.petab_select_problem.new_candidate_space(
+                    method=self.method,
+                    predecessor_model=self.predecessor_model,
                 )
             else:
-                self.candidate_space = (
-                    self.petab_select_problem.new_candidate_space(
-                        method=self.method,
-                    )
+                self.candidate_space = self.petab_select_problem.new_candidate_space(
+                    method=self.method,
                 )
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
@@ -362,6 +360,7 @@ class MethodCaller:
            1. the predecessor model for the newly calibrated models; and
            2. the newly calibrated models, as a `dict` where keys are model
               hashes and values are models.
+
         """
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
@@ -386,9 +385,7 @@ class MethodCaller:
         for candidate_model in candidate_space.models:
             # autoruns calibration
             self.new_model_problem(model=candidate_model)
-            newly_calibrated_models[
-                candidate_model.get_hash()
-            ] = candidate_model
+            newly_calibrated_models[candidate_model.get_hash()] = candidate_model
             method_signal = self.handle_calibrated_model(
                 model=candidate_model,
                 predecessor_model=predecessor_model,
@@ -417,6 +414,7 @@ class MethodCaller:
         Returns
         -------
         A :class:`MethodSignal` that describes the result.
+
         """
         # Use the predecessor model from `__init__` if an iteration-specific
         # predecessor model was not supplied to `__call__`.
@@ -434,9 +432,7 @@ class MethodCaller:
         if (
             predecessor_model is not None
             and predecessor_model != VIRTUAL_INITIAL_MODEL
-            and not self.model1_gt_model0(
-                model1=model, model0=predecessor_model
-            )
+            and not self.model1_gt_model0(model1=model, model0=predecessor_model)
         ):
             method_signal.accept = False
 
@@ -476,6 +472,7 @@ class MethodCaller:
         -------
         ``True``, if `model1` is superior to `model0` by the criterion,
         else ``False``.
+
         """
         if self.criterion in [
             Criterion.AIC,
@@ -492,9 +489,7 @@ class MethodCaller:
                 criterion_threshold=self.criterion_threshold,
             )
         else:
-            raise NotImplementedError(
-                f"Model selection criterion: {self.criterion}."
-            )
+            raise NotImplementedError(f"Model selection criterion: {self.criterion}.")
         return result
 
     def new_model_problem(
@@ -518,21 +513,20 @@ class MethodCaller:
         Returns
         -------
         The model selection problem.
+
         """
         x_guess = None
         if (
             self.startpoint_latest_mle
             and model.predecessor_model_hash in self.calibrated_models
         ):
-            predecessor_model = self.calibrated_models[
-                model.predecessor_model_hash
-            ]
+            predecessor_model = self.calibrated_models[model.predecessor_model_hash]
             if str(model.petab_yaml) != str(predecessor_model.petab_yaml):
                 raise NotImplementedError(
-                    'The PEtab YAML files differ between the model and its '
-                    'predecessor model. This may imply different (fixed union '
-                    'estimated) parameter sets. Support for this is not yet '
-                    'implemented.'
+                    "The PEtab YAML files differ between the model and its "
+                    "predecessor model. This may imply different (fixed union "
+                    "estimated) parameter sets. Support for this is not yet "
+                    "implemented."
                 )
             x_guess = {
                 **predecessor_model.parameters,

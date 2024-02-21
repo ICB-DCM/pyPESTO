@@ -32,9 +32,7 @@ class MPIPoolEngine(Engine):
     def __init__(self):
         super().__init__()
 
-    def execute(
-        self, tasks: list[Task], progress_bar: bool = None
-    ) -> list[Any]:
+    def execute(self, tasks: list[Task], progress_bar: bool = None) -> list[Any]:
         """
         Pickle tasks and distribute work to workers.
 
@@ -48,6 +46,7 @@ class MPIPoolEngine(Engine):
         Returns
         -------
         A list of results.
+
         """
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 
@@ -55,7 +54,5 @@ class MPIPoolEngine(Engine):
         logger.info(f"Parallelizing on {n_procs-1} workers with one manager.")
 
         with MPIPoolExecutor() as executor:
-            results = executor.map(
-                work, tqdm(pickled_tasks, enable=progress_bar)
-            )
+            results = executor.map(work, tqdm(pickled_tasks, enable=progress_bar))
         return results

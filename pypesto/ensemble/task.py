@@ -19,6 +19,7 @@ class EnsembleTask(Task):
         The parameter vectors, with shape `(n_parameters, n_vectors)`.
     id:
         The task ID.
+
     """
 
     def __init__(

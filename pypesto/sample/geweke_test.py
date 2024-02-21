@@ -28,6 +28,7 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
     -------
     spectral_density:
         The spectral density.
+
     """
     if nfft is None:
         nfft = np.min(len(x), 256)
@@ -38,9 +39,7 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
     n_overlap = np.floor(nw / 2).astype(int)
 
     # Hanning window
-    w = 0.5 * (
-        1 - np.cos(2 * np.pi * np.transpose(np.arange(1, nw + 1)) / (nw + 1))
-    )
+    w = 0.5 * (1 - np.cos(2 * np.pi * np.transpose(np.arange(1, nw + 1)) / (nw + 1)))
     n = len(x)
     if n < nw:
         x[nw] = 0
@@ -82,6 +81,7 @@ def spectrum0(x: np.ndarray) -> np.ndarray:
     -------
     spectral_density_zero:
         Spectral density at zero.
+
     """
     n_samples, n_par = x.shape
     spectral_density_zero = np.zeros((1, n_par))
@@ -122,6 +122,7 @@ def calculate_zscore(
         Z-score of the Geweke test.
     p:
         Significance level of the Geweke test.
+
     """
     nsamples, _ = chain.shape
 
@@ -160,9 +161,7 @@ def calculate_zscore(
     return z_score, p
 
 
-def burn_in_by_sequential_geweke(
-    chain: np.ndarray, zscore: float = 2.0
-) -> int:
+def burn_in_by_sequential_geweke(chain: np.ndarray, zscore: float = 2.0) -> int:
     """
     Calculate the burn-in of MCMC chains.
 
@@ -179,6 +178,7 @@ def burn_in_by_sequential_geweke(
         Iteration where the first and the last fraction
         of the chain do not differ significantly
         regarding Geweke test.
+
     """
     nsamples, npar = chain.shape
     # number of fragments

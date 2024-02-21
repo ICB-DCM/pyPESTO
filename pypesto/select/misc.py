@@ -45,6 +45,7 @@ def model_to_pypesto_problem(
     Returns
     -------
     The pyPESTO select problem.
+
     """
     petab_problem = petab_select.ui.model_to_petab(model=model)[PETAB_PROBLEM]
 
@@ -116,6 +117,7 @@ def correct_x_guesses(
     Returns
     -------
     The corrected startpoint guesses.
+
     """
     # TODO reconsider whether correcting is a good idea (`x_guess` is no longer
     # the latest MLE then). Similar todo exists in
@@ -126,9 +128,7 @@ def correct_x_guesses(
     #      different parameters in the old/new PEtab problem.
 
     if petab_problem is None:
-        petab_problem = petab_select.ui.model_to_petab(model=model)[
-            PETAB_PROBLEM
-        ]
+        petab_problem = petab_select.ui.model_to_petab(model=model)[PETAB_PROBLEM]
 
     corrected_x_guesses = None
     if x_guesses is not None:
@@ -138,9 +138,7 @@ def correct_x_guesses(
             for parameter_id in petab_problem.parameter_df.index:
                 if hierarchical:
                     if not pd.isna(
-                        petab_problem.parameter_df.loc[
-                            parameter_id, "parameterType"
-                        ]
+                        petab_problem.parameter_df.loc[parameter_id, "parameterType"]
                     ):
                         continue
 

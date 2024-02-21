@@ -13,7 +13,7 @@ from ..history import HistoryBase
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
-OptimizationResult = Union['OptimizerResult', 'OptimizeResult']
+OptimizationResult = Union["OptimizerResult", "OptimizeResult"]
 logger = logging.getLogger(__name__)
 
 
@@ -71,6 +71,7 @@ class OptimizerResult(dict):
     Notes
     -----
     Any field not supported by the optimizer is filled with None.
+
     """
 
     def __init__(
@@ -141,6 +142,7 @@ class OptimizerResult(dict):
         Returns
         -------
         summary: str
+
         """
         # add warning, if self.free_indices is None
         if self.free_indices is None:
@@ -188,6 +190,7 @@ class OptimizerResult(dict):
         problem:
             problem which contains info about how to convert to full vectors
             or matrices
+
         """
         self.x = problem.get_full_vector(self.x, problem.x_fixed_vals)
         self.grad = problem.get_full_vector(self.grad)
@@ -257,6 +260,7 @@ class OptimizeResult:
             If True, print full vectors including fixed parameters.
         show_hess:
             If True, display the Hessian of the OptimizerResult.
+
         """
         if len(self) == 0:
             return "## Optimization Result \n\n*empty*\n"
@@ -274,18 +278,16 @@ class OptimizeResult:
         counter_message = "  " + counter_message.replace("\n", "\n  ")
 
         times_message = (
-            f'\t* Mean execution time: {np.mean(self.time):0.3f}s\n'
-            f'\t* Maximum execution time: {np.max(self.time):0.3f}s,'
-            f'\tid={self[np.argmax(self.time)].id}\n'
-            f'\t* Minimum execution time: {np.min(self.time):0.3f}s,\t'
-            f'id={self[np.argmin(self.time)].id}'
+            f"\t* Mean execution time: {np.mean(self.time):0.3f}s\n"
+            f"\t* Maximum execution time: {np.max(self.time):0.3f}s,"
+            f"\tid={self[np.argmax(self.time)].id}\n"
+            f"\t* Minimum execution time: {np.min(self.time):0.3f}s,\t"
+            f"id={self[np.argmin(self.time)].id}"
         )
 
         # special handling in case there are only non-finite fvals
         num_best_value = int(clustsize[0]) if len(clustsize) else len(self)
-        num_plateaus = (
-            (1 + max(clust) - sum(clustsize == 1)) if len(clustsize) else 0
-        )
+        num_plateaus = (1 + max(clust) - sum(clustsize == 1)) if len(clustsize) else 0
 
         summary = (
             "## Optimization Result \n\n"
@@ -305,17 +307,14 @@ class OptimizeResult:
                 f"{self[0].summary(full, show_hess=show_hess)}"
             )
         if disp_worst:
-            summary += (
-                f"\nA summary of the worst run:\n\n"
-                f"{self[-1].summary(full)}"
-            )
+            summary += f"\nA summary of the worst run:\n\n" f"{self[-1].summary(full)}"
         return summary
 
     def append(
         self,
         optimize_result: OptimizationResult,
         sort: bool = True,
-        prefix: str = '',
+        prefix: str = "",
     ):
         """
         Append an OptimizerResult or an OptimizeResult to the result object.
@@ -329,6 +328,7 @@ class OptimizeResult:
             optimize_result.
         prefix:
             The IDs for all appended results will be prefixed with this.
+
         """
         current_ids = set(self.id)
         if isinstance(optimize_result, OptimizeResult):
@@ -397,6 +397,7 @@ class OptimizeResult:
         ----------
         keys: list(str), optional
             Labels of the field to extract.
+
         """
         lst = self.list
 

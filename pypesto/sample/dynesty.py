@@ -76,6 +76,7 @@ class DynestySampler(Sampler):
             method of the dynesty sampler.
         dynamic:
             Whether to use dynamic or static nested sampling.
+
         """
         # check dependencies
         import dynesty
@@ -118,11 +119,9 @@ class DynestySampler(Sampler):
         Returns
         -------
         The transformed prior sample.
+
         """
-        return (
-            prior_sample * (self.problem.ub - self.problem.lb)
-            + self.problem.lb
-        )
+        return prior_sample * (self.problem.ub - self.problem.lb) + self.problem.lb
 
     def loglikelihood(self, x):
         """Log-probability density function."""
@@ -186,6 +185,7 @@ class DynestySampler(Sampler):
         ----------
         filename:
             The internal sampler will be saved here.
+
         """
         import dynesty
 
@@ -203,6 +203,7 @@ class DynestySampler(Sampler):
         ----------
         filename:
             The internal sampler will be saved here.
+
         """
         import dynesty
 
@@ -216,6 +217,7 @@ class DynestySampler(Sampler):
         Returns
         -------
         The pyPESTO sample result.
+
         """
         return get_original_dynesty_samples(sampler=self.sampler)
 
@@ -225,6 +227,7 @@ class DynestySampler(Sampler):
         Returns
         -------
         The pyPESTO sample result.
+
         """
         return get_mcmc_like_dynesty_samples(sampler=self.sampler)
 
@@ -242,6 +245,7 @@ def get_original_dynesty_samples(sampler) -> McmcPtResult:
     Returns
     -------
     The sample result.
+
     """
     trace_x = np.array([sampler.results.samples])
     trace_neglogpost = -np.array([sampler.results.logl])
@@ -274,6 +278,7 @@ def get_mcmc_like_dynesty_samples(sampler) -> McmcPtResult:
     Returns
     -------
     The sample result.
+
     """
     import dynesty
 

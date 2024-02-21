@@ -79,6 +79,7 @@ def minimize(
     -------
     Result object containing the results of all multistarts in
     `result.optimize_result`.
+
     """
     # optimizer
     if optimizer is None:
@@ -134,9 +135,7 @@ def minimize(
 
     # change to one hdf5 storage file per start if parallel and if hdf5
     history_file = history_options.storage_file
-    history_requires_postprocessing = preprocess_hdf5_history(
-        history_options, engine
-    )
+    history_requires_postprocessing = preprocess_hdf5_history(history_options, engine)
 
     # define tasks
     tasks = []

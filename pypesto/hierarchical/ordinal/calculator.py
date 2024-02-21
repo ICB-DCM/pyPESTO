@@ -59,6 +59,7 @@ class OrdinalCalculator(AmiciCalculator):
         inner_solver:
             A solver to solve ``inner_problem``.
             Defaults to ``OptimalScalingInnerSolver``.
+
         """
         super().__init__()
         self.inner_problem = inner_problem
@@ -66,10 +67,7 @@ class OrdinalCalculator(AmiciCalculator):
         if inner_solver is None:
             inner_solver = OrdinalInnerSolver()
         self.inner_solver = inner_solver
-        if (
-            self.inner_problem.method
-            is not self.inner_solver.options['method']
-        ):
+        if self.inner_problem.method is not self.inner_solver.options["method"]:
             raise ValueError(
                 f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
             )
@@ -86,12 +84,12 @@ class OrdinalCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -127,6 +125,7 @@ class OrdinalCalculator(AmiciCalculator):
         -------
         inner_result:
             A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
+
         """
         if mode == MODE_RES:
             raise ValueError(
@@ -188,9 +187,7 @@ class OrdinalCalculator(AmiciCalculator):
             # if the gradient was requested,
             # we need to provide some value for it
             if 1 in sensi_orders:
-                inner_result[GRAD] = np.full(
-                    shape=len(x_ids), fill_value=np.nan
-                )
+                inner_result[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
             return filter_return_dict(inner_result)
 
         sim = [rdata[AMICI_Y] for rdata in rdatas]
@@ -198,12 +195,8 @@ class OrdinalCalculator(AmiciCalculator):
 
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
-        inner_result[FVAL] = self.inner_solver.calculate_obj_function(
-            x_inner_opt
-        )
-        inner_result[
-            X_INNER_OPT
-        ] = self.inner_problem.get_inner_parameter_dictionary()
+        inner_result[FVAL] = self.inner_solver.calculate_obj_function(x_inner_opt)
+        inner_result[X_INNER_OPT] = self.inner_problem.get_inner_parameter_dictionary()
 
         # calculate analytical gradients if requested
         if sensi_order > 0:

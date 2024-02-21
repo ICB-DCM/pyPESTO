@@ -32,6 +32,7 @@ class Hdf5AmiciHistory(Hdf5History):
         HDF5 file name.
     options:
         History options. Defaults to ``None``.
+
     """
 
     def __init__(
@@ -136,6 +137,7 @@ class CsvAmiciHistory(CsvHistory):
         History options.
     load_from_file:
         If True, history will be initialized from data in the specified file.
+
     """
 
     def __init__(

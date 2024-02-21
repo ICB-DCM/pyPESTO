@@ -58,6 +58,7 @@ class SemiquantCalculator(AmiciCalculator):
         inner_solver:
             A solver to solve ``inner_problem``.
             Defaults to ``SplineInnerSolver``.
+
         """
         super().__init__()
         self.inner_problem = inner_problem
@@ -78,12 +79,12 @@ class SemiquantCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -120,6 +121,7 @@ class SemiquantCalculator(AmiciCalculator):
         -------
         inner_result:
             A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
+
         """
         if mode == MODE_RES:
             raise ValueError(
@@ -148,9 +150,7 @@ class SemiquantCalculator(AmiciCalculator):
             amici_solver.setSensitivityOrder(sensi_order)
 
             x_dct = copy.deepcopy(x_dct)
-            x_dct.update(
-                self.inner_problem.get_noise_dummy_values(scaled=True)
-            )
+            x_dct.update(self.inner_problem.get_noise_dummy_values(scaled=True))
 
             # fill in parameters
             amici.parameter_mapping.fill_in_parameters(
@@ -195,16 +195,10 @@ class SemiquantCalculator(AmiciCalculator):
 
         # compute optimal inner parameters
         x_inner_opt = self.inner_solver.solve(self.inner_problem, sim, sigma)
-        inner_result[FVAL] = self.inner_solver.calculate_obj_function(
-            x_inner_opt
-        )
-        inner_result[
-            X_INNER_OPT
-        ] = self.inner_problem.get_inner_parameter_dictionary()
+        inner_result[FVAL] = self.inner_solver.calculate_obj_function(x_inner_opt)
+        inner_result[X_INNER_OPT] = self.inner_problem.get_inner_parameter_dictionary()
 
-        inner_result[
-            INNER_PARAMETERS
-        ] = self.inner_problem.get_inner_noise_parameters()
+        inner_result[INNER_PARAMETERS] = self.inner_problem.get_inner_noise_parameters()
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:

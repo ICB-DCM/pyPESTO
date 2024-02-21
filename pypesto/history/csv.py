@@ -42,6 +42,7 @@ class CsvHistory(CountHistoryBase):
         History options.
     load_from_file:
         If True, history will be initialized from data in the specified file.
+
     """
 
     def __init__(
@@ -65,7 +66,7 @@ class CsvHistory(CountHistoryBase):
             trace = pd.read_csv(self.file, header=[0, 1], index_col=0)
             # replace 'nan' in cols with np.NAN
             cols = pd.DataFrame(trace.columns.to_list())
-            cols[cols == 'nan'] = np.NaN
+            cols[cols == "nan"] = np.NaN
             trace.columns = pd.MultiIndex.from_tuples(
                 cols.to_records(index=False).tolist()
             )
@@ -130,15 +131,13 @@ class CsvHistory(CountHistoryBase):
 
         # calculating function values from residuals
         #  and reduce via requested history options
-        result = reduce_result_via_options(
-            add_fun_from_res(result), self.options
-        )
+        result = reduce_result_via_options(add_fun_from_res(result), self.options)
 
         used_time = time.time() - self._start_time
 
         # create table row
         row = pd.Series(
-            name=len(self._trace), index=self._trace.columns, dtype='object'
+            name=len(self._trace), index=self._trace.columns, dtype="object"
         )
 
         values = self._simulation_to_values(result, used_time)
@@ -150,7 +149,7 @@ class CsvHistory(CountHistoryBase):
             X: x,
             GRAD: result[GRAD],
         }.items():
-            if var == X or self.options[f'trace_record_{var}']:
+            if var == X or self.options[f"trace_record_{var}"]:
                 row[var] = val
             else:
                 row[(var, np.nan)] = np.nan
@@ -186,37 +185,35 @@ class CsvHistory(CountHistoryBase):
     def _init_trace(self, x: np.ndarray):
         """Initialize the trace."""
         if self.x_names is None:
-            self.x_names = [f'x{i}' for i, _ in enumerate(x)]
+            self.x_names = [f"x{i}" for i, _ in enumerate(x)]
 
         columns = self._trace_columns()
 
         for var in [X, GRAD]:
-            if var == X or self.options[f'trace_record_{var}']:
+            if var == X or self.options[f"trace_record_{var}"]:
                 columns.extend([(var, x_name) for x_name in self.x_names])
             else:
                 columns.extend([(var,)])
 
         # TODO: multi-index for res, sres, hess
         self._trace = pd.DataFrame(
-            columns=pd.MultiIndex.from_tuples(columns), dtype='float64'
+            columns=pd.MultiIndex.from_tuples(columns), dtype="float64"
         )
 
         # only non-float64
         trace_dtypes = {
-            RES: 'object',
-            SRES: 'object',
-            HESS: 'object',
-            N_FVAL: 'int64',
-            N_GRAD: 'int64',
-            N_HESS: 'int64',
-            N_RES: 'int64',
-            N_SRES: 'int64',
+            RES: "object",
+            SRES: "object",
+            HESS: "object",
+            N_FVAL: "int64",
+            N_GRAD: "int64",
+            N_HESS: "int64",
+            N_RES: "int64",
+            N_SRES: "int64",
         }
 
         for var, dtype in trace_dtypes.items():
-            self._trace[(var, np.nan)] = self._trace[(var, np.nan)].astype(
-                dtype
-            )
+            self._trace[(var, np.nan)] = self._trace[(var, np.nan)].astype(dtype)
 
     def _save_trace(self, finalize: bool = False):
         """
@@ -235,9 +232,7 @@ class CsvHistory(CountHistoryBase):
             # save
             trace_copy = copy.deepcopy(self._trace)
             for field in [(HESS, np.nan), (RES, np.nan), (SRES, np.nan)]:
-                trace_copy[field] = trace_copy[field].apply(
-                    ndarray2string_full
-                )
+                trace_copy[field] = trace_copy[field].apply(ndarray2string_full)
             trace_copy.to_csv(self.file)
 
     def __len__(self) -> int:
@@ -309,12 +304,11 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
     Returns
     -------
     Array as string.
+
     """
     if not isinstance(x, np.ndarray):
         return x
-    return np.array2string(
-        x, threshold=x.size, precision=16, max_line_width=np.inf
-    )
+    return np.array2string(x, threshold=x.size, precision=16, max_line_width=np.inf)
 
 
 def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
@@ -328,12 +322,11 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
     Returns
     -------
     Array as :class:`numpy.ndarray`.
+
     """
     if not isinstance(x, str):
         return x
-    if x.startswith('[['):
-        return np.vstack(
-            [np.fromstring(xx, sep=' ') for xx in x[2:-2].split(']\n [')]
-        )
+    if x.startswith("[["):
+        return np.vstack([np.fromstring(xx, sep=" ") for xx in x[2:-2].split("]\n [")])
     else:
-        return np.fromstring(x[1:-1], sep=' ')
+        return np.fromstring(x[1:-1], sep=" ")

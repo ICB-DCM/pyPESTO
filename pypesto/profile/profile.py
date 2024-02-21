@@ -23,7 +23,7 @@ def parameter_profile(
     profile_index: Iterable[int] = None,
     profile_list: int = None,
     result_index: int = 0,
-    next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
+    next_guess_method: Union[Callable, str] = "adaptive_step_regression",
     profile_options: ProfileOptions = None,
     progress_bar: bool = None,
     filename: Union[str, Callable, None] = None,
@@ -78,6 +78,7 @@ def parameter_profile(
     Returns
     -------
     The profile results are filled into `result.profile_result`.
+
     """
     # Copy the problem to avoid side effects
     problem = copy.deepcopy(problem)
@@ -117,11 +118,11 @@ def parameter_profile(
 
     elif callable(next_guess_method):
         raise NotImplementedError(
-            'Passing function handles for computation of next '
-            'profiling point is not yet supported.'
+            "Passing function handles for computation of next "
+            "profiling point is not yet supported."
         )
     else:
-        raise ValueError('Unsupported input for next_guess_method.')
+        raise ValueError("Unsupported input for next_guess_method.")
 
     # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
@@ -139,9 +140,7 @@ def parameter_profile(
         # only compute profiles for free parameters
         if i_par in problem.x_fixed_indices:
             # log a warning
-            logger.warning(
-                f"Parameter {i_par} is fixed and will not be profiled."
-            )
+            logger.warning(f"Parameter {i_par} is fixed and will not be profiled.")
             continue
 
         current_profile = result.profile_result.get_profiler_result(
@@ -165,9 +164,9 @@ def parameter_profile(
 
     # fill in the ProfilerResults at the right index
     for indexed_profile in indexed_profiles:
-        result.profile_result.list[-1][
-            indexed_profile['index']
-        ] = indexed_profile['profile']
+        result.profile_result.list[-1][indexed_profile["index"]] = indexed_profile[
+            "profile"
+        ]
 
     autosave(
         filename=filename,

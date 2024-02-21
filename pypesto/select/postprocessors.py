@@ -10,11 +10,11 @@ from .. import store, visualize
 from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
 
 __all__ = [
-    'model_id_binary_postprocessor',
-    'multi_postprocessor',
-    'report_postprocessor',
-    'save_postprocessor',
-    'waterfall_plot_postprocessor',
+    "model_id_binary_postprocessor",
+    "multi_postprocessor",
+    "report_postprocessor",
+    "save_postprocessor",
+    "waterfall_plot_postprocessor",
 ]
 
 
@@ -34,6 +34,7 @@ def multi_postprocessor(
         A list of postprocessors, which will be sequentially applied to the
         optimized model ``problem``.
         The location where results will be stored.
+
     """
     for postprocessor in postprocessors:
         postprocessor(problem)
@@ -82,6 +83,7 @@ def save_postprocessor(
     use_model_hash:
         Whether the filename should use the model hash. Defaults to ``False``,
         in which case the model ID is used instead.
+
     """
     stem = problem.model.model_id
     if use_model_hash:
@@ -108,6 +110,7 @@ def model_id_binary_postprocessor(problem: ModelProblem):
     ----------
     problem:
         A model selection :class:`ModelProblem` that has been optimized.
+
     """
     model_id = "M_"
     for parameter_value in problem.model.parameters.values():
@@ -131,6 +134,7 @@ def report_postprocessor(
     criteria:
         The criteria that will be in the report. Defaults to nllh, AIC, AICc,
         and BIC.
+
     """
     output_filepath = Path(output_filepath)
     write_header = False
@@ -150,10 +154,10 @@ def report_postprocessor(
     header = []
     row = []
 
-    header.append('model_id')
+    header.append("model_id")
     row.append(problem.model.model_id)
 
-    header.append('total_time')
+    header.append("total_time")
     row.append(str(sum(start_optimization_times)))
 
     for criterion in criteria:
@@ -161,7 +165,7 @@ def report_postprocessor(
         row.append(str(problem.model.get_criterion(criterion)))
 
     # Arbitrary convergence criterion
-    header.append('n_converged')
+    header.append("n_converged")
     row.append(
         str(
             (
@@ -171,13 +175,11 @@ def report_postprocessor(
         )
     )
 
-    for start_index, start_optimization_time in enumerate(
-        start_optimization_times
-    ):
-        header.append(f'start_time_{start_index}')
+    for start_index, start_optimization_time in enumerate(start_optimization_times):
+        header.append(f"start_time_{start_index}")
         row.append(str(start_optimization_time))
 
-    with open(output_filepath, 'a+') as f:
+    with open(output_filepath, "a+") as f:
         if write_header:
-            f.write('\t'.join(header) + '\n')
-        f.write('\t'.join(row) + '\n')
+            f.write("\t".join(header) + "\n")
+        f.write("\t".join(row) + "\n")

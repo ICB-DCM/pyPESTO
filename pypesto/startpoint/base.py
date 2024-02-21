@@ -37,6 +37,7 @@ class StartpointMethod(ABC):
         Returns
         -------
         xs: Startpoints, shape (n_starts, n_par).
+
         """
 
 
@@ -74,6 +75,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
         check_grad:
             Whether to check gradients at the startpoint, and resample
             if not finite.
+
         """
         self.use_guesses: bool = use_guesses
         self.check_fval: bool = check_fval
@@ -108,9 +110,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
         xs[n_guesses:n_starts, :] = x_sampled
 
         # check, resample and order startpoints
-        xs = self.check_and_resample(
-            xs=xs, lb=lb, ub=ub, objective=problem.objective
-        )
+        xs = self.check_and_resample(xs=xs, lb=lb, ub=ub, objective=problem.objective)
 
         return xs
 
@@ -135,6 +135,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
         Returns
         -------
         xs: Startpoints, shape (n_starts, n_par).
+
         """
 
     def check_and_resample(
@@ -158,6 +159,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
         xs:
             Checked and potentially partially resampled startpoints,
             shape (n_starts, n_par).
+
         """
         if not self.check_fval and not self.check_grad:
             return xs
@@ -224,6 +226,7 @@ class FunctionStartpoints(CheckedStartpoints):
         ----------
         function: The callable sampling startpoints.
         use_guesses, check_fval, check_grad: As in CheckedStartpoints.
+
         """
         super().__init__(
             use_guesses=use_guesses,
@@ -261,6 +264,7 @@ def to_startpoint_method(
     Raises
     ------
     TypeError if arguments cannot be converted to a StartpointMethod.
+
     """
     if isinstance(maybe_startpoint_method, StartpointMethod):
         return maybe_startpoint_method

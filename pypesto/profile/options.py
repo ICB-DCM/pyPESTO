@@ -38,6 +38,7 @@ class ProfileOptions(dict):
     whole_path:
         Whether to profile the whole bounds or only till we get below the
         ratio.
+
     """
 
     def __init__(
@@ -80,14 +81,15 @@ class ProfileOptions(dict):
 
     @staticmethod
     def create_instance(
-        maybe_options: Union['ProfileOptions', Dict]
-    ) -> 'ProfileOptions':
+        maybe_options: Union["ProfileOptions", Dict],
+    ) -> "ProfileOptions":
         """
         Return a valid options object.
 
         Parameters
         ----------
         maybe_options: ProfileOptions or dict
+
         """
         if isinstance(maybe_options, ProfileOptions):
             return maybe_options

@@ -59,8 +59,8 @@ from .semiquantitative import (
     SemiquantProblem,
 )
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
 
 
 class InnerCalculatorCollector(AmiciCalculator):
@@ -83,14 +83,15 @@ class InnerCalculatorCollector(AmiciCalculator):
         The experimental data.
     inner_options:
         Options for the inner problems and solvers.
+
     """
 
     def __init__(
         self,
         data_types: set[str],
-        petab_problem: 'petab.Problem',
+        petab_problem: "petab.Problem",
         model: AmiciModel,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         inner_options: dict,
     ):
         super().__init__()
@@ -99,12 +100,8 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.data_types = data_types
         self.inner_calculators: list[
             AmiciCalculator
-        ] = (
-            []
-        )  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
-        self.construct_inner_calculators(
-            petab_problem, model, edatas, inner_options
-        )
+        ] = []  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
+        self.construct_inner_calculators(petab_problem, model, edatas, inner_options)
 
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
 
@@ -118,9 +115,9 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def construct_inner_calculators(
         self,
-        petab_problem: 'petab.Problem',
+        petab_problem: "petab.Problem",
         model: AmiciModel,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         inner_options: dict,
     ):
         """Construct inner calculators for each data type."""
@@ -145,9 +142,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 for key, value in inner_options.items()
                 if key in ORDINAL_OPTIONS
             }
-            inner_problem_method = optimal_scaling_inner_options.get(
-                METHOD, None
-            )
+            inner_problem_method = optimal_scaling_inner_options.get(METHOD, None)
             ordinal_inner_problem = OrdinalProblem.from_petab_amici(
                 petab_problem, model, edatas, inner_problem_method
             )
@@ -169,9 +164,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             semiquant_problem = SemiquantProblem.from_petab_amici(
                 petab_problem, model, edatas, spline_ratio
             )
-            semiquant_inner_solver = SemiquantInnerSolver(
-                options=spline_inner_options
-            )
+            semiquant_inner_solver = SemiquantInnerSolver(options=spline_inner_options)
             semiquant_calculator = SemiquantCalculator(
                 semiquant_problem, semiquant_inner_solver
             )
@@ -203,35 +196,27 @@ class InnerCalculatorCollector(AmiciCalculator):
         ----------
         inner_options:
             Options for the inner problems and solvers.
+
         """
         for key in inner_options:
-            if (
-                key not in ORDINAL_OPTIONS
-                and key not in SPLINE_APPROXIMATION_OPTIONS
-            ):
+            if key not in ORDINAL_OPTIONS and key not in SPLINE_APPROXIMATION_OPTIONS:
                 raise ValueError(f"Unknown inner option {key}.")
 
     def _get_quantitative_data_mask(
         self,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
     ) -> list[np.ndarray]:
         # transform experimental data
-        edatas = [
-            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-        ]
+        edatas = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
-        quantitative_data_mask = [
-            np.ones_like(edata, dtype=bool) for edata in edatas
-        ]
+        quantitative_data_mask = [np.ones_like(edata, dtype=bool) for edata in edatas]
 
         # iterate over inner problems
         for calculator in self.inner_calculators:
             inner_parameters = calculator.inner_problem.xs.values()
             # Remove inner parameter masks from quantitative data mask
             for inner_par in inner_parameters:
-                for cond_idx, condition_mask in enumerate(
-                    quantitative_data_mask
-                ):
+                for cond_idx, condition_mask in enumerate(quantitative_data_mask):
                     condition_mask[inner_par.ixs[cond_idx]] = False
 
         # If there is no quantitative data, return None
@@ -315,6 +300,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
+
         """
         import amici.parameter_mapping
 
@@ -337,8 +323,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
 
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
+            amici_solver.getSensitivityMethod() == amici.SensitivityMethod_adjoint
             and any(
                 data_type in self.data_types
                 for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
@@ -354,8 +339,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         # non-quantitative data type is relative data. In this case, we
         # use the relative calculator directly.
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
+            amici_solver.getSensitivityMethod() == amici.SensitivityMethod_adjoint
             or 2 in sensi_orders
             or mode == MODE_RES
         ):
@@ -441,18 +425,15 @@ class InnerCalculatorCollector(AmiciCalculator):
             if not amici_model.getAddSigmaResiduals() and any(
                 (
                     (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
-                    or (
-                        r[AMICI_SSIGMAZ] is not None
-                        and np.any(r[AMICI_SSIGMAZ])
-                    )
+                    or (r[AMICI_SSIGMAZ] is not None and np.any(r[AMICI_SSIGMAZ]))
                 )
                 for r in rdatas
             ):
                 raise RuntimeError(
-                    'Cannot use least squares solver with'
-                    'parameter dependent sigma! Support can be '
-                    'enabled via '
-                    'amici_model.setAddSigmaResiduals().'
+                    "Cannot use least squares solver with"
+                    "parameter dependent sigma! Support can be "
+                    "enabled via "
+                    "amici_model.setAddSigmaResiduals()."
                 )
             self._known_least_squares_safe = True  # don't check this again
 
@@ -510,9 +491,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         if ret[FVAL] < self.best_fval:
             ret[X_INNER_OPT] = all_inner_pars
             ret[INNER_PARAMETERS] = (
-                interpretable_inner_pars
-                if len(interpretable_inner_pars) > 0
-                else None
+                interpretable_inner_pars if len(interpretable_inner_pars) > 0 else None
             )
             self.best_fval = ret[FVAL]
 
@@ -531,14 +510,10 @@ def calculate_quantitative_result(
     par_sim_ids: list[str],
 ):
     """Calculate the function values from rdatas and return as dict."""
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
-        sensi_orders, mode, dim
-    )
+    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(sensi_orders, mode, dim)
 
     # transform experimental data
-    edatas = [
-        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
-    ]
+    edatas = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
     # calculate the function value
     for rdata, edata, mask in zip(rdatas, edatas, quantitative_data_mask):
@@ -547,8 +522,7 @@ def calculate_quantitative_result(
         sigma_i = rdata[AMICI_SIGMAY][mask]
 
         nllh += 0.5 * np.nansum(
-            np.log(2 * np.pi * sigma_i**2)
-            + (data_i - sim_i) ** 2 / sigma_i**2
+            np.log(2 * np.pi * sigma_i**2) + (data_i - sim_i) ** 2 / sigma_i**2
         )
 
     # calculate the gradient if requested
@@ -592,18 +566,13 @@ def calculate_quantitative_result(
                 np.multiply(
                     ssigma_i,
                     (
-                        (
-                            np.full(len(data_i), 1)
-                            - (data_i - sim_i) ** 2 / sigma_i**2
-                        )
+                        (np.full(len(data_i), 1) - (data_i - sim_i) ** 2 / sigma_i**2)
                         / sigma_i
                     ),
                 ),
                 axis=1,
             ) + np.nansum(
-                np.multiply(
-                    sensitivities_i, ((sim_i - data_i) / sigma_i**2)
-                ),
+                np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)),
                 axis=1,
             )
             add_sim_grad_to_opt_grad(

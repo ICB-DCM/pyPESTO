@@ -27,6 +27,7 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     -------
     colors: list of RGBA
         One for each element in 'vals'.
+
     """
     # sanity checks
     if vals is None or len(vals) == 0:
@@ -88,9 +89,7 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     return colors
 
 
-def assign_colors(
-    vals, colors=None, balance_alpha=True, highlight_global=True
-):
+def assign_colors(vals, colors=None, balance_alpha=True, highlight_global=True):
     """
     Assign colors or format user specified colors.
 
@@ -113,6 +112,7 @@ def assign_colors(
     -------
     colors: list of RGBA
         One for each element in 'vals'.
+
     """
     # sanity checks
     if vals is None or len(vals) == 0:
@@ -152,9 +152,9 @@ def assign_colors(
 
     # Shape of array did not match n_vals. Error due to size mismatch:
     raise ValueError(
-        'Incorrect color input. Colors must be specified either as '
-        'list of `[r, g, b, alpha]` with length equal to that of `vals` '
-        f'(here: {n_vals}), or as a single `[r, g, b, alpha]`.'
+        "Incorrect color input. Colors must be specified either as "
+        "list of `[r, g, b, alpha]` with length equal to that of `vals` "
+        f"(here: {n_vals}), or as a single `[r, g, b, alpha]`."
     )
 
 
@@ -179,6 +179,7 @@ def assign_colors_for_list(
     -------
     colors:
         List of RGBA, one for each element in 'vals'.
+
     """
     # if the user did not specify any colors:
     if colors is None:
@@ -198,10 +199,10 @@ def assign_colors_for_list(
     # if the user specified color lies does not match the number of results
     if len(colors) != num_entries:
         raise (
-            'Incorrect color input. Colors must be specified either as '
-            'list of [r, g, b, alpha] with length equal to function '
-            'values Number of function (here: ' + str(num_entries) + '), '
-            'or as one single [r, g, b, alpha] color.'
+            "Incorrect color input. Colors must be specified either as "
+            "list of [r, g, b, alpha] with length equal to function "
+            "values Number of function (here: " + str(num_entries) + "), "
+            "or as one single [r, g, b, alpha] color."
         )
 
     return colors

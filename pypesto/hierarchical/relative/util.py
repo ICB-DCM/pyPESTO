@@ -31,10 +31,11 @@ def get_finite_quotient(
     Returns
     -------
     `num / den` if it's finite, else a dummy value.
+
     """
     try:
         with warnings.catch_warnings():
-            warnings.filterwarnings('error')
+            warnings.filterwarnings("error")
             quotient = float(numerator / denominator)
         if not np.isfinite(quotient):
             raise ValueError
@@ -87,9 +88,7 @@ def compute_optimal_scaling(
     )
 
 
-def apply_scaling(
-    scaling_value: float, sim: list[np.ndarray], mask: list[np.ndarray]
-):
+def apply_scaling(scaling_value: float, sim: list[np.ndarray], mask: list[np.ndarray]):
     """Apply scaling to simulations (in-place).
 
     Parameters
@@ -101,6 +100,7 @@ def apply_scaling(
     mask:
         The masks that indicate the simulation subset that corresponds to the
         `scaling_value`.
+
     """
     for i in range(len(sim)):
         sim[i][mask[i]] *= scaling_value
@@ -120,6 +120,7 @@ def apply_scaling_to_sensitivities(
     mask:
         The masks that indicate the simulation subset that corresponds to the
         `scaling_value`.
+
     """
     for i in range(len(ssim)):
         ssim[i][:, mask[i]] *= scaling_value
@@ -260,6 +261,7 @@ def apply_offset(
     is_data:
         Whether the data is being offset, or the simulation is. If False, the
         offset is added to the simulation instead of subtracted from the data.
+
     """
     for i in range(len(data)):
         data[i][mask[i]] += -offset_value if is_data else offset_value
@@ -292,9 +294,7 @@ def compute_optimal_sigma(
     return np.sqrt(num / den)
 
 
-def apply_sigma(
-    sigma_value: float, sigma: list[np.ndarray], mask: list[np.ndarray]
-):
+def apply_sigma(sigma_value: float, sigma: list[np.ndarray], mask: list[np.ndarray]):
     """Apply optimal sigma to pre-existing sigma arrays (in-place).
 
     Parameters
@@ -306,6 +306,7 @@ def apply_sigma(
     mask:
         The masks that indicate the sigma subset that corresponds to the
         `sigma_value`.
+
     """
     for i in range(len(sigma)):
         sigma[i][mask[i]] = sigma_value
@@ -353,6 +354,7 @@ def compute_bounded_optimal_scaling_offset_coupled(
     Returns
     -------
     The optimal scaling and offset of the constrained problem.
+
     """
     # Define relevant data and sim
     # Make all non-masked data and sim nan's in the original one
@@ -412,9 +414,7 @@ def compute_bounded_optimal_scaling_offset_coupled(
         ]
         # The constrained solution is the candidate point with the lowest
         # objective value
-        constrained_solution = candidate_points[
-            np.argmin(candidate_objective_values)
-        ]
+        constrained_solution = candidate_points[np.argmin(candidate_objective_values)]
 
     # If only one parameter is unsatisfied, we need to solve a
     # unconstrained problem, clipped to its boundary
@@ -477,10 +477,7 @@ def compute_nllh_gradient_for_condition(
     return np.nansum(
         np.multiply(
             ssigma,
-            (
-                (np.full(data.shape, 1) - (data - sim) ** 2 / sigma**2)
-                / sigma
-            ),
+            ((np.full(data.shape, 1) - (data - sim) ** 2 / sigma**2) / sigma),
         ),
         axis=(1, 2),
     ) + np.nansum(

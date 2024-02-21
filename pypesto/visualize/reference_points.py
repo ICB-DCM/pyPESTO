@@ -25,6 +25,7 @@ class ReferencePoint(dict):
         assigned automatically or whether it was assigned by user
     legend: str
         legend text for reference point
+
     """
 
     def __init__(
@@ -45,9 +46,7 @@ class ReferencePoint(dict):
 
         # assign legend, may be None
         self.legend = legend
-        if isinstance(reference, dict) or isinstance(
-            reference, ReferencePoint
-        ):
+        if isinstance(reference, dict) or isinstance(reference, ReferencePoint):
             # Handle case of dict or ReferencePoint
             self.x = np.array(reference["x"])
             self.fval = reference["fval"]
@@ -79,17 +78,17 @@ class ReferencePoint(dict):
                 self.x = np.array(x)
             else:
                 raise ValueError(
-                    'Parameter vector x not passed, but is a '
-                    'mandatory input when creating a reference '
-                    'point. Stopping.'
+                    "Parameter vector x not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
                 )
             if fval is not None:
                 self.fval = fval
             else:
                 raise ValueError(
-                    'Objective value fval not passed, but is a '
-                    'mandatory input when creating a reference '
-                    'point. Stopping.'
+                    "Objective value fval not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
                 )
             if color is not None:
                 self.color = color
@@ -121,11 +120,12 @@ def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
     Returns
     -------
     Reference points, which got their color property filled
+
     """
     # loop over reference points
     auto_color_count = 0
     for i_ref in ref:
-        if i_ref['auto_color']:
+        if i_ref["auto_color"]:
             auto_color_count += 1
 
     auto_colors = [
@@ -136,8 +136,8 @@ def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
     # loop over reference points and assign auto_colors
     auto_color_count = 0
     for i_num, i_ref in enumerate(ref):
-        if i_ref['auto_color']:
-            i_ref['color'] = auto_colors[i_num]
+        if i_ref["auto_color"]:
+            i_ref["color"] = auto_colors[i_num]
             auto_color_count += 1
 
     return ref
@@ -166,6 +166,7 @@ def create_references(
     -------
     colors: list of RGBA
         One for each element in 'vals'.
+
     """
     # parse input (reference)
     ref = []

@@ -22,7 +22,7 @@ class ProfilerTask(Task):
         options: ProfileOptions,
         i_par: int,
         global_opt: float,
-        optimizer: 'pypesto.optimize.Optimizer',
+        optimizer: "pypesto.optimize.Optimizer",
         create_next_guess: Callable,
     ):
         """
@@ -44,6 +44,7 @@ class ProfilerTask(Task):
             Handle of the method which creates the next profile point proposal
         i_par:
             index for the current parameter
+
         """
         super().__init__()
 
@@ -76,4 +77,4 @@ class ProfilerTask(Task):
             )
 
         # return the ProfilerResult and the index of the parameter profiled
-        return {'profile': self.current_profile, 'index': self.i_par}
+        return {"profile": self.current_profile, "index": self.i_par}

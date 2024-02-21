@@ -36,6 +36,7 @@ def preprocess_hdf5_history(
     -------
     history_requires_postprocessing:
         Whether history storage post-processing is required.
+
     """
     storage_file = history_options.storage_file
 
@@ -63,14 +64,10 @@ def preprocess_hdf5_history(
     # create directory with same name as original file stem
     if "{id}" in path.stem:
         template_path = (
-            path.parent
-            / path.stem.replace("{id}", "")
-            / (path.stem + path.suffix)
+            path.parent / path.stem.replace("{id}", "") / (path.stem + path.suffix)
         )
     else:
-        template_path = (
-            path.parent / path.stem / (path.stem + "_{id}" + path.suffix)
-        )
+        template_path = path.parent / path.stem / (path.stem + "_{id}" + path.suffix)
     template_path.parent.mkdir(parents=True, exist_ok=True)
     # set history file to template path
     history_options.storage_file = str(template_path)
@@ -97,18 +94,19 @@ def postprocess_hdf5_history(
         are to be gathered.
     history_options:
         History options used in the optimization.
+
     """
     # create hdf5 file that gathers the others within history group
     if "{id}" in storage_file:
         storage_file = storage_file.replace("{id}", "")
-    with h5py.File(storage_file, mode='w') as f:
+    with h5py.File(storage_file, mode="w") as f:
         # create file and group
         f.require_group("history")
         # append links to each single result file
         for result in ret:
-            id = result['id']
-            f[f'history/{id}'] = h5py.ExternalLink(
-                result['history'].file, f'history/{id}'
+            id = result["id"]
+            f[f"history/{id}"] = h5py.ExternalLink(
+                result["history"].file, f"history/{id}"
             )
 
     # reset storage file (undo preprocessing changes)
@@ -131,6 +129,7 @@ def bound_n_starts_from_env(n_starts: int):
     n_starts_new:
         The original number of starts, or the minimum with the environment
         variable, if exists.
+
     """
     if C.PYPESTO_MAX_N_STARTS not in os.environ:
         return n_starts
@@ -175,9 +174,7 @@ def assign_ids(
     if len(ids) != n_starts:
         raise AssertionError("Number of starts and ids must coincide.")
     if not used_ids.isdisjoint(ids):
-        raise AssertionError(
-            "Manually assigned ids must differ from existing ones."
-        )
+        raise AssertionError("Manually assigned ids must differ from existing ones.")
     return ids
 
 
@@ -185,6 +182,6 @@ def check_finite_bounds(lb, ub):
     """Raise if bounds are not finite."""
     if not np.isfinite(lb).all() or not np.isfinite(ub).all():
         raise ValueError(
-            'Selected optimizer cannot work with unconstrained '
-            'optimization problems.'
+            "Selected optimizer cannot work with unconstrained "
+            "optimization problems."
         )

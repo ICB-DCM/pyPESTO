@@ -56,6 +56,7 @@ class RelativeInnerSolver(InnerSolver):
             List of sigma matrices from the model, as provided in AMICI's
             ``ReturnData.sigmay``. Same order as simulations in the
             PEtab problem.
+
         """
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
@@ -134,6 +135,7 @@ class RelativeInnerSolver(InnerSolver):
         Returns
         -------
         The gradients with respect to the outer parameters.
+
         """
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
@@ -225,9 +227,10 @@ class RelativeInnerSolver(InnerSolver):
             The rdatas to apply the inner parameters to.
         inner_parameters:
             The inner parameters to apply to the rdatas.
+
         """
-        sim = [rdata['y'] for rdata in rdatas]
-        sigma = [rdata['sigmay'] for rdata in rdatas]
+        sim = [rdata["y"] for rdata in rdatas]
+        sigma = [rdata["sigmay"] for rdata in rdatas]
 
         # apply offsets, scalings and sigmas
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
@@ -285,6 +288,7 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
         scaled:
             Whether to scale the results to the parameter scale specified in
             ``problem``.
+
         """
         x_opt = {}
         data = copy.deepcopy(problem.data)
@@ -300,9 +304,7 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
 
                 # calculate the optimal coupled scaling
                 coupled_scaling = x.coupled
-                x_opt[
-                    coupled_scaling.inner_parameter_id
-                ] = compute_optimal_scaling(
+                x_opt[coupled_scaling.inner_parameter_id] = compute_optimal_scaling(
                     data=data,
                     sim=sim,
                     sigma=sigma,
@@ -406,6 +408,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
     x_guesses:
         Cached optimized parameter vectors, supplied as guesses to the next
         `solve` call.
+
     """
 
     def __init__(
@@ -422,11 +425,9 @@ class NumericalInnerSolver(RelativeInnerSolver):
         if self.problem_kwargs is None:
             self.problem_kwargs = {}
 
-        self.minimize_kwargs['n_starts'] = self.minimize_kwargs.get(
-            'n_starts', 1
-        )
-        self.minimize_kwargs['progress_bar'] = self.minimize_kwargs.get(
-            'progress_bar', False
+        self.minimize_kwargs["n_starts"] = self.minimize_kwargs.get("n_starts", 1)
+        self.minimize_kwargs["progress_bar"] = self.minimize_kwargs.get(
+            "progress_bar", False
         )
 
         self.x_guesses = None
@@ -463,6 +464,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
         scale:
             Whether to scale the results to the parameter scale specified in
             ``problem``.
+
         """
         pars = list(problem.xs.values())
 
@@ -498,8 +500,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
                     apply_sigma(x_val, _sigma, mask)
                 else:
                     raise ValueError(
-                        "Can't handle parameter type "
-                        f"`{par.inner_parameter_type}`."
+                        "Can't handle parameter type " f"`{par.inner_parameter_type}`."
                     )
 
             return compute_nllh(_data, _sim, _sigma)
@@ -511,13 +512,11 @@ class NumericalInnerSolver(RelativeInnerSolver):
         pypesto_problem = Problem(
             objective, lb=lb, ub=ub, x_names=x_names, **self.problem_kwargs
         )
-        pypesto_problem.set_x_guesses(
-            x_guesses[:, pypesto_problem.x_free_indices]
-        )
+        pypesto_problem.set_x_guesses(x_guesses[:, pypesto_problem.x_free_indices])
 
         # perform the actual optimization
         result = minimize(pypesto_problem, **self.minimize_kwargs)
-        best_par = result.optimize_result.list[0]['x']
+        best_par = result.optimize_result.list[0]["x"]
 
         # Check if the index of an optimized parameter on the dummy bound
         # is not in the list of specified bounds. If so, raise an error.
@@ -544,10 +543,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
 
         # cache
         self.x_guesses = np.array(
-            [
-                entry['x']
-                for entry in result.optimize_result.list[: self.n_cached]
-            ]
+            [entry["x"] for entry in result.optimize_result.list[: self.n_cached]]
         )
 
         # scale
@@ -574,15 +570,14 @@ class NumericalInnerSolver(RelativeInnerSolver):
         Returns
         -------
         The sampled startpoints appended to the cached startpoints.
+
         """
-        if self.minimize_kwargs['n_starts'] == 1 and self.x_guesses is None:
-            return np.array(
-                [list(problem.get_dummy_values(scaled=False).values())]
-            )
+        if self.minimize_kwargs["n_starts"] == 1 and self.x_guesses is None:
+            return np.array([list(problem.get_dummy_values(scaled=False).values())])
         elif self.x_guesses is not None:
-            n_samples = self.minimize_kwargs['n_starts'] - len(self.x_guesses)
+            n_samples = self.minimize_kwargs["n_starts"] - len(self.x_guesses)
         else:
-            n_samples = self.minimize_kwargs['n_starts'] - 1
+            n_samples = self.minimize_kwargs["n_starts"] - 1
 
         if n_samples <= 0:
             return self.x_guesses
@@ -615,9 +610,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
         else:
             startpoints = np.vstack(
                 (
-                    np.array(
-                        [list(problem.get_dummy_values(scaled=False).values())]
-                    ),
+                    np.array([list(problem.get_dummy_values(scaled=False).values())]),
                     startpoints,
                 )
             )

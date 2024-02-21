@@ -31,6 +31,7 @@ def latin_hypercube(
     -------
     xs:
         Latin hypercube points, shape (n_starts, n_x).
+
     """
     if not np.isfinite(ub).all() or not np.isfinite(lb).all():
         raise ValueError(
@@ -64,6 +65,7 @@ def _latin_hypercube_unit(
     Returns
     -------
     xs: Latin hypercube points sampled in [0, 1], shape (n_starts, dim).
+
     """
     xs = np.empty((n_starts, dim))
 
@@ -103,6 +105,7 @@ class LatinHypercubeStartpoints(CheckedStartpoints):
             Whether a (uniformly chosen) random starting point within the
             hypercube [i/n_starts, (i+1)/n_starts] should be chosen (True) or
             the midpoint of the interval (False).
+
         """
         super().__init__(
             use_guesses=use_guesses,

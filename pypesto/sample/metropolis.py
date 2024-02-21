@@ -50,8 +50,8 @@ class MetropolisSampler(InternalSampler):
     def default_options(cls):
         """Return the default options for the sampler."""
         return {
-            'std': 1.0,  # the proposal standard deviation
-            'show_progress': None,  # whether to show the progress
+            "std": 1.0,  # the proposal standard deviation
+            "show_progress": None,  # whether to show the progress
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -73,7 +73,7 @@ class MetropolisSampler(InternalSampler):
         lpost = -self.trace_neglogpost[-1]
         lprior = -self.trace_neglogprior[-1]
 
-        show_progress = self.options.get('show_progress', None)
+        show_progress = self.options.get("show_progress", None)
 
         # loop over iterations
         for _ in tqdm(range(int(n_samples)), enable=show_progress):
@@ -97,8 +97,9 @@ class MetropolisSampler(InternalSampler):
         ----------
         temper_lpost:
             Whether to temperate the posterior or only the likelihood.
+
         """
-        self.options['show_progress'] = False
+        self.options["show_progress"] = False
         self.temper_lpost = temper_lpost
 
     def _perform_step(
@@ -153,15 +154,13 @@ class MetropolisSampler(InternalSampler):
             lprior = lprior_new
 
         # update proposal
-        self._update_proposal(
-            x, lpost, log_p_acc, len(self.trace_neglogpost) + 1
-        )
+        self._update_proposal(x, lpost, log_p_acc, len(self.trace_neglogpost) + 1)
 
         return x, lpost, lprior
 
     def _propose_parameter(self, x: np.ndarray):
         """Propose a step."""
-        x_new: np.ndarray = x + self.options['std'] * np.random.randn(len(x))
+        x_new: np.ndarray = x + self.options["std"] * np.random.randn(len(x))
         return x_new
 
     def _update_proposal(
@@ -176,6 +175,7 @@ class MetropolisSampler(InternalSampler):
         -------
         internal_sample:
             The last sample in the chain in the exchange format.
+
         """
         return InternalSample(
             x=self.trace_x[-1],
@@ -191,6 +191,7 @@ class MetropolisSampler(InternalSampler):
         ----------
         sample:
             The sample that will replace the last sample in the chain.
+
         """
         self.trace_x[-1] = sample.x
         self.trace_neglogpost[-1] = -sample.lpost

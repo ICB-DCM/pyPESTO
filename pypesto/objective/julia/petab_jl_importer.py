@@ -41,6 +41,7 @@ class PetabJlImporter:
             Path to the Julia source file.
         petab_problem:
             Wrapper around the PEtab.jl problem.
+
         """
         self.module = module
         self.source_file = source_file
@@ -79,6 +80,7 @@ class PetabJlImporter:
         directory:
             Where to write the julia file, defaults to the directory of the
             yaml file.
+
         """
         # get default values
         options = _get_default_options(
@@ -99,9 +101,7 @@ class PetabJlImporter:
             source_file=source_file,
         )
 
-    def create_objective(
-        self, precompile: Optional[bool] = True
-    ) -> PEtabJlObjective:
+    def create_objective(self, precompile: Optional[bool] = True) -> PEtabJlObjective:
         """
         Create a `pypesto.objective.PEtabJlObjective` from the PEtab.jl problem.
 
@@ -165,6 +165,7 @@ class PetabJlImporter:
         precompile:
             Whether to precompile the julia module for speed up in
             multistart optimization.
+
         """
         obj = self.create_objective(precompile=precompile)
         lb = np.asarray(self.petab_jl_problem.lower_bounds)
@@ -210,6 +211,7 @@ def _get_default_options(
     -------
     dict:
         The options.
+
     """
     # get default values
     if ode_solver_options is None:
@@ -262,9 +264,7 @@ def _get_default_options(
     return options
 
 
-def _write_julia_file(
-    yaml_file: str, options: dict, directory: str
-) -> Tuple[str, str]:
+def _write_julia_file(yaml_file: str, options: dict, directory: str) -> Tuple[str, str]:
     """
     Write the Julia file.
 
@@ -283,6 +283,7 @@ def _write_julia_file(
         The name/path of the file.
     module:
         The module name.
+
     """
     if directory is None:
         directory = os.path.dirname(yaml_file)  # directory of the yaml file

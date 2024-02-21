@@ -35,6 +35,7 @@ class MultiProcessEngine(Engine):
     method:
         Start method, any of "fork", "spawn", "forkserver", or None,
         giving the system specific default context. Defaults to ``None``.
+
     """
 
     def __init__(
@@ -46,15 +47,11 @@ class MultiProcessEngine(Engine):
 
         if n_procs is None:
             n_procs = os.cpu_count()
-            logger.info(
-                f"Engine will use up to {n_procs} processes (= CPU count)."
-            )
+            logger.info(f"Engine will use up to {n_procs} processes (= CPU count).")
         self.n_procs: int = n_procs
         self.method: str = method
 
-    def execute(
-        self, tasks: list[Task], progress_bar: bool = None
-    ) -> list[Any]:
+    def execute(self, tasks: list[Task], progress_bar: bool = None) -> list[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
         Parameters
@@ -67,6 +64,7 @@ class MultiProcessEngine(Engine):
         Returns
         -------
         A list of results.
+
         """
         n_tasks = len(tasks)
 

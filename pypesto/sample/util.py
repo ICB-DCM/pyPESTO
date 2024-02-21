@@ -31,6 +31,7 @@ def calculate_ci_mcmc_sample(
     -------
     lb, ub:
         Bounds of the MCMC percentile-based confidence interval.
+
     """
     burn_in = 0
     if exclude_burn_in:
@@ -65,6 +66,7 @@ def calculate_ci_mcmc_sample_prediction(
     -------
     lb, ub:
         Bounds of the MCMC-based prediction confidence interval.
+
     """
     lb, ub = calculate_ci(simulated_values, ci_level=ci_level, axis=1)
     return lb, ub
@@ -90,6 +92,7 @@ def calculate_ci(
     -------
     lb, ub:
         Bounds of the confidence/credibility interval.
+
     """
     # Percentile values corresponding to the CI level
     percentiles = 100 * np.array([(1 - ci_level) / 2, 1 - (1 - ci_level) / 2])
@@ -114,6 +117,7 @@ def bound_n_samples_from_env(n_samples: int):
     n_samples_new:
         The original number of samples, or the minimum with the environment
         variable, if exists.
+
     """
     if PYPESTO_MAX_N_SAMPLES not in os.environ:
         return n_samples

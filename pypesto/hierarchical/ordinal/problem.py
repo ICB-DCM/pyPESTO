@@ -71,6 +71,7 @@ class OrdinalProblem(AmiciInnerProblem):
         A dictionary of the groups of the subproblem.
     method:
         A string representing the method of the Optimal Scaling approach, either ``reduced`` or ``standard``.
+
     """
 
     def __init__(
@@ -153,8 +154,8 @@ class OrdinalProblem(AmiciInnerProblem):
                 self.groups[group][W_DOT_MATRIX] = self.initialize_w(group)
             else:
                 raise ValueError(
-                    'Censoring types of optimal scaling parameters of a group '
-                    'have to either be all None, or all not None.'
+                    "Censoring types of optimal scaling parameters of a group "
+                    "have to either be all None, or all not None."
                 )
 
     def initialize(self) -> None:
@@ -172,10 +173,10 @@ class OrdinalProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: 'amici.Model',
-        edatas: list['amici.ExpData'],
+        amici_model: "amici.Model",
+        edatas: list["amici.ExpData"],
         method: str = None,
-    ) -> 'OrdinalProblem':
+    ) -> "OrdinalProblem":
         """Construct the inner problem from the `petab_problem`."""
         if not method:
             method = REDUCED
@@ -202,23 +203,13 @@ class OrdinalProblem(AmiciInnerProblem):
 
     def get_free_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are free and belong to the given group."""
-        return [
-            x
-            for x in self.xs.values()
-            if x.group == group and x.estimate is True
-        ]
+        return [x for x in self.xs.values() if x.group == group and x.estimate is True]
 
     def get_fixed_xs_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are fixed and belong to the given group."""
-        return [
-            x
-            for x in self.xs.values()
-            if x.group == group and x.estimate is False
-        ]
+        return [x for x in self.xs.values() if x.group == group and x.estimate is False]
 
-    def get_cat_ub_parameters_for_group(
-        self, group: int
-    ) -> list[OrdinalParameter]:
+    def get_cat_ub_parameters_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category upper boundaries and belong to the given group."""
         return [
             x
@@ -226,9 +217,7 @@ class OrdinalProblem(AmiciInnerProblem):
             if x.group == group and x.inner_parameter_id[:6] == CAT_UB
         ]
 
-    def get_cat_lb_parameters_for_group(
-        self, group: int
-    ) -> list[OrdinalParameter]:
+    def get_cat_lb_parameters_for_group(self, group: int) -> list[OrdinalParameter]:
         r"""Get ``OptimalScalingParameter``\s that are category lower boundaries and belong to the given group."""
         return [
             x
@@ -261,30 +250,19 @@ class OrdinalProblem(AmiciInnerProblem):
         data_idx = 0
 
         # Iterate over categories.
-        for cat_idx, category in enumerate(
-            self.get_cat_ub_parameters_for_group(group)
-        ):
+        for cat_idx, category in enumerate(self.get_cat_ub_parameters_for_group(group)):
             num_data_in_cat = int(
-                np.sum(
-                    [
-                        np.sum(category.ixs[idx])
-                        for idx in range(len(category.ixs))
-                    ]
-                )
+                np.sum([np.sum(category.ixs[idx]) for idx in range(len(category.ixs))])
             )
 
             # Constrain the surrogate data of this category to stay within it.
             for _ in range(num_data_in_cat):
                 # lb - y_surr <= 0
                 constr[data_idx, data_idx] = -1
-                constr[
-                    data_idx, cat_idx + self.groups[group][NUM_DATAPOINTS]
-                ] = 1
+                constr[data_idx, cat_idx + self.groups[group][NUM_DATAPOINTS]] = 1
 
                 # y_surr - ub <= 0
-                constr[
-                    data_idx + self.groups[group][NUM_DATAPOINTS], data_idx
-                ] = 1
+                constr[data_idx + self.groups[group][NUM_DATAPOINTS], data_idx] = 1
                 constr[
                     data_idx + self.groups[group][NUM_DATAPOINTS],
                     cat_idx
@@ -361,11 +339,7 @@ class OrdinalProblem(AmiciInnerProblem):
             np.block(
                 [
                     np.ones(self.groups[group][NUM_DATAPOINTS])
-                    * (
-                        -1
-                        * np.sum(sy_all)
-                        / ((np.sum(np.abs(y_sim_all)) + 1e-8) ** 2)
-                    ),
+                    * (-1 * np.sum(sy_all) / ((np.sum(np.abs(y_sim_all)) + 1e-8) ** 2)),
                     np.zeros(2 * self.groups[group][NUM_CATEGORIES]),
                 ]
             )
@@ -388,10 +362,10 @@ class OrdinalProblem(AmiciInnerProblem):
         d = np.zeros(self.groups[group][NUM_CONSTR_FULL])
 
         d[
-            2 * self.groups[group][NUM_DATAPOINTS]
-            + 1 : 2 * self.groups[group][NUM_DATAPOINTS]
+            2 * self.groups[group][NUM_DATAPOINTS] + 1 : 2
+            * self.groups[group][NUM_DATAPOINTS]
             + self.groups[group][NUM_CATEGORIES]
-        ] = (interval_gap + eps)
+        ] = interval_gap + eps
 
         d[
             2 * self.groups[group][NUM_DATAPOINTS]
@@ -415,8 +389,8 @@ class OrdinalProblem(AmiciInnerProblem):
         dinterval_gap_dtheta = max_sy / (4 * (len(xs) - 1) + 1)
 
         dd_dtheta[
-            2 * self.groups[group][NUM_DATAPOINTS]
-            + 1 : 2 * self.groups[group][NUM_DATAPOINTS]
+            2 * self.groups[group][NUM_DATAPOINTS] + 1 : 2
+            * self.groups[group][NUM_DATAPOINTS]
             + self.groups[group][NUM_CATEGORIES]
         ] = dinterval_gap_dtheta
 
@@ -444,6 +418,7 @@ class OrdinalProblem(AmiciInnerProblem):
         -------
         quantitative_ixs:
             List of boolean masks indicating which data points are quantitative.
+
         """
         # Initialize boolean masks with False and find corresponding observable index.
         quantitative_ixs = [np.full(ixs_i.shape, False) for ixs_i in xs[0].ixs]
@@ -451,9 +426,7 @@ class OrdinalProblem(AmiciInnerProblem):
 
         # Set to True all datapoints of the corresponding observable.
         if np.ndim(quantitative_ixs) == 2:
-            quantitative_ixs = [
-                np.full(ixs_i.shape, True) for ixs_i in xs[0].ixs
-            ]
+            quantitative_ixs = [np.full(ixs_i.shape, True) for ixs_i in xs[0].ixs]
         else:
             for quantitative_ixs_i in quantitative_ixs:
                 quantitative_ixs_i[:, observable_index] = True
@@ -475,8 +448,8 @@ class OrdinalProblem(AmiciInnerProblem):
 
 def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
-    amici_model: 'amici.Model',
-    edatas: list['amici.ExpData'],
+    amici_model: "amici.Model",
+    edatas: list["amici.ExpData"],
     method: str,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -491,7 +464,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
+    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -511,7 +484,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
 def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
-    amici_model: 'amici.Model',
+    amici_model: "amici.Model",
 ) -> list[OrdinalParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
@@ -533,12 +506,11 @@ def optimal_scaling_inner_parameters_from_measurement_df(
             # Add optimal scaling parameters for ordinal measurements.
             for par_type, par_estimate in zip(par_types, estimate):
                 for _, row in observable_df.iterrows():
-                    par_id = f'{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{int(row[MEASUREMENT_CATEGORY])}'
+                    par_id = f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{int(row[MEASUREMENT_CATEGORY])}"
 
                     # Create only one set of bound parameters per category of a group.
                     if par_id not in [
-                        inner_par.inner_parameter_id
-                        for inner_par in inner_parameters
+                        inner_par.inner_parameter_id for inner_par in inner_parameters
                     ]:
                         inner_parameters.append(
                             OrdinalParameter(
@@ -567,14 +539,14 @@ def optimal_scaling_inner_parameters_from_measurement_df(
             for par_type in par_types:
                 for _, row in censored_df.iterrows():
                     category = int(
-                        unique_censoring_bounds.index(row[CENSORING_BOUNDS])
-                        + 1
+                        unique_censoring_bounds.index(row[CENSORING_BOUNDS]) + 1
                     )
-                    par_id = f'{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}'
+                    par_id = (
+                        f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}"
+                    )
                     # Create only one set of bound parameters per category of a group.
                     if par_id not in [
-                        inner_par.inner_parameter_id
-                        for inner_par in inner_parameters
+                        inner_par.inner_parameter_id for inner_par in inner_parameters
                     ]:
                         inner_parameters.append(
                             OrdinalParameter(
@@ -611,8 +583,8 @@ def get_estimate_for_method(method: str) -> tuple[bool, bool]:
 
 
 def optimal_scaling_ixs_for_measurement_specific_parameters(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
     inner_parameters: list[OrdinalParameter],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.
@@ -623,6 +595,7 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.
+
     """
     ixs_for_par = {}
     observable_ids = amici_model.getObservableIds()
@@ -670,9 +643,7 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
             # iterate over measurements
             for _, measurement in df_for_time.iterrows():
                 # extract observable index
-                observable_ix = observable_ids.index(
-                    measurement[OBSERVABLE_ID]
-                )
+                observable_ix = observable_ids.index(measurement[OBSERVABLE_ID])
 
                 # as the time indices have to account for replicates, we need
                 #  to track which time indices have already been assigned for

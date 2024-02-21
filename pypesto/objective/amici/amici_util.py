@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     except ImportError:
         ParameterMapping = ParameterMappingForCondition = None
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +58,10 @@ def map_par_opt_to_par_sim(
     par_sim_vals:
         The simulation parameters vector corresponding to x under the
         specified mapping.
+
     """
     par_sim_vals = [
-        condition_map_sim_var[par_id]
-        for par_id in amici_model.getParameterIds()
+        condition_map_sim_var[par_id] for par_id in amici_model.getParameterIds()
     ]
 
     # iterate over simulation parameter indices
@@ -97,6 +97,7 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
     plist: array-like of float
         List of parameter indices for which the sensitivity needs to be
         computed
+
     """
     warnings.warn(
         "This function will be removed in future releases. ",
@@ -134,11 +135,9 @@ def create_identity_parameter_mapping(
             for x_id, x_scale in zip(x_ids, x_scales)
         }
         # assumes fixed parameters are filled in already
-        mapping_for_condition = (
-            amici.parameter_mapping.ParameterMappingForCondition(
-                map_sim_var=condition_map_sim_var,
-                scale_map_sim_var=condition_scale_map_sim_var,
-            )
+        mapping_for_condition = amici.parameter_mapping.ParameterMappingForCondition(
+            map_sim_var=condition_map_sim_var,
+            scale_map_sim_var=condition_scale_map_sim_var,
         )
 
         parameter_mapping.append(mapping_for_condition)
@@ -168,6 +167,7 @@ def par_index_slices(
         array of simulation parameter indices
     par_opt_slice:
         array of optimization parameter indices
+
     """
     # Create ID to index mapping for more efficient lookup than list.index
     par_opt_id_to_idx = {id_: idx for idx, id_ in enumerate(par_opt_ids)}
@@ -176,10 +176,7 @@ def par_index_slices(
     # bool array indicating which simulation parameters map to any estimated
     #  parameters
     par_sim_maps_to_str = np.fromiter(
-        (
-            isinstance(condition_map_sim_var[par_id], str)
-            for par_id in par_sim_ids
-        ),
+        (isinstance(condition_map_sim_var[par_id], str) for par_id in par_sim_ids),
         dtype=bool,
         count=len(par_sim_ids),
     )
@@ -234,14 +231,13 @@ def add_sim_grad_to_opt_grad(
         Changed in-place.
     coefficient:
         Coefficient for sim_grad when adding to opt_grad.
+
     """
     par_sim_slice, par_opt_slice = par_index_slices(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
 
-    par_opt_slice_unique, unique_index = np.unique(
-        par_opt_slice, return_index=True
-    )
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice, return_index=True)
     opt_grad[par_opt_slice_unique] += (
         coefficient * sim_grad[par_sim_slice[unique_index]]
     )
@@ -268,14 +264,13 @@ def add_sim_hess_to_opt_hess(
     Parameters
     ----------
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
+
     """
     par_sim_slice, par_opt_slice = par_index_slices(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
 
-    par_opt_slice_unique, unique_index = np.unique(
-        par_opt_slice, return_index=True
-    )
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice, return_index=True)
 
     non_unique_indices = [
         idx for idx in range(len(par_opt_slice)) if idx not in unique_index
@@ -283,25 +278,20 @@ def add_sim_hess_to_opt_hess(
 
     opt_hess[np.ix_(par_opt_slice_unique, par_opt_slice_unique)] += (
         coefficient
-        * sim_hess[
-            np.ix_(par_sim_slice[unique_index], par_sim_slice[unique_index])
-        ]
+        * sim_hess[np.ix_(par_sim_slice[unique_index], par_sim_slice[unique_index])]
     )
 
     if par_opt_slice_unique.size < par_opt_slice.size:
         for idx in non_unique_indices:
             opt_hess[par_opt_slice[idx], par_opt_slice_unique] += (
-                coefficient
-                * sim_hess[par_sim_slice[idx], par_sim_slice[unique_index]]
+                coefficient * sim_hess[par_sim_slice[idx], par_sim_slice[unique_index]]
             )
             opt_hess[par_opt_slice_unique, par_opt_slice[idx]] += (
-                coefficient
-                * sim_hess[par_sim_slice[unique_index], par_sim_slice[idx]]
+                coefficient * sim_hess[par_sim_slice[unique_index], par_sim_slice[idx]]
             )
             for jdx in non_unique_indices:
                 opt_hess[par_opt_slice[idx], par_opt_slice[jdx]] += (
-                    coefficient
-                    * sim_hess[par_sim_slice[idx], par_sim_slice[jdx]]
+                    coefficient * sim_hess[par_sim_slice[idx], par_sim_slice[jdx]]
                 )
 
 
@@ -320,6 +310,7 @@ def sim_sres_to_opt_sres(
     ----------
     Mostly the same as for add_sim_grad_to_opt_grad, replacing the gradients by
     residual sensitivities.
+
     """
     opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
 
@@ -327,9 +318,7 @@ def sim_sres_to_opt_sres(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
 
-    par_opt_slice_unique, unique_index = np.unique(
-        par_opt_slice, return_index=True
-    )
+    par_opt_slice_unique, unique_index = np.unique(par_opt_slice, return_index=True)
     opt_sres[:, par_opt_slice_unique] += (
         coefficient * sim_sres[:, par_sim_slice[unique_index]]
     )
@@ -350,7 +339,7 @@ def log_simulation(data_ix, rdata) -> None:
     logger.debug(f"status: {rdata['status']}")
     logger.debug(f"llh: {rdata['llh']}")
 
-    t_steadystate = 't_steadystate'
+    t_steadystate = "t_steadystate"
     if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
         logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
 
@@ -360,8 +349,8 @@ def log_simulation(data_ix, rdata) -> None:
 
 def get_error_output(
     amici_model: AmiciModel,
-    edatas: Sequence['amici.ExpData'],
-    rdatas: Sequence['amici.ReturnData'],
+    edatas: Sequence["amici.ExpData"],
+    rdatas: Sequence["amici.ReturnData"],
     sensi_orders: Tuple[int, ...],
     mode: ModeType,
     dim: int,
@@ -374,9 +363,7 @@ def get_error_output(
     if not amici_model.nt():
         nt = sum(data.nt() for data in edatas)
     else:
-        nt = sum(
-            data.nt() if data.nt() else amici_model.nt() for data in edatas
-        )
+        nt = sum(data.nt() if data.nt() else amici_model.nt() for data in edatas)
     n_res = nt * amici_model.nytrue
     if amici_model.getAddSigmaResiduals():
         n_res *= 2

@@ -19,6 +19,7 @@ def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:
     -------
     covariance_matrix:
         covariance matrix of ensemble parameters
+
     """
     # call lowlevel routine using the parameter ensemble
     return np.cov(ens.x_vectors.transpose())
@@ -42,6 +43,7 @@ def get_covariance_matrix_predictions(
     -------
     covariance_matrix:
         covariance matrix of ensemble predictions
+
     """
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
@@ -99,6 +101,7 @@ def get_spectral_decomposition_parameters(
         Eigenvalues of the covariance matrix
     eigenvectors:
         Eigenvectors of the covariance matrix
+
     """
     # check inputs
     if sum([only_identifiable_directions, only_separable_directions]) >= 2:
@@ -168,6 +171,7 @@ def get_spectral_decomposition_predictions(
         Eigenvalues of the covariance matrix
     eigenvectors:
         Eigenvectors of the covariance matrix
+
     """
     covariance = get_covariance_matrix_predictions(ens)
     return get_spectral_decomposition_lowlevel(
@@ -231,6 +235,7 @@ def get_spectral_decomposition_lowlevel(
         Eigenvalues of the covariance matrix
     eigenvectors:
         Eigenvectors of the covariance matrix
+
     """
     # get the eigenvalue decomposition
     eigenvalues, eigenvectors = np.linalg.eigh(matrix)
@@ -255,9 +260,7 @@ def get_spectral_decomposition_lowlevel(
                 [
                     i_eig_abs > cutoff_absolute_separable
                     and i_eig_rel > cutoff_relative_separable
-                    for i_eig_abs, i_eig_rel in zip(
-                        eigenvalues, rel_eigenvalues
-                    )
+                    for i_eig_abs, i_eig_rel in zip(eigenvalues, rel_eigenvalues)
                 ]
             )
         elif cutoff_absolute_separable is not None:
@@ -266,8 +269,8 @@ def get_spectral_decomposition_lowlevel(
             above_cutoff = rel_eigenvalues > cutoff_relative_separable
         else:
             raise Exception(
-                'Need a lower cutoff (absolute or relative, '
-                'e.g., 1e-16, to compute separable directions.'
+                "Need a lower cutoff (absolute or relative, "
+                "e.g., 1e-16, to compute separable directions."
             )
 
         # restrict to those above cutoff
@@ -297,8 +300,8 @@ def get_spectral_decomposition_lowlevel(
         below_cutoff = 1 / rel_eigenvalues > cutoff_relative_identifiable
     else:
         raise Exception(
-            'Need an inverse upper cutoff (absolute or relative, '
-            'e.g., 1e-16, to compute identifiable directions.'
+            "Need an inverse upper cutoff (absolute or relative, "
+            "e.g., 1e-16, to compute identifiable directions."
         )
 
     # restrict to those below cutoff

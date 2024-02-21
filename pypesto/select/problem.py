@@ -32,6 +32,7 @@ class Problem:
         Passed to the constructor of :class:``ModelProblem``.
     petab_select_problem:
         A PEtab Select problem.
+
     """
 
     # FIXME rename `best_model` to `selected_model` everywhere
@@ -50,11 +51,11 @@ class Problem:
         # TODO deprecated
         if model_postprocessor is not None:
             warnings.warn(
-                'Specifying `model_postprocessor` directly is deprecated. '
-                'Please specify it with `model_problem_options`, e.g. '
+                "Specifying `model_postprocessor` directly is deprecated. "
+                "Please specify it with `model_problem_options`, e.g. "
                 'model_problem_options={"postprocessor": ...}`.'
             )
-            self.model_problem_options['postprocessor'] = model_postprocessor
+            self.model_problem_options["postprocessor"] = model_postprocessor
 
         self.set_state(
             calibrated_models={},
@@ -72,10 +73,11 @@ class Problem:
         Returns
         -------
         A :class:`MethodCaller` instance.
+
         """
         kwargs = kwargs.copy()
         model_problem_options = self.model_problem_options | kwargs.pop(
-            'model_problem_options', {}
+            "model_problem_options", {}
         )
 
         return MethodCaller(
@@ -106,6 +108,7 @@ class Problem:
         Args:
             newly_calibrated_models:
                 See attributes of :class:`Problem`.
+
         """
         self.newly_calibrated_models = newly_calibrated_models
         self.calibrated_models.update(self.newly_calibrated_models)
@@ -117,13 +120,13 @@ class Problem:
         """Check keyword arguments to select calls."""
         if "newly_calibrated_models" in kwargs:
             raise ValueError(
-                'Please supply `newly_calibrated_models` via '
-                '`pypesto.select.Problem.set_state`.'
+                "Please supply `newly_calibrated_models` via "
+                "`pypesto.select.Problem.set_state`."
             )
         if "calibrated_models" in kwargs:
             raise ValueError(
-                'Please supply `calibrated_models` via '
-                '`pypesto.select.Problem.set_state`.'
+                "Please supply `calibrated_models` via "
+                "`pypesto.select.Problem.set_state`."
             )
 
     def select(
@@ -146,6 +149,7 @@ class Problem:
               model hashes as keys and models as values; and
            3. all candidate models from all iterations, as a `dict` with
               model hashes as keys and models as values.
+
         """
         # TODO move some options to PEtab Select? e.g.:
         # - startpoint_latest_mle
@@ -188,6 +192,7 @@ class Problem:
         Returns
         -------
         The best models (the best model at each iteration).
+
         """
         best_models = []
         self.handle_select_kwargs(kwargs)
@@ -203,9 +208,7 @@ class Problem:
                 )
                 best_models.append(previous_best_model)
             except StopIteration:
-                previous_best_model = (
-                    method_caller.candidate_space.predecessor_model
-                )
+                previous_best_model = method_caller.candidate_space.predecessor_model
                 best_models.append(previous_best_model)
                 break
 
@@ -241,6 +244,7 @@ class Problem:
 
            1. the best model; and
            2. the best models (the best model at each iteration).
+
         """
         self.handle_select_kwargs(kwargs)
         model_lists = []
@@ -250,24 +254,16 @@ class Problem:
 
         method_caller = self.create_method_caller(**kwargs)
         for start_index, predecessor_model in enumerate(predecessor_models):
-            method_caller.candidate_space.previous_predecessor_model = (
-                predecessor_model
-            )
+            method_caller.candidate_space.previous_predecessor_model = predecessor_model
             (
                 best_model,
                 newly_calibrated_models_list[start_index],
             ) = method_caller(
-                newly_calibrated_models=newly_calibrated_models_list[
-                    start_index
-                ],
+                newly_calibrated_models=newly_calibrated_models_list[start_index],
             )
-            self.calibrated_models.update(
-                newly_calibrated_models_list[start_index]
-            )
+            self.calibrated_models.update(newly_calibrated_models_list[start_index])
 
-            model_lists.append(
-                newly_calibrated_models_list[start_index].values()
-            )
+            model_lists.append(newly_calibrated_models_list[start_index].values())
             method_caller.candidate_space.reset()
 
         best_model = petab_select.ui.best(

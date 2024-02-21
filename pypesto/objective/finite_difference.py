@@ -43,6 +43,7 @@ class FDDelta:
     max_steps:
         Number of steps after which to update in the `FDDelta.STEPS` update
         condition.
+
     """
 
     # update conditions
@@ -106,6 +107,7 @@ class FDDelta:
         fd_method:
             FD method employed by
             :class:`pypesto.objective.finite_difference.FD`, see there.
+
         """
         # scalar to vector
         if isinstance(self.delta, float):
@@ -131,8 +133,7 @@ class FDDelta:
                     and self.steps > 1
                 )
                 or (
-                    self.update_condition == FDDelta.CONSTANT
-                    and self.delta is not None
+                    self.update_condition == FDDelta.CONSTANT and self.delta is not None
                 )
             ):
                 return
@@ -200,9 +201,9 @@ class FDDelta:
         #  entries, to constrain the worst deviation
         if stab_vec.ndim > 2:
             # flatten all dimensions > 1
-            stab_vec = stab_vec.reshape(
-                stab_vec.shape[0], stab_vec.shape[1], -1
-            ).max(axis=2)
+            stab_vec = stab_vec.reshape(stab_vec.shape[0], stab_vec.shape[1], -1).max(
+                axis=2
+            )
 
         # minimum delta index for each parameter
         min_ixs = np.argmin(stab_vec, axis=0)
@@ -230,6 +231,7 @@ def to_delta(delta: Union[FDDelta, np.ndarray, float, str]) -> FDDelta:
     delta:
         Can be a vector, float, or one of Delta.UPDATE_CONDITIONS. If a
         vector or float, a constant delta is assumed.
+
     """
     if isinstance(delta, FDDelta):
         return delta
@@ -296,6 +298,7 @@ class FD(ObjectiveBase):
     >>> res = lambda x: x - x_obs
     >>> fun = lambda x: 0.5 * sum(res(x)**2)
     >>> obj = FD(Objective(fun=fun, res=res))
+
     """
 
     # finite difference types
@@ -336,7 +339,7 @@ class FD(ObjectiveBase):
     def __deepcopy__(
         self,
         memodict: Dict = None,
-    ) -> 'FD':
+    ) -> "FD":
         """Create deepcopy of Objective."""
         other = self.__class__.__new__(self.__class__)
         for attr, val in self.__dict__.items():
@@ -382,13 +385,9 @@ class FD(ObjectiveBase):
         delegates the actual objective evaluation.
         """
         if mode == MODE_FUN:
-            result = self._call_mode_fun(
-                x=x, sensi_orders=sensi_orders, **kwargs
-            )
+            result = self._call_mode_fun(x=x, sensi_orders=sensi_orders, **kwargs)
         elif mode == MODE_RES:
-            result = self._call_mode_res(
-                x=x, sensi_orders=sensi_orders, **kwargs
-            )
+            result = self._call_mode_res(x=x, sensi_orders=sensi_orders, **kwargs)
         else:
             raise ValueError("This mode is not supported.")
 
@@ -421,9 +420,7 @@ class FD(ObjectiveBase):
             return result
 
         # whether the Hessian should be based on 2nd order FD from fval
-        hess_via_fd_fval = hess_via_fd and (
-            self.hess_via_fval or not self.obj.has_grad
-        )
+        hess_via_fd_fval = hess_via_fd and (self.hess_via_fval or not self.obj.has_grad)
         hess_via_fd_grad = hess_via_fd and not hess_via_fd_fval
 
         def f_fval(x):
@@ -597,6 +594,7 @@ def unit_vec(dim: int, ix: int) -> np.ndarray:
     Returns
     -------
     vector: The unit vector.
+
     """
     vector = np.zeros(shape=dim)
     vector[ix] = 1
@@ -627,6 +625,7 @@ def fd_nabla_1(
     nabla_1:
         The FD approximation to the 1st order derivatives.
         Shape (n_par, ...) with ndim > 1 if `f_fval` is not scalar-valued.
+
     """
     # parameter dimension
     n_par = len(x)
@@ -680,6 +679,7 @@ def fd_nabla_2(
         The FD approximation of the 2nd order derivative tensor.
         Shape (n_par, n_par, ...) with ndim > 2 if `f_fval` is not
         scalar-valued.
+
     """
     # parameter dimension
     n_par = len(x)

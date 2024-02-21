@@ -78,6 +78,7 @@ def validation_profile_significance(
         “Likelihood based observability analysis and
         confidence intervals for predictions of dynamic models”.
         BMC Systems Biology 2012/12. doi:10.1186/1752-0509-6-120
+
     """
     if (result_full_data is not None) and (optimizer is not None):
         raise UserWarning(
@@ -106,9 +107,7 @@ def validation_profile_significance(
 
     nllh_new = result_full_data.optimize_result.fval[0]
     nllh_old = problem_full_data.objective(
-        problem_full_data.get_reduced_vector(
-            result_training_data.optimize_result.x[0]
-        )
+        problem_full_data.get_reduced_vector(result_training_data.optimize_result.x[0])
     )
 
     if nllh_new > nllh_old:

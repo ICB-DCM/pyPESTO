@@ -41,6 +41,7 @@ class EmceeSampler(Sampler):
         run_args:
             Further keyword arguments that are passed on to
             ``emcee.EnsembleSampler.run_mcmc``.
+
         """
         # check dependencies
         try:
@@ -94,6 +95,7 @@ class EmceeSampler(Sampler):
             and the center of the first dimension is at 100, then the upper
             and lower bounds of the epsilon ball in the first dimension will
             be 150 and 50, respectively.
+
         """
         # Epsilon ball
         lb = center * (1 - epsilon)
@@ -140,6 +142,7 @@ class EmceeSampler(Sampler):
             Alternatively, a set of vectors can be provided, which will be used
             to initialize walkers. In this case, any remaining walkers will be
             initialized at points sampled uniformly within the problem bounds.
+
         """
         import emcee
 
