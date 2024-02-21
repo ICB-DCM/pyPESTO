@@ -20,7 +20,7 @@ multi_line_output = 3
 
 [tool.ruff]
 exclude = ["amici_models"]
-ignore = [
+lint.ignore = [
     "B027",
     "D100",
     "D105",
@@ -30,11 +30,12 @@ ignore = [
     "F403",
     "F405",
 ]
-select = [
-    "F",
+lint.select = [
+    "F",  # Pyflakes
+    "I",  # isort
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "test/julia/test_pyjulia.py" = ["E402"]
 "pypesto/problem.py" = [
     "D400",
