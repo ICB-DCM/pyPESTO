@@ -18,6 +18,13 @@ from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    'PymcSampler',
+    'PymcObjectiveWithGradientOp',
+    'PymcObjectiveOp',
+    'PymcGradientOp',
+]
+
 # implementation based on:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
