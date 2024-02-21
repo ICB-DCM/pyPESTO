@@ -6,15 +6,16 @@ import pandas as pd
 import petab
 import sympy as sp
 from more_itertools import one
-from petab.C import ESTIMATE, LIN
-from petab.C import LOWER_BOUND as PETAB_LOWER_BOUND
 from petab.C import (
+    ESTIMATE,
+    LIN,
     NOISE_PARAMETERS,
     OBSERVABLE_ID,
     OBSERVABLE_PARAMETERS,
     OBSERVABLE_TRANSFORMATION,
     PARAMETER_SEPARATOR,
 )
+from petab.C import LOWER_BOUND as PETAB_LOWER_BOUND
 from petab.C import UPPER_BOUND as PETAB_UPPER_BOUND
 from petab.observables import get_formula_placeholders
 
@@ -24,9 +25,6 @@ from ..C import (
     INNER_PARAMETER_BOUNDS,
     INTERVAL_CENSORED,
     LEFT_CENSORED,
-)
-from ..C import LOWER_BOUND as PYPESTO_LOWER_BOUND
-from ..C import (
     MEASUREMENT_CATEGORY,
     MEASUREMENT_TYPE,
     ORDINAL,
@@ -34,9 +32,10 @@ from ..C import (
     RELATIVE,
     RIGHT_CENSORED,
     SEMIQUANTITATIVE,
+    InnerParameterType,
 )
+from ..C import LOWER_BOUND as PYPESTO_LOWER_BOUND
 from ..C import UPPER_BOUND as PYPESTO_UPPER_BOUND
-from ..C import InnerParameterType
 
 
 def correct_parameter_df_bounds(parameter_df: pd.DataFrame) -> pd.DataFrame:
@@ -97,17 +96,13 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
             | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
         ).all()
     ):
-        sub_df = inner_parameter_table.loc[
-            :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
-        ]
+        sub_df = inner_parameter_table.loc[:, [PARAMETER_TYPE, petab.PARAMETER_SCALE]]
         raise NotImplementedError(
             "Only parameterScale=lin supported for parameters of the inner "
             f"subproblem.\n{sub_df}"
         )
 
-    inner_parameter_df = validate_measurement_formulae(
-        petab_problem=petab_problem
-    )
+    inner_parameter_df = validate_measurement_formulae(petab_problem=petab_problem)
 
     validate_inner_parameter_pairings(inner_parameter_df=inner_parameter_df)
 
@@ -226,9 +221,7 @@ def get_inner_parameters(
         try:
             inner_parameters[parameter_id] = InnerParameterType(type_str)
         except ValueError as e:
-            raise ValueError(
-                f"Unknown inner parameter type `{type_str}`."
-            ) from e
+            raise ValueError(f"Unknown inner parameter type `{type_str}`.") from e
 
     return inner_parameters
 
@@ -266,10 +259,7 @@ def validate_measurement_formulae(
             inner_parameters=inner_parameters,
         )
         inner_parameter_sets.append(
-            [
-                str(v) if v is not None else None
-                for v in [offset, scaling, sigma]
-            ]
+            [str(v) if v is not None else None for v in [offset, scaling, sigma]]
         )
 
     return pd.DataFrame(
@@ -304,7 +294,7 @@ def _validate_measurement_specific_observable_formula(
     """
     formula, formula_inner_parameters = _get_symbolic_formula_from_measurement(
         measurement=measurement,
-        formula_type='observable',
+        formula_type="observable",
         petab_problem=petab_problem,
         inner_parameters=inner_parameters,
     )
@@ -320,9 +310,7 @@ def _validate_measurement_specific_observable_formula(
     ) in formula_inner_parameters.items():
         if inner_parameter_type == InnerParameterType.OFFSET:
             offset = formula_inner_parameter
-            appearances = [
-                term for term in terms if offset in term.free_symbols
-            ]
+            appearances = [term for term in terms if offset in term.free_symbols]
             try:
                 # `one` ensures the offset occurs in exactly one term
                 # `==`  ensures that the offset appearances as its own term,
@@ -338,18 +326,14 @@ def _validate_measurement_specific_observable_formula(
                 ) from e
         elif inner_parameter_type == InnerParameterType.SCALING:
             scaling = formula_inner_parameter
-            appearances = [
-                term for term in terms if scaling in term.free_symbols
-            ]
+            appearances = [term for term in terms if scaling in term.free_symbols]
             # Should occur in exactly one term, and should be multiplied by
             # everything else in the term.
             try:
                 # `one` ensures the scaling occurs in exactly one term
                 factors = sp.Mul.make_args(one(appearances))
                 factor_appearances = [
-                    factor
-                    for factor in factors
-                    if scaling in factor.free_symbols
+                    factor for factor in factors if scaling in factor.free_symbols
                 ]
                 # as for offset, ensure scaling is exactly one factor
                 if scaling != one(factor_appearances):
@@ -389,7 +373,7 @@ def _validate_measurement_specific_noise_formula(
     """
     formula, formula_inner_parameters = _get_symbolic_formula_from_measurement(
         measurement=measurement,
-        formula_type='noise',
+        formula_type="noise",
         petab_problem=petab_problem,
         inner_parameters=inner_parameters,
     )
@@ -420,7 +404,7 @@ def _validate_measurement_specific_noise_formula(
 
 def _get_symbolic_formula_from_measurement(
     measurement: pd.Series,
-    formula_type: Literal['observable', 'noise'],
+    formula_type: Literal["observable", "noise"],
     petab_problem: petab.Problem,
     inner_parameters: dict[str, InnerParameterType],
 ) -> tuple[sp.Expr, dict[sp.Symbol, InnerParameterType]]:
@@ -447,7 +431,7 @@ def _get_symbolic_formula_from_measurement(
     observable_id = measurement[OBSERVABLE_ID]
 
     formula_string = petab_problem.observable_df.loc[
-        observable_id, formula_type + 'Formula'
+        observable_id, formula_type + "Formula"
     ]
     symbolic_formula = sp.sympify(formula_string)
 
@@ -457,7 +441,7 @@ def _get_symbolic_formula_from_measurement(
         override_type=formula_type,
     )
     if formula_placeholders:
-        overrides = measurement[formula_type + 'Parameters']
+        overrides = measurement[formula_type + "Parameters"]
         overrides = (
             overrides.split(PARAMETER_SEPARATOR)
             if isinstance(overrides, str)
@@ -472,10 +456,10 @@ def _get_symbolic_formula_from_measurement(
         if sp.Symbol(inner_parameter_id) in symbolic_formula.free_symbols
     }
 
-    if formula_type == 'noise':
+    if formula_type == "noise":
         max_parameters = 1
         expected_inner_parameter_types = [InnerParameterType.SIGMA]
-    elif formula_type == 'observable':
+    elif formula_type == "observable":
         max_parameters = 2
         expected_inner_parameter_types = [
             InnerParameterType.OFFSET,
@@ -505,13 +489,10 @@ def _get_symbolic_formula_from_measurement(
         )
 
     if symbolic_formula_inner_parameters:
-        observable_transformation = petab_problem.observable_df.loc[
-            observable_id
-        ].get(OBSERVABLE_TRANSFORMATION)
-        if (
-            observable_transformation is not None
-            and observable_transformation != LIN
-        ):
+        observable_transformation = petab_problem.observable_df.loc[observable_id].get(
+            OBSERVABLE_TRANSFORMATION
+        )
+        if observable_transformation is not None and observable_transformation != LIN:
             raise ValueError(
                 "Non-linear observable transformations are not supported if "
                 "the observable is associated with hierarchically-optimized "
@@ -541,9 +522,7 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
         ].unique()
         for data_type in petab_data_types:
             observables_by_data_type[data_type] = set(
-                meas_df.loc[
-                    meas_df[MEASUREMENT_TYPE] == data_type, OBSERVABLE_ID
-                ]
+                meas_df.loc[meas_df[MEASUREMENT_TYPE] == data_type, OBSERVABLE_ID]
             )
         # Check whether all data types are supported
         if not set(petab_data_types).issubset(supported_data_types):
@@ -567,9 +546,7 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
                 InnerParameterType.OFFSET,
             ]:
                 for _, row in meas_df_w_obs_pars.iterrows():
-                    if par_id in row[OBSERVABLE_PARAMETERS].split(
-                        PARAMETER_SEPARATOR
-                    ):
+                    if par_id in row[OBSERVABLE_PARAMETERS].split(PARAMETER_SEPARATOR):
                         relative_observables.add(row[OBSERVABLE_ID])
 
             elif row[PARAMETER_TYPE] == InnerParameterType.SIGMA:
@@ -579,8 +556,7 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
                 # If a sigma parameter belongs to a semi-quantiative
                 # observable, it is not a relative inner parameter.
                 if SEMIQUANTITATIVE in observables_by_data_type and (
-                    corresponding_obs
-                    & observables_by_data_type[SEMIQUANTITATIVE]
+                    corresponding_obs & observables_by_data_type[SEMIQUANTITATIVE]
                 ):
                     continue
                 relative_observables.update(corresponding_obs)
@@ -607,8 +583,7 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
         meas_df_w_ordinals = meas_df[meas_df[MEASUREMENT_TYPE] == ORDINAL]
         if MEASUREMENT_CATEGORY not in meas_df_w_ordinals.columns:
             raise ValueError(
-                "Measurement category must be specified for ordinal "
-                "measurements."
+                "Measurement category must be specified for ordinal " "measurements."
             )
         for _, row in meas_df_w_ordinals.iterrows():
             try:
@@ -623,13 +598,10 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
 
     # Validate censored measurement specification
     if set(CENSORING_TYPES) & set(observables_by_data_type.keys()):
-        meas_df_w_censored = meas_df[
-            meas_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)
-        ]
+        meas_df_w_censored = meas_df[meas_df[MEASUREMENT_TYPE].isin(CENSORING_TYPES)]
         if CENSORING_BOUNDS not in meas_df_w_censored.columns:
             raise ValueError(
-                "Censoring bounds must be specified for censored "
-                "measurements."
+                "Censoring bounds must be specified for censored " "measurements."
             )
         for _, row in meas_df_w_censored.iterrows():
             if (

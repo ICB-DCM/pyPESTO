@@ -76,9 +76,9 @@ class PEtabJlObjective(JuliaObjective):
         """Get state for pickling."""
         # if not dumped, dump it via JLD2
         return {
-            'module': self.module,
-            'source_file': self.source_file,
-            '_petab_problem_name': self._petab_problem_name,
+            "module": self.module,
+            "source_file": self.source_file,
+            "_petab_problem_name": self._petab_problem_name,
         }
 
     def __setstate__(self, state):
@@ -87,8 +87,10 @@ class PEtabJlObjective(JuliaObjective):
             setattr(self, key, value)
         # lazy imports
         try:
-            from julia import Main  # noqa: F401
-            from julia import Pkg
+            from julia import (
+                Main,  # noqa: F401
+                Pkg,
+            )
 
             Pkg.activate(".")
         except ImportError:
@@ -128,10 +130,7 @@ class PEtabJlObjective(JuliaObjective):
         """
         directory = os.path.dirname(self.source_file)
         # check whether precompilation is necessary, if the directory exists
-        if (
-            os.path.exists(f"{directory}/{self.module}_pre")
-            and not force_compile
-        ):
+        if os.path.exists(f"{directory}/{self.module}_pre") and not force_compile:
             logger.info("Precompilation module already exists.")
             return None
         # lazy imports
@@ -187,9 +186,7 @@ def write_precompilation_module(module, source_file_orig):
     # path to the yaml file
     yaml_path = "\t".join(lines[["yaml" in line for line in lines]])
     # packages
-    packages = "\t\t".join(
-        lines[[line.startswith("using ") for line in lines]]
-    )
+    packages = "\t\t".join(lines[[line.startswith("using ") for line in lines]])
     # get everything in between the packages and the end line
     start = int(np.argwhere([line.startswith("using ") for line in lines])[-1])
     end = int(np.argwhere([line.startswith("end") for line in lines])[0])
