@@ -21,6 +21,7 @@ multi_line_output = 3
 [tool.ruff]
 line-length = 79
 exclude = ["amici_models"]
+extend-include = ["*.ipynb"]
 lint.ignore = [
     "B027",
     "D100",
@@ -38,6 +39,10 @@ lint.select = [
     "S",  # flake8-bandit
     "B",  # flake8-bugbear
     "C4",  # flake8-comprehensions
+    "T20",  # flake8-print
+    "W",  # pycodestyle Warnings
+    "E",  # pycodestyle Errors
+    # "ANN",  # flakes-annotations TODO: currently produces ~1500 errors to manual fix
 ]
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
@@ -76,4 +81,10 @@ convention = "pep257"
 ]
 "doc/example/*.py" = [  # ignore docstyle in example pthon files.
     "D",
+]
+"doc/conf.py" = [
+    "E402",
+]
+"*.ipynb" = [
+    "T20", "E402", "D"
 ]

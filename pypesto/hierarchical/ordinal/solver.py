@@ -75,7 +75,7 @@ class OrdinalInnerSolver(InnerSolver):
             raise ValueError(
                 f"Inner solver method cannot be {self.options[METHOD]}. Please enter either {STANDARD} or {REDUCED}"
             )
-        elif type(self.options[REPARAMETERIZED]) is not bool:
+        elif not isinstance(self.options[REPARAMETERIZED], bool):
             raise ValueError(
                 f"Inner solver option 'reparameterized' has to be boolean, not {type(self.options[REPARAMETERIZED])}."
             )
@@ -83,7 +83,7 @@ class OrdinalInnerSolver(InnerSolver):
             raise ValueError(
                 f"Inner solver method cannot be {self.options[INTERVAL_CONSTRAINTS]}. Please enter either {MAX} or {MAXMIN}"
             )
-        elif type(self.options[MIN_GAP]) is not float:
+        elif not isinstance(self.options[MIN_GAP], float):
             raise ValueError(
                 f"Inner solver option 'reparameterized' has to be a float, not {type(self.options[MIN_GAP])}."
             )

@@ -52,15 +52,15 @@ class SemiquantInnerSolver(InnerSolver):
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if type(self.options[MIN_DIFF_FACTOR]) is not float:
+        if not isinstance(self.options[MIN_DIFF_FACTOR], float):
             raise TypeError(f"{MIN_DIFF_FACTOR} must be of type float.")
         elif self.options[MIN_DIFF_FACTOR] < 0:
             raise ValueError(f"{MIN_DIFF_FACTOR} must not be negative.")
 
-        elif type(self.options[REGULARIZE_SPLINE]) is not bool:
+        elif not isinstance(self.options[REGULARIZE_SPLINE], bool):
             raise TypeError(f"{REGULARIZE_SPLINE} must be of type bool.")
         if self.options[REGULARIZE_SPLINE]:
-            if type(self.options[REGULARIZATION_FACTOR]) is not float:
+            if not isinstance(self.options[REGULARIZATION_FACTOR], float):
                 raise TypeError(
                     f"{REGULARIZATION_FACTOR} must be of type float."
                 )
