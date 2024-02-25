@@ -578,11 +578,16 @@ class IpoptOptimizer(Optimizer):
 
         bounds = np.array([problem.lb, problem.ub]).T
 
+        if max(objective.sensi_orders) > 0:
+            jac = objective.get_grad
+        else:
+            jac = None
+        
         ret = cyipopt.minimize_ipopt(
             fun=objective.get_fval,
             x0=x0,
             method=None,  # ipopt does not use this argument for anything
-            jac=objective.get_grad,
+            jac=jac,
             hess=None,  # ipopt does not support Hessian yet
             hessp=None,  # ipopt does not support Hessian vector product yet
             bounds=bounds,
