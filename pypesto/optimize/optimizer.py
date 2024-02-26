@@ -584,7 +584,7 @@ class IpoptOptimizer(Optimizer):
         elif objective.has_grad:
             jac = objective.get_grad
         else:
-            raise Value(
+            raise ValueError(
                 "For IPOPT, the objective must either be able to return "
                 "gradients or the `approx_grad` must be set to True."
             )
