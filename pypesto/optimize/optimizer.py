@@ -13,7 +13,7 @@ import scipy.optimize
 
 from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES
 from ..history import HistoryOptions, NoHistory, OptimizerHistory
-from ..objective import Objective
+from ..objective import Objective, AggregatedObjective, AmiciObjective
 from ..problem import Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
@@ -67,6 +67,16 @@ def hierarchical_decorator(minimize):
             and problem.objective.inner_parameters is not None
         ):
             result[INNER_PARAMETERS] = problem.objective.inner_parameters
+        elif isinstance(problem.objective, AggregatedObjective):
+            for objective in problem.objective._objectives:
+                if isinstance(objective, AmiciObjective):
+                    if (
+                            hasattr(objective, INNER_PARAMETERS)
+                            and objective.inner_parameters is not None
+                    ):
+                        result[
+                            INNER_PARAMETERS] = objective.inner_parameters
+                break
 
         return result
 

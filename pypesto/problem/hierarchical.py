@@ -4,6 +4,7 @@ from typing import Iterable, List, Optional, SupportsFloat, SupportsInt, Union
 import numpy as np
 
 from .base import Problem
+from ..objective import AggregatedObjective, AmiciObjective
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
@@ -46,18 +47,35 @@ class HierarchicalProblem(Problem):
         super().__init__(**problem_kwargs)
 
         if inner_x_names is None:
-            inner_x_names = (
-                self.objective.calculator.get_interpretable_inner_par_ids()
-            )
+            if isinstance(self.objective, AggregatedObjective):
+                for objective in self.objective._objectives:
+                    if isinstance(objective, AmiciObjective):
+                        inner_x_names = (
+                            objective.calculator.get_interpretable_inner_par_ids()
+                        )
+                    break
+            else:
+                inner_x_names = (
+                    self.objective.calculator.get_interpretable_inner_par_ids()
+                )
         if len(set(inner_x_names)) != len(inner_x_names):
             raise ValueError("Parameter names inner_x_names must be unique")
         self.inner_x_names = inner_x_names
 
         if inner_lb is None or inner_ub is None:
-            (
-                default_inner_lb,
-                default_inner_ub,
-            ) = self.objective.calculator.get_interpretable_inner_par_bounds()
+            if isinstance(self.objective, AggregatedObjective):
+                for objective in self.objective._objectives:
+                    if isinstance(objective, AmiciObjective):
+                        (
+                            default_inner_lb,
+                            default_inner_ub,
+                        ) = objective.calculator.get_interpretable_inner_par_bounds()
+                    break
+            else:
+                (
+                    default_inner_lb,
+                    default_inner_ub,
+                ) = self.objective.calculator.get_interpretable_inner_par_bounds()
             inner_lb = default_inner_lb if inner_lb is None else inner_lb
             inner_ub = default_inner_ub if inner_ub is None else inner_ub
 

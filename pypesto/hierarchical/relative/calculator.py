@@ -132,37 +132,37 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 'optimizer.'
             )
 
-        if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
-            or 2 in sensi_orders
-        ):
-            inner_result, inner_parameters = self.call_amici_twice(
-                x_dct=x_dct,
-                sensi_orders=sensi_orders,
-                mode=mode,
-                amici_model=amici_model,
-                amici_solver=amici_solver,
-                edatas=edatas,
-                n_threads=n_threads,
-                x_ids=x_ids,
-                parameter_mapping=parameter_mapping,
-                fim_for_hess=fim_for_hess,
-            )
-        else:
-            inner_result, inner_parameters = self.calculate_directly(
-                x_dct=x_dct,
-                sensi_orders=sensi_orders,
-                mode=mode,
-                amici_model=amici_model,
-                amici_solver=amici_solver,
-                edatas=edatas,
-                n_threads=n_threads,
-                x_ids=x_ids,
-                parameter_mapping=parameter_mapping,
-                fim_for_hess=fim_for_hess,
-                rdatas=rdatas,
-            )
+        # if (
+        #     amici_solver.getSensitivityMethod()
+        #     == amici.SensitivityMethod_adjoint
+        #     or 2 in sensi_orders
+        # ):
+        inner_result, inner_parameters = self.call_amici_twice(
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
+        # else:
+        #     inner_result, inner_parameters = self.calculate_directly(
+        #         x_dct=x_dct,
+        #         sensi_orders=sensi_orders,
+        #         mode=mode,
+        #         amici_model=amici_model,
+        #         amici_solver=amici_solver,
+        #         edatas=edatas,
+        #         n_threads=n_threads,
+        #         x_ids=x_ids,
+        #         parameter_mapping=parameter_mapping,
+        #         fim_for_hess=fim_for_hess,
+        #         rdatas=rdatas,
+        #     )
 
         inner_result[X_INNER_OPT] = {}
         inner_result[INNER_PARAMETERS] = np.array(

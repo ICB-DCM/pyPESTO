@@ -659,9 +659,13 @@ class PetabImporter(AmiciObjectBuilder):
         Returns None, if no priors are defined.
         """
         prior_list = []
+        not_hierarchical = self.petab_problem.parameter_df[
+            'parameterType'].isna()
+        x_ids = [x_id for x_id in self.petab_problem.x_ids if
+                 not_hierarchical[x_id]]
 
         if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
-            for i, x_id in enumerate(self.petab_problem.x_ids):
+            for i, x_id in enumerate(x_ids):
                 prior_type_entry = self.petab_problem.parameter_df.loc[
                     x_id, petab.OBJECTIVE_PRIOR_TYPE
                 ]
@@ -775,11 +779,11 @@ class PetabImporter(AmiciObjectBuilder):
         prior = self.create_prior()
 
         if prior is not None:
-            if self._hierarchical:
-                raise NotImplementedError(
-                    "Hierarchical optimization in combination with priors "
-                    "is not yet supported."
-                )
+            # if self._hierarchical:
+            #     raise NotImplementedError(
+            #         "Hierarchical optimization in combination with priors "
+            #         "is not yet supported."
+            #     )
             objective = AggregatedObjective([objective, prior])
 
         if self._hierarchical:
@@ -1068,7 +1072,7 @@ class PetabStartpoints(CheckedStartpoints):
         self._free_ids = current_free_ids
         id_to_prior = dict(
             zip(
-                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
+                self._parameter_df.index[(self._parameter_df[ESTIMATE] == 1) & (self._parameter_df['parameterType'].isna())],
                 petab.parameters.get_priors_from_df(
                     self._parameter_df, mode=petab.INITIALIZATION
                 ),
