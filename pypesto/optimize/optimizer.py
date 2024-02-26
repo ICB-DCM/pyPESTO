@@ -123,7 +123,9 @@ def history_decorator(minimize):
                 optimize_options=optimize_options,
             )
             result.id = id
-            objective.history.finalize(message=result.message, exitflag=result.exitflag)
+            objective.history.finalize(
+                message=result.message, exitflag=result.exitflag
+            )
         except Exception as err:
             if optimize_options and optimize_options.allow_failed_starts:
                 import sys
@@ -132,7 +134,9 @@ def history_decorator(minimize):
                 trace = "\n".join(traceback.format_exception(*sys.exc_info()))
 
                 logger.error(f"start {id} failed:\n{trace}")
-                result = OptimizerResult(x0=x0, exitflag=-1, message=str(err), id=id)
+                result = OptimizerResult(
+                    x0=x0, exitflag=-1, message=str(err), id=id
+                )
             else:
                 raise
 
@@ -374,7 +378,9 @@ class ScipyOptimizer(Optimizer):
             if self.options is not None:
                 ls_options = self.options.copy()
                 ls_options["verbose"] = (
-                    2 if "disp" in ls_options.keys() and ls_options["disp"] else 0
+                    2
+                    if "disp" in ls_options.keys() and ls_options["disp"]
+                    else 0
                 )
                 ls_options.pop("disp", None)
                 ls_options["max_nfev"] = ls_options.pop("maxfun", None)
@@ -602,7 +608,9 @@ class IpoptOptimizer(Optimizer):
         )
 
         # the ipopt return object is a scipy.optimize.OptimizeResult
-        return OptimizerResult(x=ret.x, exitflag=ret.status, message=ret.message)
+        return OptimizerResult(
+            x=ret.x, exitflag=ret.status, message=ret.message
+        )
 
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
@@ -722,7 +730,9 @@ class PyswarmOptimizer(Optimizer):
 
         check_finite_bounds(lb, ub)
 
-        xopt, fopt = pyswarm.pso(problem.objective.get_fval, lb, ub, **self.options)
+        xopt, fopt = pyswarm.pso(
+            problem.objective.get_fval, lb, ub, **self.options
+        )
 
         optimizer_result = OptimizerResult(x=np.array(xopt), fval=fopt)
 
@@ -807,7 +817,9 @@ class CmaesOptimizer(Optimizer):
             .result
         )
 
-        optimizer_result = OptimizerResult(x=np.array(result[0]), fval=result[1])
+        optimizer_result = OptimizerResult(
+            x=np.array(result[0]), fval=result[1]
+        )
 
         return optimizer_result
 
@@ -872,7 +884,9 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
             problem.objective.get_fval, bounds, x0=x0, **self.options
         )
 
-        optimizer_result = OptimizerResult(x=np.array(result.x), fval=result.fun)
+        optimizer_result = OptimizerResult(
+            x=np.array(result.x), fval=result.fun
+        )
 
         return optimizer_result
 
@@ -945,9 +959,13 @@ class PyswarmsOptimizer(Optimizer):
 
         # check for finite values for the bounds
         if np.isfinite(lb).all() is np.False_:
-            raise ValueError("This optimizer can only handle finite lower bounds.")
+            raise ValueError(
+                "This optimizer can only handle finite lower bounds."
+            )
         if np.isfinite(ub).all() is np.False_:
-            raise ValueError("This optimizer can only handle finite upper bounds.")
+            raise ValueError(
+                "This optimizer can only handle finite upper bounds."
+            )
 
         optimizer = pyswarms.single.global_best.GlobalBestPSO(
             n_particles=self.par_popsize,
@@ -1107,11 +1125,14 @@ class NLoptOptimizer(Optimizer):
             nlopt.GN_DIRECT_L_RAND_NOSCAL,
         ]
         self.hybrid_methods = [nlopt.AUGLAG, nlopt.AUGLAG_EQ]
-        methods = self.local_methods + self.global_methods + self.hybrid_methods
+        methods = (
+            self.local_methods + self.global_methods + self.hybrid_methods
+        )
 
         if method not in methods:
             raise ValueError(
-                f'"{method}" is not a valid method. Valid ' f"methods are: {methods}"
+                f'"{method}" is not a valid method. Valid '
+                f"methods are: {methods}"
             )
 
         self.method = method
@@ -1238,7 +1259,8 @@ class NLoptOptimizer(Optimizer):
         ):
             if x_guesses is not None and x_guesses.size > 0:
                 logger.warning(
-                    f"The NLopt optimizer method {self.method} does " "not support x0."
+                    f"The NLopt optimizer method {self.method} does "
+                    "not support x0."
                 )
             return False
         return True
@@ -1307,7 +1329,10 @@ class FidesOptimizer(Optimizer):
             if self.hessian_update == "default":
                 rep += f" hessian_update={self.hessian_update}"
             else:
-                rep += f" hessian_update=" f"{self.hessian_update.__class__.__name__}"
+                rep += (
+                    f" hessian_update="
+                    f"{self.hessian_update.__class__.__name__}"
+                )
         if self.verbose is not None:
             rep += f" verbose={self.verbose}"
         if self.options is not None:
@@ -1341,7 +1366,9 @@ class FidesOptimizer(Optimizer):
             _hessian_update = self.hessian_update
 
         resfun = (
-            _hessian_update.requires_resfun if _hessian_update is not None else False
+            _hessian_update.requires_resfun
+            if _hessian_update is not None
+            else False
         )
 
         args = {"mode": MODE_RES if resfun else MODE_FUN}
@@ -1353,7 +1380,9 @@ class FidesOptimizer(Optimizer):
                 "gradient evaluation."
             )
 
-        if _hessian_update is None or (_hessian_update.requires_hess and not resfun):
+        if _hessian_update is None or (
+            _hessian_update.requires_hess and not resfun
+        ):
             if not problem.objective.has_hess:
                 raise ValueError(
                     "Specified hessian update scheme cannot be "
