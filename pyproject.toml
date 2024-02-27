@@ -53,7 +53,6 @@ convention = "pep257"
 "pypesto/C.py" = [
     "D400",
     "D205",
-    "D107",
 ]
 "*/__init__.py" = [
     "F401",
@@ -63,7 +62,6 @@ convention = "pep257"
 "pypesto/logging.py" = [
     "D400",
     "D205",
-    "D107",
 ]
 "test/*" = [
     "T201",
@@ -73,7 +71,6 @@ convention = "pep257"
 "pypesto/util.py" = [
     "D400",
     "D205",
-    "D107",
 ]
 "doc/example/*.py" = [  # ignore docstyle in example pthon files.
     "D",
