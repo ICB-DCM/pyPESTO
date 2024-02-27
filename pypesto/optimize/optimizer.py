@@ -788,7 +788,7 @@ class CmaesOptimizer(Optimizer):
         try:
             import cma
         except ImportError:
-            raise OptimizerImportError("cma")
+            raise OptimizerImportError("cmaes")
 
         result = (
             cma.CMAEvolutionStrategy(
