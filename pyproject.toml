@@ -31,6 +31,7 @@ lint.ignore = [
     "E501",
     "F403",
     "F405",
+    "D413"
 ]
 lint.select = [
     "F",  # Pyflakes
