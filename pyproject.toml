@@ -9,15 +9,6 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-line-length = 79
-skip-string-normalization = true
-
-[tool.isort]
-profile = "black"
-line_length = 79
-multi_line_output = 3
-
 [tool.ruff]
 line-length = 79
 exclude = ["amici_models"]
