@@ -43,7 +43,6 @@ class FDDelta:
     max_steps:
         Number of steps after which to update in the `FDDelta.STEPS` update
         condition.
-
     """
 
     # update conditions
@@ -107,7 +106,6 @@ class FDDelta:
         fd_method:
             FD method employed by
             :class:`pypesto.objective.finite_difference.FD`, see there.
-
         """
         # scalar to vector
         if isinstance(self.delta, float):
@@ -232,7 +230,6 @@ def to_delta(delta: Union[FDDelta, np.ndarray, float, str]) -> FDDelta:
     delta:
         Can be a vector, float, or one of Delta.UPDATE_CONDITIONS. If a
         vector or float, a constant delta is assumed.
-
     """
     if isinstance(delta, FDDelta):
         return delta
@@ -299,7 +296,6 @@ class FD(ObjectiveBase):
     >>> res = lambda x: x - x_obs
     >>> fun = lambda x: 0.5 * sum(res(x)**2)
     >>> obj = FD(Objective(fun=fun, res=res))
-
     """
 
     # finite difference types
@@ -601,7 +597,6 @@ def unit_vec(dim: int, ix: int) -> np.ndarray:
     Returns
     -------
     vector: The unit vector.
-
     """
     vector = np.zeros(shape=dim)
     vector[ix] = 1
@@ -632,7 +627,6 @@ def fd_nabla_1(
     nabla_1:
         The FD approximation to the 1st order derivatives.
         Shape (n_par, ...) with ndim > 1 if `f_fval` is not scalar-valued.
-
     """
     # parameter dimension
     n_par = len(x)
@@ -686,7 +680,6 @@ def fd_nabla_2(
         The FD approximation of the 2nd order derivative tensor.
         Shape (n_par, n_par, ...) with ndim > 2 if `f_fval` is not
         scalar-valued.
-
     """
     # parameter dimension
     n_par = len(x)

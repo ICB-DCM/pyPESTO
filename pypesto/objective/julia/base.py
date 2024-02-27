@@ -26,7 +26,6 @@ def _read_source(module_name: str, source_file: str) -> None:
     ----------
     module_name: Julia module name.
     source_file: Qualified Julia source file.
-
     """
     from julia import Main
 
@@ -90,7 +89,6 @@ class JuliaObjective(Objective):
     fun, grad, hess, res, sres:
         Names of callables within the Julia code of the corresponding
         objective functions and derivatives.
-
     """
 
     def __init__(

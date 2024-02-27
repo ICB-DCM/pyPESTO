@@ -28,7 +28,6 @@ class MemoryHistory(CountHistoryBase):
     options:
         History options, see :class:`pypesto.history.HistoryOptions`. Defaults
         to `None`, which implies default options.
-
     """
 
     def __init__(self, options: Union[HistoryOptions, dict, None] = None):

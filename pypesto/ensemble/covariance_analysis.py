@@ -19,7 +19,6 @@ def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:
     -------
     covariance_matrix:
         covariance matrix of ensemble parameters
-
     """
     # call lowlevel routine using the parameter ensemble
     return np.cov(ens.x_vectors.transpose())
@@ -43,7 +42,6 @@ def get_covariance_matrix_predictions(
     -------
     covariance_matrix:
         covariance matrix of ensemble predictions
-
     """
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
@@ -101,7 +99,6 @@ def get_spectral_decomposition_parameters(
         Eigenvalues of the covariance matrix
     eigenvectors:
         Eigenvectors of the covariance matrix
-
     """
     # check inputs
     if sum([only_identifiable_directions, only_separable_directions]) >= 2:
@@ -171,7 +168,6 @@ def get_spectral_decomposition_predictions(
         Eigenvalues of the covariance matrix
     eigenvectors:
         Eigenvectors of the covariance matrix
-
     """
     covariance = get_covariance_matrix_predictions(ens)
     return get_spectral_decomposition_lowlevel(
@@ -235,7 +231,6 @@ def get_spectral_decomposition_lowlevel(
         Eigenvalues of the covariance matrix
     eigenvectors:
         Eigenvectors of the covariance matrix
-
     """
     # get the eigenvalue decomposition
     eigenvalues, eigenvectors = np.linalg.eigh(matrix)

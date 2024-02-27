@@ -46,7 +46,6 @@ def process_result_list(
         One for each element in 'results'.
     legends: list of str
         labels for line plots
-
     """
     # check how many results were passed
     single_result = False
@@ -124,7 +123,6 @@ def process_offset_y(
     offset_y: float
        value for offsetting the later plotted values, in order to ensure
        positivity if a semilog-plot is used
-
     """
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
@@ -162,7 +160,6 @@ def process_y_limits(ax, y_limits):
     -------
     ax: matplotlib.Axes, optional
         Axes object to use.
-
     """
     # apply y-limits, if they were specified by the user
     if y_limits is not None:
@@ -239,7 +236,6 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     Returns
     -------
     The combined color.
-
     """
     if bg is None:
         bg = RGBA_WHITE
@@ -287,7 +283,6 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
         Returns
         -------
         The component of the new color.
-
         """
         return (
             fg_component * fg_alpha
@@ -322,7 +317,6 @@ def process_start_indices(
             cluster.
     result:
         Result to determine maximum allowed length and/or clusters.
-
     """
     if start_indices is None:
         start_indices = ALL
@@ -385,7 +379,6 @@ def process_parameter_indices(
         list of indices or str specifying the desired indices. Default is
         `free_only`. Other option is 'all', which included all estimated
         and fixed parameters.
-
     """
     if isinstance(parameter_indices, str):
         if parameter_indices == ALL:

@@ -58,7 +58,6 @@ def sample(
     -------
     result:
         A result with filled in sample_options part.
-
     """
     # prepare result object
     if result is None:

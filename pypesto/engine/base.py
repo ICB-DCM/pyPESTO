@@ -24,6 +24,5 @@ class Engine(abc.ABC):
             List of tasks to execute.
         progress_bar:
             Whether to display a progress bar.
-
         """
         raise NotImplementedError("This engine is not intended to be called.")

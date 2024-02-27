@@ -84,7 +84,6 @@ def optimizer_history(
     -------
     ax:
         The plot axes.
-
     """
     if isinstance(start_indices, int):
         start_indices = list(range(start_indices))
@@ -162,7 +161,6 @@ def optimizer_history_lowlevel(
     -------
     ax:
         The plot axes.
-
     """
     # axes
     if ax is None:
@@ -253,7 +251,6 @@ def get_trace(
         label for x-axis to be plotted later.
     y_label:
         label for y-axis to be plotted later.
-
     """
     # get data frames
     histories: List[HistoryBase] = result.optimize_result.history
@@ -342,7 +339,6 @@ def get_vals(
         offset for the y-axis, if this is supposed to be in log10-scale
     y_label:
         Label for y axis
-
     """
     # get list of indices
     if start_indices is None:
@@ -393,7 +389,6 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
     Returns
     -------
     labels for x and y axes
-
     """
     x_label = ""
     y_label = ""
@@ -448,7 +443,6 @@ def handle_options(
     -------
     ax:
         The plot axes.
-
     """
     # handle y-limits
     ax = process_y_limits(ax, y_limits)
@@ -504,7 +498,6 @@ def sacess_history(
     Returns
     -------
     The plot axes. `ax` or a new axes if `ax` was `None`.
-
     """
     ax = ax or plt.subplot()
 

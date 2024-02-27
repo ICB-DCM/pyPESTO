@@ -35,7 +35,6 @@ def get_umap_representation_parameters(
         first components of the umap embedding
     umap_object:
         returned fitted umap object from umap.UMAP()
-
     """
     # call lowlevel routine using the parameter vector ensemble
     return _get_umap_representation_lowlevel(
@@ -79,7 +78,6 @@ def get_umap_representation_predictions(
         first components of the umap embedding
     umap_object:
         returned fitted umap object from umap.UMAP()
-
     """
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
@@ -126,7 +124,6 @@ def get_pca_representation_parameters(
         principal components of the parameter vector ensemble
     pca_object:
         returned fitted pca object from sklearn.decomposition.PCA()
-
     """
     return _get_pca_representation_lowlevel(
         dataset=ens.x_vectors.transpose(),
@@ -172,7 +169,6 @@ def get_pca_representation_predictions(
         principal components of the parameter vector ensemble
     pca_object:
         returned fitted pca object from sklearn.decomposition.PCA()
-
     """
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
@@ -220,7 +216,6 @@ def _get_umap_representation_lowlevel(
         first components of the umap embedding
     umap_object:
         returned fitted umap object from umap.UMAP()
-
     """
     import umap
     import umap.plot
@@ -272,7 +267,6 @@ def _get_pca_representation_lowlevel(
         principal components of the parameter vector ensemble
     pca_object:
         returned fitted pca object from sklearn.decomposition.PCA()
-
     """
     import sklearn.decomposition
 

@@ -63,7 +63,6 @@ class SemiquantProblem(AmiciInnerProblem):
         A dictionary of the groups of the subproblem.
     spline_ratio:
         The ratio of the number of spline inner parameters and number of measurements for each group.
-
     """
 
     def __init__(
@@ -391,7 +390,6 @@ def spline_ixs_for_measurement_specific_parameters(
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.
-
     """
     ixs_for_par = {}
     observable_ids = amici_model.getObservableIds()

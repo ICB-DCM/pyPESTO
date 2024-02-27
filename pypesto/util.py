@@ -114,7 +114,6 @@ def is_none_or_nan(x: Union[Number, None]) -> bool:
     Returns
     -------
     True if x is None or NaN, False otherwise.
-
     """
     return x is None or np.isnan(x)
 
@@ -131,7 +130,6 @@ def is_none_or_nan_array(x: Union[Number, np.ndarray, None]) -> bool:
     Returns
     -------
     True if x is None or NaN array, False otherwise.
-
     """
     return x is None or np.isnan(x).all()
 
@@ -150,7 +148,6 @@ def allclose(
     Returns
     -------
     True if all elements of x and y are close, False otherwise.
-
     """
     # Note: We use this wrapper around np.allclose in order to more easily
     #  adjust hyper parameters for the tolerance.
@@ -172,7 +169,6 @@ def isclose(
     Returns
     -------
     Element-wise boolean comparison of x and y.
-
     """
     # Note: We use this wrapper around np.isclose in order to more easily
     #  adjust hyper parameters for the tolerance.
@@ -194,7 +190,6 @@ def get_condition_label(condition_id: str) -> str:
     Returns
     -------
     The condition label.
-
     """
     return f"condition_{condition_id}"
 
@@ -215,7 +210,6 @@ def assign_clusters(vals):
         'vals'.
     clustsize: numeric list
         Size of clusters, length equals number of clusters.
-
     """
     # sanity checks
     if vals is None or len(vals) == 0:
@@ -277,7 +271,6 @@ def delete_nan_inf(
         array of parameters without nan or inf
     fvals:
         array of fval without nan or inf
-
     """
     fvals = np.asarray(fvals)
     finite_fvals = np.isfinite(fvals) & (np.absolute(fvals) < magnitude_bound)
@@ -327,7 +320,6 @@ def tqdm(*args, enable: bool = None, **kwargs):
     -------
     progress_bar:
         A progress bar.
-
     """
     # Drop the `disable` argument unless it is not-None.
     # This way, we don't interfere with TQDM_DISABLE or other global

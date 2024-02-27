@@ -70,7 +70,6 @@ def visualize_optimized_model_fit(
     -------
     axes: `matplotlib.axes.Axes` object of the created plot.
     None: In case subplots are saved to file
-
     """
     x = result.optimize_result.list[start_index]["x"][
         pypesto_problem.x_free_indices
@@ -171,7 +170,6 @@ def time_trajectory_model(
     -------
     axes:
         `matplotlib.axes.Axes` object of the plot.
-
     """
     if problem is None:
         problem = result.problem
@@ -230,7 +228,6 @@ def _get_simulation_rdatas(
     -------
     rdatas:
         List of amici.ReturnData objects containing the simulation results.
-
     """
     # add timepoints as needed
     if simulation_timepoints is None:
@@ -328,7 +325,6 @@ def _time_trajectory_model_with_states(
     -------
     axes:
         `matplotlib.axes.Axes` object of the plot.
-
     """
     # if state_name, state_id or observable_id is not None, get indices
     # for these the AMICI plotting functions default to all indices if
@@ -398,7 +394,6 @@ def _time_trajectory_model_without_states(
     -------
     axes:
         `matplotlib.axes.Axes` object of the plot.
-
     """
     # if observable_id's is not None, get indices for these
     # the AMICI plotting functions default to all indices if `None` is

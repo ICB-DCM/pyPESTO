@@ -35,7 +35,6 @@ class MultiProcessEngine(Engine):
     method:
         Start method, any of "fork", "spawn", "forkserver", or None,
         giving the system specific default context. Defaults to ``None``.
-
     """
 
     def __init__(
@@ -68,7 +67,6 @@ class MultiProcessEngine(Engine):
         Returns
         -------
         A list of results.
-
         """
         n_tasks = len(tasks)
 

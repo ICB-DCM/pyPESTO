@@ -52,7 +52,6 @@ def plot_splines_from_pypesto_result(
         The figure.
     ax:
         The axes.
-
     """
     # Check the calculator is the InnerCalculatorCollector.
     if not isinstance(
@@ -157,7 +156,6 @@ def plot_splines_from_inner_result(
         The figure.
     ax:
         The axes.
-
     """
 
     if len(results) != len(inner_problem.groups):
@@ -279,7 +277,6 @@ def _calculate_optimal_regularization(
         The optimal slope of the linear function.
     beta_opt:
         The optimal offset of the linear function.
-
     """
     lower_trian = np.tril(np.ones((N, N)))
     xi = np.dot(lower_trian, s)
@@ -476,7 +473,6 @@ def _obtain_regularization_for_start(
     Returns
     -------
     The regularization term of the objective function for the start index.
-
     """
     # Get the parameters from the pypesto result for the start_index.
     x_dct = dict(

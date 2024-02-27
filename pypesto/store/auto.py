@@ -40,7 +40,6 @@ def autosave(
         method the function is called in.
     overwrite:
         Whether to overwrite the currently existing results.
-
     """
     if filename is None:
         return

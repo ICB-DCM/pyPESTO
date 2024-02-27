@@ -24,7 +24,6 @@ class PredictorTask(Task):
         Whether to compute function values or residuals.
     id:
         The input ID.
-
     """
 
     def __init__(

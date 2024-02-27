@@ -34,7 +34,6 @@ class HierarchicalProblem(Problem):
         Only relevant if hierarchical is True. Contains the bounds of easily
         interpretable inner parameters only, e.g. noise parameters, scaling
         factors, offsets.
-
     """
 
     def __init__(

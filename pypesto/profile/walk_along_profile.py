@@ -55,7 +55,6 @@ def walk_along_profile(
     Returns
     -------
     The current profile, modified in-place.
-
     """
     if par_direction not in (-1, 1):
         raise AssertionError("par_direction must be -1 or 1")

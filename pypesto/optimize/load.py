@@ -54,7 +54,6 @@ def fill_result_from_history(
     Returns
     -------
     result: The in-place modified result.
-
     """
     if optimize_options is None:
         optimize_options = OptimizeOptions()
@@ -132,7 +131,6 @@ def read_history_from_file(
         Multistart id.
     history_options:
         Optimizer history options.
-
     """
     if history_options.storage_file is None:
         raise ValueError("No history file specified.")
@@ -189,7 +187,6 @@ def read_result_from_file(
         Multistart id.
     history_options:
         Optimizer history options.
-
     """
     opt_hist = read_history_from_file(
         problem=problem, history_options=history_options, identifier=identifier
@@ -229,7 +226,6 @@ def read_results_from_file(
         Number of performed multistarts.
     history_options:
         Optimizer history options.
-
     """
     if history_options.storage_file is None:
         raise ValueError("No history file specified.")
@@ -274,7 +270,6 @@ def optimization_result_from_history(
     -------
         A result object in which the optimization result is constructed from
         history. But missing "Time, Message and Exitflag" keys.
-
     """
     result = Result()
     with h5py.File(filename, "r") as f:

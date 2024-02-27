@@ -119,7 +119,6 @@ class ESSOptimizer:
             Whether the :meth:`minimize` result should include the final
             RefSet, or just the local search results and the overall best
             parameters.
-
         """
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
@@ -255,7 +254,6 @@ class ESSOptimizer:
             **Deprecated. Use ``problem.startpoint_method`` instead.**
         refset:
             The initial RefSet or ``None`` to auto-generate.
-
         """
         self._initialize_minimize(
             problem=problem, startpoint_method=startpoint_method, refset=refset
@@ -356,7 +354,6 @@ class ESSOptimizer:
         Returns
         -------
         ``True`` if not of the exit criteria is met, ``False`` otherwise.
-
         """
         # TODO DW which further stopping criteria: gtol, fatol, frtol?
 
@@ -400,7 +397,6 @@ class ESSOptimizer:
             (`dim_refset` x `dim_problem`).
         fy:
             The objective values corresponding to the parameters in `y`.
-
         """
         y = np.zeros(shape=(self.refset.dim, self.evaluator.problem.dim))
         fy = np.full(shape=self.refset.dim, fill_value=np.inf)
@@ -441,7 +437,6 @@ class ESSOptimizer:
         Returns
         -------
         A new parameter vector.
-
         """
         if i == j:
             raise ValueError("i == j")

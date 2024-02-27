@@ -66,7 +66,6 @@ class CESSOptimizer:
     References
     ----------
     .. footbibliography::
-
     """
 
     def __init__(
@@ -91,7 +90,6 @@ class CESSOptimizer:
             Maximum walltime in seconds. Will only be checked between local
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search. Defaults to no limit.
-
         """
         self.max_walltime_s = max_walltime_s
         self.ess_init_args = ess_init_args
@@ -122,7 +120,6 @@ class CESSOptimizer:
         startpoint_method:
             Method for choosing starting points.
             **Deprecated. Use ``problem.startpoint_method`` instead.**
-
         """
         if startpoint_method is not None:
             warn(
@@ -308,7 +305,6 @@ class CESSOptimizer:
         Returns
         -------
         ``True`` if none of the exit criteria is met, ``False`` otherwise.
-
         """
         # TODO DW which further stopping criteria: gtol, fatol, frtol?
 

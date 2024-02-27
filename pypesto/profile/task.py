@@ -44,7 +44,6 @@ class ProfilerTask(Task):
             Handle of the method which creates the next profile point proposal
         i_par:
             index for the current parameter
-
         """
         super().__init__()
 

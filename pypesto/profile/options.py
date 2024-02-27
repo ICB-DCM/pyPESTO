@@ -38,7 +38,6 @@ class ProfileOptions(dict):
     whole_path:
         Whether to profile the whole bounds or only till we get below the
         ratio.
-
     """
 
     def __init__(
@@ -89,7 +88,6 @@ class ProfileOptions(dict):
         Parameters
         ----------
         maybe_options: ProfileOptions or dict
-
         """
         if isinstance(maybe_options, ProfileOptions):
             return maybe_options

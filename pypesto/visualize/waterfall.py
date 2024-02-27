@@ -75,7 +75,6 @@ def waterfall(
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     # axes
     if ax is None:
@@ -222,7 +221,6 @@ def waterfall_lowlevel(
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     # axes
     if ax is None:
@@ -322,7 +320,6 @@ def process_offset_for_list(
         List of arrays of function values for each result
     offset_y:
         offset for the y-axis
-
     """
     min_val = np.inf
     fvals_all = []
@@ -364,7 +361,6 @@ def get_ordering_by_start_id(results: Sequence[Result]) -> List[int]:
     Returns
     -------
     The ordering.
-
     """
     if len(results) < 2:
         raise ValueError("Multiple result objects are required.")
@@ -427,7 +423,6 @@ def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     # handle reference points
     for i_ref in ref:

@@ -26,7 +26,6 @@ class AggregatedObjective(ObjectiveBase):
             Sequence of names of the (optimized) parameters.
             (Details see documentation of x_names in
             :class:`pypesto.ObjectiveBase`)
-
         """
         # input typechecks
         if not isinstance(objectives, Sequence):
@@ -96,7 +95,6 @@ class AggregatedObjective(ObjectiveBase):
         kwargs_list:
             Objective-specific keyword arguments, where the dictionaries are
             ordered by the objectives.
-
         """
         if kwargs_list is None:
             kwargs_list = [{}] * len(self._objectives)
@@ -139,7 +137,6 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     ----------
     rvals:
         results to aggregate
-
     """
     # sum over fval/grad/hess, if available in all rvals
     result = {

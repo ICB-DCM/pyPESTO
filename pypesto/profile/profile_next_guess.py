@@ -57,7 +57,6 @@ def next_guess(
     Returns
     -------
     The next initial guess as base for the next profile point.
-
     """
     if update_type == "fixed_step":
         return fixed_step(
@@ -115,7 +114,6 @@ def fixed_step(
     Returns
     -------
     The updated parameter vector, of size `dim_full`.
-
     """
     delta_x = np.zeros(len(x))
     delta_x[par_index] = par_direction * options.default_step_size
@@ -175,7 +173,6 @@ def adaptive_step(
     Returns
     -------
     The updated parameter vector, of size `dim_full`.
-
     """
 
     # restrict step proposal to minimum and maximum step size
@@ -307,7 +304,6 @@ def handle_profile_history(
         The regression polynomial for profile extrapolation.
     delta_obj_value:
         The difference of the objective function value between the last point and `global_opt`.
-
     """
     n_profile_points = len(current_profile.fval_path)
 
@@ -438,7 +434,6 @@ def do_line_search(
     -------
     Parameter vector that is expected to yield the objective function value
     closest to `next_obj_target`.
-
     """
     # Was the initial step too big or too small?
     direction = "decrease" if next_obj_target < next_obj else "increase"

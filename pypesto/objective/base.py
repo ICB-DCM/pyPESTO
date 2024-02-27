@@ -44,7 +44,6 @@ class ObjectiveBase(ABC):
     pre_post_processor:
         Preprocess input values to and postprocess output values from
         __call__. Configured in `update_from_problem()`.
-
     """
 
     def __init__(
@@ -165,7 +164,6 @@ class ObjectiveBase(ABC):
             and derivatives in the requested order (if only 1 value, the tuple
             is flattened). If `return_dict`, then instead a dict is returned
             with function values and derivatives indicated by ids.
-
         """
         # copy parameter vector to prevent side effects
         # np.array creates a copy of x already
@@ -230,7 +228,6 @@ class ObjectiveBase(ABC):
         -------
         result:
             A dict containing the results.
-
         """
 
     def check_mode(self, mode: ModeType) -> bool:
@@ -249,7 +246,6 @@ class ObjectiveBase(ABC):
         -------
         flag:
             Boolean indicating whether mode is supported
-
         """
         if mode == MODE_FUN:
             return self.has_fun
@@ -290,7 +286,6 @@ class ObjectiveBase(ABC):
         flag:
             Boolean indicating whether combination of sensi_orders and mode
             is supported
-
         """
         if not sensi_orders:
             return True
@@ -411,7 +406,6 @@ class ObjectiveBase(ABC):
         x_fixed_vals:
             Vector of the same length as x_fixed_indices, containing the values
             of the fixed parameters.
-
         """
         self.pre_post_processor = FixedParametersProcessor(
             dim_full=dim_full,
@@ -444,7 +438,6 @@ class ObjectiveBase(ABC):
             The label of the column that will be minimized for each parameter.
             Valid options are the column labels of the dataframe returned by
             the `ObjectiveBase.check_grad` method.
-
         """
         if "eps" in kwargs:
             raise KeyError(
@@ -520,7 +513,6 @@ class ObjectiveBase(ABC):
         -------
         result:
             gradient, finite difference approximations and error estimates.
-
         """
         if x_indices is None:
             x_indices = list(range(len(x)))
@@ -676,7 +668,6 @@ class ObjectiveBase(ABC):
         -------
         bool
             Indicates whether gradients match (True) FDs or not (False)
-
         """
         par = np.asarray(x)
         if x_free is None:

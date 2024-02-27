@@ -46,7 +46,6 @@ class NegLogParameterPriors(ObjectiveBase):
     log-densities and their corresponding derivatives.
     Internally, values are multiplied by -1, since pyPESTO expects the
     Objective function to be of a negative log-density type.
-
     """
 
     def __init__(
@@ -64,7 +63,6 @@ class NegLogParameterPriors(ObjectiveBase):
             Format see above.
         x_names:
             Sequence of parameter names (optional).
-
         """
         self.prior_list = prior_list
         super().__init__(x_names)
@@ -88,7 +86,6 @@ class NegLogParameterPriors(ObjectiveBase):
         -------
         result:
             A dict containing the results.
-
         """
         res = {}
 
@@ -435,7 +432,6 @@ def _prior_densities(
     log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx:
         Log density, first and second derivative, and if possible a residual
         representation and its first derivative.
-
     """
     if prior_type in [C.UNIFORM, C.PARAMETER_SCALE_UNIFORM]:
 

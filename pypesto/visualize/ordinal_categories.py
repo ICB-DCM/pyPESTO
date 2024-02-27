@@ -62,7 +62,6 @@ def plot_categories_from_pypesto_result(
         The figure.
     axes:
         The axes.
-
     """
 
     # Get the parameters from the pypesto result for the start_index.
@@ -192,7 +191,6 @@ def plot_categories_from_inner_result(
         The figure.
     axes:
         The axes.
-
     """
 
     if len(results) != len(inner_problem.groups):

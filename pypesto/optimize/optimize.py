@@ -79,7 +79,6 @@ def minimize(
     -------
     Result object containing the results of all multistarts in
     `result.optimize_result`.
-
     """
     # optimizer
     if optimizer is None:

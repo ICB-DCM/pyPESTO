@@ -36,7 +36,6 @@ def preprocess_hdf5_history(
     -------
     history_requires_postprocessing:
         Whether history storage post-processing is required.
-
     """
     storage_file = history_options.storage_file
 
@@ -98,7 +97,6 @@ def postprocess_hdf5_history(
         are to be gathered.
     history_options:
         History options used in the optimization.
-
     """
     # create hdf5 file that gathers the others within history group
     if "{id}" in storage_file:
@@ -133,7 +131,6 @@ def bound_n_starts_from_env(n_starts: int):
     n_starts_new:
         The original number of starts, or the minimum with the environment
         variable, if exists.
-
     """
     if C.PYPESTO_MAX_N_STARTS not in os.environ:
         return n_starts

@@ -51,7 +51,6 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
     This function should rather be implemented as class method of JaxObjective,
     but this is not possible at the time of writing as this is not supported
     by signature inspection in the underlying bind call.
-
     """
     return hcb.call(
         obj.cached_fval,
@@ -80,7 +79,6 @@ def _device_fun_grad(obj: "JaxObjective", x: jnp.array):
     This function should rather be implemented as class method of JaxObjective,
     but this is not possible at the time of writing as this is not supported
     by signature inspection in the underlying bind call.
-
     """
     return hcb.call(
         obj.cached_grad,
@@ -111,7 +109,6 @@ def _device_fun_hess(obj: "JaxObjective", x: jnp.array):
     This function should rather be implemented as class method of JaxObjective,
     but this is not possible at the time of writing as this is not supported
     by signature inspection in the underlying bind call.
-
     """
     return hcb.call(
         obj.cached_hess,
@@ -158,7 +155,6 @@ class JaxObjective(ObjectiveBase):
         pyPESTO objective
     jax_fun:
         jax function (not jitted) that computes input to the pyPESTO objective
-
     """
 
     def __init__(

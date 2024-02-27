@@ -45,7 +45,6 @@ class ProfilerResult(dict):
     -----
     Any field not supported by the profiler or the profiling optimizer is
     filled with None. Some fields are filled by pypesto itself.
-
     """
 
     def __init__(
@@ -153,7 +152,6 @@ class ProfilerResult(dict):
             Number of gradient evaluations performed to find `x`.
         n_hess:
             Number of Hessian evaluations performed to find `x`.
-
         """
         self.x_path = np.hstack((self.x_path, x[..., np.newaxis]))
         self.fval_path = np.hstack((self.fval_path, fval))
@@ -202,7 +200,6 @@ class ProfileResult:
         -------
         index:
             The index of the created profile list.
-
         """
         self.list.append([])
         return len(self.list) - 1
@@ -222,7 +219,6 @@ class ProfileResult:
         profile_list:
             Index specifying the profile list to which we want to append.
             Defaults to the last list.
-
         """
         if profile_list is None:
             profile_list = -1  # last
@@ -247,7 +243,6 @@ class ProfileResult:
             profiler_result.
         profile_list:
             Index specifying the profile list. Defaults to the last list.
-
         """
         if profile_list is None:
             profile_list = -1  # last
@@ -263,7 +258,6 @@ class ProfileResult:
             Integer specifying the profile index.
         profile_list:
             Index specifying the profile list. Defaults to the last list.
-
         """
         if profile_list is None:
             profile_list = -1  # last

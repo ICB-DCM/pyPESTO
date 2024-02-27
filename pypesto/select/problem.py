@@ -32,7 +32,6 @@ class Problem:
         Passed to the constructor of :class:``ModelProblem``.
     petab_select_problem:
         A PEtab Select problem.
-
     """
 
     # FIXME rename `best_model` to `selected_model` everywhere
@@ -75,7 +74,6 @@ class Problem:
         Returns
         -------
         A :class:`MethodCaller` instance.
-
         """
         kwargs = kwargs.copy()
         model_problem_options = self.model_problem_options | kwargs.pop(
@@ -110,7 +108,6 @@ class Problem:
         Args:
             newly_calibrated_models:
                 See attributes of :class:`Problem`.
-
         """
         self.newly_calibrated_models = newly_calibrated_models
         self.calibrated_models.update(self.newly_calibrated_models)
@@ -151,7 +148,6 @@ class Problem:
               model hashes as keys and models as values; and
            3. all candidate models from all iterations, as a `dict` with
               model hashes as keys and models as values.
-
         """
         # TODO move some options to PEtab Select? e.g.:
         # - startpoint_latest_mle
@@ -194,7 +190,6 @@ class Problem:
         Returns
         -------
         The best models (the best model at each iteration).
-
         """
         best_models = []
         self.handle_select_kwargs(kwargs)
@@ -248,7 +243,6 @@ class Problem:
 
            1. the best model; and
            2. the best models (the best model at each iteration).
-
         """
         self.handle_select_kwargs(kwargs)
         model_lists = []

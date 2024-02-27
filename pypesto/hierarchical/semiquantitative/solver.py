@@ -93,7 +93,6 @@ class SemiquantInnerSolver(InnerSolver):
         Returns
         -------
         List of optimization results of the inner subproblem.
-
         """
         inner_results = []
         for group in problem.get_groups_for_xs(InnerParameterType.SPLINE):
@@ -138,7 +137,6 @@ class SemiquantInnerSolver(InnerSolver):
         Returns
         -------
         Inner objective function value.
-
         """
         if False in (
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
@@ -201,7 +199,6 @@ class SemiquantInnerSolver(InnerSolver):
         Returns
         -------
         The gradients with respect to the outer parameters.
-
         """
         already_calculated = set()
 
@@ -377,7 +374,6 @@ class SemiquantInnerSolver(InnerSolver):
             The spline inner parameters.
         group_dict:
             The group dictionary.
-
         """
         (
             distance_between_bases,
@@ -470,7 +466,6 @@ class SemiquantInnerSolver(InnerSolver):
             The rescaled spline bases.
         intervals_per_sim:
             List of indices of intervals each simulation belongs to.
-
         """
         min_idx = np.argmin(sim_all)
         max_idx = np.argmax(sim_all)
@@ -554,7 +549,6 @@ class SemiquantInnerSolver(InnerSolver):
             Maximal measurement value.
         min_diff:
             Minimal difference between spline parameters.
-
         """
         range_all = max_meas - min_meas
 
@@ -635,7 +629,6 @@ def _calculate_nllh_for_group(
     Returns
     -------
     Negative log-likelihood.
-
     """
     # Calculate residuals
     residuals_squared = _calculate_residuals_for_group(
@@ -722,7 +715,6 @@ def _calculate_nllh_gradient_for_group(
     Returns
     -------
     Gradient of the negative log-likelihood wrt. spline differences s.
-
     """
     # Calculate gradient of residuals
     residuals_squared_gradient = _calculate_residuals_gradient_for_group(
@@ -786,7 +778,6 @@ def _calculate_sigma_for_group(
         The sum of squared residuals divided by 2.
     n_datapoints:
         The number of datapoints.
-
     """
     sigma = np.sqrt(2 * residuals_squared / n_datapoints)
 
@@ -1091,7 +1082,6 @@ def save_inner_parameters_to_inner_problem(
         List of inner parameters.
     s : np.ndarray
         Reformulated inner spline parameters.
-
     """
     group_dict = inner_problem.groups[group]
     inner_spline_parameters = inner_problem.get_xs_for_group(group)
@@ -1128,7 +1118,6 @@ def get_monotonicity_measure(measurement, simulation):
     -------
     inversions : int
         Number of inversions.
-
     """
     if len(measurement) != len(simulation):
         raise ValueError(

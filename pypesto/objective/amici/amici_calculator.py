@@ -85,7 +85,6 @@ class AmiciCalculator:
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
-
         """
         import amici.parameter_mapping
 

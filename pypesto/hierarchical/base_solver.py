@@ -45,5 +45,4 @@ class InnerSolver:
         A dictionary of inner parameter ids and their optimal values for the
         relative inner problem, or a list of inner optimization results
         for the semiquantitative and ordinal inner problems.
-
         """

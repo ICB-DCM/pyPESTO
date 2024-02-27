@@ -66,7 +66,6 @@ class HistoryBase(ABC):
         result:
             The objective function values for parameters `x`, sensitivities
             `sensi_orders` and mode `mode`.
-
         """
 
     def finalize(
@@ -83,7 +82,6 @@ class HistoryBase(ABC):
             Optimizer message to be saved.
         exitflag:
             Optimizer exitflag to be saved.
-
         """
 
     @abstractmethod
@@ -502,7 +500,6 @@ def add_fun_from_res(result: ResultDict) -> ResultDict:
     Returns
     -------
     Result dictionary, adding whatever is possible to calculate.
-
     """
     result = result.copy()
 
@@ -532,7 +529,6 @@ def reduce_result_via_options(
     Returns
     -------
     Result reduced to what is intended to be stored in history.
-
     """
     result = result.copy()
 

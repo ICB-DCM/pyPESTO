@@ -56,7 +56,6 @@ class RelativeInnerSolver(InnerSolver):
             List of sigma matrices from the model, as provided in AMICI's
             ``ReturnData.sigmay``. Same order as simulations in the
             PEtab problem.
-
         """
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
@@ -135,7 +134,6 @@ class RelativeInnerSolver(InnerSolver):
         Returns
         -------
         The gradients with respect to the outer parameters.
-
         """
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
@@ -227,7 +225,6 @@ class RelativeInnerSolver(InnerSolver):
             The rdatas to apply the inner parameters to.
         inner_parameters:
             The inner parameters to apply to the rdatas.
-
         """
         sim = [rdata["y"] for rdata in rdatas]
         sigma = [rdata["sigmay"] for rdata in rdatas]
@@ -288,7 +285,6 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
         scaled:
             Whether to scale the results to the parameter scale specified in
             ``problem``.
-
         """
         x_opt = {}
         data = copy.deepcopy(problem.data)
@@ -410,7 +406,6 @@ class NumericalInnerSolver(RelativeInnerSolver):
     x_guesses:
         Cached optimized parameter vectors, supplied as guesses to the next
         `solve` call.
-
     """
 
     def __init__(
@@ -468,7 +463,6 @@ class NumericalInnerSolver(RelativeInnerSolver):
         scale:
             Whether to scale the results to the parameter scale specified in
             ``problem``.
-
         """
         pars = list(problem.xs.values())
 
@@ -580,7 +574,6 @@ class NumericalInnerSolver(RelativeInnerSolver):
         Returns
         -------
         The sampled startpoints appended to the cached startpoints.
-
         """
         if self.minimize_kwargs["n_starts"] == 1 and self.x_guesses is None:
             return np.array(

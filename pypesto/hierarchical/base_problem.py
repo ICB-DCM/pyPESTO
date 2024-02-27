@@ -30,7 +30,6 @@ class InnerProblem:
     data:
         Measurement data. One matrix (`num_timepoints` x `num_observables`)
         per simulation condition. Missing observations as NaN.
-
     """
 
     def __init__(self, xs: list[InnerParameter], data: list[np.ndarray]):
@@ -104,7 +103,6 @@ class InnerProblem:
         scaled:
             Whether the parameters should be returned on parameter scale (``True``)
             or on linear scale (``False``).
-
         """
         return {
             x.inner_parameter_id: (
@@ -129,7 +127,6 @@ class InnerProblem:
         -------
         ``True`` if there aren't any parameters associated with this problem,
         ``False`` otherwise.
-
         """
         return len(self.xs) == 0
 
@@ -169,7 +166,6 @@ class AmiciInnerProblem(InnerProblem):
     ----------
     edatas:
         AMICI ``ExpDataView``s for each simulation condition.
-
     """
 
     def __init__(self, edatas: list[amici.ExpData], **kwargs):
@@ -190,7 +186,6 @@ class AmiciInnerProblem(InnerProblem):
         Returns
         -------
         Whether the data sets are consistent.
-
         """
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
@@ -244,7 +239,6 @@ def ix_matrices_from_arrays(
     simulation condition. Therein, ``True`` indicates that the respective
     parameter is used for the model output at the respective timepoint,
     observable and condition index.
-
     """
     ix_matrices = {
         id: [np.zeros_like(edata, dtype=bool) for edata in edatas]

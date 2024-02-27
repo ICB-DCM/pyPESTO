@@ -58,7 +58,6 @@ class RelativeAmiciCalculator(AmiciCalculator):
         inner_solver:
             A solver to solve ``inner_problem``.
             Defaults to ``pypesto.hierarchical.solver.AnalyticalInnerSolver``.
-
         """
         super().__init__()
 
@@ -125,7 +124,6 @@ class RelativeAmiciCalculator(AmiciCalculator):
         -------
         inner_result:
             A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
-
         """
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError(

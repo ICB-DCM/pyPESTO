@@ -47,7 +47,6 @@ def with_h5_file(mode: str):
     mode:
         Access mode, see
         https://docs.h5py.org/en/stable/high/file.html.
-
     """
     modes = ["r", "a"]
     if mode not in modes:
@@ -103,7 +102,6 @@ class Hdf5History(HistoryBase):
         HDF5 file name.
     options:
         History options. Defaults to ``None``.
-
     """
 
     def __init__(
@@ -390,7 +388,6 @@ class Hdf5History(HistoryBase):
         Returns
         -------
         The entries ix for the key entry_id.
-
         """
         if ix is None:
             ix = range(len(self))
@@ -467,7 +464,6 @@ class Hdf5History(HistoryBase):
         Returns
         -------
         True if the file is editable, False otherwise.
-
         """
         try:
             with h5py.File(self.file, "a") as f:
@@ -503,7 +499,6 @@ class Hdf5History(HistoryBase):
         Returns
         -------
         The newly created :class:`Hdf5History`.
-
         """
         history = Hdf5History(file=file, id=id_)
         history._f = h5py.File(history.file, mode="a")

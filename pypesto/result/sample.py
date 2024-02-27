@@ -34,7 +34,6 @@ class McmcPtResult(dict):
 
     Here, `n_chain` denotes the number of chains, `n_iter` the number of
     iterations (i.e., the chain length), and `n_par` the number of parameters.
-
     """
 
     def __init__(

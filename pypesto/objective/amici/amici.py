@@ -134,7 +134,6 @@ class AmiciObjective(ObjectiveBase):
             Determines which quantities will be computed by AMICI,
             see ``amici.Solver.setReturnDataReportingMode``. Set to ``None``
             to compute only the minimum required information.
-
         """
         import amici
 
@@ -456,7 +455,6 @@ class AmiciObjective(ObjectiveBase):
         -------
         result:
             A dict containing the results.
-
         """
         import amici
 
@@ -624,7 +622,6 @@ class AmiciObjective(ObjectiveBase):
         Returns
         -------
         The customized copy of this objective.
-
         """
         if timepoints is None and timepoints_global is None:
             raise KeyError("Timepoints were not specified.")
@@ -664,7 +661,6 @@ class AmiciObjective(ObjectiveBase):
         -------
         bool
             Indicates whether gradients match (True) FDs or not (False)
-
         """
         if x is None and "petab_problem" in dir(self.amici_object_builder):
             x = self.amici_object_builder.petab_problem.x_nominal_scaled

@@ -62,7 +62,6 @@ class PredictionConditionResult:
             Standard deviations of postprocessed observables
         x_names:
             IDs of model parameter w.r.t to which sensitivities were computed
-
         """
         self.timepoints = timepoints
         self.output_ids = output_ids
@@ -140,7 +139,6 @@ class PredictionResult:
             and simulation conditions)
         comment:
             An additional note, which can be attached to this prediction
-
         """
         # cast the result per condition
         self.conditions = [
@@ -194,7 +192,6 @@ class PredictionResult:
         ----------
         output_file:
             path to file/folder to which results will be written
-
         """
 
         def _prepare_csv_output(output_file):
@@ -276,7 +273,6 @@ class PredictionResult:
             path to file/folder to which results will be written
         base_path:
             base path in the h5 file
-
         """
         # check if the file exists and append to it in case it does
         output_path = Path(output_file)

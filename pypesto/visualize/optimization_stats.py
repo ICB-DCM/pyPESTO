@@ -61,7 +61,6 @@ def optimization_run_properties_one_plot(
         result1,
         properties_to_plot=['time', 'n_grad'],
         colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
-
     """
     if properties_to_plot is None:
         properties_to_plot = [
@@ -174,7 +173,6 @@ def optimization_run_properties_per_multistart(
     optimization_properties_per_multistart(
         [result1, result2], properties_to_plot=['time', 'n_fval'],
         colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
-
     """
     if properties_to_plot is None:
         properties_to_plot = [
@@ -257,7 +255,6 @@ def optimization_run_property_per_multistart(
     -------
     axes:
         The plot axes.
-
     """
     supported_properties = {
         "time": "Wall-clock time (seconds)",
@@ -376,7 +373,6 @@ def stats_lowlevel(
     -------
     ax:
         The plot axes.
-
     """
     fvals = result.optimize_result.fval
     values = [[res[property_name]] for res in result.optimize_result.list]

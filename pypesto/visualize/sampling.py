@@ -71,7 +71,6 @@ def sampling_fval_traces(
     -------
     ax:
         The plot axes.
-
     """
     import seaborn as sns
 
@@ -142,7 +141,6 @@ def _get_level_percentiles(level: float) -> Tuple[float, float]:
     Returns
     -------
     The percentiles, with the lower percentile first.
-
     """
     lower_percentile = (100 - level) / 2
     return lower_percentile, 100 - lower_percentile
@@ -174,7 +172,6 @@ def _get_statistic_data(
     Predicted values and their corresponding time points. A tuple of two
     sequences, where the first sequence is time points, and the second
     sequence is predicted values at the corresponding time points.
-
     """
     condition_index = summary[statistic].condition_ids.index(condition_id)
     condition_result = summary[statistic].conditions[condition_index]
@@ -236,7 +233,6 @@ def _plot_trajectories_by_condition(
         Measurement data that has already been grouped by condition and output,
         where the keys are `(condition_id, output_id)` 2-tuples, and the values
         are `[sequence of x-axis values, sequence of y-axis values]`.
-
     """
     # Each subplot has all data for a single condition.
     for condition_index, condition_id in enumerate(condition_ids):
@@ -486,7 +482,6 @@ def _get_condition_and_output_ids(
     A 2-tuple, with the following indices and values.
     - `0`: a list of all condition IDs.
     - `1`: a list of all output IDs.
-
     """
     # For now, all prediction results must predict for the same set of
     # conditions. Can support different conditions later.
@@ -574,7 +569,6 @@ def _handle_legends(
         Measurement data that has already been grouped by condition and output,
         where the keys are `(condition_id, output_id)` 2-tuples, and the values
         are `[sequence of x-axis values, sequence of y-axis values]`.
-
     """
     # Fake plots for legend line styles
     fake_data = [[0], [0]]
@@ -703,7 +697,6 @@ def _handle_colors(
     A 2-tuple, with the following indices and values.
     - `0`: a list of opacities, one per level.
     - `1`: a list of colors, one per variable.
-
     """
     level_opacities = sorted(
         # min 30%, max 100%, opacity
@@ -794,7 +787,6 @@ def sampling_prediction_trajectories(
     -------
     axes:
         The plot axes.
-
     """
     if labels is None:
         labels = {}
@@ -1002,7 +994,6 @@ def sampling_parameter_cis(
     -------
     ax:
         The plot axes.
-
     """
     if alpha is None:
         alpha = [95]
@@ -1118,7 +1109,6 @@ def sampling_parameter_traces(
     -------
     ax:
         The plot axes.
-
     """
     import seaborn as sns
 
@@ -1225,7 +1215,6 @@ def sampling_scatter(
     -------
     ax:
         The plot axes.
-
     """
     import seaborn as sns
 
@@ -1296,7 +1285,6 @@ def sampling_1d_marginals(
     --------
     ax:
         matplotlib-axes
-
     """
     import seaborn as sns
 
@@ -1387,7 +1375,6 @@ def get_data_to_plot(
         Parameter upper bounds to be plotted.
     param_names:
         Parameter names to be plotted.
-
     """
     # get parameters and fval results as numpy arrays (trace_x is numpy array)
     arr_param = np.asarray(result.sample_result.trace_x[i_chain])

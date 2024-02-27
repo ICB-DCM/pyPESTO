@@ -58,7 +58,6 @@ class SemiquantCalculator(AmiciCalculator):
         inner_solver:
             A solver to solve ``inner_problem``.
             Defaults to ``SplineInnerSolver``.
-
         """
         super().__init__()
         self.inner_problem = inner_problem
@@ -121,7 +120,6 @@ class SemiquantCalculator(AmiciCalculator):
         -------
         inner_result:
             A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
-
         """
         if mode == MODE_RES:
             raise ValueError(

@@ -30,7 +30,6 @@ def check_overwrite(
        should be checked
     target: name of the group, whose existence is checked
     overwrite: if ``True``, it deletes the target in ``f``
-
     """
     if target in f:
         if overwrite:
@@ -52,7 +51,6 @@ class ProblemHDF5Writer:
     ----------
     storage_filename:
         HDF5 result file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -63,7 +61,6 @@ class ProblemHDF5Writer:
         ----------
         storage_filename:
             HDF5 problem file name
-
         """
         self.storage_filename = str(storage_filename)
 
@@ -107,7 +104,6 @@ class OptimizationResultHDF5Writer:
     ----------
     storage_filename:
         HDF5 result file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -118,7 +114,6 @@ class OptimizationResultHDF5Writer:
         ----------
         storage_filename:
             HDF5 result file name
-
         """
         self.storage_filename = str(storage_filename)
 
@@ -158,7 +153,6 @@ class SamplingResultHDF5Writer:
     ----------
     storage_filename:
         HDF5 result file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -169,7 +163,6 @@ class SamplingResultHDF5Writer:
         ----------
         storage_filename:
             HDF5 result file name
-
         """
         self.storage_filename = str(storage_filename)
 
@@ -213,7 +206,6 @@ class ProfileResultHDF5Writer:
     ----------
     storage_filename:
         HDF5 result file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -224,7 +216,6 @@ class ProfileResultHDF5Writer:
         ----------
         storage_filename:
             HDF5 result file name
-
         """
         self.storage_filename = str(storage_filename)
 
@@ -304,7 +295,6 @@ def write_result(
         Read the profile result.
     sample:
         Read the sample result.
-
     """
     if not any([optimize, profile, sample]):
         optimize = True

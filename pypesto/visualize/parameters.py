@@ -81,7 +81,6 @@ def parameters(
     -------
     ax:
         The plot axes.
-
     """
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
@@ -209,7 +208,6 @@ def parameter_hist(
     -------
     ax:
         The plot axes.
-
     """
     if ax is None:
         ax = plt.subplots()[1]
@@ -280,7 +278,6 @@ def parameters_lowlevel(
     -------
     ax:
         The plot axes.
-
     """
 
     if size is None:
@@ -376,7 +373,6 @@ def handle_inputs(
         objective function values which are needed for plotting later
     xs:
         parameter values which will be plotted later
-
     """
     # retrieve results
     fvals = result.optimize_result.fval
@@ -458,7 +454,6 @@ def _handle_inner_inputs(
         Inner parameter lower bounds.
     inner_ub:
         Inner parameter upper bounds.
-
     """
     inner_xs = [
         res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
@@ -528,7 +523,6 @@ def parameters_correlation_matrix(
     -------
     ax:
         The plot axis.
-
     """
     import seaborn as sns
 
@@ -597,7 +591,6 @@ def optimization_scatter(
     -------
     ax:
         The plot axis.
-
     """
     import seaborn as sns
 

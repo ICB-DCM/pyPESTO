@@ -41,7 +41,6 @@ class Sampler(abc.ABC):
             The problem for which to sample.
         x0:
             Should, but is not required to, be used as initial parameter.
-
         """
 
     @abc.abstractmethod
@@ -58,7 +57,6 @@ class Sampler(abc.ABC):
             Number of samples to generate.
         beta:
             Inverse of the temperature to which the system is elevated.
-
         """
 
     @abc.abstractmethod
@@ -74,7 +72,6 @@ class Sampler(abc.ABC):
         -------
         default_options:
             Default sampler options.
-
         """
         return {}
 
@@ -87,7 +84,6 @@ class Sampler(abc.ABC):
         ----------
         options:
             Options configuring the sampler.
-
         """
         used_options = cls.default_options()
         if options is None:
@@ -116,7 +112,6 @@ class InternalSample:
         Log-posterior value (negative function value).
     lprior:
         Log-prior value (negative function value).
-
     """
 
     def __init__(self, x: np.ndarray, lpost: float, lprior: float):
@@ -140,7 +135,6 @@ class InternalSampler(Sampler):
         -------
         internal_sample:
             The last sample in the chain in the exchange format.
-
         """
 
     @abc.abstractmethod
@@ -152,7 +146,6 @@ class InternalSampler(Sampler):
         ----------
         sample:
             The sample that will replace the last sample in the chain.
-
         """
 
     def make_internal(self, temper_lpost: bool):
@@ -166,5 +159,4 @@ class InternalSampler(Sampler):
         ----------
         temper_lpost:
             Whether to temperate the posterior or only the likelihood.
-
         """

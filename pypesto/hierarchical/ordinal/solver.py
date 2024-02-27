@@ -127,7 +127,6 @@ class OrdinalInnerSolver(InnerSolver):
         Returns
         -------
         List of optimization results of the inner subproblem.
-
         """
         optimal_surrogates = []
         for group in problem.get_groups_for_xs(InnerParameterType.ORDINAL):
@@ -182,7 +181,6 @@ class OrdinalInnerSolver(InnerSolver):
         Returns
         -------
         Inner objective function value.
-
         """
         if False in [
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
@@ -247,7 +245,6 @@ class OrdinalInnerSolver(InnerSolver):
         Returns
         -------
         The gradients with respect to the outer parameters.
-
         """
         already_calculated = set()
 
@@ -414,7 +411,6 @@ def calculate_dxi_dtheta(
         Vector of interval gap and range.
     dd_theta:
         Derivative of vector of interval gap and range.
-
     """
     from scipy.sparse import csc_matrix, linalg
 
@@ -462,7 +458,6 @@ def get_mu(group: int, problem: OrdinalProblem, residual: np.ndarray):
         Optimal scaling inner problem.
     residual:
         Residual for group.
-
     """
     from scipy import linalg
 
@@ -495,7 +490,6 @@ def get_xi(
         Model simulation.
     options:
         Optimal scaling inner solver options.
-
     """
     xs = problem.get_cat_ub_parameters_for_group(group)
     interval_range, interval_gap = compute_interval_constraints(
@@ -530,7 +524,6 @@ def optimize_surrogate_data_per_group(
         Model simulations.
     options:
         Optimal scaling inner solver options.
-
     """
     from scipy.optimize import minimize
 
@@ -609,7 +602,6 @@ def get_inner_optimization_options(
         Minimal constrained gap between categories.
     options:
         Optimal scaling inner solver options.
-
     """
     from scipy.optimize import Bounds
 
@@ -1107,7 +1099,6 @@ def calculate_censored_obj(
     -------
     Dictionary with the objective function value, dummy success
     and censoring category bounds.
-
     """
     cat_lb_values = np.array([x.value for x in category_lower_bounds])
     cat_ub_values = np.array([x.value for x in category_upper_bounds])
@@ -1189,7 +1180,6 @@ def calculate_censored_grad(
     Returns
     -------
     Gradient.
-
     """
     cat_lb_values = np.array([x.value for x in category_lower_bounds])
     cat_ub_values = np.array([x.value for x in category_upper_bounds])
