@@ -50,11 +50,6 @@ convention = "pep257"
 
 [tool.ruff.lint.per-file-ignores]
 "test/julia/test_pyjulia.py" = ["E402"]
-"pypesto/problem.py" = [
-    "D400",
-    "D205",
-    "D107",
-]
 "pypesto/C.py" = [
     "D400",
     "D205",
