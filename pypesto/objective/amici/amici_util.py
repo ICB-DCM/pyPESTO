@@ -58,7 +58,6 @@ def map_par_opt_to_par_sim(
     par_sim_vals:
         The simulation parameters vector corresponding to x under the
         specified mapping.
-
     """
     par_sim_vals = [
         condition_map_sim_var[par_id]
@@ -98,7 +97,6 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
     plist: array-like of float
         List of parameter indices for which the sensitivity needs to be
         computed
-
     """
     warnings.warn(
         "This function will be removed in future releases. ",
@@ -171,7 +169,6 @@ def par_index_slices(
         array of simulation parameter indices
     par_opt_slice:
         array of optimization parameter indices
-
     """
     # Create ID to index mapping for more efficient lookup than list.index
     par_opt_id_to_idx = {id_: idx for idx, id_ in enumerate(par_opt_ids)}
@@ -238,7 +235,6 @@ def add_sim_grad_to_opt_grad(
         Changed in-place.
     coefficient:
         Coefficient for sim_grad when adding to opt_grad.
-
     """
     par_sim_slice, par_opt_slice = par_index_slices(
         par_opt_ids, par_sim_ids, condition_map_sim_var
@@ -273,7 +269,6 @@ def add_sim_hess_to_opt_hess(
     Parameters
     ----------
     Same as for add_sim_grad_to_opt_grad, replacing the gradients by hessians.
-
     """
     par_sim_slice, par_opt_slice = par_index_slices(
         par_opt_ids, par_sim_ids, condition_map_sim_var
@@ -326,7 +321,6 @@ def sim_sres_to_opt_sres(
     ----------
     Mostly the same as for add_sim_grad_to_opt_grad, replacing the gradients by
     residual sensitivities.
-
     """
     opt_sres = np.zeros((sim_sres.shape[0], len(par_opt_ids)))
 

@@ -55,7 +55,6 @@ def plot_selected_models(
     -------
     matplotlib.pyplot.Axes
         The plot axis.
-
     """
     zero = 0
     if relative:
@@ -156,7 +155,6 @@ def plot_calibrated_models_digraph(
     -------
     matplotlib.pyplot.Axes
         The plot axis.
-
     """
     if criterion is None:
         criterion = problem.petab_select_problem.criterion

@@ -78,7 +78,6 @@ def validation_profile_significance(
         “Likelihood based observability analysis and
         confidence intervals for predictions of dynamic models”.
         BMC Systems Biology 2012/12. doi:10.1186/1752-0509-6-120
-
     """
     if (result_full_data is not None) and (optimizer is not None):
         raise UserWarning(

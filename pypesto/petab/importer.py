@@ -120,7 +120,6 @@ class PetabImporter(AmiciObjectBuilder):
         inner_options:
             Options for the inner problems and solvers.
             If not provided, default options will be used.
-
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
@@ -222,7 +221,6 @@ class PetabImporter(AmiciObjectBuilder):
         Returns
         -------
         match: Whether gradients match FDs (True) or not (False)
-
         """
         par = np.asarray(self.petab_problem.x_nominal_scaled)
         problem = self.create_problem()
@@ -291,7 +289,6 @@ class PetabImporter(AmiciObjectBuilder):
             progress is printed.
         kwargs:
             Extra arguments passed to amici.SbmlImporter.sbml2amici
-
         """
         # courtesy check whether target is folder
         if os.path.exists(self.output_folder) and not os.path.isdir(
@@ -380,7 +377,6 @@ class PetabImporter(AmiciObjectBuilder):
         kwargs:
             Extra arguments passed to :meth:`amici.sbml_import.SbmlImporter.sbml2amici`
             or :func:`amici.pysb_import.pysb2amici`.
-
         """
         # delete output directory
         if os.path.exists(self.output_folder):
@@ -456,7 +452,6 @@ class PetabImporter(AmiciObjectBuilder):
         Returns
         -------
         A :class:`pypesto.objective.AmiciObjective` for the model and the data.
-
         """
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
@@ -622,7 +617,6 @@ class PetabImporter(AmiciObjectBuilder):
         -------
         A :class:`pypesto.predict.AmiciPredictor` for the model, using
         the outputs of the AMICI model and the timepoints from the PEtab data.
-
         """
         # if the user didn't pass an objective function, we create it first
         if objective is None:
@@ -706,7 +700,6 @@ class PetabImporter(AmiciObjectBuilder):
         **kwargs:
             Additional keyword arguments passed on to
             :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
-
         """
         return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
@@ -740,7 +733,6 @@ class PetabImporter(AmiciObjectBuilder):
         Returns
         -------
         A :class:`pypesto.problem.Problem` for the objective.
-
         """
         if objective is None:
             objective = self.create_objective(**kwargs)
@@ -837,7 +829,6 @@ class PetabImporter(AmiciObjectBuilder):
         -------
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
-
         """
         # create model
         if model is None:
@@ -886,7 +877,6 @@ class PetabImporter(AmiciObjectBuilder):
         -------
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
-
         """
 
         # create rdata-like dicts from the prediction result
@@ -985,7 +975,6 @@ def get_petab_non_quantitative_data_types(
     -------
     data_types:
         A list of the data types.
-
     """
     non_quantitative_data_types = set()
     caught_observables = set()

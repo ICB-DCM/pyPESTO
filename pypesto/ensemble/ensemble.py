@@ -92,7 +92,6 @@ class EnsemblePrediction:
             the shape of n_timepoints x n_outputs for each condition.
         upper_bound:
             array of potential upper bounds for the parameters
-
         """
         self.predictor = predictor
         self.prediction_id = prediction_id
@@ -219,7 +218,6 @@ class EnsemblePrediction:
         -------
         dictionary of predictions results with the keys mean, std, median,
         percentiles, ...
-
         """
         # check if prediction results are available
         if not self.prediction_results:
@@ -289,7 +287,6 @@ class EnsemblePrediction:
             Returns
             -------
             The stacked weights.
-
             """
             # Were outputs computed
             if self.prediction_results[0].conditions[ic].output_weight is None:
@@ -429,7 +426,6 @@ class EnsemblePrediction:
         Returns
         -------
         The chi^2 error.
-
         """
         if (self.prediction_summary[MEAN] is None) or (
             self.prediction_summary[WEIGHTED_SIGMA] is None
@@ -516,7 +512,6 @@ class Ensemble:
             Array of potential lower bounds for the parameters.
         upper_bound:
             Array of potential upper bounds for the parameters.
-
         """
         # Do we have a representative sample or just random ensemble?
         self.ensemble_type = EnsembleType.ensemble
@@ -587,7 +582,6 @@ class Ensemble:
         Returns
         -------
         The ensemble.
-
         """
         x_vectors = result.sample_result.trace_x[0]
         if x_names is None:
@@ -644,7 +638,6 @@ class Ensemble:
         Returns
         -------
         The ensemble.
-
         """
         if rel_cutoff is None and percentile is None:
             abs_cutoff = np.inf
@@ -745,7 +738,6 @@ class Ensemble:
         Returns
         -------
         The ensemble.
-
         """
         if rel_cutoff is None and percentile is None:
             abs_cutoff = np.inf
@@ -923,7 +915,6 @@ class Ensemble:
         Returns
         -------
         The prediction of the ensemble.
-
         """
         if engine is None:
             engine = SingleCoreEngine()
@@ -1001,7 +992,6 @@ class Ensemble:
         Returns
         -------
         Dict with mean, std, median, and percentiles of parameter vectors
-
         """
         # compute summaries based on parameters
         summary = {
@@ -1031,7 +1021,6 @@ class Ensemble:
         parameter_identifiability:
             DataFrame indicating parameter identifiability based on mean
             plus/minus standard deviations and parameter bounds
-
         """
         # Recompute the summary, maybe the ensemble objects has been changed.
         self.compute_summary()
@@ -1115,7 +1104,6 @@ def entries_per_start(
     -------
     A list of number of candidates per start that are to
     be included in the ensemble.
-
     """
     # choose possible candidates
     ens_ind = [np.flatnonzero(fval <= cutoff) for fval in fval_traces]
@@ -1170,7 +1158,6 @@ def get_vector_indices(
     Returns
     -------
     The indices to include in the ensemble.
-
     """
     candidates = np.flatnonzero(trace_start <= cutoff)
 
@@ -1201,7 +1188,6 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
     Returns
     -------
     The label of the (possibly rounded) percentile.
-
     """
     if isinstance(percentile, str):
         percentile = float(percentile)
@@ -1244,7 +1230,6 @@ def calculate_cutoff(
     Returns
     -------
     The calculated cutoff value.
-
     """
     if percentile > 100:
         raise ValueError(

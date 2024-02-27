@@ -71,7 +71,6 @@ class OptimizerResult(dict):
     Notes
     -----
     Any field not supported by the optimizer is filled with None.
-
     """
 
     def __init__(
@@ -142,7 +141,6 @@ class OptimizerResult(dict):
         Returns
         -------
         summary: str
-
         """
         # add warning, if self.free_indices is None
         if self.free_indices is None:
@@ -190,7 +188,6 @@ class OptimizerResult(dict):
         problem:
             problem which contains info about how to convert to full vectors
             or matrices
-
         """
         self.x = problem.get_full_vector(self.x, problem.x_fixed_vals)
         self.grad = problem.get_full_vector(self.grad)
@@ -260,7 +257,6 @@ class OptimizeResult:
             If True, print full vectors including fixed parameters.
         show_hess:
             If True, display the Hessian of the OptimizerResult.
-
         """
         if len(self) == 0:
             return "## Optimization Result \n\n*empty*\n"
@@ -333,7 +329,6 @@ class OptimizeResult:
             optimize_result.
         prefix:
             The IDs for all appended results will be prefixed with this.
-
         """
         current_ids = set(self.id)
         if isinstance(optimize_result, OptimizeResult):
@@ -402,7 +397,6 @@ class OptimizeResult:
         ----------
         keys: list(str), optional
             Labels of the field to extract.
-
         """
         lst = self.list
 

@@ -22,7 +22,6 @@ class Result:
         The results of the profiler run.
     sample_result:
         The results of the sampler run.
-
     """
 
     def __init__(
@@ -47,6 +46,5 @@ class Result:
             If True, print full vectors including fixed parameters.
         show_hess:
             If True, display the Hessian of the OptimizeResult.
-
         """
         return self.optimize_result.summary(full=full, show_hess=show_hess)

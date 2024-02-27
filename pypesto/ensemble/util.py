@@ -63,7 +63,6 @@ def read_from_csv(
     -------
     result:
         Ensemble object of parameter vectors
-
     """
     # get the data from the csv
     ensemble_df = pd.read_csv(path, sep=sep, index_col=index_col)
@@ -104,7 +103,6 @@ def read_ensemble_from_hdf5(
     -------
     ensemble:
         Ensemble object of parameter vectors
-
     """
     # TODO: add option HISTORY. Need to fix
     #  reading history from hdf5.
@@ -157,7 +155,6 @@ def read_from_df(
     -------
     result:
         Ensemble object of parameter vectors
-
     """
     # if we have a parser to make vector_tags from column names, we use it
     vector_tags = None
@@ -193,7 +190,6 @@ def write_ensemble_prediction_to_h5(
         The filename of the hdf5 file.
     base_path:
         An optional filepath where the file should be saved to.
-
     """
     # parse base path
     base = Path("")
@@ -284,7 +280,6 @@ def get_prediction_dataset(
     -------
     dataset:
         numpy array containing the ensemble predictions
-
     """
     if isinstance(ens, Ensemble):
         dataset = ens.predictions[prediction_index]

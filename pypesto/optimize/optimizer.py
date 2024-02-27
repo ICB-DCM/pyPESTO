@@ -291,7 +291,6 @@ class Optimizer(abc.ABC):
             Optimizer history options.
         optimize_options:
             Global optimization options.
-
         """
 
     @abc.abstractmethod
@@ -550,7 +549,6 @@ class IpoptOptimizer(Optimizer):
         ----------
         options:
             Options are directly passed on to `cyipopt.minimize_ipopt`.
-
         """
         super().__init__()
         self.options = options
@@ -755,7 +753,6 @@ class CmaesOptimizer(Optimizer):
             (where the optimum is to be expected)
         options:
             Optimizer options that are directly passed on to cma.
-
         """
         super().__init__()
 
@@ -836,7 +833,6 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         Default: 100
     popsize:
         population size, default value 15
-
     """
 
     def __init__(self, options: Dict = None):
@@ -908,7 +904,6 @@ class PyswarmsOptimizer(Optimizer):
     maxiter:
         used to calculate the maximal number of funcion evaluations.
         Default: 1000
-
     """
 
     def __init__(self, par_popsize: float = 10, options: Dict = None):
@@ -974,7 +969,6 @@ class PyswarmsOptimizer(Optimizer):
             Returns
             -------
             result: np.ndarray, shape (n_particles_in_swarm)
-
             """
             n_particles = swarm.shape[0]
             result = np.zeros(n_particles)
@@ -1038,7 +1032,6 @@ class NLoptOptimizer(Optimizer):
             transformed into `maxeval` and takes precedence.
         local_options:
             Optimizer options for the local method
-
         """
         super().__init__()
 
@@ -1284,7 +1277,6 @@ class FidesOptimizer(Optimizer):
             Hessian update strategy. If this is ``None``, a hybrid approximation
             that switches from the ``problem.objective`` provided Hessian (
             approximation) to a BFGS approximation will be used.
-
         """
         super().__init__()
 
@@ -1432,7 +1424,6 @@ class FidesOptimizer(Optimizer):
         -------
             An informative message on the cause of termination. Based on
             fides documentation.
-
         """
         import fides
 

@@ -42,7 +42,6 @@ class CsvHistory(CountHistoryBase):
         History options.
     load_from_file:
         If True, history will be initialized from data in the specified file.
-
     """
 
     def __init__(
@@ -310,7 +309,6 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
     Returns
     -------
     Array as string.
-
     """
     if not isinstance(x, np.ndarray):
         return x
@@ -330,7 +328,6 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
     Returns
     -------
     Array as :class:`numpy.ndarray`.
-
     """
     if not isinstance(x, str):
         return x

@@ -27,7 +27,6 @@ def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
     Returns
     -------
     The computed likelihood ratio threshold.
-
     """
     quantile = scipy.stats.chi2.ppf(alpha, df=df)
     ratio = np.exp(-quantile / 2)
@@ -56,7 +55,6 @@ def calculate_approximate_ci(
     Returns
     -------
     Bounds of the approximate confidence interval.
-
     """
     # extract indices where the ratio is larger than the minimum ratio
     (indices,) = np.where(ratios >= confidence_ratio)
@@ -115,7 +113,6 @@ def initialize_profile(
     -------
     global_opt:
         log-posterior at global optimum.
-
     """
     # Check whether an optimization result is existing
     if result.optimize_result is None:
@@ -177,7 +174,6 @@ def fill_profile_list(
         number of parameters in the unreduced problem.
     global_opt:
         log-posterior at global optimum.
-
     """
     if optimizer_result[GRAD] is not None:
         gradnorm = np.linalg.norm(optimizer_result[GRAD])

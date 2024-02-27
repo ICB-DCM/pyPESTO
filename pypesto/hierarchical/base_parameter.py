@@ -43,7 +43,6 @@ class InnerParameter:
         Scale on which to estimate this parameter.
     ub:
         The upper bound, for optimization.
-
     """
 
     def __init__(
@@ -62,7 +61,6 @@ class InnerParameter:
         Parameters
         ----------
         See class attributes.
-
         """
         self.inner_parameter_id: str = inner_parameter_id
         self.coupled: InnerParameter = None

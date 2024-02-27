@@ -51,7 +51,6 @@ def approximate_parameter_profile(
     Returns
     -------
     The profile results are filled into `result.profile_result`.
-
     """
     # Handling defaults
     # profiling indices

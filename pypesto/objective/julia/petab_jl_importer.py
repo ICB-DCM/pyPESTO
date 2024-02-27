@@ -41,7 +41,6 @@ class PetabJlImporter:
             Path to the Julia source file.
         petab_problem:
             Wrapper around the PEtab.jl problem.
-
         """
         self.module = module
         self.source_file = source_file
@@ -80,7 +79,6 @@ class PetabJlImporter:
         directory:
             Where to write the julia file, defaults to the directory of the
             yaml file.
-
         """
         # get default values
         options = _get_default_options(
@@ -115,7 +113,6 @@ class PetabJlImporter:
         precompile:
             Whether to precompile the julia module for speed up in
             multistart optimization.
-
         """
         # lazy imports
         try:
@@ -167,7 +164,6 @@ class PetabJlImporter:
         precompile:
             Whether to precompile the julia module for speed up in
             multistart optimization.
-
         """
         obj = self.create_objective(precompile=precompile)
         lb = np.asarray(self.petab_jl_problem.lower_bounds)
@@ -213,7 +209,6 @@ def _get_default_options(
     -------
     dict:
         The options.
-
     """
     # get default values
     if ode_solver_options is None:
@@ -287,7 +282,6 @@ def _write_julia_file(
         The name/path of the file.
     module:
         The module name.
-
     """
     if directory is None:
         directory = os.path.dirname(yaml_file)  # directory of the yaml file

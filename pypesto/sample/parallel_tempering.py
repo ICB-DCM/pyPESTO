@@ -178,7 +178,6 @@ def near_exponential_decay_betas(
         Decay exponent. The higher, the more small temperatures are used.
     max_temp:
         Maximum chain temperature.
-
     """
     # special case of one chain
     if n_chains == 1:

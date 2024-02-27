@@ -57,7 +57,6 @@ class SacessOptimizer:
         found by each worker. (Monotonously decreasing objective values.)
         See :func:`pypesto.visualize.optimizer_history.sacess_history` for
         visualization.
-
     """
 
     def __init__(
@@ -106,7 +105,6 @@ class SacessOptimizer:
             current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
             parallel have a unique `tmpdir`.
-
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -172,7 +170,6 @@ class SacessOptimizer:
         Results are sorted by objective. At least the best parameters are
         included. Additional results may be included - this is subject to
         change.
-
         """
         if startpoint_method is not None:
             warn(
@@ -338,7 +335,6 @@ class SacessManager:
         incoming solutions have to pass to be accepted
     _lock: Lock for accessing shared state.
     _logger: A logger instance
-
     """
 
     def __init__(
@@ -403,7 +399,6 @@ class SacessManager:
         fx: Objective value corresponding to ``x``
         sender_idx: Index of the worker submitting the results.
         elapsed_time_s: Elapsed time since the beginning of the sacess run.
-
         """
         abs_change = fx - self._best_known_fx.value
         with self._lock:
@@ -490,7 +485,6 @@ class SacessWorker:
     _loglevel: Logging level for sacess
     _ess_loglevel: Logging level for ESS runs
     _tmp_result_file: Path of a temporary file to be created.
-
     """
 
     def __init__(
@@ -717,7 +711,6 @@ class SacessWorker:
         Returns
         -------
         ``True`` if none of the exit criteria is met, ``False`` otherwise.
-
         """
         # elapsed time
         if time.time() - self._start_time >= self._max_walltime_s:
@@ -789,7 +782,6 @@ def get_default_ess_options(
         or a :obj:`Callable` returning an optimizer instance.
         The latter can be used to propagate walltime limits to the local
         optimizers. See :meth:`SacessFidesFactory.__call__` for an example.
-
     """
     min_dimrefset = 5
 
@@ -977,7 +969,6 @@ class SacessFidesFactory:
     fides_kwargs:
         Keyword arguments for the :class:`FidesOptimizer`. See
         :meth:`FidesOptimizer.__init__`. Must not include ``options``.
-
     """
 
     def __init__(

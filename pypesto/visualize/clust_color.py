@@ -27,7 +27,6 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     -------
     colors: list of RGBA
         One for each element in 'vals'.
-
     """
     # sanity checks
     if vals is None or len(vals) == 0:
@@ -114,7 +113,6 @@ def assign_colors(
     -------
     colors: list of RGBA
         One for each element in 'vals'.
-
     """
     # sanity checks
     if vals is None or len(vals) == 0:
@@ -181,7 +179,6 @@ def assign_colors_for_list(
     -------
     colors:
         List of RGBA, one for each element in 'vals'.
-
     """
     # if the user did not specify any colors:
     if colors is None:

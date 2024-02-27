@@ -22,7 +22,6 @@ class SplineInnerParameter(InnerParameter):
         Current value of the inner parameter.
     estimate:
         Whether to estimate inner parameter in inner subproblem.
-
     """
 
     def __init__(
@@ -39,7 +38,6 @@ class SplineInnerParameter(InnerParameter):
         Parameters
         ----------
         See class attributes.
-
         """
         super().__init__(*args, **kwargs)
         if self.inner_parameter_type not in [

@@ -65,7 +65,6 @@ class Objective(ObjectiveBase):
         Parameter names. None if no names provided, otherwise a list of str,
         length dim_full (as in the Problem class). Can be read by the
         problem.
-
     """
 
     def __init__(
@@ -143,7 +142,6 @@ class Objective(ObjectiveBase):
         -------
         result:
             A dict containing the results.
-
         """
         if mode == MODE_FUN:
             result = self._call_mode_fun(x=x, sensi_orders=sensi_orders)

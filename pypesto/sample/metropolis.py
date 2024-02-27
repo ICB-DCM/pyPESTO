@@ -97,7 +97,6 @@ class MetropolisSampler(InternalSampler):
         ----------
         temper_lpost:
             Whether to temperate the posterior or only the likelihood.
-
         """
         self.options["show_progress"] = False
         self.temper_lpost = temper_lpost
@@ -177,7 +176,6 @@ class MetropolisSampler(InternalSampler):
         -------
         internal_sample:
             The last sample in the chain in the exchange format.
-
         """
         return InternalSample(
             x=self.trace_x[-1],
@@ -193,7 +191,6 @@ class MetropolisSampler(InternalSampler):
         ----------
         sample:
             The sample that will replace the last sample in the chain.
-
         """
         self.trace_x[-1] = sample.x
         self.trace_neglogpost[-1] = -sample.lpost

@@ -60,7 +60,6 @@ def profiles(
     -------
     ax:
         The plot axes.
-
     """
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
@@ -161,7 +160,6 @@ def profiles_lowlevel(
     Returns
     -------
     The plot axes.
-
     """
     # axes
     if ax is None:
@@ -300,7 +298,6 @@ def profile_lowlevel(
     Returns
     -------
     The plot axes.
-
     """
     # parse input
     fvals = np.asarray(fvals)
@@ -343,7 +340,6 @@ def handle_reference_points(ref, ax, profile_indices):
         Axes object to use.
     profile_indices: list of integer values
         List of integer values specifying which profiles should be plotted.
-
     """
     if len(ref) > 0:
         # loop over axes objects
@@ -388,7 +384,6 @@ def handle_inputs(
     Returns
     -------
     List of parameter values and ratios that need to be plotted.
-
     """
     # extract ratio values from result
     fvals = []
@@ -443,7 +438,6 @@ def process_result_list_profiles(
     profile_indices: list of integer values
         corrected list of integer values specifying which profiles should be
         plotted.
-
     """
     # ensure list of ids
     if isinstance(profile_list_ids, int):

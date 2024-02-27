@@ -118,7 +118,6 @@ class AmiciPredictor:
         condition_ids:
             List of identifiers for the conditions of the edata objects of the
             amici objective, will be passed to the :class:`PredictionResult` at call.
-
         """
         # save settings and objective
         self.amici_objective = amici_objective
@@ -196,7 +195,6 @@ class AmiciPredictor:
         -------
         PredictionResult object containing timepoints, outputs, and
         output sensitivities if requested.
-
         """
         # sanity check for output
         if 2 in sensi_orders:
@@ -313,7 +311,6 @@ class AmiciPredictor:
             Boolean whether standard deviations should be included in the
             prediction output. Necessary for evaluation of weighted means
             of Ensembles.
-
         """
         # Do we have a maximum number of simulations allowed?
         n_edatas = len(self.amici_objective.edatas)

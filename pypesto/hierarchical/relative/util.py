@@ -31,7 +31,6 @@ def get_finite_quotient(
     Returns
     -------
     `num / den` if it's finite, else a dummy value.
-
     """
     try:
         with warnings.catch_warnings():
@@ -102,7 +101,6 @@ def apply_scaling(
     mask:
         The masks that indicate the simulation subset that corresponds to the
         `scaling_value`.
-
     """
     for i in range(len(sim)):
         sim[i][mask[i]] *= scaling_value
@@ -122,7 +120,6 @@ def apply_scaling_to_sensitivities(
     mask:
         The masks that indicate the simulation subset that corresponds to the
         `scaling_value`.
-
     """
     for i in range(len(ssim)):
         ssim[i][:, mask[i]] *= scaling_value
@@ -263,7 +260,6 @@ def apply_offset(
     is_data:
         Whether the data is being offset, or the simulation is. If False, the
         offset is added to the simulation instead of subtracted from the data.
-
     """
     for i in range(len(data)):
         data[i][mask[i]] += -offset_value if is_data else offset_value
@@ -310,7 +306,6 @@ def apply_sigma(
     mask:
         The masks that indicate the sigma subset that corresponds to the
         `sigma_value`.
-
     """
     for i in range(len(sigma)):
         sigma[i][mask[i]] = sigma_value
@@ -358,7 +353,6 @@ def compute_bounded_optimal_scaling_offset_coupled(
     Returns
     -------
     The optimal scaling and offset of the constrained problem.
-
     """
     # Define relevant data and sim
     # Make all non-masked data and sim nan's in the original one

@@ -78,7 +78,6 @@ def parameter_profile(
     Returns
     -------
     The profile results are filled into `result.profile_result`.
-
     """
     # Copy the problem to avoid side effects
     problem = copy.deepcopy(problem)

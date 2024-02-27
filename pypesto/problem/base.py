@@ -85,7 +85,6 @@ class Problem:
     regardless of whether they were in dimension dim or dim_full before. If
     the full representation is needed, the methods get_full_vector() and
     get_full_matrix() can be used.
-
     """
 
     def __init__(
@@ -276,7 +275,6 @@ class Problem:
         Parameters
         ----------
         x_guesses:
-
         """
         x_guesses_full = np.array(x_guesses)
         if x_guesses_full.shape[1] != self.dim_full:
@@ -348,7 +346,6 @@ class Problem:
             The values to be used for the fixed indices. If None, then nans are
             inserted. Usually, None will be used for grad and
             problem.x_fixed_vals for x.
-
         """
         if x is None:
             return None
@@ -378,7 +375,6 @@ class Problem:
         ----------
         x: array_like, shape=(dim, dim)
             The matrix in dimension dim.
-
         """
         if x is None:
             return None
@@ -411,7 +407,6 @@ class Problem:
             The vector in dimension dim_full.
         x_indices:
             indices of x_full that should remain
-
         """
         if x_full is None:
             return None
@@ -435,7 +430,6 @@ class Problem:
         ----------
         x_full: array_like, ndim=2
             The matrix in dimension dim_full.
-
         """
         if x_full is None:
             return None
@@ -458,7 +452,6 @@ class Problem:
         Returns
         -------
         free_index: The index in the free vector.
-
         """
         fixed_indices = np.asarray(self.x_fixed_indices)
         if full_index in fixed_indices:

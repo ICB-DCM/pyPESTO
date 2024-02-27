@@ -42,7 +42,6 @@ class PymcObjectiveOp(pt.Op):
         -------
         PymcObjectiveOp
             The created instance.
-
         """
         if objective.has_grad:
             return PymcObjectiveWithGradientOp(objective, beta)
@@ -103,7 +102,6 @@ class PymcSampler(Sampler):
         determines one automatically (preferable).
     **kwargs:
         Options are directly passed on to `pymc.sample`.
-
     """
 
     def __init__(
@@ -128,7 +126,6 @@ class PymcSampler(Sampler):
         ----------
         options:
             Options configuring the sampler.
-
         """
         if not options:
             options = {"chains": 1}
@@ -144,7 +141,6 @@ class PymcSampler(Sampler):
             The problem for which to sample.
         x0:
             Should, but is not required to, be used as initial parameter.
-
         """
         self.problem = problem
         if x0 is not None:
@@ -164,7 +160,6 @@ class PymcSampler(Sampler):
         ----------
         n_samples:
             Number of samples to be computed.
-
         """
         try:
             import pymc

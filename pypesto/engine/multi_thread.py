@@ -30,7 +30,6 @@ class MultiThreadEngine(Engine):
         `os.cpu_count()`.
         The effectively used number of threads will be the minimum of
         `n_threads` and the number of tasks submitted.
-
     """
 
     def __init__(self, n_threads: Union[int, None] = None):
@@ -58,7 +57,6 @@ class MultiThreadEngine(Engine):
         Returns
         -------
         A list of results.
-
         """
         n_tasks = len(tasks)
 

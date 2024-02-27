@@ -27,7 +27,6 @@ def geweke_test(result: Result, zscore: float = 2.0) -> int:
     burn_in:
         Iteration where the first and the last fraction of the chain
         do not differ significantly regarding Geweke test -> Burn-In
-
     """
     # Get parameter samples as numpy arrays
     chain = np.asarray(result.sample_result.trace_x[0])
@@ -58,7 +57,6 @@ def auto_correlation(result: Result) -> float:
     auto_correlation:
         Estimate of the integrated autocorrelation time of
         the MCMC chains.
-
     """
     # Check if burn in index is available
     if result.sample_result.burn_in is None:
@@ -112,7 +110,6 @@ def effective_sample_size(result: Result) -> float:
     ess:
         Estimate of the effective sample size of
         the MCMC chains.
-
     """
     # Check if autocorrelation is available
     if result.sample_result.auto_correlation is None:

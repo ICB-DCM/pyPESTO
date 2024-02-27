@@ -33,7 +33,6 @@ class PrePostProcessor:
         -------
         x:
             Parameter vector for simulation.
-
         """
         return x
 
@@ -45,7 +44,6 @@ class PrePostProcessor:
         ----------
         result:
             The result object to finalize.
-
         """
         result = PrePostProcessor.as_ndarrays(result)
         return result
@@ -63,7 +61,6 @@ class PrePostProcessor:
         -------
         x:
             Parameter vector for optimization.
-
         """
         return x
 
@@ -123,7 +120,6 @@ class FixedParametersProcessor(PrePostProcessor):
         -------
         x:
             Parameter vector for optimization.
-
         """
         x = super().reduce(x)
 

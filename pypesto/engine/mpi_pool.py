@@ -48,7 +48,6 @@ class MPIPoolEngine(Engine):
         Returns
         -------
         A list of results.
-
         """
         pickled_tasks = [pickle.dumps(task) for task in tasks]
 

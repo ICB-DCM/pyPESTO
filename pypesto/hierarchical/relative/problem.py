@@ -50,7 +50,6 @@ class RelativeInnerProblem(AmiciInnerProblem):
         per simulation condition. Missing observations as NaN.
     edatas:
         AMICI ``ExpData``\s for each simulation condition.
-
     """
 
     def __init__(self, **kwargs):
@@ -82,7 +81,6 @@ class RelativeInnerProblem(AmiciInnerProblem):
         Returns
         -------
         Whether the data sets are consistent.
-
         """
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
@@ -247,7 +245,6 @@ def ixs_for_measurement_specific_parameters(
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.
-
     """
     ixs_for_par = {}
     observable_ids = amici_model.getObservableIds()

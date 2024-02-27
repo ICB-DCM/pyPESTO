@@ -71,7 +71,6 @@ class OrdinalProblem(AmiciInnerProblem):
         A dictionary of the groups of the subproblem.
     method:
         A string representing the method of the Optimal Scaling approach, either ``reduced`` or ``standard``.
-
     """
 
     def __init__(
@@ -445,7 +444,6 @@ class OrdinalProblem(AmiciInnerProblem):
         -------
         quantitative_ixs:
             List of boolean masks indicating which data points are quantitative.
-
         """
         # Initialize boolean masks with False and find corresponding observable index.
         quantitative_ixs = [np.full(ixs_i.shape, False) for ixs_i in xs[0].ixs]
@@ -625,7 +623,6 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.
-
     """
     ixs_for_par = {}
     observable_ids = amici_model.getObservableIds()

@@ -23,7 +23,6 @@ class RefSet:
     n_stuck:
         Counts the number of times a refset member did not lead to an
         improvement in the objective (length: ``dim``).
-
     """
 
     def __init__(
@@ -46,7 +45,6 @@ class RefSet:
         fx:
             Function values corresponding to entries in x. Must be provided if
             and only if ``x`` is not ``None``.
-
         """
         if (x is not None and fx is None) or (x is None and fx is not None):
             raise ValueError(

@@ -27,7 +27,6 @@ class FunctionEvaluator:
         ``reset_counter``.
     n_eval_round: Number of objective evaluations since construction or last
         call to ``reset_counter`` or ``reset_round_counter``.
-
     """
 
     def __init__(
@@ -44,7 +43,6 @@ class FunctionEvaluator:
         startpoint_method:
             Method for choosing feasible parameters
             **Deprecated. Use ``problem.startpoint_method`` instead.**
-
         """
         if startpoint_method is not None:
             warn(
@@ -67,7 +65,6 @@ class FunctionEvaluator:
         Returns
         -------
         The objective function value at ``x``.
-
         """
         self.n_eval += 1
         self.n_eval_round += 1
@@ -84,7 +81,6 @@ class FunctionEvaluator:
         Returns
         -------
         The objective function values in the same order as the inputs.
-
         """
         res = np.fromiter(map(self.single, xs), dtype=float)
         self.n_eval += len(xs)
@@ -101,7 +97,6 @@ class FunctionEvaluator:
         -------
         Tuple of the generated parameter vector and the respective function
         value.
-
         """
         x = fx = np.nan
         while not np.isfinite(fx):
@@ -119,7 +114,6 @@ class FunctionEvaluator:
         -------
         Tuple of the generated parameter vectors and the respective function
         values.
-
         """
         fxs = np.full(shape=n, fill_value=np.nan)
         xs = np.full(shape=(n, self.problem.dim), fill_value=np.nan)
@@ -164,7 +158,6 @@ class FunctionEvaluatorMT(FunctionEvaluator):
         n_threads: Maximum number of threads to use for parallel objective
             function evaluations. Requires the objective to be copy-able, and
             that copies are thread-safe.
-
         """
         super().__init__(problem=problem, startpoint_method=startpoint_method)
 
@@ -219,7 +212,6 @@ class FunctionEvaluatorMT(FunctionEvaluator):
         Returns
         -------
         The objective function values in the same order as the inputs.
-
         """
         if self._executor is not None:
             res = np.fromiter(
@@ -263,7 +255,6 @@ class FunctionEvaluatorMP(FunctionEvaluator):
         Returns
         -------
         The objective function values in the same order as the inputs.
-
         """
         res = np.fromiter(
             self._pool.map(self.problem.objective, xs),

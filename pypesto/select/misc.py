@@ -45,7 +45,6 @@ def model_to_pypesto_problem(
     Returns
     -------
     The pyPESTO select problem.
-
     """
     petab_problem = petab_select.ui.model_to_petab(model=model)[PETAB_PROBLEM]
 
@@ -117,7 +116,6 @@ def correct_x_guesses(
     Returns
     -------
     The corrected startpoint guesses.
-
     """
     # TODO reconsider whether correcting is a good idea (`x_guess` is no longer
     # the latest MLE then). Similar todo exists in

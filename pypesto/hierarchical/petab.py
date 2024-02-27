@@ -49,7 +49,6 @@ def correct_parameter_df_bounds(parameter_df: pd.DataFrame) -> pd.DataFrame:
     Returns
     -------
     The table, with corrected bounds.
-
     """
 
     def correct_row(row: pd.Series) -> pd.Series:
@@ -75,7 +74,6 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
     ----------
     petab_problem:
         The PEtab problem.
-
     """
     if PARAMETER_TYPE not in petab_problem.parameter_df:
         # not a hierarchical optimization problem
@@ -125,7 +123,6 @@ def validate_inner_parameter_pairings(
     inner_parameter_df:
         Each row has the offset, scaling and sigma of each measurement in
         measurement table of the PEtab problem.
-
     """
     scalings_with_sigmas = {}
     offsets_with_sigmas = {}
@@ -209,7 +206,6 @@ def get_inner_parameters(
     Returns
     -------
     Parameter IDs and their inner parameter types.
-
     """
     # TODO exclude fixed inner parameters
 
@@ -252,7 +248,6 @@ def validate_measurement_formulae(
     Returns
     -------
     A dataframe containing the inner parameters for each measurement.
-
     """
     inner_parameters = get_inner_parameters(petab_problem=petab_problem)
 
@@ -305,7 +300,6 @@ def _validate_measurement_specific_observable_formula(
     Returns
     -------
     The offset and scaling parameters.
-
     """
     formula, formula_inner_parameters = _get_symbolic_formula_from_measurement(
         measurement=measurement,
@@ -391,7 +385,6 @@ def _validate_measurement_specific_noise_formula(
     Returns
     -------
     The sigma parameter.
-
     """
     formula, formula_inner_parameters = _get_symbolic_formula_from_measurement(
         measurement=measurement,
@@ -449,7 +442,6 @@ def _get_symbolic_formula_from_measurement(
     Returns
     -------
     The symbolic formula, and its inner parameters.
-
     """
     observable_id = measurement[OBSERVABLE_ID]
 

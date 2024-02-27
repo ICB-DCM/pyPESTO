@@ -44,7 +44,6 @@ def optimizer_convergence(
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     import seaborn as sns
 

@@ -59,7 +59,6 @@ class OrdinalCalculator(AmiciCalculator):
         inner_solver:
             A solver to solve ``inner_problem``.
             Defaults to ``OptimalScalingInnerSolver``.
-
         """
         super().__init__()
         self.inner_problem = inner_problem
@@ -128,7 +127,6 @@ class OrdinalCalculator(AmiciCalculator):
         -------
         inner_result:
             A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
-
         """
         if mode == MODE_RES:
             raise ValueError(

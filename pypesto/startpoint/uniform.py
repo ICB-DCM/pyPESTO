@@ -22,7 +22,6 @@ def uniform(
     Returns
     -------
     xs: Uniformly sampled points in [lb, ub], shape (n_starts, n_x).
-
     """
     if not np.isfinite(ub).all() or not np.isfinite(lb).all():
         raise ValueError(

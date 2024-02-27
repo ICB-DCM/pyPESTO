@@ -22,7 +22,6 @@ class OptimizeOptions(dict):
         Whether the optimal value recorded by pyPESTO in the history has
         priority over the optimal value reported by the optimizer (True)
         or not (False).
-
     """
 
     def __init__(
@@ -58,7 +57,6 @@ class OptimizeOptions(dict):
         Parameters
         ----------
         maybe_options: OptimizeOptions or dict
-
         """
         if isinstance(maybe_options, OptimizeOptions):
             return maybe_options

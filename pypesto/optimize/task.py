@@ -40,7 +40,6 @@ class OptimizerTask(Task):
             Options object applying to optimization.
         history_options:
             Optimizer history options.
-
         """
         super().__init__()
 

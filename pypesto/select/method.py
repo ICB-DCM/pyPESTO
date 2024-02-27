@@ -37,7 +37,6 @@ class MethodSignal:
         Whether to accept the model.
     proceed:
         How the method should proceed.
-
     """
 
     accept: bool
@@ -58,7 +57,6 @@ class MethodLogger:
         The logging level.
     logger:
         A logger from the :mod:`logging` module.
-
     """
 
     column_width: int = 12
@@ -78,7 +76,6 @@ class MethodLogger:
         level:
             The logging level. Defaults to the value defined in the
             constructor.
-
         """
         if level is None:
             level = self.level
@@ -129,7 +126,6 @@ class MethodLogger:
             The predecessor model.
         precision:
             The number of decimal places to log.
-
         """
         model_criterion = model.get_criterion(criterion)
 
@@ -144,7 +140,6 @@ class MethodLogger:
             Returns
             -------
             The ID.
-
             """
             model_subspace_id = model.model_subspace_id or ""
             original_model_id = model.model_id or model.get_hash()
@@ -224,7 +219,6 @@ class MethodCaller:
     startpoint_latest_mle:
         If ``True``, one of the startpoints in the multistart optimization
         will be the MLE of the latest model.
-
     """
 
     def __init__(
@@ -368,7 +362,6 @@ class MethodCaller:
            1. the predecessor model for the newly calibrated models; and
            2. the newly calibrated models, as a `dict` where keys are model
               hashes and values are models.
-
         """
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
@@ -424,7 +417,6 @@ class MethodCaller:
         Returns
         -------
         A :class:`MethodSignal` that describes the result.
-
         """
         # Use the predecessor model from `__init__` if an iteration-specific
         # predecessor model was not supplied to `__call__`.
@@ -484,7 +476,6 @@ class MethodCaller:
         -------
         ``True``, if `model1` is superior to `model0` by the criterion,
         else ``False``.
-
         """
         if self.criterion in [
             Criterion.AIC,
@@ -527,7 +518,6 @@ class MethodCaller:
         Returns
         -------
         The model selection problem.
-
         """
         x_guess = None
         if (

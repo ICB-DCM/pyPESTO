@@ -37,7 +37,6 @@ def ensemble_identifiability(
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     # first get the data to check identifiability
     id_df = ensemble.check_identifiability()
@@ -94,7 +93,6 @@ def ensemble_identifiability_lowlevel(
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     # define some short hands for later plotting
     n_par = sum(
@@ -248,7 +246,6 @@ def _prepare_identifiability_plot(id_df: pd.DataFrame):
     both_hit:
         2-dimensional array of confidence interval/credible ranges for
         parameters which hit both parameter bounds
-
     """
     # prepare
     both_hit = []
@@ -344,7 +341,6 @@ def _create_patches(
     patches_none_hit
         patches showing parameters which hit no parameter bounds in the
         ensemble (and are hence identifiable)
-
     """
     # get total number of parameters
     n_par = sum(

@@ -39,7 +39,6 @@ def projection_scatter_umap(
     axs:
         Either one axes object, or a dictionary of plot axes (depending on the
         number of coordinates passed)
-
     """
     n_components = len(components)
     if n_components == 2:
@@ -93,7 +92,6 @@ def projection_scatter_umap_original(
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     import umap.plot
 
@@ -126,7 +124,6 @@ def projection_scatter_pca(
     axs:
         Either one axes object, or a dictionary of plot axes (depending on the
         number of coordinates passed)
-
     """
     n_components = len(components)
     if n_components == 2:
@@ -175,7 +172,6 @@ def ensemble_crosstab_scatter_lowlevel(
     -------
     axs:
         A dictionary of plot axes.
-
     """
     # We got more than two components. Create a cross-classification table
     n_components = dataset.shape[1]
@@ -258,7 +254,6 @@ def ensemble_scatter_lowlevel(
     -------
     ax: matplotlib.Axes
         The plot axes.
-
     """
     # first get the data to check identifiability
     # axes
@@ -308,7 +303,6 @@ def _create_crosstab_axes(n_comp: int):
     -------
     axs:
         A dictionary of plot axes.
-
     """
     axs = {}
 

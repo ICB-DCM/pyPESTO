@@ -174,7 +174,6 @@ def update_history_statistics(
     mean, cov:
         The updated values for the estimated mean and the estimated covariance
         matrix of the sample.
-
     """
     update_rate = n_cur_sample ** (-decay_constant)
 
@@ -206,7 +205,6 @@ def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     -------
     cov:
         Regularized estimate of the covariance matrix of the sample.
-
     """
     eig = np.linalg.eigvals(cov)
     eig_min = min(eig)

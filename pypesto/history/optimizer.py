@@ -47,7 +47,6 @@ class OptimizerHistory:
     generate_from_history:
         If set to true, this function will try to fill attributes of this
         function based on the provided history. Defaults to ``False``.
-
     """
 
     # optimal point values
@@ -101,7 +100,6 @@ class OptimizerHistory:
             Mode of the evaluation.
         result:
             Current result.
-
         """
         result = add_fun_from_res(result)
         self._update_vals(x, result)
@@ -121,7 +119,6 @@ class OptimizerHistory:
             Optimizer message to be saved. Defaults to ``None``.
         exitflag:
             Optimizer exitflag to be saved. Defaults to ``None``.
-
         """
         self.history.finalize(message=message, exitflag=exitflag)
 
@@ -240,7 +237,6 @@ class OptimizerHistory:
         Returns
         -------
         Whether the point fulfills the problem requirements.
-
         """
         return np.all(x <= self.ub) and np.all(x >= self.lb)
 

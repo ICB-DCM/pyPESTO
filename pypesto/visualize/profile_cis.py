@@ -40,7 +40,6 @@ def profile_cis(
         Whether to show, and extend the plot to, the lower and upper bounds.
     ax:
         Axes object to use. Default: Create a new one.
-
     """
     # extract problem
     problem = result.problem

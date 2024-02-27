@@ -46,7 +46,6 @@ class AesaraObjective(ObjectiveBase):
         Aesara function that maps `aet_x` to the variables of `objective`
     coeff:
         Multiplicative coefficient for objective
-
     """
 
     def __init__(
@@ -167,7 +166,6 @@ class AesaraObjectiveOp(Op):
         Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
-
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
@@ -217,7 +215,6 @@ class AesaraObjectiveGradOp(Op):
         Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
-
     """
 
     itypes = [aet.dvector]  # expects a vector of parameter values when called
@@ -266,7 +263,6 @@ class AesaraObjectiveHessOp(Op):
         Base aesara objective
     coeff:
         Multiplicative coefficient for the objective function value
-
     """
 
     itypes = [aet.dvector]

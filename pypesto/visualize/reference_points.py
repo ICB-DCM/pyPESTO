@@ -25,7 +25,6 @@ class ReferencePoint(dict):
         assigned automatically or whether it was assigned by user
     legend: str
         legend text for reference point
-
     """
 
     def __init__(
@@ -122,7 +121,6 @@ def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
     Returns
     -------
     Reference points, which got their color property filled
-
     """
     # loop over reference points
     auto_color_count = 0
@@ -168,7 +166,6 @@ def create_references(
     -------
     colors: list of RGBA
         One for each element in 'vals'.
-
     """
     # parse input (reference)
     ref = []

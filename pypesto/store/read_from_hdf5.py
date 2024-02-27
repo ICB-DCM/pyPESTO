@@ -34,7 +34,6 @@ def read_hdf5_profile(
     parameter_id:
         specifies the profile index that is read
         from the HDF5 file
-
     """
     result = ProfilerResult(np.empty((0, 0)), np.array([]), np.array([]))
 
@@ -65,7 +64,6 @@ def read_hdf5_optimization(
         The name of the HDF5 file, needed to create HDF5History
     opt_id:
         Specifies the start that is read from the HDF5 file
-
     """
     result = OptimizerResult()
 
@@ -94,7 +92,6 @@ class ProblemHDF5Reader:
     ----------
     storage_filename:
         HDF5 problem file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -104,7 +101,6 @@ class ProblemHDF5Reader:
         ----------
         storage_filename:
             HDF5 problem file name
-
         """
         self.storage_filename = storage_filename
 
@@ -120,7 +116,6 @@ class ProblemHDF5Reader:
         -------
         problem:
             A problem instance with all attributes read in.
-
         """
         # create empty problem
         if objective is None:
@@ -159,7 +154,6 @@ class OptimizationResultHDF5Reader:
     ----------
     storage_filename:
         HDF5 result file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -170,7 +164,6 @@ class OptimizationResultHDF5Reader:
         ----------
         storage_filename:
             HDF5 result file name
-
         """
         self.storage_filename = storage_filename
         self.results = Result()
@@ -195,7 +188,6 @@ class SamplingResultHDF5Reader:
     ----------
     storage_filename:
         HDF5 result file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -205,7 +197,6 @@ class SamplingResultHDF5Reader:
         ----------
         storage_filename:
             HDF5 result file name
-
         """
         self.storage_filename = storage_filename
         self.results = Result()
@@ -236,7 +227,6 @@ class ProfileResultHDF5Reader:
     ----------
     storage_filename:
         HDF5 result file name
-
     """
 
     def __init__(self, storage_filename: Union[str, Path]):
@@ -247,7 +237,6 @@ class ProfileResultHDF5Reader:
         ----------
         storage_filename:
             HDF5 result file name
-
         """
         self.storage_filename = storage_filename
         self.results = Result()
@@ -303,7 +292,6 @@ def read_result(
     -------
     result:
         Result object containing the results stored in HDF5 file.
-
     """
     if not any([optimize, profile, sample]):
         optimize = True
@@ -366,7 +354,6 @@ def load_objective_config(filename: Union[str, Path]):
     -------
         A dictionary of the information, stored instead of the
         actual objective in problem.objective.
-
     """
     with h5py.File(filename, "r") as f:
         info_str = f["problem/config"][()].decode()

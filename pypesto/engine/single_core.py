@@ -32,7 +32,6 @@ class SingleCoreEngine(Engine):
         Returns
         -------
         A list of results.
-
         """
         results = []
         for task in tqdm(

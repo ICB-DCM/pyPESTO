@@ -83,7 +83,6 @@ class InnerCalculatorCollector(AmiciCalculator):
         The experimental data.
     inner_options:
         Options for the inner problems and solvers.
-
     """
 
     def __init__(
@@ -202,7 +201,6 @@ class InnerCalculatorCollector(AmiciCalculator):
         ----------
         inner_options:
             Options for the inner problems and solvers.
-
         """
         for key in inner_options:
             if (
@@ -315,7 +313,6 @@ class InnerCalculatorCollector(AmiciCalculator):
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
-
         """
         import amici.parameter_mapping
 
