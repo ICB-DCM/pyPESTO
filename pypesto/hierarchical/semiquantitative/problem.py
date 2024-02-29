@@ -205,15 +205,15 @@ class SemiquantProblem(AmiciInnerProblem):
             inner_par_dict[x_id] = x.value
         return inner_par_dict
 
-    def get_spline_knots(self) -> np.ndarray:
+    def get_spline_knots(self) -> list[list[np.array[float], np.array[float]]]:
         """Get spline knots of all semiquantitative observables.
 
         Returns
         -------
-        list[list[list[float], list[float]]]
-            A list of lists of lists. Each list in the first list corresponds to a
-            semiquantitative observable. Each of these lists contains two lists:
-            the first list contains the spline bases, the second list contains the
+        list[list[np.array[float], np.array[float]]]
+            A list of lists with two arrays. Each list in the first level corresponds
+            to a semiquantitative observable. Each of these lists contains two arrays:
+            the first array contains the spline bases, the second array contains the
             spline knot values. The ordering of the observable lists is the same
             as in `pypesto.problem.hierarchical.semiquant_observable_ids`.
         """
