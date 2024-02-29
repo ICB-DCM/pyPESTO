@@ -205,12 +205,14 @@ class SemiquantProblem(AmiciInnerProblem):
             inner_par_dict[x_id] = x.value
         return inner_par_dict
 
-    def get_spline_knots(self) -> list[list[np.array[float], np.array[float]]]:
+    def get_spline_knots(
+        self,
+    ) -> list[list[np.ndarray[float], np.ndarray[float]]]:
         """Get spline knots of all semiquantitative observables.
 
         Returns
         -------
-        list[list[np.array[float], np.array[float]]]
+        list[list[np.ndarray[float], np.ndarray[float]]]
             A list of lists with two arrays. Each list in the first level corresponds
             to a semiquantitative observable. Each of these lists contains two arrays:
             the first array contains the spline bases, the second array contains the
