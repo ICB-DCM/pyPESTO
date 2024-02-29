@@ -552,7 +552,7 @@ class IpoptOptimizer(Optimizer):
         """
         super().__init__()
         self.approx_grad = False
-        if (not options is None) and "approx_grad" in options:
+        if (options is not None) and "approx_grad" in options:
             self.approx_grad = options.pop("approx_grad")
         self.options = options
 
