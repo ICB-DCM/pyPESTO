@@ -616,7 +616,7 @@ def test_ipopt_approx_grad():
     obj2 = rosen_for_sensi(max_sensi_order=1, integrated=integrated)["obj"]
     assert (
         result.optimize_result.history[0].get_grad_trace(0)
-        == obj2.get_gradient(x_guesses[0]).shape[0]
+        == obj2.get_grad(x_guesses[0]).shape[0]
     )
 
 
