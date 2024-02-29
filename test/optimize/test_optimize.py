@@ -613,10 +613,10 @@ def test_ipopt_approx_grad():
         history_options=history_options,
         progress_bar=False,
     )
-    obj_2 = rosen_for_sensi(max_sensi_order=1, integrated=integrated)["obj"]
+    obj2 = rosen_for_sensi(max_sensi_order=1, integrated=integrated)["obj"]
     assert (
-        len(result.optimize_result.history[0].get_grad_trace(0))
-        == obj_2.get_gradient(x_guesses[0]).shape[0]
+        result.optimize_result.history[0].get_grad_trace(0)
+        == obj2.get_gradient(x_guesses[0]).shape[0]
     )
 
 
