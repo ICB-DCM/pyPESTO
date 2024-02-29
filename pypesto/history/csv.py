@@ -20,7 +20,6 @@ from ..C import (
     RES,
     SRES,
     TIME,
-    X_INNER_OPT,
     ModeType,
     X,
 )
@@ -154,10 +153,6 @@ class CsvHistory(CountHistoryBase):
                 row[var] = val
             else:
                 row[(var, np.nan)] = np.nan
-
-        if X_INNER_OPT in result:
-            for x_inner_id, x_inner_opt_value in result[X_INNER_OPT].items():
-                row[(X_INNER_OPT, x_inner_id)] = x_inner_opt_value
 
         self._trace = pd.concat(
             (self._trace, pd.DataFrame([row])),

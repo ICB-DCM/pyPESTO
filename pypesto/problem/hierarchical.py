@@ -34,6 +34,11 @@ class HierarchicalProblem(Problem):
         Only relevant if hierarchical is True. Contains the bounds of easily
         interpretable inner parameters only, e.g. noise parameters, scaling
         factors, offsets.
+    semiquant_observable_ids:
+        The ids of semiquantitative observables. Only relevant if hierarchical
+        is True. If not None, the optimization result's `spline_knots` will be
+        a list of lists of spline knots for each semiquantitative observable in
+        the order of these ids.
     """
 
     def __init__(
@@ -70,3 +75,7 @@ class HierarchicalProblem(Problem):
 
         self.inner_lb = np.array(inner_lb)
         self.inner_ub = np.array(inner_ub)
+
+        self.semiquant_observable_ids = (
+            self.objective.calculator.semiquant_observable_ids
+        )

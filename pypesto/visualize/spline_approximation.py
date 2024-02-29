@@ -12,8 +12,10 @@ from ..C import (
     AMICI_Y,
     CURRENT_SIMULATION,
     DATAPOINTS,
+    EXPDATA_MASK,
     REGULARIZE_SPLINE,
     SCIPY_X,
+    SPLINE_KNOTS,
 )
 from ..problem import Problem
 from ..result import Result
@@ -26,6 +28,7 @@ try:
     from ..hierarchical.semiquantitative.solver import (
         SemiquantInnerSolver,
         _calculate_regularization_for_group,
+        extract_expdata_using_mask,
         get_spline_mapped_simulations,
     )
 except ImportError:
@@ -60,6 +63,25 @@ def plot_splines_from_pypesto_result(
         raise ValueError(
             'The calculator must be an instance of the InnerCalculatorCollector.'
         )
+
+    # Get the spline knot values from the pypesto result
+    spline_knot_values = [
+        obs_spline_knots[1]
+        for obs_spline_knots in pypesto_result.optimize_result.list[
+            start_index
+        ][SPLINE_KNOTS]
+    ]
+
+    # Get inner parameters per observable as differences of spline knot values
+    inner_parameters = [
+        np.concatenate([[obs_knot_values[0]], np.diff(obs_knot_values)])
+        for obs_knot_values in spline_knot_values
+    ]
+
+    inner_results = [
+        {SCIPY_X: obs_inner_parameter}
+        for obs_inner_parameter in inner_parameters
+    ]
 
     # Get the parameters from the pypesto result for the start_index.
     x_dct = dict(
@@ -107,7 +129,6 @@ def plot_splines_from_pypesto_result(
 
     # Get simulation and sigma.
     sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
-    sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
 
     spline_calculator = None
     for (
@@ -117,14 +138,23 @@ def plot_splines_from_pypesto_result(
             spline_calculator = calculator
             break
 
+    if spline_calculator is None:
+        raise ValueError(
+            'No SemiquantCalculator found in the inner_calculators of the objective.'
+            'Cannot plot splines.'
+        )
+
     # Get the inner solver and problem.
     inner_solver = spline_calculator.inner_solver
     inner_problem = spline_calculator.inner_problem
 
-    inner_results = inner_solver.solve(inner_problem, sim, sigma)
-
     return plot_splines_from_inner_result(
-        inner_problem, inner_solver, inner_results, observable_ids, **kwargs
+        inner_problem,
+        inner_solver,
+        inner_results,
+        sim,
+        observable_ids,
+        **kwargs,
     )
 
 
@@ -132,6 +162,7 @@ def plot_splines_from_inner_result(
     inner_problem: 'pypesto.hierarchical.spline_approximation.problem.SplineInnerProblem',
     inner_solver: 'pypesto.hierarchical.spline_approximation.solver.SplineInnerSolver',
     results: list[dict],
+    sim: list[np.ndarray],
     observable_ids=None,
     **kwargs,
 ):
@@ -145,6 +176,10 @@ def plot_splines_from_inner_result(
         The inner solver.
     results:
         The results from the inner solver.
+    sim:
+        The simulated model output.
+    observable_ids:
+        The ids of the observables.
     kwargs:
         Additional arguments to pass to the plotting function.
 
@@ -192,7 +227,9 @@ def plot_splines_from_inner_result(
         spline_knots = np.dot(lower_trian, s)
 
         measurements = inner_problem.groups[group][DATAPOINTS]
-        simulation = inner_problem.groups[group][CURRENT_SIMULATION]
+        simulation = extract_expdata_using_mask(
+            expdata=sim, mask=inner_problem.groups[group][EXPDATA_MASK]
+        )
 
         # For the simulation, get the spline bases
         (
@@ -200,7 +237,6 @@ def plot_splines_from_inner_result(
             spline_bases,
             n,
         ) = SemiquantInnerSolver._rescale_spline_bases(
-            self=None,
             sim_all=simulation,
             N=len(spline_knots),
             K=len(simulation),
@@ -402,7 +438,6 @@ def _add_spline_mapped_simulations_to_model_fit(
             spline_bases,
             n,
         ) = SemiquantInnerSolver._rescale_spline_bases(
-            self=None,
             sim_all=simulation,
             N=len(s),
             K=len(simulation),
@@ -543,7 +578,6 @@ def _obtain_regularization_for_start(
             spline_bases,
             _,
         ) = SemiquantInnerSolver._rescale_spline_bases(
-            self=None,
             sim_all=simulation,
             N=len(s),
             K=len(simulation),

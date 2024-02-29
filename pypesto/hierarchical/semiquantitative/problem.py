@@ -205,6 +205,48 @@ class SemiquantProblem(AmiciInnerProblem):
             inner_par_dict[x_id] = x.value
         return inner_par_dict
 
+    def get_spline_knots(self) -> np.ndarray:
+        """Get spline knots of all semiquantitative observables.
+
+        Returns
+        -------
+        list[list[list[float], list[float]]]
+            A list of lists of lists. Each list in the first list corresponds to a
+            semiquantitative observable. Each of these lists contains two lists:
+            the first list contains the spline bases, the second list contains the
+            spline knot values. The ordering of the observable lists is the same
+            as in `pypesto.problem.hierarchical.semiquant_observable_ids`.
+        """
+        # We need the solver only for the rescaling function.
+        from .solver import SemiquantInnerSolver
+
+        all_spline_knots = []
+
+        for group in self.get_groups_for_xs(InnerParameterType.SPLINE):
+            group_dict = self.groups[group]
+            n_spline_pars = group_dict[N_SPLINE_PARS]
+            n_data_points = group_dict[NUM_DATAPOINTS]
+
+            inner_pars = np.array(
+                [x.value for x in self.get_xs_for_group(group)]
+            )
+
+            # Utility matrix for the spline knot calculation
+            lower_trian = np.tril(np.ones((n_spline_pars, n_spline_pars)))
+            knot_values = np.dot(lower_trian, inner_pars)
+
+            _, knot_bases, _ = SemiquantInnerSolver._rescale_spline_bases(
+                sim_all=group_dict[CURRENT_SIMULATION],
+                N=n_spline_pars,
+                K=n_data_points,
+            )
+
+            spline_knots_for_observable = [knot_bases, knot_values]
+
+            all_spline_knots.append(spline_knots_for_observable)
+
+        return all_spline_knots
+
     def get_measurements_for_group(self, gr) -> np.ndarray:
         """Get measurements for a group."""
         # Taking the ixs of first inner parameter since
