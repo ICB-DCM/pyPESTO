@@ -614,9 +614,21 @@ def test_ipopt_approx_grad():
         progress_bar=False,
     )
     obj2 = rosen_for_sensi(max_sensi_order=1, integrated=integrated)["obj"]
-    assert (
-        result.optimize_result.history[0].get_grad_trace(0)
-        == obj2.get_grad(x_guesses[0]).shape[0]
+    problem2 = pypesto.Problem(
+        objective=obj2, lb=lb, ub=ub, x_guesses=x_guesses
+    )
+    optimizer2 = optimize.IpoptOptimizer(options={"maxiter": 10})
+    result2 = optimize.minimize(
+        problem=problem2,
+        optimizer=optimizer2,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+        history_options=history_options,
+        progress_bar=False,
+    )
+    np.testing.assert_array_almost_equal(
+        result.optimize_result[0].x, result2.optimize_result[0].x, decimal=4
     )
 
 
