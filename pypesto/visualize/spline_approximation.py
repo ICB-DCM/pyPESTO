@@ -185,11 +185,12 @@ def plot_splines_from_inner_result(
         group_idx = list(inner_problem.groups.keys()).index(group)
 
         # For each group get the inner parameters and simulation
-        xs = inner_problem.get_xs_for_group(group)
-
         s = result[SCIPY_X]
 
-        inner_parameters = np.array([x.value for x in xs])
+        # Utility matrix for the spline knot calculation
+        lower_trian = np.tril(np.ones((len(s), len(s))))
+        spline_knots = np.dot(lower_trian, s)
+
         measurements = inner_problem.groups[group][DATAPOINTS]
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
@@ -201,22 +202,22 @@ def plot_splines_from_inner_result(
         ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
-            N=len(inner_parameters),
+            N=len(spline_knots),
             K=len(simulation),
         )
         mapped_simulations = get_spline_mapped_simulations(
-            s, simulation, len(inner_parameters), delta_c, spline_bases, n
+            s, simulation, len(spline_knots), delta_c, spline_bases, n
         )
 
         axs[group_idx].plot(
             simulation, measurements, 'bs', label='Measurements'
         )
         axs[group_idx].plot(
-            spline_bases, inner_parameters, 'g.', label='Spline knots'
+            spline_bases, spline_knots, 'g.', label='Spline knots'
         )
         axs[group_idx].plot(
             spline_bases,
-            inner_parameters,
+            spline_knots,
             linestyle='-',
             color='g',
             label='Spline function',
@@ -224,7 +225,7 @@ def plot_splines_from_inner_result(
         if inner_solver.options[REGULARIZE_SPLINE]:
             alpha_opt, beta_opt = _calculate_optimal_regularization(
                 s=s,
-                N=len(inner_parameters),
+                N=len(spline_knots),
                 c=spline_bases,
             )
             axs[group_idx].plot(
@@ -392,10 +393,7 @@ def _add_spline_mapped_simulations_to_model_fit(
         ][0]
 
         # Get the inner parameters and simulation.
-        xs = inner_problem.get_xs_for_group(group)
         s = inner_result[SCIPY_X]
-
-        inner_parameters = np.array([x.value for x in xs])
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
@@ -406,12 +404,12 @@ def _add_spline_mapped_simulations_to_model_fit(
         ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
-            N=len(inner_parameters),
+            N=len(s),
             K=len(simulation),
         )
         # and the spline-mapped simulations.
         mapped_simulations = get_spline_mapped_simulations(
-            s, simulation, len(inner_parameters), delta_c, spline_bases, n
+            s, simulation, len(s), delta_c, spline_bases, n
         )
 
         # Plot the spline-mapped simulations to the ax with same color
@@ -536,29 +534,25 @@ def _obtain_regularization_for_start(
     # for each result and group, plot the inner solution
     for result, group in zip(inner_results, inner_problem.groups):
         # For each group get the inner parameters and simulation
-        xs = inner_problem.get_xs_for_group(group)
-
         s = result[SCIPY_X]
-
-        inner_parameters = np.array([x.value for x in xs])
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]
 
         # For the simulation, get the spline bases
         (
-            delta_c,
+            _,
             spline_bases,
-            n,
+            _,
         ) = SemiquantInnerSolver._rescale_spline_bases(
             self=None,
             sim_all=simulation,
-            N=len(inner_parameters),
+            N=len(s),
             K=len(simulation),
         )
 
         if inner_solver.options[REGULARIZE_SPLINE]:
             reg_term = _calculate_regularization_for_group(
                 s=s,
-                N=len(inner_parameters),
+                N=len(s),
                 c=spline_bases,
                 regularization_factor=inner_solver.options[
                     'regularization_factor'
