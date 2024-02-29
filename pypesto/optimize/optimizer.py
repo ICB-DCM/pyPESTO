@@ -551,12 +551,9 @@ class IpoptOptimizer(Optimizer):
             for the `approx_grad` option, which is handled separately.
         """
         super().__init__()
-        if options is None:
-            self.approx_grad = False
-        elif "approx_grad" in options:
+        self.approx_grad = False
+        if (not options is None) and  "approx_grad" in options:
             self.approx_grad = options.pop("approx_grad")
-        else:
-            self.approx_grad = False
         self.options = options
 
     def __repr__(self) -> str:
