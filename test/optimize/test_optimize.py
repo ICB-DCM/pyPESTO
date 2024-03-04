@@ -593,6 +593,46 @@ def test_scipy_integrated_grad():
     )
 
 
+def test_ipopt_approx_grad():
+    integrated = False
+    obj = rosen_for_sensi(max_sensi_order=0, integrated=integrated)["obj"]
+    lb = 0 * np.ones((1, 2))
+    ub = 1 * np.ones((1, 2))
+    x_guesses = [[0.5, 0.5]]
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    optimizer = optimize.IpoptOptimizer(
+        options={"maxiter": 10, "approx_grad": True}
+    )
+    optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+        history_options=history_options,
+        progress_bar=False,
+    )
+    obj2 = rosen_for_sensi(max_sensi_order=1, integrated=integrated)["obj"]
+    problem2 = pypesto.Problem(
+        objective=obj2, lb=lb, ub=ub, x_guesses=x_guesses
+    )
+    optimizer2 = optimize.IpoptOptimizer(options={"maxiter": 10})
+    result2 = optimize.minimize(
+        problem=problem2,
+        optimizer=optimizer2,
+        n_starts=1,
+        startpoint_method=pypesto.startpoint.uniform,
+        options=optimize_options,
+        history_options=history_options,
+        progress_bar=False,
+    )
+    np.testing.assert_array_almost_equal(
+        result.optimize_result[0].x, result2.optimize_result[0].x, decimal=4
+    )
+
+
 def test_correct_startpoint_usage(optimizer):
     """
     Test that the startpoint is correctly used in all optimizers.

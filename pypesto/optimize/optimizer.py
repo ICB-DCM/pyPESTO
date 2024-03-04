@@ -548,9 +548,13 @@ class IpoptOptimizer(Optimizer):
         Parameters
         ----------
         options:
-            Options are directly passed on to `cyipopt.minimize_ipopt`.
+            Options are directly passed on to `cyipopt.minimize_ipopt`, except
+            for the `approx_grad` option, which is handled separately.
         """
         super().__init__()
+        self.approx_grad = False
+        if (options is not None) and "approx_grad" in options:
+            self.approx_grad = options.pop("approx_grad")
         self.options = options
 
     def __repr__(self) -> str:
@@ -579,11 +583,21 @@ class IpoptOptimizer(Optimizer):
 
         bounds = np.array([problem.lb, problem.ub]).T
 
+        if self.approx_grad:
+            jac = None
+        elif objective.has_grad:
+            jac = objective.get_grad
+        else:
+            raise ValueError(
+                "For IPOPT, the objective must either be able to return "
+                "gradients or the `approx_grad` must be set to True."
+            )
+
         ret = cyipopt.minimize_ipopt(
             fun=objective.get_fval,
             x0=x0,
             method=None,  # ipopt does not use this argument for anything
-            jac=objective.get_grad,
+            jac=jac,
             hess=None,  # ipopt does not support Hessian yet
             hessp=None,  # ipopt does not support Hessian vector product yet
             bounds=bounds,
