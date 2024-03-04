@@ -140,7 +140,7 @@ def plot_splines_from_pypesto_result(
 
     if spline_calculator is None:
         raise ValueError(
-            'No SemiquantCalculator found in the inner_calculators of the objective.'
+            'No SemiquantCalculator found in the inner_calculators of the objective. '
             'Cannot plot splines.'
         )
 
