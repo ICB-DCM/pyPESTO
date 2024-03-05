@@ -34,10 +34,10 @@ from pypesto.hierarchical.semiquantitative.solver import (
 
 inner_options = [
     {
-        'spline_ratio': spline_ratio,
-        'min_diff_factor': min_diff_factor,
-        'regularize_spline': regularize_spline,
-        'regularization_factor': regularization_factor,
+        "spline_ratio": spline_ratio,
+        "min_diff_factor": min_diff_factor,
+        "regularize_spline": regularize_spline,
+        "regularization_factor": regularization_factor,
     }
     for spline_ratio in [1.0, 1 / 4]
     for min_diff_factor in [1 / 2, 0.0]
@@ -47,12 +47,12 @@ inner_options = [
 
 example_semiquantitative_yaml = (
     Path(__file__).parent
-    / '..'
-    / '..'
-    / 'doc'
-    / 'example'
-    / 'example_semiquantitative'
-    / 'example_semiquantitative_linear.yaml'
+    / ".."
+    / ".."
+    / "doc"
+    / "example"
+    / "example_semiquantitative"
+    / "example_semiquantitative_linear.yaml"
 )
 
 
@@ -75,13 +75,13 @@ def test_optimization(inner_options: dict):
         problem=problem, n_starts=1, optimizer=optimizer
     )
     # Check that optimization finished without infinite or nan values.
-    assert np.isfinite(result.optimize_result.list[0]['fval'])
-    assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
-    assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
+    assert np.isfinite(result.optimize_result.list[0]["fval"])
+    assert np.all(np.isfinite(result.optimize_result.list[0]["x"]))
+    assert np.all(np.isfinite(result.optimize_result.list[0]["grad"][2:]))
     # Check that optimization finished with a lower value.
     assert (
-        result.optimize_result.list[0]['fval']
-        < result.optimize_result.list[0]['fval0']
+        result.optimize_result.list[0]["fval"]
+        < result.optimize_result.list[0]["fval0"]
     )
 
 
@@ -108,13 +108,13 @@ def test_spline_calculator_and_objective():
 
     problems = {}
     options = {
-        'minimal_diff_on': {
-            'spline_ratio': 1 / 2,
-            'min_diff_factor': 1 / 2,
+        "minimal_diff_on": {
+            "spline_ratio": 1 / 2,
+            "min_diff_factor": 1 / 2,
         },
-        'minimal_diff_off': {
-            'spline_ratio': 1 / 2,
-            'min_diff_factor': 0.0,
+        "minimal_diff_off": {
+            "spline_ratio": 1 / 2,
+            "min_diff_factor": 0.0,
         },
     }
 
@@ -181,13 +181,13 @@ def test_spline_calculator_and_objective():
     # Check the inner calculator and the inner calculator collector
     # give the same results.
     assert np.allclose(
-        inner_calculator_results['minimal_diff_on']['fval'],
-        calculator_results['minimal_diff_on']['fval'],
+        inner_calculator_results["minimal_diff_on"]["fval"],
+        calculator_results["minimal_diff_on"]["fval"],
         atol=atol,
     )
     assert np.allclose(
-        inner_calculator_results['minimal_diff_on']['grad'],
-        calculator_results['minimal_diff_on']['grad'],
+        inner_calculator_results["minimal_diff_on"]["grad"],
+        calculator_results["minimal_diff_on"]["grad"],
         atol=atol,
     )
 
@@ -195,20 +195,20 @@ def test_spline_calculator_and_objective():
     # will not depend on whether we constrain minimal difference.
     # In general, this is not the case.
     assert np.isclose(
-        calculator_results['minimal_diff_on']['fval'],
-        calculator_results['minimal_diff_off']['fval'],
+        calculator_results["minimal_diff_on"]["fval"],
+        calculator_results["minimal_diff_off"]["fval"],
         atol=atol,
     )
     assert np.allclose(
-        calculator_results['minimal_diff_on']['grad'],
-        calculator_results['minimal_diff_off']['grad'],
+        calculator_results["minimal_diff_on"]["grad"],
+        calculator_results["minimal_diff_off"]["grad"],
         atol=atol,
     )
 
     # The gradient should be close to the one calculated using
     # finite differences.
     assert np.allclose(
-        calculator_results['minimal_diff_on']['grad'],
+        calculator_results["minimal_diff_on"]["grad"],
         FD_results[1],
         atol=atol,
     )
@@ -217,9 +217,9 @@ def test_spline_calculator_and_objective():
     # the fval and grad should both be low.
     expected_fval = np.log(2 * np.pi) * 18 / 2
     assert np.isclose(
-        calculator_results['minimal_diff_on']['fval'], expected_fval, atol=atol
+        calculator_results["minimal_diff_on"]["fval"], expected_fval, atol=atol
     )
-    assert np.all(calculator_results['minimal_diff_off']['grad'] < grad_atol)
+    assert np.all(calculator_results["minimal_diff_off"]["grad"] < grad_atol)
 
 
 def test_extract_expdata_using_mask():
@@ -260,22 +260,22 @@ def _inner_problem_exp():
     n_spline_pars = int(np.ceil(spline_ratio * len(timepoints)))
 
     expected_values = {
-        'fun': np.log(2 * np.pi) * n_timepoints / 2,
-        'jac': np.zeros(n_spline_pars),
-        'x': np.asarray([0.0, 2.0, 2.0, 2.0, 2.0, 2.0]),
+        "fun": np.log(2 * np.pi) * n_timepoints / 2,
+        "jac": np.zeros(n_spline_pars),
+        "x": np.asarray([0.0, 2.0, 2.0, 2.0, 2.0, 2.0]),
     }
 
-    par_type = 'spline'
+    par_type = "spline"
     mask = [np.full(len(simulation), True)]
 
     inner_parameters = [
         SplineInnerParameter(
-            inner_parameter_id=f'{par_type}_{1}_{par_index+1}',
+            inner_parameter_id=f"{par_type}_{1}_{par_index+1}",
             inner_parameter_type=InnerParameterType.SPLINE,
             scale=LIN,
             lb=-np.inf,
             ub=np.inf,
-            observable_id='obs1',
+            observable_id="obs1",
             ixs=mask,
             index=par_index + 1,
             group=1,
@@ -298,11 +298,11 @@ def test_spline_inner_solver():
     inner_problem, expected_values, simulation, sigma = _inner_problem_exp()
 
     options = {
-        'minimal_diff_on': {
-            'min_diff_factor': 1 / 2,
+        "minimal_diff_on": {
+            "min_diff_factor": 1 / 2,
         },
-        'minimal_diff_off': {
-            'min_diff_factor': 0.0,
+        "minimal_diff_off": {
+            "min_diff_factor": 0.0,
         },
     }
 
@@ -324,13 +324,13 @@ def test_spline_inner_solver():
 
     for minimal_diff in options.keys():
         assert np.isclose(
-            results[minimal_diff][0]['fun'], expected_values['fun'], rtol=rtol
+            results[minimal_diff][0]["fun"], expected_values["fun"], rtol=rtol
         )
         assert np.allclose(
-            results[minimal_diff][0]['jac'], expected_values['jac'], rtol=rtol
+            results[minimal_diff][0]["jac"], expected_values["jac"], rtol=rtol
         )
         assert np.allclose(
-            results[minimal_diff][0]['x'], expected_values['x'], rtol=rtol
+            results[minimal_diff][0]["x"], expected_values["x"], rtol=rtol
         )
 
 

@@ -226,8 +226,8 @@ class RelativeInnerSolver(InnerSolver):
         inner_parameters:
             The inner parameters to apply to the rdatas.
         """
-        sim = [rdata['y'] for rdata in rdatas]
-        sigma = [rdata['sigmay'] for rdata in rdatas]
+        sim = [rdata["y"] for rdata in rdatas]
+        sigma = [rdata["sigmay"] for rdata in rdatas]
 
         # apply offsets, scalings and sigmas
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
@@ -422,11 +422,11 @@ class NumericalInnerSolver(RelativeInnerSolver):
         if self.problem_kwargs is None:
             self.problem_kwargs = {}
 
-        self.minimize_kwargs['n_starts'] = self.minimize_kwargs.get(
-            'n_starts', 1
+        self.minimize_kwargs["n_starts"] = self.minimize_kwargs.get(
+            "n_starts", 1
         )
-        self.minimize_kwargs['progress_bar'] = self.minimize_kwargs.get(
-            'progress_bar', False
+        self.minimize_kwargs["progress_bar"] = self.minimize_kwargs.get(
+            "progress_bar", False
         )
 
         self.x_guesses = None
@@ -517,7 +517,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
 
         # perform the actual optimization
         result = minimize(pypesto_problem, **self.minimize_kwargs)
-        best_par = result.optimize_result.list[0]['x']
+        best_par = result.optimize_result.list[0]["x"]
 
         # Check if the index of an optimized parameter on the dummy bound
         # is not in the list of specified bounds. If so, raise an error.
@@ -545,7 +545,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
         # cache
         self.x_guesses = np.array(
             [
-                entry['x']
+                entry["x"]
                 for entry in result.optimize_result.list[: self.n_cached]
             ]
         )
@@ -575,14 +575,14 @@ class NumericalInnerSolver(RelativeInnerSolver):
         -------
         The sampled startpoints appended to the cached startpoints.
         """
-        if self.minimize_kwargs['n_starts'] == 1 and self.x_guesses is None:
+        if self.minimize_kwargs["n_starts"] == 1 and self.x_guesses is None:
             return np.array(
                 [list(problem.get_dummy_values(scaled=False).values())]
             )
         elif self.x_guesses is not None:
-            n_samples = self.minimize_kwargs['n_starts'] - len(self.x_guesses)
+            n_samples = self.minimize_kwargs["n_starts"] - len(self.x_guesses)
         else:
-            n_samples = self.minimize_kwargs['n_starts'] - 1
+            n_samples = self.minimize_kwargs["n_starts"] - 1
 
         if n_samples <= 0:
             return self.x_guesses

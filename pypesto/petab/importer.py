@@ -502,7 +502,7 @@ class PetabImporter(AmiciObjectBuilder):
             self._non_quantitative_data_types is not None
             and self._hierarchical
         ):
-            inner_options = kwargs.pop('inner_options', None)
+            inner_options = kwargs.pop("inner_options", None)
             inner_options = (
                 inner_options
                 if inner_options is not None
@@ -518,15 +518,17 @@ class PetabImporter(AmiciObjectBuilder):
             amici_reporting = amici.RDataReporting.full
 
             # FIXME: currently not supported with hierarchical
-            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+            if "guess_steadystate" in kwargs and kwargs["guess_steadystate"]:
                 warnings.warn(
-                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
+                    "`guess_steadystate` not supported with hierarchical "
+                    "optimization. Disabling `guess_steadystate`.",
+                    stacklevel=1,
                 )
-            kwargs['guess_steadystate'] = False
+            kwargs["guess_steadystate"] = False
             inner_parameter_ids = calculator.get_inner_par_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
-        max_sensi_order = kwargs.get('max_sensi_order', None)
+        max_sensi_order = kwargs.get("max_sensi_order", None)
 
         if (
             self._non_quantitative_data_types is not None
@@ -622,11 +624,9 @@ class PetabImporter(AmiciObjectBuilder):
 
         # create a identifiers of preequilibration and simulation condition ids
         # which can then be stored in the prediction result
-        edata_conditions = (
-            objective.amici_object_builder.petab_problem.get_simulation_conditions_from_measurement_df()
-        )
+        edata_conditions = objective.amici_object_builder.petab_problem.get_simulation_conditions_from_measurement_df()
         if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
-            preeq_dummy = [''] * edata_conditions.shape[0]
+            preeq_dummy = [""] * edata_conditions.shape[0]
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
         edata_conditions.drop_duplicates(inplace=True)
 
@@ -674,7 +674,7 @@ class PetabImporter(AmiciObjectBuilder):
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[
                             x_id, petab.OBJECTIVE_PRIOR_PARAMETERS
-                        ].split(';')
+                        ].split(";")
                     ]
 
                     scale = self.petab_problem.parameter_df.loc[

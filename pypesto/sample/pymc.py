@@ -18,13 +18,6 @@ from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
-__all__ = [
-    'PymcSampler',
-    'PymcObjectiveWithGradientOp',
-    'PymcObjectiveOp',
-    'PymcGradientOp',
-]
-
 # implementation based on:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
@@ -135,7 +128,7 @@ class PymcSampler(Sampler):
             Options configuring the sampler.
         """
         if not options:
-            options = {'chains': 1}
+            options = {"chains": 1}
         return options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -171,7 +164,7 @@ class PymcSampler(Sampler):
         try:
             import pymc
         except ImportError:
-            raise SamplerImportError("pymc")
+            raise SamplerImportError("pymc") from None
 
         problem = self.problem
         log_post = PymcObjectiveOp.create_instance(problem.objective, beta)

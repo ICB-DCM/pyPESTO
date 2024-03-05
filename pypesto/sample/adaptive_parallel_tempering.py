@@ -32,10 +32,10 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
         """Get default options for sampler."""
         options = super().default_options()
         # scaling factor for temperature adaptation
-        options['eta'] = 100
+        options["eta"] = 100
         # controls the adaptation degeneration velocity of the temperature
         # adaption.
-        options['nu'] = 1e3
+        options["nu"] = 1e3
 
         return options
 
@@ -45,8 +45,8 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
             return
 
         # parameters
-        nu = self.options['nu']
-        eta = self.options['eta']
+        nu = self.options["nu"]
+        eta = self.options["eta"]
         betas = self.betas
 
         # booleans to integer array

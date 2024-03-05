@@ -11,7 +11,7 @@ from pypesto.C import MODE_FUN, MODE_RES
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
 
-scales = ['lin', 'log', 'log10']
+scales = ["lin", "log", "log10"]
 
 
 @pytest.fixture(params=scales)
@@ -20,23 +20,23 @@ def scale(request):
 
 
 prior_type_lists = [
-    ['uniform'],
-    ['normal'],
-    ['laplace'],
-    ['logNormal'],
-    ['parameterScaleUniform'],
-    ['parameterScaleNormal'],
-    ['parameterScaleLaplace'],
-    ['laplace', 'parameterScaleNormal', 'parameterScaleLaplace'],
-    ['laplace', 'logNormal', 'parameterScaleNormal', 'parameterScaleLaplace'],
+    ["uniform"],
+    ["normal"],
+    ["laplace"],
+    ["logNormal"],
+    ["parameterScaleUniform"],
+    ["parameterScaleNormal"],
+    ["parameterScaleLaplace"],
+    ["laplace", "parameterScaleNormal", "parameterScaleLaplace"],
+    ["laplace", "logNormal", "parameterScaleNormal", "parameterScaleLaplace"],
     [
-        'uniform',
-        'normal',
-        'laplace',
-        'logNormal',
-        'parameterScaleUniform',
-        'parameterScaleNormal',
-        'parameterScaleLaplace',
+        "uniform",
+        "normal",
+        "laplace",
+        "logNormal",
+        "parameterScaleUniform",
+        "parameterScaleNormal",
+        "parameterScaleLaplace",
     ],
 ]
 
@@ -53,9 +53,9 @@ def test_mode(scale, prior_type_list):
     """
 
     problem_dict = {
-        'lin': {'lb': 0, 'ub': 3, 'opt': 1},
-        'log': {'lb': -3, 'ub': 3, 'opt': 0},
-        'log10': {'lb': -3, 'ub': 2, 'opt': 0},
+        "lin": {"lb": 0, "ub": 3, "opt": 1},
+        "log": {"lb": -3, "ub": 3, "opt": 0},
+        "log10": {"lb": -3, "ub": 2, "opt": 0},
     }
 
     prior_list = [
@@ -64,15 +64,15 @@ def test_mode(scale, prior_type_list):
             prior_type,
             (
                 [1, 2]
-                if prior_type in ['uniform', 'parameterScaleUniform']
+                if prior_type in ["uniform", "parameterScaleUniform"]
                 else [1, 1]
             ),
             scale,
         )
         for iprior, prior_type in enumerate(prior_type_list)
     ]
-    ubs = np.asarray([problem_dict[scale]['ub'] for _ in prior_type_list])
-    lbs = np.asarray([problem_dict[scale]['lb'] for _ in prior_type_list])
+    ubs = np.asarray([problem_dict[scale]["ub"] for _ in prior_type_list])
+    lbs = np.asarray([problem_dict[scale]["lb"] for _ in prior_type_list])
 
     test_prior = NegLogParameterPriors(prior_list)
     test_problem = pypesto.Problem(
@@ -86,23 +86,23 @@ def test_mode(scale, prior_type_list):
     topt = []
     # test uniform distribution:
     for prior_type, prior in zip(prior_type_list, prior_list):
-        if prior_type.startswith('parameterScale'):
-            scale = 'lin'
-        if prior_type in ['uniform', 'parameterScaleUniform']:
+        if prior_type.startswith("parameterScale"):
+            scale = "lin"
+        if prior_type in ["uniform", "parameterScaleUniform"]:
             # check inside and outside of interval
-            funprior = prior['density_fun']
+            funprior = prior["density_fun"]
             assert np.isinf(funprior(lin_to_scaled(0.5, scale)))
             assert np.isclose(funprior(lin_to_scaled(1.5, scale)), math.log(1))
             assert np.isinf(funprior(lin_to_scaled(2.5, scale)))
-            resprior = prior['residual']
+            resprior = prior["residual"]
             assert np.isinf(resprior(lin_to_scaled(0.5, scale)))
             assert np.isclose(resprior(lin_to_scaled(1.5, scale)), 0)
             assert np.isinf(resprior(lin_to_scaled(2.5, scale)))
             topt.append(np.nan)
         else:
-            topt.append(problem_dict[scale]['opt'])
+            topt.append(problem_dict[scale]["opt"])
 
-        if prior_type.endswith('logNormal'):
+        if prior_type.endswith("logNormal"):
             assert not test_prior.has_res
             assert not test_prior.has_sres
 
@@ -110,8 +110,8 @@ def test_mode(scale, prior_type_list):
 
     # test log-density based and residual representation
     if any(~np.isnan(topt)):
-        for method in ['L-BFGS-B', 'ls_trf']:
-            if method == 'ls_trf' and not test_prior.has_res:
+        for method in ["L-BFGS-B", "ls_trf"]:
+            if method == "ls_trf" and not test_prior.has_res:
                 continue
             optimizer = pypesto.optimize.ScipyOptimizer(method=method)
             startpoints = pypesto.startpoint.UniformStartpoints(
@@ -128,7 +128,7 @@ def test_mode(scale, prior_type_list):
             # flat functions don't have local minima, so dont check this
             # for uniform priors
 
-            num_optim = result.optimize_result.list[0]['x'][~np.isnan(topt)]
+            num_optim = result.optimize_result.list[0]["x"][~np.isnan(topt)]
             assert np.isclose(
                 num_optim, topt[~np.isnan(topt)], atol=1e-03
             ).all()
@@ -145,7 +145,7 @@ def test_derivatives(prior_type_list, scale):
             prior_type,
             (
                 [-1, 1]
-                if prior_type in ['uniform', 'parameterScaleUniform']
+                if prior_type in ["uniform", "parameterScaleUniform"]
                 else [1, 1]
             ),
             scale,
@@ -177,25 +177,25 @@ def lin_to_scaled(x: float, scale: str):
     """
     transforms x to linear scale
     """
-    if scale == 'lin':
+    if scale == "lin":
         return x
-    elif scale == 'log':
+    elif scale == "log":
         return math.log(x)
-    elif scale == 'log10':
+    elif scale == "log10":
         return math.log10(x)
     else:
-        ValueError(f'Unknown scale {scale}')
+        ValueError(f"Unknown scale {scale}")
 
 
 def scaled_to_lin(x: float, scale: str):
     """
     transforms x to scale
     """
-    if scale == 'lin':
+    if scale == "lin":
         return x
-    elif scale == 'log':
+    elif scale == "log":
         return math.exp(x)
-    elif scale == 'log10':
+    elif scale == "log10":
         return 10**x
     else:
-        ValueError(f'Unknown scale {scale}')
+        ValueError(f"Unknown scale {scale}")

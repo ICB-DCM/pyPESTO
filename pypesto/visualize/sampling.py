@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 
 
 prediction_errorbar_settings = {
-    'fmt': 'none',
-    'color': 'k',
-    'capsize': 10,
+    "fmt": "none",
+    "color": "k",
+    "capsize": 10,
 }
 
 
@@ -87,14 +87,14 @@ def sampling_fval_traces(
         _, ax = plt.subplots(figsize=size)
 
     sns.set(style="ticks")
-    kwargs = {'edgecolor': "w", 'linewidth': 0.3, 's': 10}  # for edge color
+    kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
     if full_trace:
-        kwargs['hue'] = "converged"
-        if len(params_fval[kwargs['hue']].unique()) == 1:
-            kwargs['palette'] = ["#477ccd"]
-        elif len(params_fval[kwargs['hue']].unique()) == 2:
-            kwargs['palette'] = ["#868686", "#477ccd"]
-        kwargs['legend'] = False
+        kwargs["hue"] = "converged"
+        if len(params_fval[kwargs["hue"]].unique()) == 1:
+            kwargs["palette"] = ["#477ccd"]
+        elif len(params_fval[kwargs["hue"]].unique()) == 2:
+            kwargs["palette"] = ["#868686", "#477ccd"]
+        kwargs["legend"] = False
 
     sns.scatterplot(
         x="iteration", y="logPosterior", data=params_fval, ax=ax, **kwargs
@@ -106,10 +106,10 @@ def sampling_fval_traces(
         _burn_in = result.sample_result.burn_in
 
     if full_trace and _burn_in > 0:
-        ax.axvline(_burn_in, linestyle='--', linewidth=1.5, color='k')
+        ax.axvline(_burn_in, linestyle="--", linewidth=1.5, color="k")
 
-    ax.set_xlabel('iteration index')
-    ax.set_ylabel('log-posterior')
+    ax.set_xlabel("iteration index")
+    ax.set_ylabel("log-posterior")
 
     if title:
         ax.set_title(title)
@@ -237,7 +237,7 @@ def _plot_trajectories_by_condition(
     # Each subplot has all data for a single condition.
     for condition_index, condition_id in enumerate(condition_ids):
         ax = axes.flat[condition_index]
-        ax.set_title(f'Condition: {labels[condition_id]}')
+        ax.set_title(f"Condition: {labels[condition_id]}")
         # Each subplot has all data for all condition-specific outputs.
         for output_index, output_id in enumerate(output_ids):
             facecolor0 = variable_colors[output_index]
@@ -251,7 +251,7 @@ def _plot_trajectories_by_condition(
             ax.plot(
                 t_average,
                 y_average,
-                'k-',
+                "k-",
             )
             if add_sd:
                 t_std, y_std = _get_statistic_data(
@@ -262,8 +262,8 @@ def _plot_trajectories_by_condition(
                 )
                 if (t_std != t_average).all():
                     raise ValueError(
-                        'Unknown error: timepoints for average and standard '
-                        'deviation do not match.'
+                        "Unknown error: timepoints for average and standard "
+                        "deviation do not match."
                     )
                 ax.errorbar(
                     t_average,
@@ -297,8 +297,8 @@ def _plot_trajectories_by_condition(
                 # some incorrect time points.
                 if not (np.array(t_lower) == np.array(t_upper)).all():
                     raise ValueError(
-                        'The timepoints of the data for the upper and lower '
-                        'percentiles do not match.'
+                        "The timepoints of the data for the upper and lower "
+                        "percentiles do not match."
                     )
                 # Plot a shaded region between the data that correspond to the
                 # lower and upper percentiles.
@@ -318,12 +318,12 @@ def _plot_trajectories_by_condition(
                 ax.scatter(
                     measurements[0],
                     measurements[1],
-                    marker='o',
+                    marker="o",
                     facecolor=facecolor0,
                     edgecolor=(
-                        'white'
+                        "white"
                         if rgb_to_hls(*facecolor0)[1] < 0.5
-                        else 'black'
+                        else "black"
                     ),
                 )
 
@@ -360,7 +360,7 @@ def _plot_trajectories_by_output(
         # next condition plot starts at the end of the previous condition plot.
         t0 = 0
         ax = axes.flat[output_index]
-        ax.set_title(f'Trajectory: {labels[output_id]}')
+        ax.set_title(f"Trajectory: {labels[output_id]}")
         # Each subplot is divided by conditions, with vertical lines.
         for condition_index, condition_id in enumerate(condition_ids):
             facecolor0 = variable_colors[condition_index]
@@ -368,7 +368,7 @@ def _plot_trajectories_by_output(
                 ax.axvline(
                     t0,
                     linewidth=2,
-                    color='k',
+                    color="k",
                 )
 
             t_max = t0
@@ -384,7 +384,7 @@ def _plot_trajectories_by_output(
             ax.plot(
                 t_average_shifted,
                 y_average,
-                'k-',
+                "k-",
             )
             if add_sd:
                 t_std, y_std = _get_statistic_data(
@@ -395,8 +395,8 @@ def _plot_trajectories_by_output(
                 )
                 if (t_std != t_average).all():
                     raise ValueError(
-                        'Unknown error: timepoints for average and standard '
-                        'deviation do not match.'
+                        "Unknown error: timepoints for average and standard "
+                        "deviation do not match."
                     )
                 ax.errorbar(
                     t_average_shifted,
@@ -433,8 +433,8 @@ def _plot_trajectories_by_output(
                 # some incorrect time points.
                 if not (np.array(t_lower) == np.array(t_upper)).all():
                     raise ValueError(
-                        'The timepoints of the data for the upper and lower '
-                        'percentiles do not match.'
+                        "The timepoints of the data for the upper and lower "
+                        "percentiles do not match."
                     )
                 # Plot a shaded region between the data that correspond to the
                 # lower and upper percentiles.
@@ -454,12 +454,12 @@ def _plot_trajectories_by_output(
                 ax.scatter(
                     [t0 + _t for _t in measurements[0]],
                     measurements[1],
-                    marker='o',
+                    marker="o",
                     facecolor=facecolor0,
                     edgecolor=(
-                        'white'
+                        "white"
                         if rgb_to_hls(*facecolor0)[1] < 0.5
-                        else 'black'
+                        else "black"
                     ),
                 )
             # Set t0 to the last plotted timepoint of the current condition
@@ -468,7 +468,7 @@ def _plot_trajectories_by_output(
 
 
 def _get_condition_and_output_ids(
-    summary: Dict[str, PredictionResult]
+    summary: Dict[str, PredictionResult],
 ) -> Tuple[Sequence[str], Sequence[str]]:
     """Get all condition and output IDs in a prediction summary.
 
@@ -496,7 +496,7 @@ def _get_condition_and_output_ids(
             ]
         ).all()
     ):
-        raise KeyError('All predictions must have the same set of conditions.')
+        raise KeyError("All predictions must have the same set of conditions.")
     condition_ids = all_condition_ids[0]
 
     output_ids = sorted(
@@ -591,7 +591,7 @@ def _handle_legends(
     for index, level in enumerate(levels):
         ci_lines.append(
             [
-                f'{level}% CI',
+                f"{level}% CI",
                 Line2D(
                     *fake_data,
                     color=rgba2rgb(
@@ -608,16 +608,16 @@ def _handle_legends(
     if add_sd:
         capline = Line2D(
             *fake_data,
-            color=prediction_errorbar_settings['color'],
+            color=prediction_errorbar_settings["color"],
             # https://github.com/matplotlib/matplotlib/blob
             # /710fce3df95e22701bd68bf6af2c8adbc9d67a79/lib/matplotlib/
             # axes/_axes.py#L3424=
-            markersize=2.0 * prediction_errorbar_settings['capsize'],
+            markersize=2.0 * prediction_errorbar_settings["capsize"],
         )
-        average_title += ' + SD'
+        average_title += " + SD"
         barline = LineCollection(
             np.empty((2, 2, 2)),
-            color=prediction_errorbar_settings['color'],
+            color=prediction_errorbar_settings["color"],
         )
         average_line_object = ErrorbarContainer(
             (
@@ -636,13 +636,13 @@ def _handle_legends(
     if grouped_measurements:
         data_line = [
             [
-                'Data',
+                "Data",
                 Line2D(
                     *fake_data,
                     linewidth=0,
-                    marker='o',
-                    markerfacecolor='grey',
-                    markeredgecolor='white',
+                    marker="o",
+                    markerfacecolor="grey",
+                    markeredgecolor="white",
                 ),
             ]
         ]
@@ -651,16 +651,16 @@ def _handle_legends(
 
     # CI level, and variable name, legends.
     legend_options_top_right = {
-        'bbox_to_anchor': (1 + artist_padding, 1),
-        'loc': 'upper left',
+        "bbox_to_anchor": (1 + artist_padding, 1),
+        "loc": "upper left",
     }
     legend_options_bottom_right = {
-        'bbox_to_anchor': (1 + artist_padding, 0),
-        'loc': 'lower left',
+        "bbox_to_anchor": (1 + artist_padding, 0),
+        "loc": "lower left",
     }
     legend_titles = {
-        OUTPUT: 'Conditions',
-        CONDITION: 'Trajectories',
+        OUTPUT: "Conditions",
+        CONDITION: "Trajectories",
     }
     legend_variables = axes.flat[n_col - 1].legend(
         variable_lines[:, 1],
@@ -673,7 +673,7 @@ def _handle_legends(
         level_lines[:, 1],
         level_lines[:, 0],
         **legend_options_bottom_right,
-        title='Prediction',
+        title="Prediction",
     )
     fig.add_artist(legend_variables)
 
@@ -825,7 +825,7 @@ def sampling_prediction_trajectories(
                 ) = condition_id.split(petab.PARAMETER_SEPARATOR)
             else:
                 preequilibration_condition_id, simulation_condition_id = (
-                    '',
+                    "",
                     condition_id,
                 )
             condition = {
@@ -858,7 +858,7 @@ def sampling_prediction_trajectories(
         variable_names = condition_ids
         n_subplots = len(output_ids)
     else:
-        raise ValueError(f'Unsupported groupby value: {groupby}')
+        raise ValueError(f"Unsupported groupby value: {groupby}")
 
     level_opacities, variable_colors = _handle_colors(
         levels=levels,
@@ -878,8 +878,8 @@ def sampling_prediction_trajectories(
             axes = np.array([[axes]])
         if len(axes.flat) < n_subplots:
             raise ValueError(
-                'Provided `axes` contains insufficient subplots. At least '
-                f'{n_subplots} are required.'
+                "Provided `axes` contains insufficient subplots. At least "
+                f"{n_subplots} are required."
             )
     artist_padding = axis_label_padding / (fig.get_size_inches() * fig.dpi)[0]
 
@@ -935,26 +935,26 @@ def sampling_prediction_trajectories(
     xmin = min(ax.get_position().xmin for ax in axes.flat)
     ymin = min(ax.get_position().ymin for ax in axes.flat)
     xlabel = (
-        'Cumulative time across all conditions'
+        "Cumulative time across all conditions"
         if groupby == OUTPUT
-        else 'Time'
+        else "Time"
     )
     fig.text(
         0.5,
         ymin - artist_padding,
         xlabel,
-        ha='center',
-        va='center',
+        ha="center",
+        va="center",
         transform=fig.transFigure,
     )
     fig.text(
         xmin - artist_padding,
         0.5,
-        'Simulated values',
-        ha='center',
-        va='center',
+        "Simulated values",
+        ha="center",
+        va="center",
         transform=fig.transFigure,
-        rotation='vertical',
+        rotation="vertical",
     )
 
     # plt.tight_layout()  # Ruins layout for `groupby == OUTPUT`.
@@ -1031,7 +1031,7 @@ def sampling_parameter_cis(
                 np.append(x1, x1[::-1]),
                 np.append(y1, y2[::-1]),
                 color=colors[n],
-                label=str(level) + '% CI',
+                label=str(level) + "% CI",
             )
 
             if show_median:
@@ -1042,8 +1042,8 @@ def sampling_parameter_cis(
                     ax.plot(
                         [_median, _median],
                         [npar - _step, npar + _step],
-                        'k-',
-                        label='MCMC median',
+                        "k-",
+                        label="MCMC median",
                     )
 
             # increment height of boxes
@@ -1053,8 +1053,8 @@ def sampling_parameter_cis(
     ax.set_yticklabels(
         result.problem.get_reduced_vector(result.problem.x_names)
     )
-    ax.set_xlabel('Parameter value')
-    ax.set_ylabel('Parameter name')
+    ax.set_xlabel("Parameter value")
+    ax.set_ylabel("Parameter name")
 
     if title:
         ax.set_title(title)
@@ -1134,15 +1134,15 @@ def sampling_parameter_traces(
     par_ax = dict(zip(param_names, ax.flat))
 
     sns.set(style="ticks")
-    kwargs = {'edgecolor': "w", 'linewidth': 0.3, 's': 10}  # for edge color
+    kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
 
     if full_trace:
-        kwargs['hue'] = "converged"
-        if len(params_fval[kwargs['hue']].unique()) == 1:
-            kwargs['palette'] = ["#477ccd"]
-        elif len(params_fval[kwargs['hue']].unique()) == 2:
-            kwargs['palette'] = ["#868686", "#477ccd"]
-        kwargs['legend'] = False
+        kwargs["hue"] = "converged"
+        if len(params_fval[kwargs["hue"]].unique()) == 1:
+            kwargs["palette"] = ["#477ccd"]
+        elif len(params_fval[kwargs["hue"]].unique()) == 2:
+            kwargs["palette"] = ["#868686", "#477ccd"]
+        kwargs["legend"] = False
 
     if result.sample_result.burn_in is None:
         _burn_in = 0
@@ -1163,12 +1163,12 @@ def sampling_parameter_traces(
         if full_trace and _burn_in > 0:
             _ax.axvline(
                 _burn_in,
-                linestyle='--',
+                linestyle="--",
                 linewidth=1.5,
-                color='k',
+                color="k",
             )
 
-        _ax.set_xlabel('iteration index')
+        _ax.set_xlabel("iteration index")
         _ax.set_ylabel(param_names[idx])
         if use_problem_bounds:
             _ax.set_ylim([theta_lb[idx], theta_ub[idx]])
@@ -1227,7 +1227,7 @@ def sampling_scatter(
 
     # TODO: Think this throws the axis errors in seaborn.
     ax = sns.pairplot(
-        params_fval.drop(['logPosterior', 'iteration'], axis=1),
+        params_fval.drop(["logPosterior", "iteration"], axis=1),
         diag_kind=diag_kind,
     )
 
@@ -1252,8 +1252,8 @@ def sampling_1d_marginals(
     i_chain: int = 0,
     par_indices: Sequence[int] = None,
     stepsize: int = 1,
-    plot_type: str = 'both',
-    bw_method: str = 'scott',
+    plot_type: str = "both",
+    bw_method: str = "scott",
     suptitle: str = None,
     size: Tuple[float, float] = None,
 ):
@@ -1307,28 +1307,28 @@ def sampling_1d_marginals(
 
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, par_id in enumerate(param_names):
-        if plot_type == 'kde':
+        if plot_type == "kde":
             # TODO: add bw_adjust as option?
             sns.kdeplot(
                 params_fval[par_id], bw_method=bw_method, ax=par_ax[par_id]
             )
-        elif plot_type == 'hist':
+        elif plot_type == "hist":
             # fixes usage of sns distplot which throws a future warning
             sns.histplot(
-                x=params_fval[par_id], ax=par_ax[par_id], stat='density'
+                x=params_fval[par_id], ax=par_ax[par_id], stat="density"
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
-        elif plot_type == 'both':
+        elif plot_type == "both":
             sns.histplot(
                 x=params_fval[par_id],
                 kde=True,
                 ax=par_ax[par_id],
-                stat='density',
+                stat="density",
             )
             sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
 
         par_ax[par_id].set_xlabel(param_names[idx])
-        par_ax[par_id].set_ylabel('Density')
+        par_ax[par_id].set_ylabel("Density")
 
     sns.despine()
 
@@ -1383,7 +1383,8 @@ def get_data_to_plot(
         warnings.warn(
             "Burn in index not found in the results, the full chain "
             "will be shown.\nYou may want to use, e.g., "
-            "`pypesto.sample.geweke_test`."
+            "`pypesto.sample.geweke_test`.",
+            stacklevel=2,
         )
         _burn_in = 0
     else:
@@ -1412,14 +1413,14 @@ def get_data_to_plot(
 
     # transform ndarray to pandas for the use of seaborn
     pd_params = pd.DataFrame(arr_param, columns=param_names)
-    pd_fval = pd.DataFrame(data=arr_fval, columns=['logPosterior'])
+    pd_fval = pd.DataFrame(data=arr_fval, columns=["logPosterior"])
 
-    pd_iter = pd.DataFrame(data=indices, columns=['iteration'])
+    pd_iter = pd.DataFrame(data=indices, columns=["iteration"])
 
     if full_trace:
         converged = np.zeros((len(arr_fval)))
         converged[_burn_in:] = 1
-        pd_conv = pd.DataFrame(data=converged, columns=['converged'])
+        pd_conv = pd.DataFrame(data=converged, columns=["converged"])
 
         params_fval = pd.concat(
             [pd_params, pd_fval, pd_iter, pd_conv], axis=1, ignore_index=False

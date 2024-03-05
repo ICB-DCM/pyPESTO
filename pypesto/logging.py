@@ -9,10 +9,10 @@ import logging
 
 
 def log(
-    name: str = 'pypesto',
+    name: str = "pypesto",
     level: int = logging.INFO,
     console: bool = True,
-    filename: str = '',
+    filename: str = "",
 ):
     """
     Log messages from `name` with `level` to any combination of console/file.
@@ -54,7 +54,7 @@ def log_to_console(level: int = logging.INFO):
 
 
 def log_to_file(
-    level: int = logging.INFO, filename: str = '.pypesto_logging.log'
+    level: int = logging.INFO, filename: str = ".pypesto_logging.log"
 ):
     """
     Log to file.
