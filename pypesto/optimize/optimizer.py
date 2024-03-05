@@ -463,7 +463,8 @@ class ScipyOptimizer(Optimizer):
                     "for each evaluation of hess, fun will be "
                     "evaluated again. This can lead to increased "
                     "computation times. If possible, separate fun "
-                    "and hess."
+                    "and hess.",
+                    stacklevel=1,
                 )
             if objective.grad is True:
 
@@ -576,7 +577,7 @@ class IpoptOptimizer(Optimizer):
         try:
             import cyipopt
         except ImportError:
-            raise OptimizerImportError("ipopt")
+            raise OptimizerImportError("ipopt") from None
 
         objective = problem.objective
 
@@ -651,7 +652,7 @@ class DlibOptimizer(Optimizer):
         try:
             import dlib
         except ImportError:
-            raise OptimizerImportError("dlib")
+            raise OptimizerImportError("dlib") from None
 
         if not objective.has_fun:
             raise ValueError(
@@ -723,7 +724,7 @@ class PyswarmOptimizer(Optimizer):
         try:
             import pyswarm
         except ImportError:
-            raise OptimizerImportError("pyswarm")
+            raise OptimizerImportError("pyswarm") from None
 
         check_finite_bounds(lb, ub)
 
@@ -802,7 +803,7 @@ class CmaesOptimizer(Optimizer):
         try:
             import cma
         except ImportError:
-            raise OptimizerImportError("cma")
+            raise OptimizerImportError("cma") from None
 
         result = (
             cma.CMAEvolutionStrategy(
@@ -952,7 +953,7 @@ class PyswarmsOptimizer(Optimizer):
         try:
             import pyswarms
         except ImportError:
-            raise OptimizerImportError("pyswarms")
+            raise OptimizerImportError("pyswarms") from None
 
         # check for finite values for the bounds
         if np.isfinite(lb).all() is np.False_:
@@ -1060,7 +1061,7 @@ class NLoptOptimizer(Optimizer):
         try:
             import nlopt
         except ImportError:
-            raise OptimizerImportError("nlopt")
+            raise OptimizerImportError("nlopt") from None
 
         if method is None:
             method = nlopt.LD_LBFGS
@@ -1296,7 +1297,7 @@ class FidesOptimizer(Optimizer):
         try:
             import fides
         except ImportError:
-            raise OptimizerImportError("fides")
+            raise OptimizerImportError("fides") from None
 
         if (
             (hessian_update is not None)
@@ -1354,7 +1355,8 @@ class FidesOptimizer(Optimizer):
                     "Fides is using BFGS as hessian approximation, "
                     "as the problem does not provide a Hessian. "
                     "Specify a Hessian to use a more efficient "
-                    "hybrid approximation scheme."
+                    "hybrid approximation scheme.",
+                    stacklevel=1,
                 )
                 _hessian_update = fides.BFGS()
             else:

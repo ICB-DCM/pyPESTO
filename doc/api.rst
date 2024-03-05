@@ -24,7 +24,6 @@ API reference
    pypesto.profile.profile_next_guess
    pypesto.result
    pypesto.sample
-   pypesto.sample.pymc
    pypesto.select
    pypesto.select.postprocessors
    pypesto.startpoint

@@ -356,8 +356,8 @@ def test_mpipoolengine():
         # get the path to this file:
         path = os.path.dirname(__file__)
         # run the example file.
-        subprocess.check_call(  # noqa: S603,S607
-            [
+        subprocess.check_call(
+            [  # noqa: S603,S607
                 "mpiexec",
                 "--oversubscribe",
                 "-np",
@@ -548,7 +548,8 @@ def test_ess_multiprocess(problem, request):
     ess = ESSOptimizer(
         max_iter=20,
         # also test passing a callable as local_optimizer
-        local_optimizer=lambda max_walltime_s, **kwargs: optimize.FidesOptimizer(
+        local_optimizer=lambda max_walltime_s,
+        **kwargs: optimize.FidesOptimizer(
             options={FidesOptions.MAXTIME: max_walltime_s}
         ),
     )

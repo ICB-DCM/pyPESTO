@@ -127,7 +127,7 @@ def walk_along_profile(
             # if too many parameters are fixed, there is nothing to do ...
             fval = problem.objective(np.array([]))
             optimizer_result = OptimizerResult(
-                id='0',
+                id="0",
                 x=np.array([]),
                 fval=fval,
                 n_fval=0,

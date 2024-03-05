@@ -123,8 +123,10 @@ class CESSOptimizer:
         """
         if startpoint_method is not None:
             warn(
-                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                "Passing `startpoint_method` directly is deprecated, "
+                "use `problem.startpoint_method` instead.",
                 DeprecationWarning,
+                stacklevel=1,
             )
 
         self._initialize()
@@ -135,12 +137,12 @@ class CESSOptimizer:
         )
 
         refsets = [
-            RefSet(evaluator=evaluator, dim=ess_init_args['dim_refset'])
+            RefSet(evaluator=evaluator, dim=ess_init_args["dim_refset"])
             for ess_init_args in self.ess_init_args
         ]
         for refset, ess_init_args in zip(refsets, self.ess_init_args):
             refset.initialize_random(
-                n_diverse=ess_init_args.get('n_diverse', 10 * problem.dim)
+                n_diverse=ess_init_args.get("n_diverse", 10 * problem.dim)
             )
 
         while True:
@@ -207,13 +209,13 @@ class CESSOptimizer:
         Currently, this returns the overall best value and the final RefSet.
         """
         common_result_fields = {
-            'exitflag': self.exit_flag,
+            "exitflag": self.exit_flag,
             # meaningful? this is the overall time, and identical for all
             #  reported points
-            'time': time.time() - self.starttime,
+            "time": time.time() - self.starttime,
             # TODO
             # 'n_fval': self.evaluator.n_eval,
-            'optimizer': str(self),
+            "optimizer": str(self),
         }
         i_result = 0
         result = pypesto.Result(problem=problem)
@@ -262,17 +264,13 @@ class CESSOptimizer:
         #  2.5 < tau < 3.5, default: 2.5
         ess_init_args = [
             dict(
-                {
-                    'max_eval': int(
-                        10**2.5 * refsets[0].evaluator.problem.dim
-                    )
-                },
+                {"max_eval": int(10**2.5 * refsets[0].evaluator.problem.dim)},
                 **ess_kwargs,
             )
             for ess_kwargs in self.ess_init_args
         ]
 
-        ctx = multiprocessing.get_context('spawn')
+        ctx = multiprocessing.get_context("spawn")
         with ctx.Pool(len(self.ess_init_args)) as pool:
             ess_optimizers = pool.starmap(
                 self._run_single_ess,
@@ -349,7 +347,7 @@ class CESSOptimizer:
 
         for i, ess_init_args in enumerate(self.ess_init_args):
             refsets[i] = RefSet(
-                dim=ess_init_args['dim_refset'], evaluator=evaluator
+                dim=ess_init_args["dim_refset"], evaluator=evaluator
             )
             refsets[i].initialize_from_array(x_diverse=x, fx_diverse=fx)
             refsets[i].sort()
