@@ -22,7 +22,7 @@ def close_fig(fun):
     @wraps(fun)
     def wrapped_fun(*args, **kwargs):
         ret = fun(*args, **kwargs)
-        plt.close('all')
+        plt.close("all")
         return ret
 
     return wrapped_fun

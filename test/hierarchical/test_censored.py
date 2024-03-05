@@ -21,12 +21,12 @@ from pypesto.hierarchical.ordinal.parameter import OrdinalParameter
 
 example_censored_yaml = (
     Path(__file__).parent
-    / '..'
-    / '..'
-    / 'doc'
-    / 'example'
-    / 'example_censored'
-    / 'example_censored.yaml'
+    / ".."
+    / ".."
+    / "doc"
+    / "example"
+    / "example_censored"
+    / "example_censored.yaml"
 )
 
 
@@ -35,7 +35,7 @@ def test_optimization():
     petab_problem = petab.Problem.from_yaml(example_censored_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
-        method='L-BFGS-B', options={'maxiter': 10}
+        method="L-BFGS-B", options={"maxiter": 10}
     )
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
@@ -48,13 +48,13 @@ def test_optimization():
         problem=problem, n_starts=1, optimizer=optimizer
     )
     # Check that optimization finished without infinite or nan values.
-    assert np.isfinite(result.optimize_result.list[0]['fval'])
-    assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
-    assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
+    assert np.isfinite(result.optimize_result.list[0]["fval"])
+    assert np.all(np.isfinite(result.optimize_result.list[0]["x"]))
+    assert np.all(np.isfinite(result.optimize_result.list[0]["grad"][2:]))
     # Check that optimization finished with a lower objective value.
     assert (
-        result.optimize_result.list[0]['fval']
-        < result.optimize_result.list[0]['fval0']
+        result.optimize_result.list[0]["fval"]
+        < result.optimize_result.list[0]["fval0"]
     )
 
 
@@ -100,7 +100,7 @@ def test_ordinal_calculator_and_objective():
     # with finite differences.
     assert np.allclose(
         finite_differences_results[1],
-        calculator_result['grad'],
+        calculator_result["grad"],
     )
 
 
@@ -111,11 +111,11 @@ def _inner_problem_exp():
     data = np.full(simulation.shape, np.nan)
     data[4:6] = [5, 6]
 
-    par_types = ['cat_lb', 'cat_ub']
+    par_types = ["cat_lb", "cat_ub"]
 
     categories = [1, 2, 4, 5, 1, 2, 4, 5]
     inner_parameter_ids = [
-        f'{par_type}_{category}'
+        f"{par_type}_{category}"
         for par_type in par_types
         for category in set(categories)
     ]
@@ -190,6 +190,6 @@ def test_ordinal_solver():
         sigma=[np.full(len(simulation), 1 / np.sqrt(np.pi * 2))],
     )[0]
 
-    assert result['success'] is True
-    assert np.allclose(np.asarray(result['x']), expected_values, rtol=rtol)
-    assert np.allclose(result['fun'], 0, rtol=rtol)
+    assert result["success"] is True
+    assert np.allclose(np.asarray(result["x"]), expected_values, rtol=rtol)
+    assert np.allclose(result["fun"], 0, rtol=rtol)

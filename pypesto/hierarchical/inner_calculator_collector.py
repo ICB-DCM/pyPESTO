@@ -60,8 +60,8 @@ from .semiquantitative import (
     SemiquantProblem,
 )
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
 
 
 class InnerCalculatorCollector(AmiciCalculator):
@@ -89,9 +89,9 @@ class InnerCalculatorCollector(AmiciCalculator):
     def __init__(
         self,
         data_types: set[str],
-        petab_problem: 'petab.Problem',
+        petab_problem: "petab.Problem",
         model: AmiciModel,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         inner_options: dict,
     ):
         super().__init__()
@@ -100,9 +100,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.data_types = data_types
         self.inner_calculators: list[
             AmiciCalculator
-        ] = (
-            []
-        )  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
+        ] = []  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
         self.construct_inner_calculators(
             petab_problem, model, edatas, inner_options
         )
@@ -120,9 +118,9 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def construct_inner_calculators(
         self,
-        petab_problem: 'petab.Problem',
+        petab_problem: "petab.Problem",
         model: AmiciModel,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         inner_options: dict,
     ):
         """Construct inner calculators for each data type."""
@@ -221,11 +219,11 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def _get_quantitative_data_mask(
         self,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
     ) -> list[np.ndarray]:
         # transform experimental data
         edatas = [
-            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
         ]
 
         quantitative_data_mask = [
@@ -457,10 +455,10 @@ class InnerCalculatorCollector(AmiciCalculator):
                 for r in rdatas
             ):
                 raise RuntimeError(
-                    'Cannot use least squares solver with'
-                    'parameter dependent sigma! Support can be '
-                    'enabled via '
-                    'amici_model.setAddSigmaResiduals().'
+                    "Cannot use least squares solver with"
+                    "parameter dependent sigma! Support can be "
+                    "enabled via "
+                    "amici_model.setAddSigmaResiduals()."
                 )
             self._known_least_squares_safe = True  # don't check this again
 
@@ -546,7 +544,7 @@ def calculate_quantitative_result(
 
     # transform experimental data
     edatas = [
-        amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+        amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
     ]
 
     # calculate the function value
@@ -556,8 +554,7 @@ def calculate_quantitative_result(
         sigma_i = rdata[AMICI_SIGMAY][mask]
 
         nllh += 0.5 * np.nansum(
-            np.log(2 * np.pi * sigma_i**2)
-            + (data_i - sim_i) ** 2 / sigma_i**2
+            np.log(2 * np.pi * sigma_i**2) + (data_i - sim_i) ** 2 / sigma_i**2
         )
 
     # calculate the gradient if requested
@@ -610,9 +607,7 @@ def calculate_quantitative_result(
                 ),
                 axis=1,
             ) + np.nansum(
-                np.multiply(
-                    sensitivities_i, ((sim_i - data_i) / sigma_i**2)
-                ),
+                np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)),
                 axis=1,
             )
             add_sim_grad_to_opt_grad(

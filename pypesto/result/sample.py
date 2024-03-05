@@ -9,11 +9,9 @@ class McmcPtResult(dict):
     """
     The result of a sampler run using Markov-chain Monte Carlo.
 
-    Here, `n_chain` denotes the number of chains, `n_iter` the number of
-    iterations (i.e., the chain length), and `n_par` the number of
-    parameters.
+    Currently result object of all supported samplers. Can be used like a dict.
 
-    Attributes
+    Parameters
     ----------
     trace_x: [n_chain, n_iter, n_par]
         Parameters.
@@ -33,6 +31,9 @@ class McmcPtResult(dict):
         The estimated effective sample size.
     message: str
         Textual comment on the profile result.
+
+    Here, `n_chain` denotes the number of chains, `n_iter` the number of
+    iterations (i.e., the chain length), and `n_par` the number of parameters.
     """
 
     def __init__(
@@ -47,7 +48,6 @@ class McmcPtResult(dict):
         effective_sample_size: float = None,
         message: str = None,
     ):
-        """Initialize the McmcPtResult."""
         super().__init__()
 
         self.trace_x = trace_x
@@ -105,7 +105,7 @@ class McmcPtResult(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__

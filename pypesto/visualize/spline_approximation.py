@@ -61,7 +61,7 @@ def plot_splines_from_pypesto_result(
         pypesto_result.problem.objective.calculator, InnerCalculatorCollector
     ):
         raise ValueError(
-            'The calculator must be an instance of the InnerCalculatorCollector.'
+            "The calculator must be an instance of the InnerCalculatorCollector."
         )
 
     # Get the spline knot values from the pypesto result
@@ -87,7 +87,7 @@ def plot_splines_from_pypesto_result(
     x_dct = dict(
         zip(
             pypesto_result.problem.objective.x_ids,
-            pypesto_result.optimize_result.list[start_index]['x'],
+            pypesto_result.optimize_result.list[start_index]["x"],
         )
     )
 
@@ -123,7 +123,9 @@ def plot_splines_from_pypesto_result(
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
-            'Warning: Some AMICI simulations failed. Cannot plot inner solutions.'
+            "Warning: Some AMICI simulations failed. Cannot plot inner "
+            "solutions.",
+            stacklevel=2,
         )
         return None
 
@@ -140,8 +142,8 @@ def plot_splines_from_pypesto_result(
 
     if spline_calculator is None:
         raise ValueError(
-            'No SemiquantCalculator found in the inner_calculators of the objective. '
-            'Cannot plot splines.'
+            "No SemiquantCalculator found in the inner_calculators of the objective. "
+            "Cannot plot splines."
         )
 
     # Get the inner solver and problem.
@@ -159,8 +161,8 @@ def plot_splines_from_pypesto_result(
 
 
 def plot_splines_from_inner_result(
-    inner_problem: 'pypesto.hierarchical.spline_approximation.problem.SplineInnerProblem',
-    inner_solver: 'pypesto.hierarchical.spline_approximation.solver.SplineInnerSolver',
+    inner_problem: "pypesto.hierarchical.spline_approximation.problem.SplineInnerProblem",
+    inner_solver: "pypesto.hierarchical.spline_approximation.solver.SplineInnerSolver",
     results: list[dict],
     sim: list[np.ndarray],
     observable_ids=None,
@@ -246,17 +248,17 @@ def plot_splines_from_inner_result(
         )
 
         axs[group_idx].plot(
-            simulation, measurements, 'bs', label='Measurements'
+            simulation, measurements, "bs", label="Measurements"
         )
         axs[group_idx].plot(
-            spline_bases, spline_knots, 'g.', label='Spline knots'
+            spline_bases, spline_knots, "g.", label="Spline knots"
         )
         axs[group_idx].plot(
             spline_bases,
             spline_knots,
-            linestyle='-',
-            color='g',
-            label='Spline function',
+            linestyle="-",
+            color="g",
+            label="Spline function",
         )
         if inner_solver.options[REGULARIZE_SPLINE]:
             alpha_opt, beta_opt = _calculate_optimal_regularization(
@@ -267,22 +269,22 @@ def plot_splines_from_inner_result(
             axs[group_idx].plot(
                 spline_bases,
                 alpha_opt * spline_bases + beta_opt,
-                linestyle='--',
-                color='orange',
-                label='Regularization line',
+                linestyle="--",
+                color="orange",
+                label="Regularization line",
             )
 
         axs[group_idx].plot(
-            simulation, mapped_simulations, 'r^', label='Mapped simulation'
+            simulation, mapped_simulations, "r^", label="Mapped simulation"
         )
         axs[group_idx].legend()
         if observable_ids is not None:
-            axs[group_idx].set_title(f'{observable_ids[group-1]}')
+            axs[group_idx].set_title(f"{observable_ids[group-1]}")
         else:
-            axs[group_idx].set_title(f'Group {group}')
+            axs[group_idx].set_title(f"Group {group}")
 
-        axs[group_idx].set_xlabel('Model output')
-        axs[group_idx].set_ylabel('Measurements')
+        axs[group_idx].set_xlabel("Model output")
+        axs[group_idx].set_ylabel("Measurements")
 
     for ax in axs[len(results) :]:
         ax.remove()
@@ -362,7 +364,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     x_dct = dict(
         zip(
             pypesto_problem.objective.x_ids,
-            result.optimize_result.list[start_index]['x'],
+            result.optimize_result.list[start_index]["x"],
         )
     )
     x_dct.update(
@@ -395,7 +397,9 @@ def _add_spline_mapped_simulations_to_model_fit(
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
-            'Warning: Some AMICI simulations failed. Cannot plot inner solutions.'
+            "Warning: Some AMICI simulations failed. Cannot plot inner "
+            "solutions.",
+            stacklevel=2,
         )
         return None
 
@@ -451,7 +455,7 @@ def _add_spline_mapped_simulations_to_model_fit(
         # and timepoints as the lines which have 'simulation' in their label.
         plotted_index = 0
         for line in ax.lines:
-            if 'simulation' in line.get_label():
+            if "simulation" in line.get_label():
                 color = line.get_color()
                 timepoints = line.get_xdata()
                 condition_mapped_simulations = mapped_simulations[
@@ -463,18 +467,18 @@ def _add_spline_mapped_simulations_to_model_fit(
                     timepoints,
                     condition_mapped_simulations,
                     color=color,
-                    linestyle='dotted',
-                    marker='^',
+                    linestyle="dotted",
+                    marker="^",
                 )
 
         # Add linestyle='dotted' and marker='^' to the legend as black spline mapped simulations.
         ax.plot(
             [],
             [],
-            color='black',
-            linestyle='dotted',
-            marker='^',
-            label='Spline mapped simulation',
+            color="black",
+            linestyle="dotted",
+            marker="^",
+            label="Spline mapped simulation",
         )
 
     # Reset the legend.
@@ -507,7 +511,7 @@ def _obtain_regularization_for_start(
     x_dct = dict(
         zip(
             pypesto_result.problem.objective.x_ids,
-            pypesto_result.optimize_result.list[start_index]['x'],
+            pypesto_result.optimize_result.list[start_index]["x"],
         )
     )
 
@@ -542,7 +546,9 @@ def _obtain_regularization_for_start(
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
-            'Warning: Some AMICI simulations failed. Cannot plot inner solutions.'
+            "Warning: Some AMICI simulations failed. Cannot plot inner "
+            "solutions.",
+            stacklevel=2,
         )
         return None
 
@@ -589,7 +595,7 @@ def _obtain_regularization_for_start(
                 N=len(s),
                 c=spline_bases,
                 regularization_factor=inner_solver.options[
-                    'regularization_factor'
+                    "regularization_factor"
                 ],
             )
             reg_term_sum += reg_term

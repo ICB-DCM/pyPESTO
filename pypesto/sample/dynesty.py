@@ -312,4 +312,4 @@ def setup_dynesty() -> None:
 
         dynesty.utils.pickle_module = cloudpickle
     except ImportError:
-        raise SamplerImportError("dynesty")
+        raise SamplerImportError("dynesty") from None

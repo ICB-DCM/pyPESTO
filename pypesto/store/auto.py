@@ -51,7 +51,7 @@ def autosave(
         filename = default_filename
     elif isinstance(filename, str):
         if os.path.exists(filename) and not overwrite:
-            with h5py.File(filename, 'r') as f:
+            with h5py.File(filename, "r") as f:
                 storage_used = store_type in f.keys()
             if storage_used:
                 logger.warning(

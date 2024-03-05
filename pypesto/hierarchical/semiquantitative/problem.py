@@ -124,10 +124,10 @@ class SemiquantProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: 'amici.Model',
-        edatas: list['amici.ExpData'],
+        amici_model: "amici.Model",
+        edatas: list["amici.ExpData"],
         spline_ratio: float = None,
-    ) -> 'SemiquantProblem':
+    ) -> "SemiquantProblem":
         """Construct the inner problem from the `petab_problem`."""
         if spline_ratio is None:
             spline_ratio = get_default_options()
@@ -279,8 +279,8 @@ def get_default_options() -> dict:
 
 def spline_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
-    amici_model: 'amici.Model',
-    edatas: list['amici.ExpData'],
+    amici_model: "amici.Model",
+    edatas: list["amici.ExpData"],
     spline_ratio: float = None,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -306,7 +306,7 @@ def spline_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
+    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -326,7 +326,7 @@ def spline_inner_problem_from_petab_problem(
 def spline_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     spline_ratio: float,
-    amici_model: 'amici.Model',
+    amici_model: "amici.Model",
 ) -> list[SplineInnerParameter]:
     """Create list of inner free spline parameters from PEtab measurement table."""
     df = df.reset_index()
@@ -351,7 +351,7 @@ def spline_inner_parameters_from_measurement_df(
 
         # Create n_spline_parameters number of spline inner parameters.
         for par_index in range(n_spline_parameters):
-            par_id = f'{par_type}_{observable_id}_{group}_{par_index+1}'
+            par_id = f"{par_type}_{observable_id}_{group}_{par_index+1}"
             inner_parameters.append(
                 SplineInnerParameter(
                     inner_parameter_id=par_id,
@@ -372,8 +372,8 @@ def spline_inner_parameters_from_measurement_df(
 
 
 def noise_inner_parameters_from_parameter_df(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
 ) -> list[SplineInnerParameter]:
     """Create list of inner free noise parameters from PEtab parameter table."""
     # Select the semiquantitative measurements.
@@ -422,8 +422,8 @@ def noise_inner_parameters_from_parameter_df(
 
 
 def spline_ixs_for_measurement_specific_parameters(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
     inner_parameters: list[SplineInnerParameter],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.

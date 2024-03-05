@@ -54,16 +54,16 @@ class InnerProblem:
 
         if self.is_empty():
             raise ValueError(
-                'There are no parameters in the inner problem of hierarchical '
-                'optimization.'
+                "There are no parameters in the inner problem of hierarchical "
+                "optimization."
             )
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: 'petab.Problem',
-        amici_model: 'amici.Model',
-        edatas: list['amici.ExpData'],
-    ) -> 'InnerProblem':
+        petab_problem: "petab.Problem",
+        amici_model: "amici.Model",
+        edatas: list["amici.ExpData"],
+    ) -> "InnerProblem":
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
     def get_x_ids(self) -> list[str]:
@@ -118,7 +118,7 @@ class InnerProblem:
         try:
             return self.xs[inner_parameter_id]
         except KeyError:
-            raise KeyError(f"Cannot find parameter with id {id}.")
+            raise KeyError(f"Cannot find parameter with id {id}.") from None
 
     def is_empty(self) -> bool:
         """Check for emptiness.
@@ -190,7 +190,7 @@ class AmiciInnerProblem(InnerProblem):
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
         data = [
-            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
         ]
 
         if len(self.data) != len(data):
@@ -218,11 +218,11 @@ def scale_value(
     val: Union[float, np.array], scale: str
 ) -> Union[float, np.array]:
     """Scale a single value."""
-    if scale == 'lin':
+    if scale == "lin":
         return val
-    if scale == 'log':
+    if scale == "log":
         return np.log(val)
-    if scale == 'log10':
+    if scale == "log10":
         return np.log10(val)
     raise ValueError(f"Scale {scale} not recognized.")
 

@@ -43,7 +43,7 @@ def gaussian_mixture_problem():
 
     objective = pypesto.Objective(fun=nllh)
     problem = pypesto.Problem(
-        objective=objective, lb=[-10], ub=[10], x_names=['x']
+        objective=objective, lb=[-10], ub=[10], x_names=["x"]
     )
     return problem
 
@@ -63,7 +63,7 @@ def gaussian_mixture_separated_modes_problem():
 
     objective = pypesto.Objective(fun=nllh)
     problem = pypesto.Problem(
-        objective=objective, lb=[-100], ub=[200], x_names=['x']
+        objective=objective, lb=[-100], ub=[200], x_names=["x"]
     )
     return problem
 
@@ -96,7 +96,7 @@ def rosenbrock_problem():
 def create_petab_problem():
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.abspath(
-        os.path.join(current_path, '..', '..', 'doc', 'example')
+        os.path.join(current_path, "..", "..", "doc", "example")
     )
     # import to petab
     petab_problem = petab.Problem.from_yaml(
@@ -116,7 +116,7 @@ def sample_petab_problem():
 
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
     result = sample.sample(
@@ -146,66 +146,66 @@ def negative_log_prior(x):
 
 @pytest.fixture(
     params=[
-        'Metropolis',
-        'AdaptiveMetropolis',
-        'ParallelTempering',
-        'AdaptiveParallelTempering',
-        'Pymc',
-        'Emcee',
-        'Dynesty',
+        "Metropolis",
+        "AdaptiveMetropolis",
+        "ParallelTempering",
+        "AdaptiveParallelTempering",
+        "Pymc",
+        "Emcee",
+        "Dynesty",
     ]
 )
 def sampler(request):
-    if request.param == 'Metropolis':
+    if request.param == "Metropolis":
         return sample.MetropolisSampler(
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
         )
-    elif request.param == 'AdaptiveMetropolis':
+    elif request.param == "AdaptiveMetropolis":
         return sample.AdaptiveMetropolisSampler(
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
         )
-    elif request.param == 'ParallelTempering':
+    elif request.param == "ParallelTempering":
         return sample.ParallelTemperingSampler(
             internal_sampler=sample.MetropolisSampler(),
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
             betas=[1, 1e-2, 1e-4],
         )
-    elif request.param == 'AdaptiveParallelTempering':
+    elif request.param == "AdaptiveParallelTempering":
         return sample.AdaptiveParallelTemperingSampler(
             internal_sampler=sample.AdaptiveMetropolisSampler(),
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
             n_chains=5,
         )
-    elif request.param == 'Pymc':
+    elif request.param == "Pymc":
         return PymcSampler(tune=5, progressbar=False)
-    elif request.param == 'Emcee':
+    elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
-    elif request.param == 'Dynesty':
+    elif request.param == "Dynesty":
         return sample.DynestySampler()
 
 
-@pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
+@pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
 def problem(request):
-    if request.param == 'gaussian':
+    if request.param == "gaussian":
         return gaussian_problem()
-    if request.param == 'gaussian_mixture':
+    if request.param == "gaussian_mixture":
         return gaussian_mixture_problem()
-    elif request.param == 'rosenbrock':
+    elif request.param == "rosenbrock":
         return rosenbrock_problem()
 
 
 def test_pipeline(sampler, problem):
     """Check that a typical pipeline runs through."""
     # optimization
-    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     result = optimize.minimize(
         problem=problem,
         n_starts=3,
@@ -233,7 +233,7 @@ def test_ground_truth():
     sampler = sample.AdaptiveParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
         n_chains=5,
     )
@@ -257,11 +257,11 @@ def test_ground_truth():
 
     # test against different distributions
 
-    statistic, pval = kstest(samples, 'norm')
+    statistic, pval = kstest(samples, "norm")
     print(statistic, pval)
     assert statistic < 0.1
 
-    statistic, pval = kstest(samples, 'uniform')
+    statistic, pval = kstest(samples, "uniform")
     print(statistic, pval)
     assert statistic > 0.1
 
@@ -275,7 +275,7 @@ def test_ground_truth_separated_modes():
     sampler = sample.AdaptiveParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
         n_chains=3,
     )
@@ -309,7 +309,7 @@ def test_ground_truth_separated_modes():
     # initiated around the "first" mode of the distribution
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
     result = sample.sample(
@@ -339,7 +339,7 @@ def test_ground_truth_separated_modes():
     # initiated around the "second" mode of the distribution
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
     result = sample.sample(
@@ -372,7 +372,7 @@ def test_multiple_startpoints():
     sampler = sample.ParallelTemperingSampler(
         internal_sampler=sample.MetropolisSampler(),
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
         n_chains=2,
     )
@@ -426,7 +426,7 @@ def test_geweke_test_unconverged():
 
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -455,7 +455,7 @@ def test_autocorrelation_pipeline():
 
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -505,7 +505,7 @@ def test_autocorrelation_short_chain():
 
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -591,12 +591,12 @@ def test_empty_prior():
 
     # define pypesto problem without prior object
     test_problem = pypesto.Problem(
-        objective=posterior_fun, lb=-10, ub=10, x_names=['x']
+        objective=posterior_fun, lb=-10, ub=10, x_names=["x"]
     )
 
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -632,12 +632,12 @@ def test_prior():
         x_priors_defs=prior_object,
         lb=-10,
         ub=10,
-        x_names=['x'],
+        x_names=["x"],
     )
 
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -678,7 +678,7 @@ def test_samples_cis():
     # set a sampler
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 

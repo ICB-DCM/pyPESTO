@@ -52,15 +52,15 @@ class SemiquantInnerSolver(InnerSolver):
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if type(self.options[MIN_DIFF_FACTOR]) is not float:
+        if not isinstance(self.options[MIN_DIFF_FACTOR], float):
             raise TypeError(f"{MIN_DIFF_FACTOR} must be of type float.")
         elif self.options[MIN_DIFF_FACTOR] < 0:
             raise ValueError(f"{MIN_DIFF_FACTOR} must not be negative.")
 
-        elif type(self.options[REGULARIZE_SPLINE]) is not bool:
+        elif not isinstance(self.options[REGULARIZE_SPLINE], bool):
             raise TypeError(f"{REGULARIZE_SPLINE} must be of type bool.")
         if self.options[REGULARIZE_SPLINE]:
-            if type(self.options[REGULARIZATION_FACTOR]) is not float:
+            if not isinstance(self.options[REGULARIZATION_FACTOR], float):
                 raise TypeError(
                     f"{REGULARIZATION_FACTOR} must be of type float."
                 )
@@ -142,7 +142,10 @@ class SemiquantInnerSolver(InnerSolver):
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
         ):
             obj = np.inf
-            warnings.warn("Inner optimization failed.")
+            warnings.warn(
+                "Inner optimization failed.",
+                stacklevel=2,
+            )
         else:
             obj = np.sum(
                 [
@@ -331,8 +334,7 @@ class SemiquantInnerSolver(InnerSolver):
                             n=n,
                         )
                         dJ_dsigma2 = (
-                            K / (2 * sigma**2)
-                            - residual_squared / sigma**4
+                            K / (2 * sigma**2) - residual_squared / sigma**4
                         )
                         dsigma2_dtheta = ssigma_all[0] * sigma
                         dsigma_grad_term = dJ_dsigma2 * dsigma2_dtheta
@@ -493,7 +495,9 @@ class SemiquantInnerSolver(InnerSolver):
                 if n[i] > N:
                     n[i] = N
                     warnings.warn(
-                        "Interval for a simulation has been set to a larger value than the number of spline parameters."
+                        "Interval for a simulation has been set to a larger "
+                        "value than the number of spline parameters.",
+                        stacklevel=2,
                     )
         # In case the simulations are sufficiently apart:
         else:
@@ -758,8 +762,7 @@ def _calculate_nllh_gradient_for_group(
 
     # Combine all terms into the gradient of the negative log-likelihood
     nllh_gradient = (
-        residuals_squared_gradient / (sigma**2)
-        + regularization_term_gradient
+        residuals_squared_gradient / (sigma**2) + regularization_term_gradient
     )
     return nllh_gradient
 
@@ -1087,8 +1090,11 @@ def save_inner_parameters_to_inner_problem(
         group
     )
 
+    lower_trian = np.tril(np.ones((len(s), len(s))))
+    xi = np.dot(lower_trian, s)
+
     for idx in range(len(inner_spline_parameters)):
-        inner_spline_parameters[idx].value = s[idx]
+        inner_spline_parameters[idx].value = xi[idx]
 
     sigma = group_dict[INNER_NOISE_PARS]
 

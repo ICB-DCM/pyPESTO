@@ -67,7 +67,7 @@ class OrdinalCalculator(AmiciCalculator):
         self.inner_solver = inner_solver
         if (
             self.inner_problem.method
-            is not self.inner_solver.options['method']
+            is not self.inner_solver.options["method"]
         ):
             raise ValueError(
                 f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
@@ -85,12 +85,12 @@ class OrdinalCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call.
 

@@ -26,17 +26,17 @@ from pypesto.select.misc import correct_x_guesses
 
 model_problem_options = {
     # Options sent to `pypesto.optimize.optimize.minimize`, to reduce run time.
-    'minimize_options': {
-        'engine': pypesto.engine.MultiProcessEngine(),
-        'n_starts': 20,
-        'filename': None,
-        'progress_bar': False,
+    "minimize_options": {
+        "engine": pypesto.engine.MultiProcessEngine(),
+        "n_starts": 20,
+        "filename": None,
+        "progress_bar": False,
     }
 }
 # Tolerances for the differences between expected and test values.
 tolerances = {
-    'rtol': 1e-2,
-    'atol': 1e-2,
+    "rtol": 1e-2,
+    "atol": 1e-2,
 }
 
 
@@ -45,10 +45,10 @@ def petab_problem_yaml() -> Path:
     """The location of the PEtab problem YAML file."""
     return (
         Path(__file__).parent.parent.parent
-        / 'doc'
-        / 'example'
-        / 'model_selection'
-        / 'example_modelSelection.yaml'
+        / "doc"
+        / "example"
+        / "model_selection"
+        / "example_modelSelection.yaml"
     )
 
 
@@ -57,10 +57,10 @@ def petab_select_problem_yaml() -> Path:
     """The location of the PEtab Select problem YAML file."""
     return (
         Path(__file__).parent.parent.parent
-        / 'doc'
-        / 'example'
-        / 'model_selection'
-        / 'petab_select_problem.yaml'
+        / "doc"
+        / "example"
+        / "model_selection"
+        / "petab_select_problem.yaml"
     )
 
 
@@ -80,22 +80,22 @@ def pypesto_select_problem(petab_select_problem) -> pypesto.select.Problem:
 def initial_models(petab_problem_yaml) -> List[Model]:
     """Models that can be used to initialize a search."""
     initial_model_1 = Model(
-        model_id='myModel1',
+        model_id="myModel1",
         petab_yaml=petab_problem_yaml,
         parameters={
-            'k1': 0,
-            'k2': 0,
-            'k3': 0,
+            "k1": 0,
+            "k2": 0,
+            "k3": 0,
         },
         criteria={Criterion.AIC: np.inf},
     )
     initial_model_2 = Model(
-        model_id='myModel2',
+        model_id="myModel2",
         petab_yaml=petab_problem_yaml,
         parameters={
-            'k1': ESTIMATE,
-            'k2': ESTIMATE,
-            'k3': 0,
+            "k1": ESTIMATE,
+            "k2": ESTIMATE,
+            "k3": 0,
         },
         criteria={Criterion.AIC: np.inf},
     )
@@ -107,24 +107,24 @@ def test_problem_select(pypesto_select_problem):
     """Test the `Problem.select` method."""
     expected_results = [
         {
-            'candidates_model_subspace_ids': ['M1_0'],
-            'best_model_subspace_id': 'M1_0',
-            'best_model_aic': 36.97,
+            "candidates_model_subspace_ids": ["M1_0"],
+            "best_model_subspace_id": "M1_0",
+            "best_model_aic": 36.97,
         },
         {
-            'candidates_model_subspace_ids': ['M1_1', 'M1_2', 'M1_3'],
-            'best_model_subspace_id': 'M1_3',
-            'best_model_aic': -4.71,
+            "candidates_model_subspace_ids": ["M1_1", "M1_2", "M1_3"],
+            "best_model_subspace_id": "M1_3",
+            "best_model_aic": -4.71,
         },
         {
-            'candidates_model_subspace_ids': ['M1_5', 'M1_6'],
-            'best_model_subspace_id': 'M1_6',
-            'best_model_aic': -4.15,
+            "candidates_model_subspace_ids": ["M1_5", "M1_6"],
+            "best_model_subspace_id": "M1_6",
+            "best_model_aic": -4.15,
         },
         {
-            'candidates_model_subspace_ids': ['M1_7'],
-            'best_model_subspace_id': 'M1_7',
-            'best_model_aic': -4.06,
+            "candidates_model_subspace_ids": ["M1_7"],
+            "best_model_subspace_id": "M1_7",
+            "best_model_aic": -4.06,
         },
     ]
 
@@ -152,15 +152,15 @@ def test_problem_select(pypesto_select_problem):
         test_best_model_aic = best_model.get_criterion(Criterion.AIC)
 
         test_result = {
-            'candidates_model_subspace_ids': test_candidates_model_subspace_ids,
-            'best_model_subspace_id': test_best_model_subspace_id,
-            'best_model_aic': test_best_model_aic,
+            "candidates_model_subspace_ids": test_candidates_model_subspace_ids,
+            "best_model_subspace_id": test_best_model_subspace_id,
+            "best_model_aic": test_best_model_aic,
         }
 
         # The expected "forward" models were found.
         assert (
-            test_result['candidates_model_subspace_ids']
-            == expected_result['candidates_model_subspace_ids']
+            test_result["candidates_model_subspace_ids"]
+            == expected_result["candidates_model_subspace_ids"]
         )
 
         # The best model is as expected.
@@ -172,7 +172,7 @@ def test_problem_select(pypesto_select_problem):
         # The best model has its criterion value set and is the expected value.
         assert np.isclose(
             [test_result["best_model_aic"]],
-            [expected_result['best_model_aic']],
+            [expected_result["best_model_aic"]],
             **tolerances,
         )
 
@@ -193,11 +193,11 @@ def test_problem_select_to_completion(pypesto_select_problem):
     )
 
     expected_calibrated_models_subspace_ids = {
-        'M1_0',
-        'M1_1',
-        'M1_4',
-        'M1_5',
-        'M1_7',
+        "M1_0",
+        "M1_1",
+        "M1_4",
+        "M1_5",
+        "M1_7",
     }
     test_calibrated_models_subspace_ids = {
         model.model_subspace_id
@@ -213,12 +213,12 @@ def test_problem_select_to_completion(pypesto_select_problem):
         # The first iteration is from a virtual model, which will appear
         # as the best model for that iteration.
         VIRTUAL_INITIAL_MODEL,
-        'M1_0',
-        'M1_1',
+        "M1_0",
+        "M1_1",
         # This iteration with models `{'M1_4', 'M1_5'}` didn't have a better
         # model than the previous iteration.
-        'M1_1',
-        'M1_7',
+        "M1_1",
+        "M1_7",
     ]
     test_best_model_subspace_ids = [
         (model.model_subspace_id if model != VIRTUAL_INITIAL_MODEL else model)
@@ -263,7 +263,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
         model_problem_options=model_problem_options,
     )
 
-    expected_best_model_subspace_id = 'M1_3'
+    expected_best_model_subspace_id = "M1_3"
     test_best_model_subspace_id = best_model.model_subspace_id
     # The best model is as expected.
     assert test_best_model_subspace_id == expected_best_model_subspace_id
@@ -277,13 +277,13 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     ]
 
     expected_best_models_criterion_values = {
-        'M1_3': -4.705,
+        "M1_3": -4.705,
         # 'M1_7': -4.056,  # skipped -- reproducibility requires many starts
     }
     test_best_models_criterion_values = {
         model.model_subspace_id: model.get_criterion(Criterion.AIC)
         for model in best_models
-        if model.model_subspace_id != 'M1_7'  # skipped, see above
+        if model.model_subspace_id != "M1_7"  # skipped, see above
     }
     # The best models are as expected and have the expected criterion values.
     pd.testing.assert_series_equal(
@@ -297,10 +297,10 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
         for initial_model in initial_models
     }
     expected_predecessor_model_hashes = {
-        'M1_1': initial_model_id_hash_map['myModel1'],
-        'M1_2': initial_model_id_hash_map['myModel1'],
-        'M1_3': initial_model_id_hash_map['myModel1'],
-        'M1_7': initial_model_id_hash_map['myModel2'],
+        "M1_1": initial_model_id_hash_map["myModel1"],
+        "M1_2": initial_model_id_hash_map["myModel1"],
+        "M1_3": initial_model_id_hash_map["myModel1"],
+        "M1_7": initial_model_id_hash_map["myModel2"],
     }
     test_predecessor_model_hashes = {
         model.model_subspace_id: model.predecessor_model_hash
@@ -312,7 +312,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
 
 def test_postprocessors(petab_select_problem):
     """Test model calibration postprocessors."""
-    output_path = Path('output')
+    output_path = Path("output")
     output_path.mkdir(exist_ok=True, parents=True)
     postprocessor_1 = partial(
         pypesto.select.postprocessors.save_postprocessor,
@@ -327,7 +327,7 @@ def test_postprocessors(petab_select_problem):
         postprocessors=[postprocessor_1, postprocessor_2],
     )
     model_problem_options = {
-        'postprocessor': multi_postprocessor,
+        "postprocessor": multi_postprocessor,
     }
     pypesto_select_problem = pypesto.select.Problem(
         petab_select_problem=petab_select_problem,
@@ -341,7 +341,7 @@ def test_postprocessors(petab_select_problem):
         model_problem_options=model_problem_options,
     )
 
-    expected_newly_calibrated_models_subspace_ids = ['M1_0']
+    expected_newly_calibrated_models_subspace_ids = ["M1_0"]
     test_newly_calibrated_models_subspace_ids = [
         model.model_subspace_id for model in newly_calibrated_models_1.values()
     ]
@@ -428,8 +428,8 @@ def test_vis(pypesto_select_problem):
 
 def test_custom_objective(petab_problem_yaml):
     parameters = {
-        'k2': 0.333,
-        'sigma_x2': 0.444,
+        "k2": 0.333,
+        "sigma_x2": 0.444,
     }
     parameters_x_guesses = [parameters]
 

@@ -41,8 +41,8 @@ if TYPE_CHECKING:
     except ImportError:
         pass
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
 
 
 class AmiciObjectBuilder(abc.ABC):
@@ -62,7 +62,7 @@ class AmiciObjectBuilder(abc.ABC):
         """Create an AMICI solver."""
 
     @abc.abstractmethod
-    def create_edatas(self, model: AmiciModel) -> Sequence['amici.ExpData']:
+    def create_edatas(self, model: AmiciModel) -> Sequence["amici.ExpData"]:
         """Create AMICI experimental data."""
 
 
@@ -73,17 +73,17 @@ class AmiciObjective(ObjectiveBase):
         self,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: Union[Sequence['amici.ExpData'], 'amici.ExpData'],
+        edatas: Union[Sequence["amici.ExpData"], "amici.ExpData"],
         max_sensi_order: Optional[int] = None,
         x_ids: Optional[Sequence[str]] = None,
         x_names: Optional[Sequence[str]] = None,
-        parameter_mapping: Optional['ParameterMapping'] = None,
+        parameter_mapping: Optional["ParameterMapping"] = None,
         guess_steadystate: Optional[Optional[bool]] = None,
         n_threads: Optional[int] = 1,
         fim_for_hess: Optional[bool] = True,
         amici_object_builder: Optional[AmiciObjectBuilder] = None,
         calculator: Optional[AmiciCalculator] = None,
-        amici_reporting: Optional['amici.RDataReporting'] = None,
+        amici_reporting: Optional["amici.RDataReporting"] = None,
     ):
         """
         Initialize objective.
@@ -182,8 +182,8 @@ class AmiciObjective(ObjectiveBase):
         ):
             if self.guess_steadystate:
                 raise ValueError(
-                    'Steadystate prediction is not supported '
-                    'for models with conservation laws!'
+                    "Steadystate prediction is not supported "
+                    "for models with conservation laws!"
                 )
             self.guess_steadystate = False
 
@@ -194,9 +194,9 @@ class AmiciObjective(ObjectiveBase):
         ):
             if self.guess_steadystate:
                 raise ValueError(
-                    'Steadystate guesses cannot be enabled '
-                    'when `integrationOnly` as '
-                    'SteadyStateSensitivityMode!'
+                    "Steadystate guesses cannot be enabled "
+                    "when `integrationOnly` as "
+                    "SteadyStateSensitivityMode!"
                 )
             self.guess_steadystate = False
 
@@ -207,8 +207,8 @@ class AmiciObjective(ObjectiveBase):
             # preallocate guesses, construct a dict for every edata for which
             #  we need to do preequilibration
             self.steadystate_guesses = {
-                'fval': np.inf,
-                'data': {
+                "fval": np.inf,
+                "data": {
                     iexp: {}
                     for iexp, edata in enumerate(self.edatas)
                     if len(edata.fixedParametersPreequilibration)
@@ -240,10 +240,10 @@ class AmiciObjective(ObjectiveBase):
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
         info = super().get_config()
-        info['x_names'] = self.x_names
-        info['model_name'] = self.amici_model.getName()
-        info['solver'] = str(type(self.amici_solver))
-        info['sensi_order'] = self.max_sensi_order
+        info["x_names"] = self.x_names
+        info["model_name"] = self.amici_model.getName()
+        info["solver"] = str(type(self.amici_solver))
+        info["sensi_order"] = self.max_sensi_order
 
         return info
 
@@ -280,15 +280,15 @@ class AmiciObjective(ObjectiveBase):
         self.reset_steadystate_guesses()
         self.calculator.initialize()
 
-    def __deepcopy__(self, memodict: Dict = None) -> 'AmiciObjective':
+    def __deepcopy__(self, memodict: Dict = None) -> "AmiciObjective":
         import amici
 
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - {
-            'amici_model',
-            'amici_solver',
-            'edatas',
+            "amici_model",
+            "amici_solver",
+            "edatas",
         }:
             other.__dict__[key] = copy.deepcopy(self.__dict__[key])
 
@@ -310,9 +310,9 @@ class AmiciObjective(ObjectiveBase):
 
         state = {}
         for key in set(self.__dict__.keys()) - {
-            'amici_model',
-            'amici_solver',
-            'edatas',
+            "amici_model",
+            "amici_solver",
+            "edatas",
         }:
             state[key] = self.__dict__[key]
 
@@ -328,14 +328,14 @@ class AmiciObjective(ObjectiveBase):
                 )
                 raise
             # read in byte stream
-            with open(_fd, 'rb', closefd=False) as f:
-                state['amici_solver_settings'] = f.read()
+            with open(_fd, "rb", closefd=False) as f:
+                state["amici_solver_settings"] = f.read()
         finally:
             # close file descriptor and remove temporary file
             os.close(_fd)
             os.remove(_file)
 
-        state['AMICI_model_settings'] = amici.get_model_settings(
+        state["AMICI_model_settings"] = amici.get_model_settings(
             self.amici_model
         )
 
@@ -344,7 +344,7 @@ class AmiciObjective(ObjectiveBase):
     def __setstate__(self, state: Dict) -> None:
         import amici
 
-        if state['amici_object_builder'] is None:
+        if state["amici_object_builder"] is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __setstate__ without "
                 "an `amici_object_builder`."
@@ -359,14 +359,14 @@ class AmiciObjective(ObjectiveBase):
         _fd, _file = tempfile.mkstemp()
         try:
             # write solver settings to temporary file
-            with open(_fd, 'wb', closefd=False) as f:
-                f.write(state['amici_solver_settings'])
+            with open(_fd, "wb", closefd=False) as f:
+                f.write(state["amici_solver_settings"])
             # read in solver settings
             try:
                 amici.readSolverSettingsFromHDF5(_file, solver)
             except AttributeError as err:
                 if not err.args:
-                    err.args = ('',)
+                    err.args = ("",)
                 err.args += (
                     "Unpickling an AmiciObjective requires an AMICI "
                     "installation with HDF5 support.",
@@ -384,7 +384,7 @@ class AmiciObjective(ObjectiveBase):
         self.apply_custom_timepoints()
         amici.set_model_settings(
             self.amici_model,
-            state['AMICI_model_settings'],
+            state["AMICI_model_settings"],
         )
 
     def check_sensi_orders(
@@ -435,9 +435,9 @@ class AmiciObjective(ObjectiveBase):
         if (
             return_dict
             and self.amici_reporting is None
-            and 'amici_reporting' not in kwargs
+            and "amici_reporting" not in kwargs
         ):
-            kwargs['amici_reporting'] = amici.RDataReporting.full
+            kwargs["amici_reporting"] = amici.RDataReporting.full
 
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
@@ -446,9 +446,9 @@ class AmiciObjective(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: Tuple[int, ...],
         mode: ModeType,
-        edatas: Sequence['amici.ExpData'] = None,
-        parameter_mapping: 'ParameterMapping' = None,
-        amici_reporting: Optional['amici.RDataReporting'] = None,
+        edatas: Sequence["amici.ExpData"] = None,
+        parameter_mapping: "ParameterMapping" = None,
+        amici_reporting: Optional["amici.RDataReporting"] = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -479,7 +479,7 @@ class AmiciObjective(ObjectiveBase):
         # update steady state
         if (
             self.guess_steadystate
-            and self.steadystate_guesses['fval'] < np.inf
+            and self.steadystate_guesses["fval"] < np.inf
         ):
             for data_ix in range(len(self.edatas)):
                 self.apply_steadystate_guess(data_ix, x_dct)
@@ -512,10 +512,10 @@ class AmiciObjective(ObjectiveBase):
         # check whether we should update data for preequilibration guesses
         if (
             self.guess_steadystate
-            and nllh <= self.steadystate_guesses['fval']
+            and nllh <= self.steadystate_guesses["fval"]
             and nllh < np.inf
         ):
-            self.steadystate_guesses['fval'] = nllh
+            self.steadystate_guesses["fval"] = nllh
             for data_ix, rdata in enumerate(rdatas):
                 self.store_steadystate_guess(data_ix, x_dct, rdata)
 
@@ -538,16 +538,16 @@ class AmiciObjective(ObjectiveBase):
         mapping = self.parameter_mapping[condition_ix].map_sim_var
         x_sim = map_par_opt_to_par_sim(mapping, x_dct, self.amici_model)
         x_ss_guess = []  # resets initial state by default
-        if condition_ix in self.steadystate_guesses['data']:
-            guess_data = self.steadystate_guesses['data'][condition_ix]
-            if guess_data['x_ss'] is not None:
-                x_ss_guess = guess_data['x_ss']
-            if guess_data['sx_ss'] is not None:
+        if condition_ix in self.steadystate_guesses["data"]:
+            guess_data = self.steadystate_guesses["data"][condition_ix]
+            if guess_data["x_ss"] is not None:
+                x_ss_guess = guess_data["x_ss"]
+            if guess_data["sx_ss"] is not None:
                 linear_update = (
-                    guess_data['sx_ss']
+                    guess_data["sx_ss"]
                     .transpose()
                     .dot(
-                        (x_sim - guess_data['x'])[
+                        (x_sim - guess_data["x"])[
                             np.asarray(self.edatas[condition_ix].plist)
                         ]
                     )
@@ -562,7 +562,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         condition_ix: int,
         x_dct: Dict,
-        rdata: 'amici.ReturnData',
+        rdata: "amici.ReturnData",
     ) -> None:
         """
         Store condition parameter, steadystate and steadystate sensitivity.
@@ -570,9 +570,9 @@ class AmiciObjective(ObjectiveBase):
         Stored in steadystate_guesses if steadystate guesses are enabled for
         this condition.
         """
-        if condition_ix not in self.steadystate_guesses['data']:
+        if condition_ix not in self.steadystate_guesses["data"]:
             return
-        preeq_guesses = self.steadystate_guesses['data'][condition_ix]
+        preeq_guesses = self.steadystate_guesses["data"][condition_ix]
 
         # update parameter
         condition_map_sim_var = self.parameter_mapping[
@@ -581,20 +581,20 @@ class AmiciObjective(ObjectiveBase):
         x_sim = map_par_opt_to_par_sim(
             condition_map_sim_var, x_dct, self.amici_model
         )
-        preeq_guesses['x'] = x_sim
+        preeq_guesses["x"] = x_sim
 
         # update steadystates
-        preeq_guesses['x_ss'] = rdata['x_ss']
-        preeq_guesses['sx_ss'] = rdata['sx_ss']
+        preeq_guesses["x_ss"] = rdata["x_ss"]
+        preeq_guesses["sx_ss"] = rdata["sx_ss"]
 
     def reset_steadystate_guesses(self) -> None:
         """Reset all steadystate guess data."""
         if not self.guess_steadystate:
             return
 
-        self.steadystate_guesses['fval'] = np.inf
-        for condition in self.steadystate_guesses['data']:
-            self.steadystate_guesses['data'][condition] = {}
+        self.steadystate_guesses["fval"] = np.inf
+        for condition in self.steadystate_guesses["data"]:
+            self.steadystate_guesses["data"][condition] = {}
 
     def apply_custom_timepoints(self) -> None:
         """Apply custom timepoints, if applicable.
@@ -609,7 +609,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         timepoints: Sequence[Sequence[Union[float, int]]] = None,
         timepoints_global: Sequence[Union[float, int]] = None,
-    ) -> 'AmiciObjective':
+    ) -> "AmiciObjective":
         """
         Create a copy of this objective that is evaluated at custom timepoints.
 
@@ -629,18 +629,18 @@ class AmiciObjective(ObjectiveBase):
         The customized copy of this objective.
         """
         if timepoints is None and timepoints_global is None:
-            raise KeyError('Timepoints were not specified.')
+            raise KeyError("Timepoints were not specified.")
 
         amici_objective = copy.deepcopy(self)
 
         if timepoints is not None:
             if len(timepoints) != len(amici_objective.edatas):
                 raise ValueError(
-                    'The number of condition-specific timepoints `timepoints` '
-                    'does not match the number of experimental conditions.\n'
-                    f'Number of provided timepoints: {len(timepoints)}. '
-                    'Number of experimental conditions: '
-                    f'{len(amici_objective.edatas)}.'
+                    "The number of condition-specific timepoints `timepoints` "
+                    "does not match the number of experimental conditions.\n"
+                    f"Number of provided timepoints: {len(timepoints)}. "
+                    "Number of experimental conditions: "
+                    f"{len(amici_objective.edatas)}."
                 )
             custom_timepoints = timepoints
         else:
@@ -667,7 +667,7 @@ class AmiciObjective(ObjectiveBase):
         bool
             Indicates whether gradients match (True) FDs or not (False)
         """
-        if x is None and 'petab_problem' in dir(self.amici_object_builder):
+        if x is None and "petab_problem" in dir(self.amici_object_builder):
             x = self.amici_object_builder.petab_problem.x_nominal_scaled
             x_free = self.amici_object_builder.petab_problem.x_free_indices
         return super().check_gradients_match_finite_differences(
