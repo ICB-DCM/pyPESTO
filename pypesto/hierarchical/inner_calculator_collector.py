@@ -481,8 +481,9 @@ class InnerCalculatorCollector(AmiciCalculator):
             if 1 in sensi_orders:
                 snllh += inner_result[GRAD]
 
-            if INNER_PARAMETERS in inner_result:
-                interpretable_inner_pars.extend(inner_result[INNER_PARAMETERS])
+            inner_pars = inner_result.get(INNER_PARAMETERS)
+            if inner_pars is not None:
+                interpretable_inner_pars.extend(inner_pars)
             if SPLINE_KNOTS in inner_result:
                 spline_knots = inner_result[SPLINE_KNOTS]
 
