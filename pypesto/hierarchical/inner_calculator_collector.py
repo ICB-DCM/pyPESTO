@@ -474,11 +474,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                 snllh += inner_result[GRAD]
 
             all_inner_pars.update(inner_result[X_INNER_OPT])
-            if (
-                INNER_PARAMETERS in inner_result
-                and inner_result[INNER_PARAMETERS] is not None
-            ):
-                interpretable_inner_pars.extend(inner_result[INNER_PARAMETERS])
+            interpretable_inner_pars.extend(
+                inner_result.get(INNER_PARAMETERS) or []
+            )
 
         # add the quantitative data contribution
         if self.quantitative_data_mask is not None:
