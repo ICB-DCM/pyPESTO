@@ -13,7 +13,7 @@ from ..history import HistoryBase
 from ..problem import Problem
 from ..util import assign_clusters, delete_nan_inf
 
-OptimizationResult = Union['OptimizerResult', 'OptimizeResult']
+OptimizationResult = Union["OptimizerResult", "OptimizeResult"]
 logger = logging.getLogger(__name__)
 
 
@@ -122,7 +122,7 @@ class OptimizerResult(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
@@ -212,7 +212,7 @@ class OptimizeResult:
         try:
             return [res[key] for res in self.list]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     def __getitem__(self, index):
         """Define `optimize_result[i]` to access the i-th result."""
@@ -222,7 +222,7 @@ class OptimizeResult:
             raise IndexError(
                 f"{index} out of range for optimize result of "
                 f"length {len(self.list)}."
-            )
+            ) from None
 
     def __getstate__(self):
         # while we override __getattr__ as we do now, this is required to keep
@@ -274,11 +274,11 @@ class OptimizeResult:
         counter_message = "  " + counter_message.replace("\n", "\n  ")
 
         times_message = (
-            f'\t* Mean execution time: {np.mean(self.time):0.3f}s\n'
-            f'\t* Maximum execution time: {np.max(self.time):0.3f}s,'
-            f'\tid={self[np.argmax(self.time)].id}\n'
-            f'\t* Minimum execution time: {np.min(self.time):0.3f}s,\t'
-            f'id={self[np.argmin(self.time)].id}'
+            f"\t* Mean execution time: {np.mean(self.time):0.3f}s\n"
+            f"\t* Maximum execution time: {np.max(self.time):0.3f}s,"
+            f"\tid={self[np.argmax(self.time)].id}\n"
+            f"\t* Minimum execution time: {np.min(self.time):0.3f}s,\t"
+            f"id={self[np.argmin(self.time)].id}"
         )
 
         # special handling in case there are only non-finite fvals
@@ -315,7 +315,7 @@ class OptimizeResult:
         self,
         optimize_result: OptimizationResult,
         sort: bool = True,
-        prefix: str = '',
+        prefix: str = "",
     ):
         """
         Append an OptimizerResult or an OptimizeResult to the result object.
@@ -410,7 +410,9 @@ class OptimizeResult:
         warnings.warn(
             "get_for_key() is deprecated in favour of "
             "optimize_result.key and will be removed in future "
-            "releases."
+            "releases.",
+            DeprecationWarning,
+            stacklevel=1,
         )
         return [res[key] for res in self.list]
 

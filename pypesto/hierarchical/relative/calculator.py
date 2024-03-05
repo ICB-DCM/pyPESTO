@@ -84,7 +84,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -127,9 +127,9 @@ class RelativeAmiciCalculator(AmiciCalculator):
         """
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError(
-                'The experimental data provided to this call differs from '
-                'the experimental data used to setup the hierarchical '
-                'optimizer.'
+                "The experimental data provided to this call differs from "
+                "the experimental data used to setup the hierarchical "
+                "optimizer."
             )
 
         if (
@@ -266,7 +266,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Calculate directly via solver calculate methods.
 

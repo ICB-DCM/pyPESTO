@@ -34,7 +34,7 @@ def get_finite_quotient(
     """
     try:
         with warnings.catch_warnings():
-            warnings.filterwarnings('error')
+            warnings.filterwarnings("error")
             quotient = float(numerator / denominator)
         if not np.isfinite(quotient):
             raise ValueError
@@ -477,10 +477,7 @@ def compute_nllh_gradient_for_condition(
     return np.nansum(
         np.multiply(
             ssigma,
-            (
-                (np.full(data.shape, 1) - (data - sim) ** 2 / sigma**2)
-                / sigma
-            ),
+            ((np.full(data.shape, 1) - (data - sim) ** 2 / sigma**2) / sigma),
         ),
         axis=(1, 2),
     ) + np.nansum(

@@ -32,7 +32,7 @@ def test_ensemble_from_optimization():
 
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
-    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     history_options = pypesto.HistoryOptions(trace_record=True)
     result = optimize.minimize(
         problem=problem,
@@ -44,10 +44,10 @@ def test_ensemble_from_optimization():
 
     # change fvals of each start
     for i_start, optimizer_result in enumerate(result.optimize_result.list):
-        optimizer_result['fval'] = i_start
-        for i_iter in range(len(optimizer_result['history']._trace['fval'])):
-            optimizer_result['history']._trace['fval'][i_iter] = (
-                len(optimizer_result['history']._trace['fval'])
+        optimizer_result["fval"] = i_start
+        for i_iter in range(len(optimizer_result["history"]._trace["fval"])):
+            optimizer_result["history"]._trace["fval"][i_iter] = (
+                len(optimizer_result["history"]._trace["fval"])
                 + i_start
                 - i_iter
             )
@@ -63,13 +63,13 @@ def test_ensemble_from_optimization():
 
     # compare vector_tags with the expected values:
     ep_tags = [
-        (int(result.optimize_result.list[i]['id']), -1) for i in [0, 1, 2, 3]
+        (int(result.optimize_result.list[i]["id"]), -1) for i in [0, 1, 2, 3]
     ]
 
     hist_tags = [
         (
-            int(result.optimize_result.list[i]['id']),
-            len(result.optimize_result.list[i]['history']._trace['fval'])
+            int(result.optimize_result.list[i]["id"]),
+            len(result.optimize_result.list[i]["history"]._trace["fval"])
             - 1
             - j,
         )
@@ -111,7 +111,7 @@ def test_ensemble_prediction_from_hdf5():
     )
     ensemble_prediction = get_ensemble_prediction(max_size=10)
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         write_ensemble_prediction_to_h5(ensemble_prediction, fn)
         ensemble_prediction_r = read_ensemble_prediction_from_h5(

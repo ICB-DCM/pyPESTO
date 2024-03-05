@@ -13,7 +13,7 @@ def profile_cis(
     confidence_level: float = 0.95,
     profile_indices: Sequence[int] = None,
     profile_list: int = 0,
-    color: Union[str, tuple] = 'C0',
+    color: Union[str, tuple] = "C0",
     show_bounds: bool = False,
     ax: matplotlib.axes.Axes = None,
 ) -> matplotlib.axes.Axes:
@@ -69,7 +69,7 @@ def profile_cis(
     x_names = [problem.x_names[ix] for ix in profile_indices]
 
     for ix, (lb, ub) in enumerate(intervals):
-        ax.plot([lb, ub], [ix + 1, ix + 1], marker='|', color=color)
+        ax.plot([lb, ub], [ix + 1, ix + 1], marker="|", color=color)
 
     parameters_ind = np.arange(1, len(intervals) + 1)
     ax.set_yticks(parameters_ind)
@@ -79,8 +79,8 @@ def profile_cis(
 
     if show_bounds:
         lb = problem.lb_full[profile_indices]
-        ax.plot(lb, parameters_ind, 'k--', marker='+')
+        ax.plot(lb, parameters_ind, "k--", marker="+")
         ub = problem.ub_full[profile_indices]
-        ax.plot(ub, parameters_ind, 'k--', marker='+')
+        ax.plot(ub, parameters_ind, "k--", marker="+")
 
     return ax

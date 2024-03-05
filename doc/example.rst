@@ -27,7 +27,6 @@ Getting started
 
    example/getting_started.ipynb
    example/custom_objective_function.ipynb
-   example/workflow_comparison.ipynb
 
 PEtab and AMICI
 ---------------

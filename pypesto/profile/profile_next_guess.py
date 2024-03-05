@@ -6,7 +6,7 @@ from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
 
-__all__ = ['next_guess', 'fixed_step', 'adaptive_step']
+__all__ = ["next_guess", "fixed_step", "adaptive_step"]
 
 
 def next_guess(
@@ -15,10 +15,10 @@ def next_guess(
     par_direction: Literal[1, -1],
     profile_options: ProfileOptions,
     update_type: Literal[
-        'fixed_step',
-        'adaptive_step_order_0',
-        'adaptive_step_order_1',
-        'adaptive_step_regression',
+        "fixed_step",
+        "adaptive_step_order_0",
+        "adaptive_step_order_1",
+        "adaptive_step_regression",
     ],
     current_profile: ProfilerResult,
     problem: Problem,
@@ -58,20 +58,20 @@ def next_guess(
     -------
     The next initial guess as base for the next profile point.
     """
-    if update_type == 'fixed_step':
+    if update_type == "fixed_step":
         return fixed_step(
             x, par_index, par_direction, profile_options, problem
         )
 
-    if update_type == 'adaptive_step_order_0':
+    if update_type == "adaptive_step_order_0":
         order = 0
-    elif update_type == 'adaptive_step_order_1':
+    elif update_type == "adaptive_step_order_1":
         order = 1
-    elif update_type == 'adaptive_step_regression':
+    elif update_type == "adaptive_step_regression":
         order = np.nan
     else:
         raise ValueError(
-            f'Unsupported `update_type` {update_type} for `next_guess`.'
+            f"Unsupported `update_type` {update_type} for `next_guess`."
         )
 
     return adaptive_step(
@@ -437,7 +437,7 @@ def do_line_search(
     """
     # Was the initial step too big or too small?
     direction = "decrease" if next_obj_target < next_obj else "increase"
-    if direction == 'increase':
+    if direction == "increase":
         adapt_factor = options.step_size_factor
     else:
         adapt_factor = 1 / options.step_size_factor
@@ -451,12 +451,12 @@ def do_line_search(
 
         # Check if we hit the bounds
         if (
-            direction == 'decrease'
+            direction == "decrease"
             and step_size_guess == options.min_step_size
         ):
             return next_x
         if (
-            direction == 'increase'
+            direction == "increase"
             and step_size_guess == options.max_step_size
         ):
             return next_x
@@ -467,8 +467,8 @@ def do_line_search(
         next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
         # check for root crossing and compute correct step size in case
-        if (direction == 'decrease' and next_obj_target >= next_obj) or (
-            direction == 'increase' and next_obj_target <= next_obj
+        if (direction == "decrease" and next_obj_target >= next_obj) or (
+            direction == "increase" and next_obj_target <= next_obj
         ):
             return next_x_interpolate(
                 next_obj, last_obj, next_x, last_x, next_obj_target

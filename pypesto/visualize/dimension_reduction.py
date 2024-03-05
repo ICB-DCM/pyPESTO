@@ -43,8 +43,8 @@ def projection_scatter_umap(
     n_components = len(components)
     if n_components == 2:
         # handle components
-        x_label = f'UMAP component {components[0] + 1}'
-        y_label = f'UMAP component {components[1] + 1}'
+        x_label = f"UMAP component {components[0] + 1}"
+        y_label = f"UMAP component {components[1] + 1}"
         dataset = umap_coordinates[:, components]
 
         # call lowlevel routine
@@ -55,7 +55,7 @@ def projection_scatter_umap(
         # We got more than two components. Plot a cross-classification table
         # Create the labels first
         component_labels = [
-            f'UMAP component {components[i_comp] + 1}'
+            f"UMAP component {components[i_comp] + 1}"
             for i_comp in range(n_components)
         ]
         # reduce pca components
@@ -99,7 +99,7 @@ def projection_scatter_umap_original(
     umap_object.embedding_ = umap_object.embedding_[:, components]
 
     # use umap's original plotting routine to visualize
-    umap.plot.points(umap_object, values=color_by, theme='viridis', **kwargs)
+    umap.plot.points(umap_object, values=color_by, theme="viridis", **kwargs)
 
 
 def projection_scatter_pca(
@@ -128,8 +128,8 @@ def projection_scatter_pca(
     n_components = len(components)
     if n_components == 2:
         # handle components
-        x_label = f'PCA component {components[0] + 1}'
-        y_label = f'PCA component {components[1] + 1}'
+        x_label = f"PCA component {components[0] + 1}"
+        y_label = f"PCA component {components[1] + 1}"
 
         dataset = pca_coordinates[:, components]
 
@@ -141,7 +141,7 @@ def projection_scatter_pca(
         # We got more than two components. Plot a cross-classification table
         # Create the labels first
         component_labels = [
-            f'PCA component {components[i_comp] + 1}'
+            f"PCA component {components[i_comp] + 1}"
             for i_comp in range(n_components)
         ]
         # reduce pca components
@@ -179,14 +179,14 @@ def ensemble_crosstab_scatter_lowlevel(
 
     # wo don't even try to plot this into an existing axes object.
     # Overplotting a multi-axes figure is asking for trouble...
-    if 'ax' in kwargs.keys():
-        del kwargs['ax']
+    if "ax" in kwargs.keys():
+        del kwargs["ax"]
 
     for x_comp in range(0, n_components - 1):
         for y_comp in range(x_comp + 1, n_components):
             # handle axis labels
-            x_label = ''
-            y_label = ''
+            x_label = ""
+            y_label = ""
             if x_comp == 0:
                 y_label = component_labels[y_comp]
             if y_comp == n_components - 1:
@@ -211,12 +211,12 @@ def ensemble_scatter_lowlevel(
     dataset,
     ax: Optional[plt.Axes] = None,
     size: Optional[Tuple[float]] = (12, 6),
-    x_label: str = 'component 1',
-    y_label: str = 'component 2',
+    x_label: str = "component 1",
+    y_label: str = "component 2",
     color_by: Sequence[float] = None,
-    color_map: str = 'viridis',
+    color_map: str = "viridis",
     background_color: RGBA = (0.0, 0.0, 0.0, 1.0),
-    marker_type: str = '.',
+    marker_type: str = ".",
     scatter_size: float = 0.5,
     invert_scatter_order: bool = False,
 ):

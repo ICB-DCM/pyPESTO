@@ -78,12 +78,12 @@ class SemiquantCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call.
 

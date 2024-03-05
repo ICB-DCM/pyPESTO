@@ -25,14 +25,14 @@ except ImportError:
         "Using a jax objective requires an installation of "
         "the python package jax. Please install jax via "
         "`pip install jax jaxlib`."
-    )
+    ) from None
 
 # jax compatible (jittable) objective function using host callback, see
 # https://jax.readthedocs.io/en/latest/jax.experimental.host_callback.html
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun(obj: 'JaxObjective', x: jnp.array):
+def _device_fun(obj: "JaxObjective", x: jnp.array):
     """Jax compatible objective function execution using host callback.
 
     This function does not actually call the underlying objective function,
@@ -60,7 +60,7 @@ def _device_fun(obj: 'JaxObjective', x: jnp.array):
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun_grad(obj: 'JaxObjective', x: jnp.array):
+def _device_fun_grad(obj: "JaxObjective", x: jnp.array):
     """Jax compatible objective gradient execution using host callback.
 
     This function does not actually call the underlying objective function,
@@ -90,7 +90,7 @@ def _device_fun_grad(obj: 'JaxObjective', x: jnp.array):
     )
 
 
-def _device_fun_hess(obj: 'JaxObjective', x: jnp.array):
+def _device_fun_hess(obj: "JaxObjective", x: jnp.array):
     """Jax compatible objective Hessian execution using host callback.
 
     This function does not actually call the underlying objective function,
@@ -126,7 +126,7 @@ def _device_fun_hess(obj: 'JaxObjective', x: jnp.array):
 
 @_device_fun.defjvp
 def _device_fun_jvp(
-    obj: 'JaxObjective', primals: jnp.array, tangents: jnp.array
+    obj: "JaxObjective", primals: jnp.array, tangents: jnp.array
 ):
     """JVP implementation for device_fun."""
     (x,) = primals
@@ -136,7 +136,7 @@ def _device_fun_jvp(
 
 @_device_fun_grad.defjvp
 def _device_fun_grad_jvp(
-    obj: 'JaxObjective', primals: jnp.array, tangents: jnp.array
+    obj: "JaxObjective", primals: jnp.array, tangents: jnp.array
 ):
     """JVP implementation for device_fun_grad."""
     (x,) = primals
@@ -164,10 +164,10 @@ class JaxObjective(ObjectiveBase):
         x_names: Sequence[str] = None,
     ):
         if not isinstance(objective, ObjectiveBase):
-            raise TypeError('objective must be an ObjectiveBase instance')
+            raise TypeError("objective must be an ObjectiveBase instance")
         if not objective.check_mode(MODE_FUN):
             raise NotImplementedError(
-                f'objective must support mode={MODE_FUN}'
+                f"objective must support mode={MODE_FUN}"
             )
         super().__init__(x_names)
         self.base_objective = objective
@@ -241,14 +241,14 @@ class JaxObjective(ObjectiveBase):
         # this computes all the results from the inner objective, rendering
         # them accessible as cached values for device_fun, etc.
         set_return_dict, return_dict = (
-            'return_dict' in kwargs,
-            kwargs.pop('return_dict', False),
+            "return_dict" in kwargs,
+            kwargs.pop("return_dict", False),
         )
         self.cached_base_ret = self.base_objective(
             self.infun(x), sensi_orders, mode, return_dict=True, **kwargs
         )
         if set_return_dict:
-            kwargs['return_dict'] = return_dict
+            kwargs["return_dict"] = return_dict
         ret = {}
         if RDATAS in self.cached_base_ret:
             ret[RDATAS] = self.cached_base_ret[RDATAS]
