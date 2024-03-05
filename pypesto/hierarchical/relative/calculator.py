@@ -165,10 +165,17 @@ class RelativeAmiciCalculator(AmiciCalculator):
             )
 
         inner_result[X_INNER_OPT] = {}
-        inner_result[INNER_PARAMETERS] = np.array(
-            [inner_parameters[x_id] for x_id in self.inner_problem.get_x_ids()]
+
+        inner_result[INNER_PARAMETERS] = (
+            np.array(
+                [
+                    inner_parameters[x_id]
+                    for x_id in self.inner_problem.get_x_ids()
+                ]
+            )
+            if inner_parameters is not None
+            else None
         )
-        # print("relative_inner_parameters: ", inner_parameters)
 
         return inner_result
 
@@ -222,8 +229,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 inner_result[HESS] = np.full(
                     shape=(dim, dim), fill_value=np.nan
                 )
-            inner_result[INNER_PARAMETERS] = None
-            return inner_result
+            return inner_result, None
 
         inner_parameters = self.inner_solver.solve(
             problem=self.inner_problem,
@@ -325,7 +331,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 inner_result[GRAD] = np.full(
                     shape=len(x_ids), fill_value=np.nan
                 )
-            return filter_return_dict(inner_result)
+            return filter_return_dict(inner_result), None
 
         inner_parameters = self.inner_solver.solve(
             problem=self.inner_problem,
