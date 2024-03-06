@@ -98,7 +98,7 @@ def minimize(
             "Passing `startpoint_method` directly is deprecated, "
             "use `problem.startpoint_method` instead.",
             DeprecationWarning,
-            stacklevel=1,
+            stacklevel=2,
         )
 
     # convert startpoint method to class instance
