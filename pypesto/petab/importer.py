@@ -491,7 +491,7 @@ class PetabImporter(AmiciObjectBuilder):
         problem_parameters = dict(
             zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
         )
-        amici.petab.parameter_mapping.fill_in_parameters(
+        amici.petab.conditions.fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
             scaled_parameters=True,
