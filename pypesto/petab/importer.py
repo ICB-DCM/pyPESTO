@@ -353,7 +353,6 @@ class PetabImporter(AmiciObjectBuilder):
         # try to import (in particular checks version)
         try:
             # importing will already raise an exception if version wrong
-            # importlib.import_module(self.model_name)
             spec = importlib.machinery.PathFinder().find_spec(
                 self.model_name, [str(self.output_folder)]
             )
