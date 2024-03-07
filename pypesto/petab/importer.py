@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 import shutil
@@ -353,7 +352,7 @@ class PetabImporter(AmiciObjectBuilder):
         # try to import (in particular checks version)
         try:
             # importing will already raise an exception if version wrong
-            importlib.import_module(self.model_name)
+            amici.import_model_module(self.model_name, self.output_folder)
         except ModuleNotFoundError:
             return True
         except amici.AmiciVersionError as e:
