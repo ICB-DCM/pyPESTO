@@ -129,7 +129,7 @@ def plot_splines_from_pypesto_result(
         )
         return None
 
-    # Get simulation and sigma.
+    # Get simulation.
     sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
 
     spline_calculator = None
