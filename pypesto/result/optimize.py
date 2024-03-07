@@ -117,6 +117,7 @@ class OptimizerResult(dict):
         self.optimizer = optimizer
         self.free_indices = None
         self.inner_parameters = None
+        self.spline_knots = None
 
     def __getattr__(self, key):
         try:
