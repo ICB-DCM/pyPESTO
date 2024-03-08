@@ -89,7 +89,6 @@ ID = "id"
 INNER_PARAMETERS = "inner_parameters"
 INNER_RDATAS = "inner_rdatas"
 PARAMETER_TYPE = "parameterType"
-X_INNER_OPT = "x_inner_opt"
 RELATIVE = "relative"
 
 
@@ -207,6 +206,7 @@ SPLINE_APPROXIMATION_OPTIONS = [
 MIN_SIM_RANGE = 1e-16
 
 SPLINE_PAR_TYPE = "spline"
+SPLINE_KNOTS = "spline_knots"
 N_SPLINE_PARS = "n_spline_pars"
 DATAPOINTS = "datapoints"
 MIN_DATAPOINT = "min_datapoint"

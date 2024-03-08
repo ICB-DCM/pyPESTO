@@ -31,9 +31,10 @@ from ..C import (
     RES,
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
+    SPLINE_KNOTS,
     SPLINE_RATIO,
     SRES,
-    X_INNER_OPT,
+    InnerParameterType,
     ModeType,
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
@@ -107,6 +108,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
 
         self._known_least_squares_safe = False
+        self.semiquant_observable_ids = None
 
     def initialize(self):
         """Initialize."""
@@ -177,6 +179,12 @@ class InnerCalculatorCollector(AmiciCalculator):
                 semiquant_problem.get_noise_dummy_values(scaled=True)
             )
             self.inner_calculators.append(semiquant_calculator)
+            self.semiquant_observable_ids = [
+                model.getObservableIds()[group - 1]
+                for group in semiquant_problem.get_groups_for_xs(
+                    InnerParameterType.SPLINE
+                )
+            ]
 
         if self.data_types - {
             RELATIVE,
@@ -382,7 +390,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
             sensi_orders, mode, dim
         )
-        all_inner_pars = {}
+        spline_knots = None
         interpretable_inner_pars = []
 
         # set order in solver
@@ -421,7 +429,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 RES: res,
                 SRES: sres,
                 RDATAS: rdatas,
-                X_INNER_OPT: all_inner_pars,
+                SPLINE_KNOTS: None,
                 INNER_PARAMETERS: None,
             }
             ret[FVAL] = np.inf
@@ -473,9 +481,11 @@ class InnerCalculatorCollector(AmiciCalculator):
             if 1 in sensi_orders:
                 snllh += inner_result[GRAD]
 
-            all_inner_pars.update(inner_result[X_INNER_OPT])
-            if INNER_PARAMETERS in inner_result:
-                interpretable_inner_pars.extend(inner_result[INNER_PARAMETERS])
+            inner_pars = inner_result.get(INNER_PARAMETERS)
+            if inner_pars is not None:
+                interpretable_inner_pars.extend(inner_pars)
+            if SPLINE_KNOTS in inner_result:
+                spline_knots = inner_result[SPLINE_KNOTS]
 
         # add the quantitative data contribution
         if self.quantitative_data_mask is not None:
@@ -506,7 +516,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         # Add inner parameters to return dict
         # only if the objective value improved.
         if ret[FVAL] < self.best_fval:
-            ret[X_INNER_OPT] = all_inner_pars
+            ret[SPLINE_KNOTS] = spline_knots
             ret[INNER_PARAMETERS] = (
                 interpretable_inner_pars
                 if len(interpretable_inner_pars) > 0

@@ -440,7 +440,8 @@ class SemiquantInnerSolver(InnerSolver):
 
         return results
 
-    def _rescale_spline_bases(self, sim_all: np.ndarray, N: int, K: int):
+    @staticmethod
+    def _rescale_spline_bases(sim_all: np.ndarray, N: int, K: int):
         """Rescale the spline bases.
 
         Before the optimization of the spline parameters, we have to fix the
