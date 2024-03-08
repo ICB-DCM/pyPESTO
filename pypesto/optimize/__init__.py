@@ -7,7 +7,6 @@ Multistart optimization with support for various optimizers.
 """
 
 from .ess import (
-    CESSOptimizer,
     ESSOptimizer,
     SacessFidesFactory,
     SacessOptimizer,
