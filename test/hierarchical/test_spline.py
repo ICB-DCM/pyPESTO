@@ -8,11 +8,13 @@ import pypesto
 import pypesto.logging
 import pypesto.optimize
 import pypesto.petab
+import pypesto.store
 from pypesto.C import (
     INNER_NOISE_PARS,
     LIN,
     MODE_FUN,
     OPTIMIZE_NOISE,
+    SPLINE_KNOTS,
     InnerParameterType,
 )
 from pypesto.hierarchical.semiquantitative import (
@@ -462,3 +464,50 @@ def test_calculate_regularization_for_group():
         regularization_gradient,
         expected_regularization_gradient,
     )
+
+
+def test_save_and_load_spline_knots():
+    """Test the saving and loading of spline knots in an optimization result."""
+    # Run optimization
+    petab_problem = petab.Problem.from_yaml(example_semiquantitative_yaml)
+    importer = pypesto.petab.PetabImporter(
+        petab_problem,
+        hierarchical=True,
+    )
+    objective = importer.create_objective()
+    problem = importer.create_problem(objective)
+
+    optimizer = pypesto.optimize.ScipyOptimizer(
+        method="L-BFGS-B",
+        options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
+    )
+    # Set seed for reproducibility.
+    np.random.seed(0)
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=2, optimizer=optimizer
+    )
+
+    # Get spline knots
+    spline_knots_before = [
+        result.optimize_result.list[i][SPLINE_KNOTS] for i in range(2)
+    ]
+    pypesto.store.write_result(
+        result=result,
+        filename="test_spline_knots.hdf5",
+    )
+    # Load spline knots
+    result_loaded = pypesto.store.read_result("test_spline_knots.hdf5")
+    spline_knots_after = [
+        result_loaded.optimize_result.list[i][SPLINE_KNOTS] for i in range(2)
+    ]
+    # Check that the loaded spline knots are the same as the original ones
+    assert np.all(
+        [
+            np.allclose(knots_before, knots_after)
+            for knots_before, knots_after in zip(
+                spline_knots_before, spline_knots_after
+            )
+        ]
+    )
+    # Clean up
+    Path("test_spline_knots.hdf5").unlink()

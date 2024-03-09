@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Dict, Optional
 import numpy as np
 import scipy.optimize
 
-from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES
+from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES, SPLINE_KNOTS
 from ..history import HistoryOptions, NoHistory, OptimizerHistory
 from ..objective import Objective
 from ..problem import Problem
@@ -67,6 +67,12 @@ def hierarchical_decorator(minimize):
             and problem.objective.inner_parameters is not None
         ):
             result[INNER_PARAMETERS] = problem.objective.inner_parameters
+
+        if (
+            hasattr(problem.objective, SPLINE_KNOTS)
+            and problem.objective.spline_knots is not None
+        ):
+            result[SPLINE_KNOTS] = problem.objective.spline_knots
 
         return result
 
@@ -747,7 +753,7 @@ class PyswarmOptimizer(Optimizer):
         return False
 
 
-class CmaesOptimizer(Optimizer):
+class CmaOptimizer(Optimizer):
     """
     Global optimization using covariance matrix adaptation evolutionary search.
 
@@ -824,6 +830,19 @@ class CmaesOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+
+class CmaesOptimizer(CmaOptimizer):
+    """Deprecated, use CmaOptimizer instead."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        warnings.warn(
+            "`CmaesOptimizer` has been renamed to `CmaOptimizer`, "
+            "please update your code.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
 
 
 class ScipyDifferentialEvolutionOptimizer(Optimizer):
