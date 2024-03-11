@@ -727,7 +727,7 @@ def test_samples_cis():
 
 def test_dynesty_mcmc_samples():
     problem = gaussian_problem()
-    sampler = sample.DynestySampler(objective="negloglike")
+    sampler = sample.DynestySampler(objective_type="negloglike")
 
     result = sample.sample(
         problem=problem,
@@ -765,7 +765,7 @@ def test_dynesty_posterior():
     )
 
     # define sampler
-    sampler = sample.DynestySampler(objective="neglogpost")  # default
+    sampler = sample.DynestySampler(objective_type="neglogpost")  # default
 
     result = sample.sample(
         problem=test_problem,
