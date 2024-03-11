@@ -189,7 +189,7 @@ def sampler(request):
     elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
     elif request.param == "Dynesty":
-        return sample.DynestySampler()
+        return sample.DynestySampler(objective_type="negloglike")
 
 
 @pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
