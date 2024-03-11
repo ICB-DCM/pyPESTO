@@ -176,13 +176,13 @@ class DynestySampler(Sampler):
         else:
             # if objective is the negative log likelihood, we will ignore x_priors even if they are defined
             if self.problem.x_priors is not None:
-                logger.info(
-                    f"Warning: Assuming '{OBJECTIVE_NEGLOGLIKE}' as objective. "
+                logger.warning(
+                    f"Assuming '{OBJECTIVE_NEGLOGLIKE}' as objective. "
                     f"'x_priors' defined in the problem will be ignored."
                 )
 
         # if priors are uniform, we can use the default prior transform (assuming that bounds are set correctly)
-        logger.info(
+        logger.warning(
             "Assuming 'prior_transform' is correctly specified. If 'x_priors' is not uniform, 'prior_transform'"
             " has to be adjusted accordingly."
         )
