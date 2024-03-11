@@ -167,7 +167,7 @@ class DynestySampler(Sampler):
         if self.objective_type == "neglogpost":
             if self.problem.x_priors is None:
                 # objective is the negative log-posterior, but no priors are defined
-                # sampler need the likelihood
+                # sampler needs the likelihood
                 raise ValueError(
                     "x_priors have to be defined in the problem if objective is 'neglogpost'."
                 )
