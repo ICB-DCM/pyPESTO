@@ -62,6 +62,7 @@ class DynestySampler(Sampler):
         sampler_args: dict = None,
         run_args: dict = None,
         dynamic: bool = True,
+        objective: str = "neglogpost",
     ):
         """
         Initialize sampler.
@@ -76,6 +77,9 @@ class DynestySampler(Sampler):
             method of the dynesty sampler.
         dynamic:
             Whether to use dynamic or static nested sampling.
+        objective:
+            The objective to optimize (as defined in  pypesto.problem). Either "neglogpost" or "negloglike".
+            If neglogpost, x_priors have to be defined in the problem.
         """
         # check dependencies
         import dynesty
@@ -93,6 +97,12 @@ class DynestySampler(Sampler):
         if run_args is None:
             run_args = {}
         self.run_args: dict = run_args
+
+        if objective not in ["neglogpost", "negloglike"]:
+            raise ValueError(
+                "Objective has to be either 'neglogpost' or 'negloglike' as defined in pypesto.problem."
+            )
+        self.objective = objective
 
         # set in initialize
         self.problem: Union[Problem, None] = None
@@ -112,8 +122,6 @@ class DynestySampler(Sampler):
         ----------
         prior_sample:
             The prior sample, provided by dynesty.
-        problem:
-            The pyPESTO problem.
 
         Returns
         -------
@@ -130,7 +138,13 @@ class DynestySampler(Sampler):
         if any(x < self.problem.lb) or any(x > self.problem.ub):
             return -np.inf
         # invert sign
-        # TODO this is possibly the posterior if priors are defined
+        if self.objective == "neglogpost":
+            # problem.objective returns negative log-posterior
+            # compute log-likelihood by subtracting log-prior
+            return -1.0 * (
+                self.problem.objective(x) - self.problem.x_priors(x)
+            )
+        # problem.objective returns negative log-likelihood
         return -1.0 * self.problem.objective(x)
 
     def initialize(
@@ -148,6 +162,27 @@ class DynestySampler(Sampler):
         sampler_class = dynesty.NestedSampler
         if self.dynamic:
             sampler_class = dynesty.DynamicNestedSampler
+
+        # check if objective fits to the pyPESTO problem
+        if self.objective == "neglogpost":
+            if self.problem.x_priors is None:
+                # objective is the negative log-posterior, but no priors are defined
+                # sampler need the likelihood
+                raise ValueError(
+                    "x_priors have to be defined in the problem if objective is 'neglogpost'."
+                )
+        else:
+            # if objective is the negative log likelihood, we will ignore x_priors even if they are defined
+            if self.problem.x_priors is not None:
+                logger.info(
+                    "Warning: Assuming 'negloglike' as objective. 'x_priors' defined in the problem will be ignored."
+                )
+
+        # if priors are uniform, we can use the default prior transform (assuming that bounds are set correctly)
+        logger.info(
+            "Assuming 'prior_transform' is correctly specified. If 'x_priors' is not uniform, 'prior_transform'"
+            " has to be adjusted accordingly."
+        )
 
         # initialize sampler
         self.sampler = sampler_class(

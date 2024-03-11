@@ -727,10 +727,48 @@ def test_samples_cis():
 
 def test_dynesty_mcmc_samples():
     problem = gaussian_problem()
-    sampler = sample.DynestySampler()
+    sampler = sample.DynestySampler(objective="negloglike")
 
     result = sample.sample(
         problem=problem,
+        sampler=sampler,
+        n_samples=None,
+        filename=None,
+    )
+
+    original_sample_result = sampler.get_original_samples()
+    mcmc_sample_result = result.sample_result
+
+    # Nested sampling function values are monotonically increasing
+    assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
+    # MCMC samples are not
+    assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
+
+
+def test_dynesty_posterior():
+    # define negative log posterior
+    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
+
+    # define negative log prior
+    prior_fun = pypesto.Objective(fun=negative_log_prior)
+
+    # define pypesto prior object
+    prior_object = pypesto.NegLogPriors(objectives=[prior_fun])
+
+    # define pypesto problem using prior object
+    test_problem = pypesto.Problem(
+        objective=posterior_fun,
+        x_priors_defs=prior_object,
+        lb=-10,
+        ub=10,
+        x_names=["x"],
+    )
+
+    # define sampler
+    sampler = sample.DynestySampler(objective="neglogpost")  # default
+
+    result = sample.sample(
+        problem=test_problem,
         sampler=sampler,
         n_samples=None,
         filename=None,
