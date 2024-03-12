@@ -106,7 +106,7 @@ def variational_fit(
     logger.info("Elapsed time: " + str(t_elapsed))
 
     # extract results and save samples to pypesto result
-    if n_samples is not None:
+    if n_samples is not None and n_samples > 0:
         result.sample_result = variational.sample(n_samples)
         result.sample_result['time'] = t_elapsed
 
@@ -117,6 +117,12 @@ def variational_fit(
             overwrite=overwrite,
         )
 
+    result.variational_result = variational
+    if filename is not None:
+        logger.warning(
+            'Internal pymc object is not saved. '
+            'Please use `save_internal_object` method to save the internal pymc object.'
+        )
     return result
 
 

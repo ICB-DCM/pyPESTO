@@ -123,10 +123,10 @@ class PymcVariational(PymcSampler):
         x_names_free = self.problem.get_reduced_vector(self.problem.x_names)
         post_samples = np.concatenate(
             [pymc_data.posterior[name].values for name in x_names_free]
-        )
+        ).T
         samples = {
             "trace_x": post_samples,
-            "trace_neglogpost": pymc_data.posterior.loggyposty,
+            "trace_neglogpost": pymc_data.posterior.loggyposty.values,
             'trace_neglogprior': None,
             'burn_in': 0,
             'time': None,
