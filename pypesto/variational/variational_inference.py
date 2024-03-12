@@ -107,40 +107,20 @@ def variational_fit(
 
     # extract results and save samples to pypesto result
     if n_samples is not None:
-        result.sample_result = variational.data.sample(n_samples)
+        result.sample_result = variational.sample(n_samples)
 
-    autosave(
-        filename=filename,
-        result=result,
-        store_type="sample",
-        overwrite=overwrite,
-    )
+        autosave(
+            filename=filename,
+            result=result,
+            store_type="sample",
+            overwrite=overwrite,
+        )
 
-    # now also save the pymc
-
-    return variational.data
-
-    # if n_samples is not None:
-    #     vi_result.samples = variational_approx.data.sample(n_samples)
-    #
-    # # record time
-    # vi_result.time = t_elapsed
-    #
-    # # record results
-    # result.vi_result = vi_result
-    #
-    # autosave(
-    #     filename=filename,
-    #     result=result,
-    #     store_type="variational",
-    #     overwrite=overwrite,
-    # )
-    #
-    # return result
+    return result
 
 
 def eval_variational_log_density(
-    x_points: np.ndarray, vi_approx
+    x_points: np.ndarray, mean: np.ndarray, cov: np.ndarray
 ) -> np.ndarray:
     """
     Evaluate the log density of the variational approximation at x_points.
@@ -149,15 +129,17 @@ def eval_variational_log_density(
     ----------
     x_points:
         The points at which to evaluate the log density.
-    vi_approx:
-        The variational approximation object from PyMC.
+    mean:
+        The mean of the Gaussian variational family.
+    cov:
+        The cov of the Gaussian variational family.
     """
     if x_points.ndim == 1:
         x_points = x_points.reshape(1, -1)
     log_density_at_points = np.zeros_like(x_points)
     for i, point in enumerate(x_points):
         log_density_at_points[i] = stats.multivariate_normal.logpdf(
-            point, mean=vi_approx.mean.eval(), cov=vi_approx.cov.eval()
+            point, mean=mean, cov=cov
         )
     vi_log_density = np.sum(log_density_at_points, axis=-1)
     return vi_log_density

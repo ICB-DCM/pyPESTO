@@ -107,3 +107,41 @@ class PymcVariational(PymcSampler):
             )
 
         self.data = data
+
+    def sample(self, n_samples: int, beta: float = 1.0):
+        """
+        Sample from the variational approximation.
+
+        Parameters
+        ----------
+        n_samples:
+            Number of samples to be computed.
+        """
+
+        return self.data.sample(n_samples)
+
+    def save_internal_object(self, filename: str):
+        """
+        Save the internal pymc object to a file.
+
+        Parameters
+        ----------
+        filename:
+            The file to save to.
+        """
+        self.data.to_netcdf(filename)
+
+    def load_internal_object(self, filename: str):
+        """
+        Load the internal pymc object from a file.
+
+        Parameters
+        ----------
+        filename:
+            The file to load from.
+        """
+        try:
+            import arviz
+        except ImportError:
+            raise ImportError("arviz")
+        self.data = arviz.from_netcdf(filename)
