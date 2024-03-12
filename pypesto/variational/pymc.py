@@ -127,8 +127,11 @@ class PymcVariational(PymcSampler):
         ).T
         return McmcPtResult(
             trace_x=post_samples[np.newaxis, :],
-            trace_neglogpost=pymc_data.posterior.loggyposty.values,
-            trace_neglogprior=np.ones(post_samples.shape) * np.nan,
+            trace_neglogpost=pymc_data.posterior.loggyposty.values[
+                np.newaxis, :
+            ],
+            trace_neglogprior=np.ones(post_samples[np.newaxis, :].shape)
+            * np.nan,
             betas=np.array([1.0] * post_samples.shape[0]),
             burn_in=0,
             auto_correlation=0,
