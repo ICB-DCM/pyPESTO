@@ -108,7 +108,7 @@ def variational_fit(
     # extract results and save samples to pypesto result
     if n_samples is not None and n_samples > 0:
         result.sample_result = variational.sample(n_samples)
-        result.sample_result['time'] = t_elapsed
+        result.sample_result.time = t_elapsed
 
         autosave(
             filename=filename,
