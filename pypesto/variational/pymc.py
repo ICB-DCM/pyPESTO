@@ -4,6 +4,7 @@ from typing import Optional
 import numpy as np
 import pytensor.tensor as pt
 
+from ..result import McmcPtResult
 from ..sample.pymc import PymcObjectiveOp, PymcSampler
 from ..sample.sampler import SamplerImportError
 
@@ -109,9 +110,9 @@ class PymcVariational(PymcSampler):
 
         self.data = data
 
-    def sample(self, n_samples: int, beta: float = 1.0):
+    def sample(self, n_samples: int, beta: float = 1.0) -> McmcPtResult:
         """
-        Sample from the variational approximation.
+        Sample from the variational approximation and return McmcPtResult object.
 
         Parameters
         ----------
@@ -124,17 +125,16 @@ class PymcVariational(PymcSampler):
         post_samples = np.concatenate(
             [pymc_data.posterior[name].values for name in x_names_free]
         ).T
-        samples = {
-            "trace_x": post_samples,
-            "trace_neglogpost": pymc_data.posterior.loggyposty.values,
-            'trace_neglogprior': None,
-            'burn_in': 0,
-            'time': None,
-            'auto_correlation': 0,
-            'effective_sample_size': n_samples,
-            'message': 'variational inference results',
-        }
-        return samples
+        return McmcPtResult(
+            trace_x=post_samples,
+            trace_neglogpost=pymc_data.posterior.loggyposty.values,
+            trace_neglogprior=np.ones(post_samples.shape) * np.nan,
+            betas=np.array([1.0] * post_samples.shape[0]),
+            burn_in=0,
+            auto_correlation=0,
+            effective_sample_size=n_samples,
+            message='variational inference results',
+        )
 
     def save_internal_object(self, filename: str):
         """
