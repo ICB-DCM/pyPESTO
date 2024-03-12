@@ -139,9 +139,12 @@ class PymcVariational(PymcSampler):
             message='variational inference results',
         )
 
-    def get_variational_parameters(self) -> list:
+    def get_variational_parameters(self) -> (list, list):
         """Get the internal pymc variational parameters."""
-        return [(param.name, param.eval()) for param in self.data.params]
+        return (
+            [param.name for param in self.data.params],
+            [param.eval() for param in self.data.params],
+        )
 
     def set_variational_parameters(self, param_list: list):
         """
@@ -153,7 +156,7 @@ class PymcVariational(PymcSampler):
             List of tuples of the form (param_name, param_value).
         """
         for i, param in enumerate(param_list):
-            self.data.params[i].set_value(param[1])
+            self.data.params[i].set_value(param)
 
     def eval_variational_log_density(self, x: np.ndarray) -> np.ndarray:
         """

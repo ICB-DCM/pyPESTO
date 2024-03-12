@@ -111,9 +111,6 @@ def variational_fit(
 
     result.sample_result = variational.sample(n_samples)
     result.sample_result.time = t_elapsed
-    result.sample_result.variational_parameters = (
-        variational.get_variational_parameters()
-    )
 
     autosave(
         filename=filename,
@@ -123,5 +120,15 @@ def variational_fit(
     )
 
     # make pymc object available in result
+    # TODO: if needed, we can add a result object for variational inference methods
     result.variational_result = variational
+    (
+        result.sample_result.variational_parameters_names,
+        result.sample_result.variational_parameters,
+    ) = variational.get_variational_parameters()
+    if filename is not None:
+        logger.warning(
+            'Variational parameters are not saved in the hdf5 file. You have to save them manually.'
+        )
+
     return result
