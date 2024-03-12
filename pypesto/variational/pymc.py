@@ -3,6 +3,7 @@ from typing import Optional
 
 import numpy as np
 import pytensor.tensor as pt
+from scipy import stats
 
 from ..result import McmcPtResult
 from ..sample.pymc import PymcObjectiveOp, PymcSampler
@@ -127,11 +128,10 @@ class PymcVariational(PymcSampler):
         ).T
         return McmcPtResult(
             trace_x=post_samples[np.newaxis, :],
-            trace_neglogpost=pymc_data.posterior.loggyposty.values[
-                np.newaxis, :
-            ],
-            trace_neglogprior=np.ones(post_samples[np.newaxis, :].shape)
-            * np.nan,
+            trace_neglogpost=pymc_data.posterior.loggyposty.values,
+            trace_neglogprior=np.full(
+                pymc_data.posterior.loggyposty.values.shape, np.nan
+            ),
             betas=np.array([1.0] * post_samples.shape[0]),
             burn_in=0,
             auto_correlation=0,
@@ -139,28 +139,42 @@ class PymcVariational(PymcSampler):
             message='variational inference results',
         )
 
-    def save_internal_object(self, filename: str):
+    def get_variational_parameters(self) -> list:
+        """Get the internal pymc variational parameters."""
+        return [(param.name, param.eval()) for param in self.data.params]
+
+    def set_variational_parameters(self, param_list: list):
         """
-        Save the internal pymc object to a file.
+        Set the internal pymc variational parameters.
 
         Parameters
         ----------
-        filename:
-            The file to save to.
+        param_list:
+            List of tuples of the form (param_name, param_value).
         """
-        self.data.to_netcdf(filename)
+        for i, param in enumerate(param_list):
+            self.data.params[i].set_value(param[1])
 
-    def load_internal_object(self, filename: str):
+    def eval_variational_log_density(self, x: np.ndarray) -> np.ndarray:
         """
-        Load the internal pymc object from a file.
+        Evaluate the log density of the variational approximation at x_points.
 
         Parameters
         ----------
-        filename:
-            The file to load from.
+        x:
+            The points at which to evaluate the log density.
         """
-        try:
-            import arviz
-        except ImportError:
-            raise ImportError("arviz")
-        self.data = arviz.from_netcdf(filename)
+        # TODO: add support for other methods
+        logger.warning(
+            'currently only supports the methods `advi` and `fullrank_advi`'
+        )
+
+        if x.ndim == 1:
+            x = x.reshape(1, -1)
+        log_density_at_points = np.zeros_like(x)
+        for i, point in enumerate(x):
+            log_density_at_points[i] = stats.multivariate_normal.logpdf(
+                point, mean=self.data.mean.eval(), cov=self.data.cov.eval()
+            )
+        vi_log_density = np.sum(log_density_at_points, axis=-1)
+        return vi_log_density

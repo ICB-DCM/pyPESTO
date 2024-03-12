@@ -3,7 +3,6 @@ from time import process_time
 from typing import Callable, List, Optional, Union
 
 import numpy as np
-from scipy import stats
 
 from ..problem import Problem
 from ..result import Result
@@ -106,47 +105,23 @@ def variational_fit(
     logger.info("Elapsed time: " + str(t_elapsed))
 
     # extract results and save samples to pypesto result
-    if n_samples is not None and n_samples > 0:
-        result.sample_result = variational.sample(n_samples)
-        result.sample_result.time = t_elapsed
+    if n_samples is None or n_samples == 0:
+        # constructing a McmcPtResult object with nearly empty trace_x
+        n_samples = 1
 
-        autosave(
-            filename=filename,
-            result=result,
-            store_type="sample",
-            overwrite=overwrite,
-        )
+    result.sample_result = variational.sample(n_samples)
+    result.sample_result.time = t_elapsed
+    result.sample_result.variational_parameters = (
+        variational.get_variational_parameters()
+    )
 
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="sample",
+        overwrite=overwrite,
+    )
+
+    # make pymc object available in result
     result.variational_result = variational
-    if filename is not None:
-        logger.warning(
-            'Internal pymc object is not saved. '
-            'Please use `save_internal_object` method to save the internal pymc object.'
-        )
     return result
-
-
-def eval_variational_log_density(
-    x_points: np.ndarray, mean: np.ndarray, cov: np.ndarray
-) -> np.ndarray:
-    """
-    Evaluate the log density of the variational approximation at x_points.
-
-    Parameters
-    ----------
-    x_points:
-        The points at which to evaluate the log density.
-    mean:
-        The mean of the Gaussian variational family.
-    cov:
-        The cov of the Gaussian variational family.
-    """
-    if x_points.ndim == 1:
-        x_points = x_points.reshape(1, -1)
-    log_density_at_points = np.zeros_like(x_points)
-    for i, point in enumerate(x_points):
-        log_density_at_points[i] = stats.multivariate_normal.logpdf(
-            point, mean=mean, cov=cov
-        )
-    vi_log_density = np.sum(log_density_at_points, axis=-1)
-    return vi_log_density
