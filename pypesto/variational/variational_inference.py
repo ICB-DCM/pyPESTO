@@ -1,16 +1,15 @@
 import logging
 from time import process_time
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 from scipy import stats
 
 from ..problem import Problem
 from ..result import Result
-
-# from ..store import autosave
-from .pymc import PymcSampler
-from .util import bound_n_samples_from_env
+from ..sample.util import bound_n_samples_from_env
+from ..store import autosave
+from .pymc import PymcVariational
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +18,13 @@ def variational_fit(
     problem: Problem,
     n_iterations: int,
     method: str = 'advi',
-    # n_samples: Optional[int] = None,
+    n_samples: Optional[int] = None,
     random_seed: Optional[int] = None,
     start_sigma: Optional[dict[str, np.ndarray]] = None,
     x0: Union[np.ndarray, List[np.ndarray]] = None,
     result: Result = None,
-    # filename: Union[str, Callable, None] = None,
-    # overwrite: bool = False,
+    filename: Union[str, Callable, None] = None,
+    overwrite: bool = False,
     **kwargs,
 ) -> Result:
     """
@@ -86,17 +85,17 @@ def variational_fit(
             x0 = problem.get_reduced_vector(
                 result.optimize_result.list[0]['x']
             )
-        # TODO multiple x0 for PT, #269
 
     # set variational inference
-    variational_approx = PymcSampler()
+    # currently we only support pymc
+    variational = PymcVariational()
 
     # initialize sampler to problem
-    variational_approx.initialize(problem=problem, x0=x0)
+    variational.initialize(problem=problem, x0=x0)
 
     # perform the sampling and track time
     t_start = process_time()
-    variational_approx.fit(
+    variational.fit(
         n_iterations=n_iterations,
         method=method,
         random_seed=random_seed,
@@ -106,9 +105,20 @@ def variational_fit(
     t_elapsed = process_time() - t_start
     logger.info("Elapsed time: " + str(t_elapsed))
 
-    # extract results
-    # todo: build variational result object
-    return variational_approx.data
+    # extract results and save samples to pypesto result
+    if n_samples is not None:
+        result.sample_result = variational.data.sample(n_samples)
+
+    autosave(
+        filename=filename,
+        result=result,
+        store_type="sample",
+        overwrite=overwrite,
+    )
+
+    # now also save the pymc
+
+    return variational.data
 
     # if n_samples is not None:
     #     vi_result.samples = variational_approx.data.sample(n_samples)

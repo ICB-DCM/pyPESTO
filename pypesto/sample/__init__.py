@@ -16,7 +16,3 @@ from .parallel_tempering import ParallelTemperingSampler
 from .sample import sample
 from .sampler import InternalSampler, Sampler
 from .util import calculate_ci_mcmc_sample, calculate_ci_mcmc_sample_prediction
-from .variational_inference import (
-    eval_variational_log_density,
-    variational_fit,
-)
