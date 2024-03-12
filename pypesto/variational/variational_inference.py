@@ -37,7 +37,7 @@ def variational_fit(
         :class:`pypesto.AdaptiveMetropolisSampler` is used.
     n_iterations:
         Number of iterations for the optimization.
-    method: str or :class:`Inference`
+    method: str or :class:`Inference` of pymc (only interface currently supported)
         string name is case-insensitive in:
             -   'advi'  for ADVI
             -   'fullrank_advi'  for FullRankADVI
@@ -108,6 +108,7 @@ def variational_fit(
     # extract results and save samples to pypesto result
     if n_samples is not None:
         result.sample_result = variational.sample(n_samples)
+        result.sample_result.time = t_elapsed
 
         autosave(
             filename=filename,

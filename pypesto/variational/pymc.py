@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 
+import numpy as np
 import pytensor.tensor as pt
 
 from ..sample.pymc import PymcObjectiveOp, PymcSampler
@@ -42,7 +43,7 @@ class PymcVariational(PymcSampler):
         ----------
         n_iterations:
             Number of iterations.
-        method: str or :class:`Inference`
+        method: str or :class:`Inference` of pymc
             string name is case-insensitive in:
             -   'advi'  for ADVI
             -   'fullrank_advi'  for FullRankADVI
@@ -117,8 +118,23 @@ class PymcVariational(PymcSampler):
         n_samples:
             Number of samples to be computed.
         """
-
-        return self.data.sample(n_samples)
+        # get InferenceData object
+        pymc_data = self.data.sample(n_samples)
+        x_names_free = self.problem.get_reduced_vector(self.problem.x_names)
+        post_samples = np.concatenate(
+            [pymc_data.posterior[name].values for name in x_names_free]
+        )
+        samples = {
+            "trace_x": post_samples,
+            "trace_neglogpost": pymc_data.posterior.loggyposty,
+            'trace_neglogprior': None,
+            'burn_in': 0,
+            'time': None,
+            'auto_correlation': 0,
+            'effective_sample_size': n_samples,
+            'message': 'variational inference results',
+        }
+        return samples
 
     def save_internal_object(self, filename: str):
         """
