@@ -6,7 +6,4 @@ Find the best variational approximation in a given family to a distribution from
 """
 
 from .pymc import PymcVariational
-from .variational_inference import (
-    eval_variational_log_density,
-    variational_fit,
-)
+from .variational_inference import variational_fit
