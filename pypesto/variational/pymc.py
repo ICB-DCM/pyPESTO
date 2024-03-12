@@ -126,7 +126,7 @@ class PymcVariational(PymcSampler):
             [pymc_data.posterior[name].values for name in x_names_free]
         ).T
         return McmcPtResult(
-            trace_x=post_samples,
+            trace_x=post_samples[np.newaxis, :],
             trace_neglogpost=pymc_data.posterior.loggyposty.values,
             trace_neglogprior=np.ones(post_samples.shape) * np.nan,
             betas=np.array([1.0] * post_samples.shape[0]),
