@@ -10,6 +10,7 @@ import pypesto.optimize
 from pypesto.C import MODE_FUN, MODE_RES
 from pypesto.objective import NegLogParameterPriors
 from pypesto.objective.priors import get_parameter_prior_dict
+from pypesto.startpoint import UniformStartpoints
 
 scales = ["lin", "log", "log10"]
 
@@ -114,14 +115,13 @@ def test_mode(scale, prior_type_list):
             if method == "ls_trf" and not test_prior.has_res:
                 continue
             optimizer = pypesto.optimize.ScipyOptimizer(method=method)
-            startpoints = pypesto.startpoint.UniformStartpoints(
+            test_problem.startpoint_method = UniformStartpoints(
                 check_fval=True,
             )
             result = pypesto.optimize.minimize(
                 problem=test_problem,
                 optimizer=optimizer,
                 n_starts=10,
-                startpoint_method=startpoints,
                 progress_bar=False,
             )
 
