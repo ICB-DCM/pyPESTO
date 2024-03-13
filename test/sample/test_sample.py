@@ -770,10 +770,8 @@ def test_thermodynamic_integration():
         )
 
         # compute the log evidence using trapezoid and simpson rule
-        log_evidence = sampler.thermodynamic_integration(
-            result, method="trapezoid"
-        )
-        log_evidence_simps = sampler.thermodynamic_integration(
+        log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
+        log_evidence_simps = sampler.compute_log_evidence(
             result, method="simpson"
         )
 
