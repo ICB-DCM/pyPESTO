@@ -173,10 +173,10 @@ class ParallelTemperingSampler(Sampler):
     def adjust_betas(self, i_sample: int, swapped: Sequence[bool]):
         """Adjust temperature values. Default: Do nothing."""
 
-    def thermodynamic_integration(
+    def compute_log_evidence(
         self, result: Result, method: str = "trapezoid"
     ) -> float:
-        """Perform thermodynamic integration to estimate the evidence.
+        """Perform thermodynamic integration to estimate the log evidence.
 
         Parameters
         ----------
