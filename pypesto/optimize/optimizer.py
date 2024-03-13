@@ -753,7 +753,7 @@ class PyswarmOptimizer(Optimizer):
         return False
 
 
-class CmaesOptimizer(Optimizer):
+class CmaOptimizer(Optimizer):
     """
     Global optimization using covariance matrix adaptation evolutionary search.
 
@@ -830,6 +830,19 @@ class CmaesOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+
+class CmaesOptimizer(CmaOptimizer):
+    """Deprecated, use CmaOptimizer instead."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        warnings.warn(
+            "`CmaesOptimizer` has been renamed to `CmaOptimizer`, "
+            "please update your code.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
 
 
 class ScipyDifferentialEvolutionOptimizer(Optimizer):
