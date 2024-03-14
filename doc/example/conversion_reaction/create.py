@@ -19,7 +19,7 @@ def analytical_a(t, a0=a0, b0=b0, k1=k1, k2=k2):
 
 condition_df = pd.DataFrame(
     data={
-        CONDITION_ID: ['c0'],
+        CONDITION_ID: ["c0"],
     }
 ).set_index([CONDITION_ID])
 
@@ -31,8 +31,8 @@ measurements = simulations + sigma * np.random.randn(nt)
 
 measurement_df = pd.DataFrame(
     data={
-        OBSERVABLE_ID: ['obs_a'] * nt,
-        SIMULATION_CONDITION_ID: ['c0'] * nt,
+        OBSERVABLE_ID: ["obs_a"] * nt,
+        SIMULATION_CONDITION_ID: ["c0"] * nt,
         TIME: times,
         MEASUREMENT: measurements,
     }
@@ -40,15 +40,15 @@ measurement_df = pd.DataFrame(
 
 observable_df = pd.DataFrame(
     data={
-        OBSERVABLE_ID: ['obs_a'],
-        OBSERVABLE_FORMULA: ['A'],
+        OBSERVABLE_ID: ["obs_a"],
+        OBSERVABLE_FORMULA: ["A"],
         NOISE_FORMULA: [sigma],
     }
 ).set_index([OBSERVABLE_ID])
 
 parameter_df = pd.DataFrame(
     data={
-        PARAMETER_ID: ['k1', 'k2'],
+        PARAMETER_ID: ["k1", "k2"],
         PARAMETER_SCALE: [LOG] * 2,
         LOWER_BOUND: [1e-5] * 2,
         UPPER_BOUND: [1e5] * 2,

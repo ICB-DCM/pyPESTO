@@ -17,7 +17,6 @@ from ...C import (
     RDATAS,
     RES,
     SRES,
-    X_INNER_OPT,
 )
 from ...objective.amici.amici_calculator import (
     AmiciCalculator,
@@ -68,7 +67,7 @@ class OrdinalCalculator(AmiciCalculator):
         self.inner_solver = inner_solver
         if (
             self.inner_problem.method
-            is not self.inner_solver.options['method']
+            is not self.inner_solver.options["method"]
         ):
             raise ValueError(
                 f"The inner problem method {self.inner_problem.method} and the inner solver method {self.inner_solver.options['method']} have to coincide."
@@ -86,12 +85,12 @@ class OrdinalCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -126,7 +125,7 @@ class OrdinalCalculator(AmiciCalculator):
         Returns
         -------
         inner_result:
-            A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
+            A dict containing the calculation results: FVAL, GRAD, RDATAS.
         """
         if mode == MODE_RES:
             raise ValueError(
@@ -178,7 +177,6 @@ class OrdinalCalculator(AmiciCalculator):
             RES: res,
             SRES: sres,
             RDATAS: rdatas,
-            X_INNER_OPT: self.inner_problem.get_inner_parameter_dictionary(),
         }
 
         # if any amici simulation failed, it's unlikely we can compute
@@ -201,13 +199,9 @@ class OrdinalCalculator(AmiciCalculator):
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
             x_inner_opt
         )
-        inner_result[
-            X_INNER_OPT
-        ] = self.inner_problem.get_inner_parameter_dictionary()
 
         # calculate analytical gradients if requested
         if sensi_order > 0:
-            # print([opt['fun'] for opt in x_inner_opt])
             sy = [rdata[AMICI_SY] for rdata in rdatas]
             ssigma = [rdata[AMICI_SSIGMAY] for rdata in rdatas]
             inner_result[GRAD] = self.inner_solver.calculate_gradients(

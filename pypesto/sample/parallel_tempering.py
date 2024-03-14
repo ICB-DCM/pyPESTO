@@ -46,15 +46,15 @@ class ParallelTemperingSampler(Sampler):
         if betas is None:
             betas = near_exponential_decay_betas(
                 n_chains=n_chains,
-                exponent=self.options['exponent'],
-                max_temp=self.options['max_temp'],
+                exponent=self.options["exponent"],
+                max_temp=self.options["max_temp"],
             )
         if betas[0] != 1.0:
             raise ValueError("The first chain must have beta=1.0")
         self.betas0 = np.array(betas)
         self.betas = None
 
-        self.temper_lpost = self.options['temper_log_posterior']
+        self.temper_lpost = self.options["temper_log_posterior"]
 
         self.samplers = [
             copy.deepcopy(internal_sampler) for _ in range(len(self.betas0))
@@ -67,10 +67,10 @@ class ParallelTemperingSampler(Sampler):
     def default_options(cls) -> Dict:
         """Return the default options for the sampler."""
         return {
-            'max_temp': 5e4,
-            'exponent': 4,
-            'temper_log_posterior': False,
-            'show_progress': None,
+            "max_temp": 5e4,
+            "exponent": 4,
+            "temper_log_posterior": False,
+            "show_progress": None,
         }
 
     def initialize(
@@ -89,7 +89,7 @@ class ParallelTemperingSampler(Sampler):
 
     def sample(self, n_samples: int, beta: float = 1.0):
         """Sample and swap in between samplers."""
-        show_progress = self.options.get('show_progress', None)
+        show_progress = self.options.get("show_progress", None)
         # loop over iterations
         for i_sample in tqdm(range(int(n_samples)), enable=show_progress):
             # TODO test

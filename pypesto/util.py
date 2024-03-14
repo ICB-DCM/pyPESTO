@@ -191,7 +191,7 @@ def get_condition_label(condition_id: str) -> str:
     -------
     The condition label.
     """
-    return f'condition_{condition_id}'
+    return f"condition_{condition_id}"
 
 
 def assign_clusters(vals):
@@ -226,7 +226,7 @@ def assign_clusters(vals):
 
     # get clustering based on distance
     clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(vals), t=0.1, criterion='distance'
+        cluster.hierarchy.linkage(vals), t=0.1, criterion="distance"
     )
 
     # get unique clusters

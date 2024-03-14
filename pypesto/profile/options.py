@@ -73,15 +73,15 @@ class ProfileOptions(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
     @staticmethod
     def create_instance(
-        maybe_options: Union['ProfileOptions', Dict]
-    ) -> 'ProfileOptions':
+        maybe_options: Union["ProfileOptions", Dict],
+    ) -> "ProfileOptions":
         """
         Return a valid options object.
 

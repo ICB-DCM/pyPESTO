@@ -46,7 +46,7 @@ class EmceeSampler(Sampler):
         try:
             import emcee
         except ImportError:
-            raise SamplerImportError("emcee")
+            raise SamplerImportError("emcee") from None
 
         super().__init__()
         self.nwalkers: int = nwalkers

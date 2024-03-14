@@ -22,7 +22,7 @@ from .refset import RefSet
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['ESSOptimizer', 'ESSExitFlag']
+__all__ = ["ESSOptimizer", "ESSExitFlag"]
 
 
 class ESSExitFlag(int, enum.Enum):
@@ -192,8 +192,10 @@ class ESSOptimizer:
         """
         if startpoint_method is not None:
             warn(
-                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                "Passing `startpoint_method` directly is deprecated, "
+                "use `problem.startpoint_method` instead.",
                 DeprecationWarning,
+                stacklevel=1,
             )
 
         self._initialize()
@@ -301,12 +303,12 @@ class ESSOptimizer:
         Currently, this returns the overall best value and the final RefSet.
         """
         common_result_fields = {
-            'exitflag': self.exit_flag,
+            "exitflag": self.exit_flag,
             # meaningful? this is the overall time, and identical for all
             #  reported points
-            'time': time.time() - self.starttime,
-            'n_fval': self.evaluator.n_eval,
-            'optimizer': str(self),
+            "time": time.time() - self.starttime,
+            "n_fval": self.evaluator.n_eval,
+            "optimizer": str(self),
         }
         i_result = 0
         result = pypesto.Result(problem=self.evaluator.problem)

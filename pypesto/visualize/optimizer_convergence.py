@@ -10,8 +10,8 @@ from ..result import Result
 def optimizer_convergence(
     result: Result,
     ax: Optional[plt.Axes] = None,
-    xscale: str = 'symlog',
-    yscale: str = 'log',
+    xscale: str = "symlog",
+    yscale: str = "log",
     size: Tuple[float] = (18.5, 10.5),
 ) -> plt.Axes:
     """
@@ -66,10 +66,10 @@ def optimizer_convergence(
     ]
     msgs = result.optimize_result.message
     conv_data = pd.DataFrame(
-        {'fval': fvals, 'gradient norm': grad_norms, 'exit message': msgs}
+        {"fval": fvals, "gradient norm": grad_norms, "exit message": msgs}
     )
     sns.scatterplot(
-        x='fval', y='gradient norm', hue='exit message', data=conv_data, ax=ax
+        x="fval", y="gradient norm", hue="exit message", data=conv_data, ax=ax
     )
     ax.set_yscale(yscale)
     ax.set_xscale(xscale)
