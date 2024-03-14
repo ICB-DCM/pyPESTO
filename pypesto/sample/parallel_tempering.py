@@ -48,12 +48,14 @@ class ParallelTemperingSampler(Sampler):
         if (betas is None) == (n_chains is None):
             raise ValueError("Set either betas or n_chains.")
         if betas is None and self.options["beta_init"] == EXPONENTIAL_DECAY:
+            logger.info('Initializing betas with "near-exponential decay".')
             betas = near_exponential_decay_betas(
                 n_chains=n_chains,
                 exponent=self.options["exponent"],
                 max_temp=self.options["max_temp"],
             )
         elif betas is None and self.options["beta_init"] == BETA_DECAY:
+            logger.info('Initializing betas with "beta decay".')
             betas = beta_decay_betas(
                 n_chains=n_chains, alpha=self.options["alpha"]
             )
