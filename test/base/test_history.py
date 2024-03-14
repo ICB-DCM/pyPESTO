@@ -54,6 +54,7 @@ class HistoryTest(unittest.TestCase):
                 },
             }
         self.problem = pypesto.Problem(**kwargs)
+        self.problem.startpoint_method = pypesto.startpoint.uniform
 
         optimize_options = pypesto.optimize.OptimizeOptions(
             allow_failed_starts=False,
@@ -80,7 +81,6 @@ class HistoryTest(unittest.TestCase):
                     problem=self.problem,
                     optimizer=self.optimizer,
                     n_starts=n_starts,
-                    startpoint_method=pypesto.startpoint.uniform,
                     options=optimize_options,
                     history_options=self.history_options,
                     progress_bar=False,
