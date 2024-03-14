@@ -54,7 +54,7 @@ class ParallelTemperingSampler(Sampler):
                 max_temp=self.options["max_temp"],
             )
         elif betas is None and self.options["beta_init"] == BETA_DECAY:
-            betas = beta_decay_for_beta(
+            betas = beta_decay_betas(
                 n_chains=n_chains, alpha=self.options["alpha"]
             )
         if betas[0] != 1.0:
@@ -216,7 +216,7 @@ class ParallelTemperingSampler(Sampler):
         return log_evidence
 
 
-def beta_decay_for_beta(n_chains: int, alpha: float) -> np.ndarray:
+def beta_decay_betas(n_chains: int, alpha: float) -> np.ndarray:
     """Initialize betas to the (j-1)th quantile of a Beta(alpha, 1) distribution.
 
     Proposed by Xie et al. (2011) to be used for thermodynamic integration.
