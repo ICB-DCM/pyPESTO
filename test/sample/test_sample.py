@@ -750,6 +750,7 @@ def test_thermodynamic_integration():
     # test thermodynamic integration
     problem = gaussian_problem()
 
+    # approximation should be better for more chains
     for n_chains, tol in zip([10, 20], [1, 1e-1]):
         sampler = sample.ParallelTemperingSampler(
             internal_sampler=sample.AdaptiveMetropolisSampler(),
