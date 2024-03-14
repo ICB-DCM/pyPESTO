@@ -4,6 +4,7 @@ from typing import Dict, List, Sequence, Union
 
 import numpy as np
 
+from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
 from ..result import McmcPtResult, Result
 from ..util import tqdm
@@ -46,13 +47,13 @@ class ParallelTemperingSampler(Sampler):
         # set betas
         if (betas is None) == (n_chains is None):
             raise ValueError("Set either betas or n_chains.")
-        if betas is None and self.options["beta_init"] == "exponential_decay":
+        if betas is None and self.options["beta_init"] == EXPONENTIAL_DECAY:
             betas = near_exponential_decay_betas(
                 n_chains=n_chains,
                 exponent=self.options["exponent"],
                 max_temp=self.options["max_temp"],
             )
-        elif betas is None and self.options["beta_init"] == "beta_decay":
+        elif betas is None and self.options["beta_init"] == BETA_DECAY:
             betas = beta_decay_for_beta(
                 n_chains=n_chains, alpha=self.options["alpha"]
             )
@@ -78,7 +79,7 @@ class ParallelTemperingSampler(Sampler):
             "exponent": 4,
             "temper_log_posterior": False,
             "show_progress": None,
-            "beta_init": "exponential_decay",
+            "beta_init": BETA_DECAY,  # replaced in adaptive PT
             "alpha": 0.3,
         }
 
@@ -187,10 +188,10 @@ class ParallelTemperingSampler(Sampler):
         """
         from scipy.integrate import simpson, trapezoid
 
-        if self.options["beta_init"] == "exponential_decay":
+        if self.options["beta_init"] == EXPONENTIAL_DECAY:
             logger.warning(
                 "The temperature schedule is not optimal for thermodynamic integration. "
-                "Carefully check the results. Consider using beta_init='beta_decay' for better results."
+                f"Carefully check the results. Consider using beta_init='{BETA_DECAY}' for better results."
             )
 
         burn_in = result.sample_result.burn_in
@@ -218,17 +219,16 @@ class ParallelTemperingSampler(Sampler):
 def beta_decay_for_beta(n_chains: int, alpha: float) -> np.ndarray:
     """Initialize betas to the (j-1)th quantile of a Beta(alpha, 1) distribution.
 
+    Proposed by Xie et al. (2011) to be used for thermodynamic integration.
+
     Parameters
     ----------
     n_chains:
         Number of chains to use.
     alpha:
         Tuning parameter that modulates the skew of the distribution over the temperatures.
-        For alpha=1 we habe a uniform distribution, and as alpha decreases towards zero,
+        For alpha=1 we have a uniform distribution, and as alpha decreases towards zero,
         temperatures become positively skewed. Xie et al. (2011) propose alpha=0.3 as a good start.
-
-
-    Proposed by Xie et al. (2011) to be used for thermodynamic integration.
     """
     if alpha <= 0 or alpha > 1:
         raise ValueError("alpha must be in (0, 1]")

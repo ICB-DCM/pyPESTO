@@ -4,6 +4,7 @@ from typing import Dict, Sequence
 
 import numpy as np
 
+from ..C import EXPONENTIAL_DECAY
 from .parallel_tempering import ParallelTemperingSampler
 
 
@@ -36,6 +37,8 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
         # controls the adaptation degeneration velocity of the temperature
         # adaption.
         options["nu"] = 1e3
+        # initial temperature schedule as in Vousden et. al. 2016.
+        options["beta_init"] = EXPONENTIAL_DECAY
 
         return options
 
