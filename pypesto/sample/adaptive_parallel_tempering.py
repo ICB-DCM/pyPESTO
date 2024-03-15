@@ -4,6 +4,8 @@ from typing import Dict, Sequence
 
 import numpy as np
 
+from ..C import EXPONENTIAL_DECAY
+from ..result import Result
 from .parallel_tempering import ParallelTemperingSampler
 
 
@@ -36,6 +38,8 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
         # controls the adaptation degeneration velocity of the temperature
         # adaption.
         options["nu"] = 1e3
+        # initial temperature schedule as in Vousden et. al. 2016.
+        options["beta_init"] = EXPONENTIAL_DECAY
 
         return options
 
@@ -61,3 +65,20 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
 
         # fill in
         self.betas = betas
+
+    def compute_log_evidence(
+        self, result: Result, method: str = "trapezoid"
+    ) -> float:
+        """Perform thermodynamic integration to estimate the log evidence.
+
+        Parameters
+        ----------
+        result:
+            Result object containing the samples.
+        method:
+            Integration method, either 'trapezoid' or 'simpson' (uses scipy for integration).
+        """
+        raise NotImplementedError(
+            "Thermodynamic integration is not implemented for adaptive parallel tempering, "
+            "since the temperature schedule is adapted during the sampling process."
+        )
