@@ -256,6 +256,13 @@ LOG_UNIFORM = "logUniform"
 LOG_NORMAL = "logNormal"
 LOG_LAPLACE = "logLaplace"
 
+###############################################################################
+# SAMPLING
+
+EXPONENTIAL_DECAY = (
+    "exponential_decay"  # temperature schedule for parallel tempering
+)
+BETA_DECAY = "beta_decay"  # temperature schedule for parallel tempering
 
 ###############################################################################
 # PREDICT
