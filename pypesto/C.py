@@ -70,6 +70,8 @@ HESSP = "hessp"  # Hessian vector product
 RES = "res"  # residual
 SRES = "sres"  # residual sensitivities
 RDATAS = "rdatas"  # returned simulated data sets
+OBJECTIVE_NEGLOGPOST = "neglogpost"  # objective is negative log-posterior
+OBJECTIVE_NEGLOGLIKE = "negloglike"  # objective is negative log-likelihood
 
 TIME = "time"  # time
 N_FVAL = "n_fval"  # number of function evaluations
