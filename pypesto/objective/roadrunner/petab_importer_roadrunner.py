@@ -99,9 +99,11 @@ class PetabImporterRR:
     def create_edatas(self):
         """Create an ExpData object from the PEtab problem."""
         # Create Dataframes per condition
-        grouped_dataframes = dict(
-            self.petab_problem.measurement_df.groupby("simulationConditionId")
-        )
+        grouped_dataframes = {
+            key: group
+            for key, group in self.petab_problem.measurement_df.groupby(
+                "simulationConditionId"
+            )
         edatas = [
             ExpData(key, group) for key, group in grouped_dataframes.items()
         ]
