@@ -6,6 +6,7 @@ import numpy as np
 import petab
 import pytest
 import scipy.optimize as so
+from scipy.integrate import quad
 from scipy.stats import ks_2samp, kstest, multivariate_normal, norm, uniform
 
 import pypesto
@@ -784,3 +785,45 @@ def test_dynesty_posterior():
     assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
     # MCMC samples are not
     assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
+
+
+def test_thermodynamic_integration():
+    # test thermodynamic integration
+    problem = gaussian_problem()
+
+    # approximation should be better for more chains
+    for n_chains, tol in zip([10, 20], [1, 1e-1]):
+        sampler = sample.ParallelTemperingSampler(
+            internal_sampler=sample.AdaptiveMetropolisSampler(),
+            options={"show_progress": False, "beta_init": "beta_decay"},
+            n_chains=n_chains,
+        )
+
+        result = optimize.minimize(
+            problem,
+            progress_bar=False,
+        )
+
+        result = sample.sample(
+            problem,
+            n_samples=5000,
+            result=result,
+            sampler=sampler,
+        )
+
+        # compute the log evidence using trapezoid and simpson rule
+        log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
+        log_evidence_simps = sampler.compute_log_evidence(
+            result, method="simpson"
+        )
+
+        # compute evidence
+        evidence = quad(
+            lambda x: 1 / (problem.ub - problem.lb) * np.exp(gaussian_llh(x)),
+            a=problem.lb,
+            b=problem.ub,
+        )
+
+        # compare to known value
+        assert np.isclose(log_evidence, np.log(evidence[0]), atol=tol)
+        assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)
