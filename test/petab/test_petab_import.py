@@ -101,12 +101,11 @@ class PetabImportTest(unittest.TestCase):
                 options={"maxiter": 10}
             )
             problem = importer.create_problem(obj)
-            startpoints = importer.create_startpoint_method()
+            problem.startpoint_method = importer.create_startpoint_method()
             result = pypesto.optimize.minimize(
                 problem=problem,
                 optimizer=optimizer,
                 n_starts=2,
-                startpoint_method=startpoints,
                 progress_bar=False,
             )
 
