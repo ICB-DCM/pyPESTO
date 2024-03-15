@@ -104,6 +104,7 @@ class PetabImporterRR:
             for key, group in self.petab_problem.measurement_df.groupby(
                 "simulationConditionId"
             )
+        }
         edatas = [
             ExpData(key, group) for key, group in grouped_dataframes.items()
         ]
