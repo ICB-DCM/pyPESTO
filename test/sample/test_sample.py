@@ -13,6 +13,7 @@ import pypesto
 import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
+from pypesto.C import OBJECTIVE_NEGLOGLIKE, OBJECTIVE_NEGLOGPOST
 from pypesto.sample.pymc import PymcSampler
 
 
@@ -190,7 +191,7 @@ def sampler(request):
     elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
     elif request.param == "Dynesty":
-        return sample.DynestySampler()
+        return sample.DynestySampler(objective_type="negloglike")
 
 
 @pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
@@ -722,16 +723,56 @@ def test_samples_cis():
         assert (diff == 0).all()
         # check if lower bound is smaller than upper bound
         assert (lb < ub).all()
-        # check if dimmensions agree
+        # check if dimensions agree
         assert lb.shape == ub.shape
 
 
 def test_dynesty_mcmc_samples():
     problem = gaussian_problem()
-    sampler = sample.DynestySampler()
+    sampler = sample.DynestySampler(objective_type=OBJECTIVE_NEGLOGLIKE)
 
     result = sample.sample(
         problem=problem,
+        sampler=sampler,
+        n_samples=None,
+        filename=None,
+    )
+
+    original_sample_result = sampler.get_original_samples()
+    mcmc_sample_result = result.sample_result
+
+    # Nested sampling function values are monotonically increasing
+    assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
+    # MCMC samples are not
+    assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
+
+
+def test_dynesty_posterior():
+    # define negative log posterior
+    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
+
+    # define negative log prior
+    prior_fun = pypesto.Objective(fun=negative_log_prior)
+
+    # define pypesto prior object
+    prior_object = pypesto.NegLogPriors(objectives=[prior_fun])
+
+    # define pypesto problem using prior object
+    test_problem = pypesto.Problem(
+        objective=posterior_fun,
+        x_priors_defs=prior_object,
+        lb=-10,
+        ub=10,
+        x_names=["x"],
+    )
+
+    # define sampler
+    sampler = sample.DynestySampler(
+        objective_type=OBJECTIVE_NEGLOGPOST
+    )  # default
+
+    result = sample.sample(
+        problem=test_problem,
         sampler=sampler,
         n_samples=None,
         filename=None,
