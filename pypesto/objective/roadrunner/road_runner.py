@@ -76,9 +76,6 @@ class RoadRunnerObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[float, np.ndarray, dict]:
         """See :class:`ObjectiveBase` documentation."""
-        # change calculator setting in case of return_dict==True
-        if return_dict:
-            self.calculator.return_dict = True
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
     def call_unprocessed(

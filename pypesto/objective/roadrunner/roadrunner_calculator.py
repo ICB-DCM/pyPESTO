@@ -107,8 +107,17 @@ class RoadRunnerCalculator:
             x_dct, roadrunner_instance, parameter_mapping_per_condition
         )
 
+        # reset the model to recalibrate potential initial assignments
+        roadrunner_instance.reset()
+
         # get timepoints and outputs to simulate
         timepoints = edata.get_timepoints()
+        # Convert integers to floats
+        timepoints = list(map(float, timepoints))
+        if timepoints[0] != 0.0:
+            timepoints = [0.0] + timepoints
+        if len(timepoints) == 1:
+            timepoints = [0.0] + timepoints
         observables_ids = edata.get_observable_ids()
 
         sim_res = roadrunner_instance.simulate(
@@ -190,6 +199,12 @@ class RoadRunnerCalculator:
         roadrunner_instance.setValues(
             map_simulation.keys(), map_simulation.values()
         )
+        roadrunner_instance.reset()
+
+        # "init(a0)" as option to bypass reset: problem: each one resets the
+        # model
+        # Overwriting species is a problem: Fix: check whether key is in
+        # species_ids, if yes, call later
 
     def fill_simulation_df(self, sim_res: Dict, edata: ExpData):
         """Fill a dataframe with the simulation results.
