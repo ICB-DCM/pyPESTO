@@ -167,7 +167,7 @@ class ESSOptimizer:
         self.x_best: Optional[np.array] = None
         # Overall best function value found so far
         self.fx_best: float = np.inf
-        # Results from local searches
+        # Results from local searches (only those with finite fval)
         self.local_solutions: list[OptimizerResult] = []
         # Index of current iteration
         self.n_iter: int = 0
@@ -624,7 +624,7 @@ class ESSOptimizer:
     def _report_iteration(self):
         """Log the current iteration."""
         if self.n_iter == 0:
-            self.logger.info("iter | best | nf | refset         |")
+            self.logger.info("iter | best | nf | refset         | nlocal")
 
         with np.printoptions(
             edgeitems=5,
