@@ -25,10 +25,11 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
-from tempfile import NamedTemporaryFile
 from typing import List, Union
 
+import cloudpickle  # noqa: S403
 import numpy as np
 
 from ..C import OBJECTIVE_NEGLOGLIKE, OBJECTIVE_NEGLOGPOST
@@ -36,6 +37,15 @@ from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import Sampler, SamplerImportError
 
+dynesty_pickle = cloudpickle
+if importlib.util.find_spec("dynesty") is None:
+    dynesty = type("", (), {})()
+    dynesty.results = type("", (), {})()
+    dynesty.results.Results = None
+else:
+    import dynesty
+
+    dynesty.utils.pickle_module = dynesty_pickle
 logger = logging.getLogger(__name__)
 
 
@@ -86,10 +96,8 @@ class DynestySampler(Sampler):
             `pypesto.C.OBJECTIVE_NEGLOGPOST`, then `x_priors` have to
             be defined in the problem.
         """
-        # check dependencies
-        import dynesty
-
-        setup_dynesty()
+        if importlib.util.find_spec("dynesty") is None:
+            raise SamplerImportError("dynesty")
 
         super().__init__()
 
@@ -159,10 +167,6 @@ class DynestySampler(Sampler):
         x0: Union[np.ndarray, List[np.ndarray]] = None,
     ) -> None:
         """Initialize the sampler."""
-        import dynesty
-
-        setup_dynesty()
-
         self.problem = problem
 
         sampler_class = dynesty.NestedSampler
@@ -229,84 +233,24 @@ class DynestySampler(Sampler):
         filename:
             The internal sampler will be saved here.
         """
-        import dynesty
-
-        setup_dynesty()
-
-        # Do not save pyPESTO information. This is manually restored in the
-        # :func:`restore_internal_sampler` method.
-        self.sampler.loglikelihood = None
-        self.sampler.prior_transform = None
-        self.sampler.ndim = None
-        if getattr(self.sampler, "sampler", None) is not None:
-            self.sampler.sampler = None
-
         dynesty.utils.save_sampler(
             sampler=self.sampler,
             fname=filename,
         )
 
-    def restore_internal_sampler(
-        self,
-        filename: str,
-        ignore_missing_problem: bool = False,
-    ) -> None:
+    def restore_internal_sampler(self, filename: str) -> None:
         """Restore the state of the internal dynesty sampler.
 
         Parameters
         ----------
         filename:
             The internal sampler will be saved here.
-        ignore_missing_problem:
-            Whether to ignore the faulty restoration when no pyPESTO problem
-            is available. If `True`, then the loglikelihood of the sampler
-            may not be restored correctly.
         """
-        import dynesty
-
-        setup_dynesty()
-
-        if not ignore_missing_problem and self.problem is None:
-            raise ValueError(
-                "Please either first run `sampler.initialize()` before "
-                "`sampler.restore_internal_sampler()`, or use "
-                "`ignore_missing_problem` with caution."
-            )
-
         pool = self.sampler_args.get("pool", None)
-
-        with NamedTemporaryFile("wb+") as tf:
-            # Load saved sampler
-            with open(filename, "rb") as f:
-                sampler = dynesty.utils.pickle_module.load(f)
-
-            # Manually restore pyPESTO information
-            if ignore_missing_problem and self.problem is None:
-                loglikelihood = dynesty.utils.LogLikelihood(None, 0)
-                prior_transform = None
-                ndim = 0
-                inner_sampler = None
-
-            if self.problem is not None:
-                loglikelihood = self.sampler.loglikelihood
-                prior_transform = self.sampler.prior_transform
-                ndim = self.sampler.ndim
-                inner_sampler = getattr(self.sampler, "sampler", None)
-
-            sampler["sampler"].loglikelihood = loglikelihood
-            sampler["sampler"].prior_transform = prior_transform
-            sampler["sampler"].ndim = ndim
-            if inner_sampler is not None:
-                sampler["sampler"].sampler = inner_sampler
-            else:
-                delattr(sampler["sampler"], "sampler")
-            dynesty.utils.pickle_module.dump(sampler, tf)
-
-            # Round-trip with dynesty restore method
-            self.sampler = dynesty.utils.restore_sampler(
-                fname=tf.name,
-                pool=pool,
-            )
+        self.sampler = dynesty.utils.restore_sampler(
+            fname=filename,
+            pool=pool,
+        )
 
     def get_original_samples(self) -> McmcPtResult:
         """Get the samples into the fitting pypesto format.
@@ -327,8 +271,57 @@ class DynestySampler(Sampler):
         return get_mcmc_like_dynesty_samples(sampler=self.sampler)
 
 
-def get_original_dynesty_samples(sampler) -> McmcPtResult:
+def save_raw_results(sampler: DynestySampler, filename: str):
+    """Save dynesty sampler results to file.
+
+    Restoring the dynesty sampler on a different computer than the one that
+    samples were generated is problematic (e.g. an AMICI model might get
+    compiled automatically). This method should avoid that, by only saving
+    the results.
+
+    Parameters
+    ----------
+    sampler:
+        The pyPESTO `DynestySampler` object used during sampling.
+    filename:
+        The file where the results will be saved.
+    """
+    with open(filename, "wb") as f:
+        dynesty_pickle.dump(sampler.sampler.results, f)
+
+
+def load_raw_results(filename: str) -> dynesty.results.Results:
+    """Load dynesty sample results from file.
+
+    Parameters
+    ----------
+    filename:
+        The file where the results will be loaded from.
+    """
+    with open(filename, "rb") as f:
+        results = dynesty_pickle.load(f)
+    return results
+
+
+def _get_raw_results(sampler, raw_results: dynesty.result.Results):
+    if (sampler is None) == (raw_results is None):
+        raise ValueError(
+            "Please supply exactly one of `sampler` or `raw_results`."
+        )
+
+    if raw_results is not None:
+        return raw_results
+
+    return sampler.results
+
+
+def get_original_dynesty_samples(
+    sampler=None,
+    raw_results: dynesty.results.Results = None,
+) -> McmcPtResult:
     """Get original dynesty samples.
+
+    Only one of sampler or raw_results should be provided.
 
     Parameters
     ----------
@@ -336,13 +329,18 @@ def get_original_dynesty_samples(sampler) -> McmcPtResult:
         The (internal!) dynesty sampler. See
         `pypesto.sample.DynestySampler.__init__`, specifically the
         `save_internal` argument, for more details.
+    raw_results:
+        The raw results. See :func:`save_raw_results` and
+        :func:`load_raw_results`.
 
     Returns
     -------
     The sample result.
     """
-    trace_x = np.array([sampler.results.samples])
-    trace_neglogpost = -np.array([sampler.results.logl])
+    raw_results = _get_raw_results(sampler=sampler, raw_results=raw_results)
+
+    trace_x = np.array([raw_results.samples])
+    trace_neglogpost = -np.array([raw_results.logl])
 
     # the sampler uses custom adaptive priors
     trace_neglogprior = np.full(trace_neglogpost.shape, np.nan)
@@ -359,8 +357,13 @@ def get_original_dynesty_samples(sampler) -> McmcPtResult:
     return result
 
 
-def get_mcmc_like_dynesty_samples(sampler) -> McmcPtResult:
+def get_mcmc_like_dynesty_samples(
+    sampler=None,
+    raw_results: dynesty.results.Results = None,
+) -> McmcPtResult:
     """Get MCMC-like samples.
+
+    Only one of sampler or raw_results should be provided.
 
     Parameters
     ----------
@@ -368,27 +371,28 @@ def get_mcmc_like_dynesty_samples(sampler) -> McmcPtResult:
         The (internal!) dynesty sampler. See
         `pypesto.sample.DynestySampler.__init__`, specifically the
         `save_internal` argument, for more details.
+    raw_results:
+        The raw results. See :func:`save_raw_results` and
+        :func:`load_raw_results`.
 
     Returns
     -------
     The sample result.
     """
-    import dynesty
+    raw_results = _get_raw_results(sampler=sampler, raw_results=raw_results)
 
-    setup_dynesty()
-
-    if len(sampler.results.importance_weights().shape) != 1:
+    if len(raw_results.importance_weights().shape) != 1:
         raise ValueError(
             "Unknown error. The dynesty importance weights are not a 1D array."
         )
     # resample according to importance weights
     indices = dynesty.utils.resample_equal(
-        np.arange(sampler.results.importance_weights().shape[0]),
-        sampler.results.importance_weights(),
+        np.arange(raw_results.importance_weights().shape[0]),
+        raw_results.importance_weights(),
     )
 
-    trace_x = np.array([sampler.results.samples[indices]])
-    trace_neglogpost = -np.array([sampler.results.logl[indices]])
+    trace_x = np.array([raw_results.samples[indices]])
+    trace_neglogpost = -np.array([raw_results.logl[indices]])
 
     trace_neglogprior = np.array([np.full((len(indices),), np.nan)])
     betas = np.array([1.0])
@@ -400,14 +404,3 @@ def get_mcmc_like_dynesty_samples(sampler) -> McmcPtResult:
         betas=betas,
     )
     return result
-
-
-def setup_dynesty() -> None:
-    """Import dynesty."""
-    try:
-        import cloudpickle  # noqa: S403
-        import dynesty.utils
-
-        dynesty.utils.pickle_module = cloudpickle
-    except ImportError:
-        raise SamplerImportError("dynesty") from None
