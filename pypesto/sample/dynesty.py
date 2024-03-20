@@ -321,7 +321,7 @@ def get_original_dynesty_samples(
 ) -> McmcPtResult:
     """Get original dynesty samples.
 
-    Only one of sampler or raw_results should be provided.
+    Only one of `sampler` or `raw_results` should be provided.
 
     Parameters
     ----------
@@ -363,7 +363,7 @@ def get_mcmc_like_dynesty_samples(
 ) -> McmcPtResult:
     """Get MCMC-like samples.
 
-    Only one of sampler or raw_results should be provided.
+    Only one of `sampler` or `raw_results` should be provided.
 
     Parameters
     ----------
