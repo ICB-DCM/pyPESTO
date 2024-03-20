@@ -229,6 +229,12 @@ class DynestySampler(Sampler):
 
         setup_dynesty()
 
+        # Do not save pyPESTO information. This is manually restored in the
+        # :func:`restore_internal_sampler` method.
+        self.sampler.loglikelihood = None
+        self.sampler.prior_transform = None
+        self.sampler.ndim = None
+
         dynesty.utils.save_sampler(
             sampler=self.sampler,
             fname=filename,
@@ -247,6 +253,11 @@ class DynestySampler(Sampler):
         setup_dynesty()
 
         self.sampler = dynesty.utils.restore_sampler(fname=filename)
+
+        # Manually restore pyPESTO information.
+        self.sampler.loglikelihood = self.loglikelihood
+        self.sampler.prior_transform = self.prior_transform
+        self.sampler.ndim = len(self.problem.x_free_indices)
 
     def get_original_samples(self) -> McmcPtResult:
         """Get the samples into the fitting pypesto format.
