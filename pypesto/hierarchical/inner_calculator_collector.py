@@ -240,6 +240,10 @@ class InnerCalculatorCollector(AmiciCalculator):
                 ):
                     condition_mask[inner_par.ixs[cond_idx]] = False
 
+        # Put to False all entries that have a nan value in the edata
+        for condition_mask, edata in zip(quantitative_data_mask, edatas):
+            condition_mask[np.isnan(edata)] = False
+
         # If there is no quantitative data, return None
         if not all(mask.any() for mask in quantitative_data_mask):
             return None
