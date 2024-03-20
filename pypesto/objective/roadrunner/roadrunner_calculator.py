@@ -102,14 +102,6 @@ class RoadRunnerCalculator:
         parameter_mapping_per_condition:
             Parameter parameter_mapping for a single condition.
         """
-        # set parameters
-        self.fill_in_parameters(
-            x_dct, roadrunner_instance, parameter_mapping_per_condition
-        )
-
-        # reset the model to recalibrate potential initial assignments
-        roadrunner_instance.reset()
-
         # get timepoints and outputs to simulate
         timepoints = edata.get_timepoints()
         # Convert integers to floats
@@ -119,6 +111,51 @@ class RoadRunnerCalculator:
         if len(timepoints) == 1:
             timepoints = [0.0] + timepoints
         observables_ids = edata.get_observable_ids()
+        # steady state stuff
+        steady_state_calculations = False
+        state_variables = roadrunner_instance.model.getFloatingSpeciesIds()
+        obs_ss = []
+        state_ss = []
+
+        # if the first and third parameter mappings are not empty, we need
+        # to pre-equlibrate the model
+        if (
+            parameter_mapping_per_condition[0]
+            and parameter_mapping_per_condition[2]
+        ):
+            steady_state_calculations = True
+            roadrunner_instance.conservedMoietyAnalysis = True
+            self.fill_in_parameters(
+                x_dct,
+                roadrunner_instance,
+                parameter_mapping_per_condition,
+                preeq=True,
+            )
+            # steady state output = observables + state variables
+            steady_state_selections = observables_ids + state_variables
+            roadrunner_instance.steadyStateSelections = steady_state_selections
+            steady_state = roadrunner_instance.getSteadyStateValuesNamedArray()
+            # we split the steady state into observables and state variables
+            obs_ss = steady_state[:, : len(observables_ids)].flatten()
+            state_ss = steady_state[:, len(observables_ids) :].flatten()
+            # turn off conserved moiety analysis
+            roadrunner_instance.conservedMoietyAnalysis = False
+            # reset the model
+            roadrunner_instance.reset()
+        # set parameters
+        self.fill_in_parameters(
+            x_dct, roadrunner_instance, parameter_mapping_per_condition
+        )
+        # if steady state calculations are required, set state variables
+        if steady_state_calculations:
+            roadrunner_instance.setValues(state_variables, state_ss)
+            # fill in overriden species
+            self.fill_in_parameters(
+                x_dct,
+                roadrunner_instance,
+                parameter_mapping_per_condition,
+                filling_mode="only_species",
+            )
 
         sim_res = roadrunner_instance.simulate(
             times=timepoints, selections=["time"] + observables_ids
@@ -134,6 +171,8 @@ class RoadRunnerCalculator:
         problem_parameters: Dict,
         roadrunner_instance: Optional[roadrunner.RoadRunner] = None,
         parameter_mapping: Optional[ParMappingDictQuadruple] = None,
+        preeq: bool = False,
+        filling_mode: Optional[str] = None,
     ):
         """Fill in parameters into the roadrunner instance.
 
@@ -149,12 +188,22 @@ class RoadRunnerCalculator:
             be used as already set in `amici_model` and `edata`.
         parameter_mapping:
             Parameter mapping for current condition.
+        preeq:
+            Whether to fill in parameters for pre-equilibration.
+        filling_mode:
+            Which parameters to fill in. If None or "all",
+            all parameters are filled in.
+            Other options are "only_parameters" and "only_species".
         """
-        map_simulation = parameter_mapping[1]
-        scale_simulation = parameter_mapping[3]
-        # currently no preeq is considered
-        # map_preeq = parameter_mapping[0]
-        # scale_preeq = parameter_mapping[2]
+        if filling_mode is None:
+            filling_mode = "all"
+        mapping = parameter_mapping[1]
+        scaling = parameter_mapping[3]
+        if preeq:
+            mapping = parameter_mapping[0]
+            scaling = parameter_mapping[2]
+        # create a deepcopy of the mapping for comparison later
+        mapping_orig = copy.deepcopy(mapping)
 
         # Parameter parameter_mapping may contain parameter_ids as values,
         # these *must* be replaced
@@ -186,25 +235,35 @@ class RoadRunnerCalculator:
             # constant value
             return value
 
-        map_simulation = {
-            key: _get_par(key, val, map_simulation)
-            for key, val in map_simulation.items()
+        mapping_values = {
+            key: _get_par(key, val, mapping) for key, val in mapping.items()
         }
-
         # we assume the parameters to be given in the scale defined in the
         # petab problem. Thus, they need to be unscaled.
-        map_simulation = unscale_parameters(map_simulation, scale_simulation)
+        mapping_values = unscale_parameters(mapping_values, scaling)
+        # seperate the parameters into ones that overwrite species and others
+        mapping_params = dict()
+        mapping_species = dict()
+        for key, value in mapping_values.items():
+            if key in roadrunner_instance.model.getFloatingSpeciesIds():
+                # values that originally were NaN are not set
+                if isinstance(mapping[key], str) or not np.isnan(mapping[key]):
+                    mapping_species[key] = float(value)
+            else:
+                mapping_params[key] = value
 
-        # set parameters.
-        roadrunner_instance.setValues(
-            map_simulation.keys(), map_simulation.values()
-        )
-        roadrunner_instance.reset()
-
-        # "init(a0)" as option to bypass reset: problem: each one resets the
-        # model
-        # Overwriting species is a problem: Fix: check whether key is in
-        # species_ids, if yes, call later
+        if filling_mode == "only_parameters" or filling_mode == "all":
+            # set parameters.
+            roadrunner_instance.setValues(
+                mapping_params.keys(), mapping_params.values()
+            )
+            # reset is necessary to apply the changes to initial assignments
+            roadrunner_instance.reset()
+        if filling_mode == "only_species" or filling_mode == "all":
+            # set species
+            roadrunner_instance.setValues(
+                mapping_species.keys(), mapping_species.values()
+            )
 
     def fill_simulation_df(self, sim_res: Dict, edata: ExpData):
         """Fill a dataframe with the simulation results.

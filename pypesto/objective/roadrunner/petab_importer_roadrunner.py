@@ -141,13 +141,43 @@ class PetabImporterRR:
 
     def create_parameter_mapping(self):
         """Create a parameter mapping from the PEtab problem."""
-        return petab.get_optimization_to_simulation_parameter_mapping(
+        simulation_conditions = (
+            self.petab_problem.get_simulation_conditions_from_measurement_df()
+        )
+        mapping = petab.get_optimization_to_simulation_parameter_mapping(
             condition_df=self.petab_problem.condition_df,
             measurement_df=self.petab_problem.measurement_df,
             parameter_df=self.petab_problem.parameter_df,
             observable_df=self.petab_problem.observable_df,
             model=self.petab_problem.model,
-        )  # TODO: add sanity checks similar to amici
+        )
+        # check whether any species in the condition table are assigned
+        species = self.rr.model.getFloatingSpeciesIds()
+        # overrides in parameter table are handled already
+        overrides = [
+            specie
+            for specie in species
+            if specie in self.petab_problem.condition_df.columns
+        ]
+        if not overrides:
+            return mapping
+        for (_, condition), mapping_per_condition in zip(
+            simulation_conditions.iterrows(), mapping
+        ):
+            for override in overrides:
+                preeq_id = condition.get("preequilibrationConditionId")
+                sim_id = condition.get("simulationConditionId")
+                if preeq_id:
+                    mapping_per_condition[0][
+                        override
+                    ] = self.petab_problem.condition_df.loc[preeq_id, override]
+                    mapping_per_condition[2][override] = "lin"
+                if sim_id:
+                    mapping_per_condition[1][
+                        override
+                    ] = self.petab_problem.condition_df.loc[sim_id, override]
+                    mapping_per_condition[3][override] = "lin"
+        return mapping
 
     def create_objective(
         self,
