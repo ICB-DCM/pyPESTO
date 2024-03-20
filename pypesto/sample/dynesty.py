@@ -291,12 +291,15 @@ class DynestySampler(Sampler):
                 loglikelihood = self.sampler.loglikelihood
                 prior_transform = self.sampler.prior_transform
                 ndim = self.sampler.ndim
-                inner_sampler = self.sampler.sampler
+                inner_sampler = getattr(self.sampler, "sampler", None)
 
             sampler["sampler"].loglikelihood = loglikelihood
             sampler["sampler"].prior_transform = prior_transform
             sampler["sampler"].ndim = ndim
-            sampler["sampler"].sampler = inner_sampler
+            if inner_sampler is not None:
+                sampler["sampler"].sampler = inner_sampler
+            else:
+                delattr(sampler["sampler"], "sampler")
             dynesty.utils.pickle_module.dump(sampler, tf)
 
             # Round-trip with dynesty restore method
