@@ -26,6 +26,7 @@
 from __future__ import annotations
 
 import logging
+from tempfile import NamedTemporaryFile
 from typing import List, Union
 
 import numpy as np
@@ -79,8 +80,11 @@ class DynestySampler(Sampler):
         dynamic:
             Whether to use dynamic or static nested sampling.
         objective_type:
-            The objective to optimize (as defined in  pypesto.problem). Either "neglogpost" or
-            "negloglike". If "neglogpost", x_priors have to be defined in the problem.
+            The objective to optimize (as defined in `pypesto.problem`). Either
+            `pypesto.C.OBJECTIVE_NEGLOGLIKE` or
+            `pypesto.C.OBJECTIVE_NEGLOGPOST`. If
+            `pypesto.C.OBJECTIVE_NEGLOGPOST`, then `x_priors` have to
+            be defined in the problem.
         """
         # check dependencies
         import dynesty
@@ -152,7 +156,7 @@ class DynestySampler(Sampler):
     def initialize(
         self,
         problem: Problem,
-        x0: Union[np.ndarray, List[np.ndarray]],
+        x0: Union[np.ndarray, List[np.ndarray]] = None,
     ) -> None:
         """Initialize the sampler."""
         import dynesty
@@ -234,30 +238,72 @@ class DynestySampler(Sampler):
         self.sampler.loglikelihood = None
         self.sampler.prior_transform = None
         self.sampler.ndim = None
+        if getattr(self.sampler, "sampler", None) is not None:
+            self.sampler.sampler = None
 
         dynesty.utils.save_sampler(
             sampler=self.sampler,
             fname=filename,
         )
 
-    def restore_internal_sampler(self, filename: str) -> None:
+    def restore_internal_sampler(
+        self,
+        filename: str,
+        ignore_missing_problem: bool = False,
+    ) -> None:
         """Restore the state of the internal dynesty sampler.
 
         Parameters
         ----------
         filename:
             The internal sampler will be saved here.
+        ignore_missing_problem:
+            Whether to ignore the faulty restoration when no pyPESTO problem
+            is available. If `True`, then the loglikelihood of the sampler
+            may not be restored correctly.
         """
         import dynesty
 
         setup_dynesty()
 
-        self.sampler = dynesty.utils.restore_sampler(fname=filename)
+        if not ignore_missing_problem and self.problem is None:
+            raise ValueError(
+                "Please either first run `sampler.initialize()` before "
+                "`sampler.restore_internal_sampler()`, or use "
+                "`ignore_missing_problem` with caution."
+            )
 
-        # Manually restore pyPESTO information.
-        self.sampler.loglikelihood = self.loglikelihood
-        self.sampler.prior_transform = self.prior_transform
-        self.sampler.ndim = len(self.problem.x_free_indices)
+        pool = self.sampler_args.get("pool", None)
+
+        with NamedTemporaryFile("wb+") as tf:
+            # Load saved sampler
+            with open(filename, "rb") as f:
+                sampler = dynesty.utils.pickle_module.load(f)
+
+            # Manually restore pyPESTO information
+            if ignore_missing_problem and self.problem is None:
+                loglikelihood = dynesty.utils.LogLikelihood(None, 0)
+                prior_transform = None
+                ndim = 0
+                inner_sampler = None
+
+            if self.problem is not None:
+                loglikelihood = self.sampler.loglikelihood
+                prior_transform = self.sampler.prior_transform
+                ndim = self.sampler.ndim
+                inner_sampler = self.sampler.sampler
+
+            sampler["sampler"].loglikelihood = loglikelihood
+            sampler["sampler"].prior_transform = prior_transform
+            sampler["sampler"].ndim = ndim
+            sampler["sampler"].sampler = inner_sampler
+            dynesty.utils.pickle_module.dump(sampler, tf)
+
+            # Round-trip with dynesty restore method
+            self.sampler = dynesty.utils.restore_sampler(
+                fname=tf.name,
+                pool=pool,
+            )
 
     def get_original_samples(self) -> McmcPtResult:
         """Get the samples into the fitting pypesto format.
