@@ -172,6 +172,7 @@ class ESSOptimizer:
         # Index of current iteration
         self.n_iter: int = 0
         # ESS iteration at which the last local search took place
+        # (only local searches with a finite result are counted)
         self.last_local_search_niter: int = 0
         # Whether self.x_best has changed in the current iteration
         self.x_best_has_changed: bool = False
@@ -469,14 +470,14 @@ class ESSOptimizer:
             self.logger.debug("Local search only from best point.")
             local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         # first local search?
-        elif not self.local_solutions and self.n_iter >= self.local_n1:
+        elif self.n_iter == self.local_n1:
             self.logger.debug(
                 "First local search from best point due to "
                 f"local_n1={self.local_n1}."
             )
             local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         elif (
-            self.local_solutions
+            self.n_iter >= self.local_n1
             and self.n_iter - self.last_local_search_niter >= self.local_n2
         ):
             quality_order = np.argsort(fx_best_children)
@@ -543,6 +544,11 @@ class ESSOptimizer:
                     optimizer_result.fval,
                 )
                 break
+        else:
+            self.logger.debug(
+                "Local search: No finite value found in any local search."
+            )
+            return
 
         self.last_local_search_niter = self.n_iter
         self.evaluator.reset_round_counter()
