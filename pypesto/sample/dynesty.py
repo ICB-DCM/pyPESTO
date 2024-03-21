@@ -307,7 +307,7 @@ def save_raw_results(sampler: DynestySampler, filename: str) -> None:
     filename:
         The file where the results will be saved.
     """
-    raw_results = _get_raw_results(sampler=sampler, results=None)
+    raw_results = _get_raw_results(sampler=sampler, raw_results=None)
     with open(filename, "wb") as f:
         dynesty_pickle.dump(raw_results, f)
 
