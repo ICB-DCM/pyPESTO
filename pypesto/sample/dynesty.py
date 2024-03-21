@@ -259,7 +259,7 @@ class DynestySampler(Sampler):
         -------
         The pyPESTO sample result.
         """
-        return get_original_dynesty_samples(sampler=self.sampler)
+        return get_original_dynesty_samples(sampler=self)
 
     def get_samples(self) -> McmcPtResult:
         """Get MCMC-like samples into the fitting pypesto format.
@@ -268,7 +268,7 @@ class DynestySampler(Sampler):
         -------
         The pyPESTO sample result.
         """
-        return get_mcmc_like_dynesty_samples(sampler=self.sampler)
+        return get_mcmc_like_dynesty_samples(sampler=self)
 
 
 def _get_raw_results(
