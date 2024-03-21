@@ -20,7 +20,7 @@ from .load import (
 )
 from .optimize import minimize
 from .optimizer import (
-    CmaesOptimizer,
+    CmaOptimizer,
     DlibOptimizer,
     FidesOptimizer,
     IpoptOptimizer,

@@ -71,7 +71,7 @@ optimizers = [
     ("ipopt", ""),
     ("dlib", ""),
     ("pyswarm", ""),
-    ("cmaes", ""),
+    ("cma", ""),
     ("scipydiffevolopt", ""),
     ("pyswarms", ""),
     *[
@@ -188,7 +188,7 @@ def test_unbounded_minimize(optimizer):
     if optimizer in [
         ("dlib", ""),
         ("pyswarm", ""),
-        ("cmaes", ""),
+        ("cma", ""),
         ("scipydiffevolopt", ""),
         ("pyswarms", ""),
         *[
@@ -262,8 +262,8 @@ def get_optimizer(library, solver):
         optimizer = optimize.DlibOptimizer(options=options)
     elif library == "pyswarm":
         optimizer = optimize.PyswarmOptimizer(options=options)
-    elif library == "cmaes":
-        optimizer = optimize.CmaesOptimizer(options=options)
+    elif library == "cma":
+        optimizer = optimize.CmaOptimizer(options=options)
     elif library == "scipydiffevolopt":
         optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
             options=options
@@ -620,8 +620,8 @@ def test_correct_startpoint_usage(optimizer):
     """
     Test that the startpoint is correctly used in all optimizers.
     """
-    # cmaes supports x0, but samples from this initial guess, therefore return
-    if optimizer == ("cmaes", ""):
+    # cma supports x0, but samples from this initial guess, therefore return
+    if optimizer == ("cma", ""):
         return
 
     opt = get_optimizer(*optimizer)

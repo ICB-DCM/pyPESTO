@@ -25,7 +25,6 @@ from ...C import (
     RDATAS,
     RES,
     SRES,
-    X_INNER_OPT,
     ModeType,
 )
 from ...objective.amici.amici_calculator import (
@@ -123,7 +122,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         Returns
         -------
         inner_result:
-            A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
+            A dict containing the calculation results: FVAL, GRAD, RDATAS and INNER_PARAMETERS.
         """
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError(
@@ -133,10 +132,10 @@ class RelativeAmiciCalculator(AmiciCalculator):
             )
 
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
-            or 2 in sensi_orders
-        ):
+            1 in sensi_orders
+            and amici_solver.getSensitivityMethod()
+            == amici.SensitivityMethod.adjoint
+        ) or 2 in sensi_orders:
             inner_result, inner_parameters = self.call_amici_twice(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
@@ -163,8 +162,6 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 fim_for_hess=fim_for_hess,
                 rdatas=rdatas,
             )
-
-        inner_result[X_INNER_OPT] = {}
 
         inner_result[INNER_PARAMETERS] = (
             np.array(
