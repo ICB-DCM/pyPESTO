@@ -271,7 +271,28 @@ class DynestySampler(Sampler):
         return get_mcmc_like_dynesty_samples(sampler=self.sampler)
 
 
-def save_raw_results(sampler: DynestySampler, filename: str):
+def _get_raw_results(
+    sampler: DynestySampler,
+    raw_results: dynesty.result.Results,
+) -> dynesty.results.Results:
+    if (sampler is None) == (raw_results is None):
+        raise ValueError(
+            "Please supply exactly one of `sampler` or `raw_results`."
+        )
+
+    if raw_results is not None:
+        return raw_results
+
+    if not isinstance(sampler, DynestySampler):
+        raise ValueError(
+            "Please provide a pyPESTO `DynestySampler` if using "
+            "the `sampler` argument of this method."
+        )
+
+    return sampler.sampler.results
+
+
+def save_raw_results(sampler: DynestySampler, filename: str) -> None:
     """Save dynesty sampler results to file.
 
     Restoring the dynesty sampler on a different computer than the one that
@@ -286,8 +307,9 @@ def save_raw_results(sampler: DynestySampler, filename: str):
     filename:
         The file where the results will be saved.
     """
+    raw_results = _get_raw_results(sampler=sampler, results=None)
     with open(filename, "wb") as f:
-        dynesty_pickle.dump(sampler.sampler.results, f)
+        dynesty_pickle.dump(raw_results, f)
 
 
 def load_raw_results(filename: str) -> dynesty.results.Results:
@@ -299,24 +321,12 @@ def load_raw_results(filename: str) -> dynesty.results.Results:
         The file where the results will be loaded from.
     """
     with open(filename, "rb") as f:
-        results = dynesty_pickle.load(f)
-    return results
-
-
-def _get_raw_results(sampler, raw_results: dynesty.result.Results):
-    if (sampler is None) == (raw_results is None):
-        raise ValueError(
-            "Please supply exactly one of `sampler` or `raw_results`."
-        )
-
-    if raw_results is not None:
-        return raw_results
-
-    return sampler.results
+        raw_results = dynesty_pickle.load(f)
+    return raw_results
 
 
 def get_original_dynesty_samples(
-    sampler=None,
+    sampler: DynestySampler = None,
     raw_results: dynesty.results.Results = None,
 ) -> McmcPtResult:
     """Get original dynesty samples.
@@ -326,9 +336,7 @@ def get_original_dynesty_samples(
     Parameters
     ----------
     sampler:
-        The (internal!) dynesty sampler. See
-        `pypesto.sample.DynestySampler.__init__`, specifically the
-        `save_internal` argument, for more details.
+        The pyPESTO `DynestySampler` object with sampling results.
     raw_results:
         The raw results. See :func:`save_raw_results` and
         :func:`load_raw_results`.
@@ -358,7 +366,7 @@ def get_original_dynesty_samples(
 
 
 def get_mcmc_like_dynesty_samples(
-    sampler=None,
+    sampler: DynestySampler = None,
     raw_results: dynesty.results.Results = None,
 ) -> McmcPtResult:
     """Get MCMC-like samples.
@@ -368,9 +376,7 @@ def get_mcmc_like_dynesty_samples(
     Parameters
     ----------
     sampler:
-        The (internal!) dynesty sampler. See
-        `pypesto.sample.DynestySampler.__init__`, specifically the
-        `save_internal` argument, for more details.
+        The pyPESTO `DynestySampler` object with sampling results.
     raw_results:
         The raw results. See :func:`save_raw_results` and
         :func:`load_raw_results`.
