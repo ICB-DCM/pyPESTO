@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+import warnings
 from typing import List, Union
 
 import cloudpickle  # noqa: S403
@@ -58,7 +59,7 @@ class DynestySampler(Sampler):
     To work with the original samples, modify the results object with
     `pypesto_result.sample_result = sampler.get_original_samples()`, where
     `sampler` is an instance of `pypesto.sample.DynestySampler`. The original
-    dynesty results object is available at `sampler.results`.
+    dynesty results object is available at `sampler.raw_results`.
 
     NB: the dynesty samplers can be customized significantly, by providing
     `sampler_args` and `run_args` to your `pypesto.sample.DynestySampler()`
@@ -220,7 +221,22 @@ class DynestySampler(Sampler):
             )
 
         self.sampler.run_nested(**self.run_args)
-        self.results = self.sampler.results
+
+    @property
+    def results(self):
+        """Deprecated in favor of `raw_results`."""
+        warnings.warn(
+            "Accessing dynesty results via `sampler.results` is "
+            "deprecated. Please use `sampler.raw_results` instead.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+        return self.raw_results
+
+    @property
+    def raw_results(self):
+        """Get the raw dynesty results."""
+        return self.sampler.results
 
     def save_internal_sampler(self, filename: str) -> None:
         """Save the state of the internal dynesty sampler.
@@ -289,7 +305,7 @@ def _get_raw_results(
             "the `sampler` argument of this method."
         )
 
-    return sampler.sampler.results
+    return sampler.raw_results
 
 
 def save_raw_results(sampler: DynestySampler, filename: str) -> None:
