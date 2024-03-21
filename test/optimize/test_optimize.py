@@ -19,7 +19,6 @@ from numpy.testing import assert_almost_equal
 import pypesto
 import pypesto.optimize as optimize
 from pypesto.optimize.ess import (
-    CESSOptimizer,
     ESSOptimizer,
     SacessFidesFactory,
     SacessOptimizer,
@@ -457,7 +456,7 @@ def test_history_beats_optimizer():
 @pytest.mark.filterwarnings(
     "ignore:Passing `startpoint_method` directly is deprecated.*:DeprecationWarning"
 )
-@pytest.mark.parametrize("ess_type", ["ess", "cess", "sacess"])
+@pytest.mark.parametrize("ess_type", ["ess", "sacess"])
 @pytest.mark.parametrize(
     "local_optimizer",
     [None, optimize.FidesOptimizer(), SacessFidesFactory()],
@@ -473,22 +472,6 @@ def test_ess(problem, local_optimizer, ess_type, request):
             local_n2=5,
             n_threads=2,
             balance=0.5,
-        )
-    elif ess_type == "cess":
-        if (
-            "cr" in request.node.callspec.id
-            or "integrated" in request.node.callspec.id
-        ):
-            # Not pickleable - incompatible with CESS
-            pytest.skip()
-        # CESS with 4 processes
-        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
-        for x in ess_init_args:
-            x["local_optimizer"] = local_optimizer
-        ess = CESSOptimizer(
-            ess_init_args=ess_init_args,
-            max_iter=5,
-            max_walltime_s=10,
         )
     elif ess_type == "sacess":
         if (
