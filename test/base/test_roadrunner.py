@@ -81,6 +81,8 @@ def _execute_case_rr(case, model_type, version):
 
     # check if matches
     llhs_match = petabtests.evaluate_llh(llh, gt_llh, tol_llh)
+    if not llhs_match:
+        print("ERROR")
     simulations_match = petabtests.evaluate_simulations(
         [simulation_df], gt_simulation_dfs, tol_simulations
     )

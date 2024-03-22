@@ -10,6 +10,26 @@ from petab.parameter_mapping import ParMappingDictQuadruple
 from ...C import MODE_FUN, MODE_RES, ModeType
 from .utils import ExpData, unscale_parameters
 
+LLH_TYPES = {
+    "lin_normal": lambda x, y, z: -0.5
+    * (np.log(2 * np.pi * (z**2)) + ((x - y) / z) ** 2),
+    "log_normal": lambda x, y, z: -0.5
+    * (
+        np.log(2 * np.pi * (z**2) * (x**2))
+        + ((np.log(x) - np.log(y)) / z) ** 2
+    ),
+    "log10_normal": lambda x, y, z: -0.5
+    * (
+        np.log(2 * np.pi * (z**2) * (x**2) * np.log(10) ** 2)
+        + ((np.log10(x) - np.log10(y)) / z) ** 2
+    ),
+    "lin_laplace": lambda x, y, z: -np.log(2 * z) - (np.abs(x - y) / z),
+    "log_laplace": lambda x, y, z: -np.log(2 * z * y)
+    - (np.abs(np.log(x) - np.log(y)) / z),
+    "log10_laplace": lambda x, y, z: -np.log(2 * z * y * np.log(10))
+    - (np.abs(np.log10(x) - np.log10(y)) / z),
+}
+
 
 class RoadRunnerCalculator:
     """Class to handle RoadRunner simulation and obtain objective value."""
@@ -45,6 +65,8 @@ class RoadRunnerCalculator:
             Sequence of parameter IDs.
         parameter_mapping:
             Parameter parameter_mapping.
+        petab_problem:
+            PEtab problem.
 
         Returns
         -------
@@ -56,23 +78,23 @@ class RoadRunnerCalculator:
                 "Number of edatas and conditions are not consistent."
             )
         simulation_results = []
+        llh_tot = 0
         for edata, mapping_per_condition in zip(edatas, parameter_mapping):
-            sim_res = self.simulate_per_condition(
+            sim_res, llh = self.simulate_per_condition(
                 x_dct, roadrunner_instance, edata, mapping_per_condition
             )
             # fill a corresponding dataframe with the simulation results
             sim_res_df = self.fill_simulation_df(sim_res, edata)
             simulation_results.append(sim_res_df)
+            llh_tot += llh
         simulation_results = pd.concat(simulation_results)
 
         if mode == MODE_FUN:
-            llh = petab.calculate_llh(
-                petab_problem.measurement_df,
-                simulation_results,
-                petab_problem.observable_df,
-                petab_problem.parameter_df,
-            )
-            return {"fval": -llh, "simulation_results": simulation_results}
+            return {
+                "fval": -llh_tot,
+                "simulation_results": simulation_results,
+                "llh": llh_tot,
+            }
         if mode == MODE_RES:
             res_df = petab.calculate_residuals(
                 petab_problem.measurement_df,
@@ -80,7 +102,11 @@ class RoadRunnerCalculator:
                 petab_problem.observable_df,
                 petab_problem.parameter_df,
             )
-            return {"res": res_df, "simulation_results": simulation_results}
+            return {
+                "res": res_df,
+                "simulation_results": simulation_results,
+                "fval": -llh_tot,
+            }
 
     def simulate_per_condition(
         self,
@@ -104,8 +130,6 @@ class RoadRunnerCalculator:
         """
         # get timepoints and outputs to simulate
         timepoints = edata.get_timepoints()
-        # Convert integers to floats
-        timepoints = list(map(float, timepoints))
         if timepoints[0] != 0.0:
             timepoints = [0.0] + timepoints
         if len(timepoints) == 1:
@@ -114,7 +138,7 @@ class RoadRunnerCalculator:
         # steady state stuff
         steady_state_calculations = False
         state_variables = roadrunner_instance.model.getFloatingSpeciesIds()
-        obs_ss = []
+        # obs_ss = []  # TODO: add them to return values with info
         state_ss = []
 
         # if the first and third parameter mappings are not empty, we need
@@ -136,14 +160,14 @@ class RoadRunnerCalculator:
             roadrunner_instance.steadyStateSelections = steady_state_selections
             steady_state = roadrunner_instance.getSteadyStateValuesNamedArray()
             # we split the steady state into observables and state variables
-            obs_ss = steady_state[:, : len(observables_ids)].flatten()
+            # obs_ss = steady_state[:, : len(observables_ids)].flatten()
             state_ss = steady_state[:, len(observables_ids) :].flatten()
             # turn off conserved moiety analysis
             roadrunner_instance.conservedMoietyAnalysis = False
             # reset the model
             roadrunner_instance.reset()
         # set parameters
-        self.fill_in_parameters(
+        par_map = self.fill_in_parameters(
             x_dct, roadrunner_instance, parameter_mapping_per_condition
         )
         # if steady state calculations are required, set state variables
@@ -161,10 +185,12 @@ class RoadRunnerCalculator:
             times=timepoints, selections=["time"] + observables_ids
         )
 
+        llhs = calculate_llh(sim_res, edata, par_map)
+
         # reset the model
         roadrunner_instance.reset()
 
-        return sim_res
+        return sim_res, llhs
 
     def fill_in_parameters(
         self,
@@ -173,7 +199,7 @@ class RoadRunnerCalculator:
         parameter_mapping: Optional[ParMappingDictQuadruple] = None,
         preeq: bool = False,
         filling_mode: Optional[str] = None,
-    ):
+    ) -> dict:
         """Fill in parameters into the roadrunner instance.
 
         Largly taken from amici.petab.parameter_mapping.fill_in_parameters
@@ -194,6 +220,11 @@ class RoadRunnerCalculator:
             Which parameters to fill in. If None or "all",
             all parameters are filled in.
             Other options are "only_parameters" and "only_species".
+
+        Returns
+        -------
+        dict:
+            Mapping of parameter IDs to values.
         """
         if filling_mode is None:
             filling_mode = "all"
@@ -202,8 +233,6 @@ class RoadRunnerCalculator:
         if preeq:
             mapping = parameter_mapping[0]
             scaling = parameter_mapping[2]
-        # create a deepcopy of the mapping for comparison later
-        mapping_orig = copy.deepcopy(mapping)
 
         # Parameter parameter_mapping may contain parameter_ids as values,
         # these *must* be replaced
@@ -242,8 +271,8 @@ class RoadRunnerCalculator:
         # petab problem. Thus, they need to be unscaled.
         mapping_values = unscale_parameters(mapping_values, scaling)
         # seperate the parameters into ones that overwrite species and others
-        mapping_params = dict()
-        mapping_species = dict()
+        mapping_params = {}
+        mapping_species = {}
         for key, value in mapping_values.items():
             if key in roadrunner_instance.model.getFloatingSpeciesIds():
                 # values that originally were NaN are not set
@@ -264,6 +293,7 @@ class RoadRunnerCalculator:
             roadrunner_instance.setValues(
                 mapping_species.keys(), mapping_species.values()
             )
+        return mapping_values
 
     def fill_simulation_df(self, sim_res: Dict, edata: ExpData):
         """Fill a dataframe with the simulation results.
@@ -291,3 +321,117 @@ class RoadRunnerCalculator:
         # rename measurement to simulation
         sim_res_df = sim_res_df.rename(columns={"measurement": "simulation"})
         return sim_res_df
+
+
+def calculate_llh(
+    simulations: np.ndarray,
+    edata: ExpData,
+    parameter_mapping: dict,
+) -> float:
+    """Calculate the negative log-likelihood. for a single condition.
+
+    Parameters
+    ----------
+    simulations:
+        Simulations of condition.
+    edata:
+        ExpData of a single condition.
+
+    Returns
+    -------
+    float:
+        Negative log-likelihood.
+    """
+    # if 0 is not in timepoints, remove the first row of the simulation
+    if 0.0 not in edata.timepoints:
+        simulations = simulations[1:, :]
+
+    def _fill_simulation_w_replicates(simulations, measurements) -> np.ndarray:
+        """Fill the simulation with replicates.
+
+        Parameters
+        ----------
+        simulations:
+            Simulations, without replicates.
+        measurements:
+            Measurements, with replicates.
+
+        Returns
+        -------
+        np.ndarray:
+            An array of simulations where each row has its peaundant in the
+            measurements. Replicates in measurements result in copies of the
+            corresponding simulation.
+        """
+        # Find unique time values in measurements
+        unique_time_values = np.unique(measurements[:, 0])
+
+        # Initialize an empty list to store the replicated rows
+        replicated_rows = []
+
+        # Iterate over unique time values
+        for time_value in unique_time_values:
+            # Find the rows in measurements with the current time value
+            matching_rows = measurements[measurements[:, 0] == time_value]
+            # Append replicated rows from simulations for each matching row in measurements
+            replicated_rows.extend(
+                [
+                    row_sim
+                    for row_sim in simulations[simulations[:, 0] == time_value]
+                    for _ in range(len(matching_rows))
+                ]
+            )
+
+        # Convert the list of replicated rows to a NumPy array
+        replicated_simulations = np.array(replicated_rows)
+
+        return replicated_simulations
+
+    if not np.array_equal(simulations[:, 0], edata.timepoints):
+        raise ValueError(
+            "Simulation and Measurement have different timepoints."
+        )
+    # if timepoints in measurements and simulations are not the same, fill
+    if len(simulations[:, 0]) != len(edata.measurements[:, 0]):
+        simulations = _fill_simulation_w_replicates(
+            simulations, edata.measurements
+        )
+    # check that simulation and condition have same dimensions and timepoints
+    if simulations.shape != edata.measurements.shape:
+        raise ValueError(
+            "Simulation and Measurement have different dimensions."
+        )
+    # we can now drop the timepoints
+    simulations = simulations[:, 1:]
+    measurements = edata.measurements[:, 1:]
+
+    def _fill_in_noise_formula(noise_formula):
+        """Fill in the noise formula."""
+        if isinstance(noise_formula, (float, int, np.int64, np.float64)):
+            return float(noise_formula)
+        # if it is not a number, it is assumed to be a string
+        if noise_formula in parameter_mapping.keys():
+            return parameter_mapping[noise_formula]
+
+    # replace noise formula with actual value from mapping
+    noise_formulae = np.array(
+        [_fill_in_noise_formula(formula) for formula in edata.noise_formulae]
+    )
+    # check that the rows of noise are the columns of the simulation
+    if noise_formulae.shape[0] != simulations.shape[1]:
+        raise ValueError("Noise and Simulation have different dimensions.")
+    # # duplicate the noise formulae to match the number of rows of the simulation
+    # noise_formulae = np.tile(noise_formulae, (simulations.shape[0], 1))
+    # # do the same for the noise distributions
+    # noise_dist = np.tile(edata.noise_distributions, (simulations.shape[0], 1))
+    # per observable, decide on the llh function based on the noise dist
+    llhs = [
+        LLH_TYPES[noise_dist](
+            measurements[:, i], simulations[:, i], noise_formulae[i]
+        )
+        for i, noise_dist in enumerate(edata.noise_distributions)
+    ]
+    # sum over all observables
+    llhs = np.sum(llhs)
+
+    return llhs
