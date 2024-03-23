@@ -1,5 +1,6 @@
 import copy
-from typing import Dict, List, Optional, Sequence
+import numbers
+from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
@@ -39,12 +40,12 @@ class RoadRunnerCalculator:
 
     def __call__(
         self,
-        x_dct: Dict,  # TODO: sensi_order support
+        x_dct: dict,  # TODO: sensi_order support
         mode: ModeType,
         roadrunner_instance: roadrunner.RoadRunner,
-        edatas: List[ExpData],
+        edatas: list[ExpData],
         x_ids: Sequence[str],
-        parameter_mapping: List[ParMappingDictQuadruple],
+        parameter_mapping: list[ParMappingDictQuadruple],
         petab_problem: petab.Problem,
     ):
         """Perform the RoadRunner call and obtain objective function values.
@@ -110,7 +111,7 @@ class RoadRunnerCalculator:
 
     def simulate_per_condition(
         self,
-        x_dct: Dict,
+        x_dct: dict,
         roadrunner_instance: roadrunner.RoadRunner,
         edata: ExpData,
         parameter_mapping_per_condition: ParMappingDictQuadruple,
@@ -194,7 +195,7 @@ class RoadRunnerCalculator:
 
     def fill_in_parameters(
         self,
-        problem_parameters: Dict,
+        problem_parameters: dict,
         roadrunner_instance: Optional[roadrunner.RoadRunner] = None,
         parameter_mapping: Optional[ParMappingDictQuadruple] = None,
         preeq: bool = False,
@@ -295,7 +296,7 @@ class RoadRunnerCalculator:
             )
         return mapping_values
 
-    def fill_simulation_df(self, sim_res: Dict, edata: ExpData):
+    def fill_simulation_df(self, sim_res: dict, edata: ExpData):
         """Fill a dataframe with the simulation results.
 
         Parameters
@@ -407,7 +408,7 @@ def calculate_llh(
 
     def _fill_in_noise_formula(noise_formula):
         """Fill in the noise formula."""
-        if isinstance(noise_formula, (float, int, np.int64, np.float64)):
+        if isinstance(noise_formula, numbers.Number):
             return float(noise_formula)
         # if it is not a number, it is assumed to be a string
         if noise_formula in parameter_mapping.keys():

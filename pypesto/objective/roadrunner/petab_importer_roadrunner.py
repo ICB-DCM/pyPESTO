@@ -1,6 +1,7 @@
 # eventually to be added to pypesto.petab
 from __future__ import annotations
 
+import numbers
 import warnings
 from typing import Any, Iterable, Optional, Union
 
@@ -8,6 +9,7 @@ import libsbml
 import petab
 import roadrunner
 from petab.models.sbml_model import SbmlModel
+from petab.parameter_mapping import ParMappingDictQuadruple
 
 from ...petab.importer import PetabStartpoints
 from ...problem import Problem
@@ -57,6 +59,37 @@ class PetabImporterRR:
         petab_problem = petab.Problem.from_yaml(yaml_config)
 
         return PetabImporterRR(petab_problem=petab_problem)
+
+    def _check_noise_formulae(
+        self,
+        edatas: Optional[list[ExpData]] = None,
+        parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
+    ):
+        """Check if the noise formulae are valid.
+
+        Currently, only static values or singular parameters are supported.
+        Complex formulae are not supported.
+        """
+        # check that parameter mapping is available
+        if parameter_mapping is None:
+            parameter_mapping = self.create_parameter_mapping()
+        # check that edatas are available
+        if edatas is None:
+            edatas = self.create_edatas()
+        # check that noise formulae are valid
+        for edata, par_map in zip(edatas, parameter_mapping):
+            for noise_formula in edata.noise_formulae:
+                # constant values are allowed
+                if isinstance(noise_formula, numbers.Number):
+                    continue
+                # single parameters are allowed
+                if noise_formula in par_map[1].keys():
+                    continue
+                raise NotImplementedError(
+                    "Noise formulae must be either constants or single "
+                    "parameters. For more complex noise models, please "
+                    "use amici for now."
+                )
 
     def _write_observables_to_model(self):
         """Write observables of petab problem to the model."""
@@ -197,6 +230,9 @@ class PetabImporterRR:
         x_names = self.petab_problem.get_x_ids()
 
         calculator = RoadRunnerCalculator()
+
+        # run the check for noise formulae
+        self._check_noise_formulae(edatas, parameter_mapping)
 
         return RoadRunnerObjective(
             rr=roadrunner_instance,

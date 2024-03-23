@@ -107,7 +107,7 @@ class ExpData:
         """
         # extract all condition ids from measurement data
         condition_ids = list(
-            set(petab_problem.measurement_df["simulationConditionId"].values)
+            petab_problem.measurement_df["simulationConditionId"].unique()
         )
         exp_datas = [
             ExpData.from_petab_single_condition(
@@ -278,12 +278,12 @@ def construct_noise_matrices(
     -------
     noise_distributions:
         Numpy Array describing noise distributions of the measurement
-        data. Dimension: (n_timepoints, n_observables). Each entry is a
+        data. Dimension: (1, n_observables). Each entry is a
         string describing scale and type of noise distribution, the name
         is "scale_type". E.g. "lin_normal", "log_normal", "log10_normal".
     noise_formulae:
         Numpy Array describing noise formulae of the measurement data.
-        Dimension: (n_timepoints, n_observables). Each entry is a string
+        Dimension: (1, n_observables). Each entry is a string
         describing the noise formula, either a parameter name or a constant.
     """
 
