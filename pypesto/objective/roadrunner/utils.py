@@ -20,7 +20,6 @@ class ExpData:
         observable_ids: Sequence[str],
         noise_distributions: np.ndarray,
         noise_formulae: np.ndarray,
-        measurement_df: pd.DataFrame,
     ):
         """
         Initialize the ExpData object.
@@ -55,7 +54,6 @@ class ExpData:
         self.observable_ids = observable_ids
         self.noise_distributions = noise_distributions
         self.noise_formulae = noise_formulae
-        self.measurement_df = measurement_df
 
         # run sanity checks
         if not self.sanity_check():
@@ -155,7 +153,6 @@ class ExpData:
             observable_ids=observale_ids,
             noise_distributions=noise_distributions,
             noise_formulae=noise_formulae,
-            measurement_df=measurement_df,
         )
 
 
@@ -339,3 +336,43 @@ def construct_noise_matrices(
 
     noise_distributions, noise_formulae = zip(*noise)
     return np.array(noise_distributions), np.array(noise_formulae)
+
+
+def simulation_to_measurement_df(
+    simulations: dict,
+    measurement_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Convert simulation results to a measurement DataFrame.
+
+    Parameters
+    ----------
+    simulations:
+        Dictionary containing the simulation results of a roadrunner
+        simulator. The keys are the condition ids and the values are the
+        simulation results.
+    measurement_df:
+        DataFrame containing the measurement data of the PEtab problem.
+    """
+    simulation_conditions = petab.get_simulation_conditions(measurement_df)
+    meas_dfs = []
+    for _, condition_id in simulation_conditions.iterrows():
+        meas_df_cond = measurement_df[
+            measurement_df["simulationConditionId"]
+            == condition_id["simulationConditionId"]
+        ]
+        sim_res = simulations[condition_id["simulationConditionId"]]
+        # in each row, replace the "measurement" with the simulation value
+        for index, row in meas_df_cond.iterrows():
+            timepoint = row["time"]
+            observable_id = row["observableId"]
+            time_index = np.where(sim_res["time"] == timepoint)[0][0]
+            sim_value = sim_res[observable_id][time_index]
+            meas_df_cond.at[index, "measurement"] = sim_value
+        # rename measurement to simulation
+        meas_df_cond = meas_df_cond.rename(
+            columns={"measurement": "simulation"}
+        )
+        meas_dfs.append(meas_df_cond)
+    sim_res_df = pd.concat(meas_dfs)
+    return sim_res_df

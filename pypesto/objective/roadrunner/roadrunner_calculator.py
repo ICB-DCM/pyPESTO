@@ -1,9 +1,7 @@
-import copy
 import numbers
 from typing import Optional, Sequence
 
 import numpy as np
-import pandas as pd
 import petab
 import roadrunner
 from petab.parameter_mapping import ParMappingDictQuadruple
@@ -78,17 +76,14 @@ class RoadRunnerCalculator:
             raise ValueError(
                 "Number of edatas and conditions are not consistent."
             )
-        simulation_results = []
+        simulation_results = {}
         llh_tot = 0
         for edata, mapping_per_condition in zip(edatas, parameter_mapping):
             sim_res, llh = self.simulate_per_condition(
                 x_dct, roadrunner_instance, edata, mapping_per_condition
             )
-            # fill a corresponding dataframe with the simulation results
-            sim_res_df = self.fill_simulation_df(sim_res, edata)
-            simulation_results.append(sim_res_df)
+            simulation_results[edata.condition_id] = sim_res
             llh_tot += llh
-        simulation_results = pd.concat(simulation_results)
 
         if mode == MODE_FUN:
             return {
@@ -295,33 +290,6 @@ class RoadRunnerCalculator:
                 mapping_species.keys(), mapping_species.values()
             )
         return mapping_values
-
-    def fill_simulation_df(self, sim_res: dict, edata: ExpData):
-        """Fill a dataframe with the simulation results.
-
-        Parameters
-        ----------
-        sim_res:
-            Simulation results.
-        edata:
-            ExpData object.
-
-        Returns
-        -------
-        sim_res_df:
-            DataFrame with the simulation results.
-        """
-        sim_res_df = copy.deepcopy(edata.measurement_df)
-        # in each row, replace the "measurement" with the simulation value
-        for index, row in sim_res_df.iterrows():
-            timepoint = row["time"]
-            observable_id = row["observableId"]
-            time_index = np.where(sim_res["time"] == timepoint)[0][0]
-            sim_value = sim_res[observable_id][time_index]
-            sim_res_df.at[index, "measurement"] = sim_value
-        # rename measurement to simulation
-        sim_res_df = sim_res_df.rename(columns={"measurement": "simulation"})
-        return sim_res_df
 
 
 def calculate_llh(

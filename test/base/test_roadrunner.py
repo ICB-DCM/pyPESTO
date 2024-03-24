@@ -68,7 +68,9 @@ def _execute_case_rr(case, model_type, version):
 
     # extract results
     llh = -ret["fval"]
-    simulation_df = ret["simulation_results"]
+    simulation_df = objective_rr.simulation_to_measurement_df(
+        ret["simulation_results"], petab_problem.measurement_df
+    )
 
     simulation_df = simulation_df.rename(
         columns={petab.SIMULATION: petab.MEASUREMENT}
