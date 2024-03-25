@@ -53,8 +53,6 @@ class RoadRunnerCalculator:
         ----------
         x_dct:
             Parameter dictionary.
-        sensi_orders:
-            Tuple of sensitivity orders.
         mode:
             Mode of the call.
         roadrunner_instance:
@@ -240,35 +238,35 @@ class RoadRunnerCalculator:
         # Parameter parameter_mapping may contain parameter_ids as values,
         # these *must* be replaced
 
-        def _get_par(model_par, value, mapping):
+        def _get_par(model_par, val):
             """Get parameter value from problem_parameters and mapping.
 
             Replace parameter IDs in parameter_mapping dicts by values from
             problem_parameters where necessary
             """
-            if isinstance(value, str):
+            if isinstance(val, str):
                 try:
                     # estimated parameter
-                    return problem_parameters[value]
+                    return problem_parameters[val]
                 except KeyError:
                     # condition table overrides must have been handled already,
                     # e.g. by the PEtab parameter parameter_mapping, but
                     # parameters from InitialAssignments may still be present.
-                    if mapping[value] == model_par:
+                    if mapping[val] == model_par:
                         # prevent infinite recursion
                         raise
-                    return _get_par(value, mapping[value], mapping)
+                    return _get_par(val, mapping[val])
             if model_par in problem_parameters:
                 # user-provided
                 return problem_parameters[model_par]
             # prevent nan-propagation in derivative
-            if np.isnan(value):
+            if np.isnan(val):
                 return 0.0
             # constant value
-            return value
+            return val
 
         mapping_values = {
-            key: _get_par(key, val, mapping) for key, val in mapping.items()
+            key: _get_par(key, val) for key, val in mapping.items()
         }
         # we assume the parameters to be given in the scale defined in the
         # petab problem. Thus, they need to be unscaled.
@@ -312,6 +310,8 @@ def calculate_llh(
         Simulations of condition.
     edata:
         ExpData of a single condition.
+    parameter_mapping:
+        Parameter mapping for the condition.
 
     Returns
     -------
@@ -322,14 +322,14 @@ def calculate_llh(
     if 0.0 not in edata.timepoints:
         simulations = simulations[1:, :]
 
-    def _fill_simulation_w_replicates(simulations, measurements) -> np.ndarray:
+    def _fill_simulation_w_replicates(simulation, measurement) -> np.ndarray:
         """Fill the simulation with replicates.
 
         Parameters
         ----------
-        simulations:
+        simulation:
             Simulations, without replicates.
-        measurements:
+        measurement:
             Measurements, with replicates.
 
         Returns
@@ -339,21 +339,21 @@ def calculate_llh(
             measurements. Replicates in measurements result in copies of the
             corresponding simulation.
         """
-        # Find unique time values in measurements
-        unique_time_values = np.unique(measurements[:, 0])
+        # Find unique time values in measurement
+        unique_time_values = np.unique(measurement[:, 0])
 
         # Initialize an empty list to store the replicated rows
         replicated_rows = []
 
         # Iterate over unique time values
         for time_value in unique_time_values:
-            # Find the rows in measurements with the current time value
-            matching_rows = measurements[measurements[:, 0] == time_value]
-            # Append replicated rows from simulations for each matching row in measurements
+            # Find the rows in measurement with the current time value
+            matching_rows = measurement[measurement[:, 0] == time_value]
+            # Append replicated rows from simulation for each matching row in measurement
             replicated_rows.extend(
                 [
                     row_sim
-                    for row_sim in simulations[simulations[:, 0] == time_value]
+                    for row_sim in simulation[simulation[:, 0] == time_value]
                     for _ in range(len(matching_rows))
                 ]
             )

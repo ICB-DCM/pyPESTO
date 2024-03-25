@@ -96,7 +96,7 @@ class ExpData:
         return True
 
     @staticmethod
-    def from_petab_problem(petab_problem: petab.Problem) -> Sequence[ExpData]:
+    def from_petab_problem(petab_problem: petab.Problem) -> list[ExpData]:
         """
         Create a list of ExpData object from a petab problem.
 
@@ -128,8 +128,6 @@ class ExpData:
         ----------
         condition_id:
             Identifier of the condition.
-        measurement_df:
-            DataFrame containing the measurement data of only
         petab_problem:
             PEtab problem.
         """
@@ -344,7 +342,6 @@ def measurement_df_to_matrix(
 def construct_noise_matrices(
     petab_problem: petab.Problem,
     observable_ids: Sequence[str],
-    condition_id: str,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Construct noise matrices from a PEtab problem.
@@ -355,8 +352,6 @@ def construct_noise_matrices(
         PEtab problem.
     observable_ids:
         Observable ids of the measurement data.
-    condition_id:
-        Identifier of the condition.
 
     Returns
     -------
@@ -371,20 +366,14 @@ def construct_noise_matrices(
         describing the noise formula, either a parameter name or a constant.
     """
 
-    def _get_noise(
-        petab_problem: petab.Problem, observable_id: str, condition_id: str
-    ) -> tuple[str, str]:
+    def _get_noise(observable_id: str) -> tuple[str, str]:
         """
         Get noise distribution and noise formula for a single observable.
 
         Parameters
         ----------
-        petab_problem:
-            PEtab problem.
         observable_id:
             Identifier of the observable.
-        condition_id:
-            Identifier of the condition.
 
         Returns
         -------
@@ -416,10 +405,7 @@ def construct_noise_matrices(
         return noise_distribution, noise_formula
 
     # extract noise distributions and noise formulae
-    noise = [
-        _get_noise(petab_problem, observable_id, condition_id)
-        for observable_id in observable_ids
-    ]
+    noise = [_get_noise(observable_id) for observable_id in observable_ids]
 
     noise_distributions, noise_formulae = zip(*noise)
     return np.array(noise_distributions), np.array(noise_formulae)

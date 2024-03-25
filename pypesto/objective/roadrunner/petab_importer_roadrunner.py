@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import numbers
 import warnings
+from pathlib import Path
 from typing import Any, Iterable, Optional, Union
 
 import libsbml
@@ -54,7 +55,7 @@ class PetabImporterRR:
                 raise ValueError("Invalid PEtab problem.")
 
     @staticmethod
-    def from_yaml(yaml_config: Union[dict, str]) -> PetabImporterRR:
+    def from_yaml(yaml_config: Union[Path, str]) -> PetabImporterRR:
         """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
 
@@ -326,7 +327,7 @@ class PetabImporterRR:
         A :class:`pypesto.problem.Problem` instance.
         """
         if objective is None:
-            objective = self.create_objective()
+            objective = self.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
         x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
