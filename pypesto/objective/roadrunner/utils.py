@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import numbers
-from typing import Sequence
+import warnings
+from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
 import petab
+import roadrunner
 from petab.C import LIN, LOG, LOG10
 
 
@@ -154,6 +156,91 @@ class ExpData:
             noise_distributions=noise_distributions,
             noise_formulae=noise_formulae,
         )
+
+
+class SolverOptions(dict):
+    """Class for managing solver options of roadrunner."""
+
+    def __init__(
+        self,
+        integrator: Optional[str] = None,
+        relative_tolerance: Optional[float] = None,
+        absolute_tolerance: Optional[float] = None,
+        maximum_num_steps: Optional[int] = None,
+        **kwargs,
+    ):
+        """
+        Initialize the SolverOptions object. Can be used as a dictionary.
+
+        Parameters
+        ----------
+        integrator:
+            Integrator to use.
+        relative_tolerance:
+            Relative tolerance of the integrator.
+        absolute_tolerance:
+            Absolute tolerance of the integrator.
+        maximum_num_steps:
+            Maximum number of steps to take.
+        kwargs:
+            Additional solver options.
+        """
+        super().__init__()
+        if integrator is None:
+            integrator = "cvode"
+        self.integrator = integrator
+        if relative_tolerance is None:
+            relative_tolerance = 1e-6
+        self.relative_tolerance = relative_tolerance
+        if absolute_tolerance is None:
+            absolute_tolerance = 1e-12
+        self.absolute_tolerance = absolute_tolerance
+        if maximum_num_steps is None:
+            maximum_num_steps = 20000
+        self.maximum_num_steps = maximum_num_steps
+        self.update(kwargs)
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key) from None
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+    def __repr__(self):
+        """Return a dict representation of the SolverOptions object."""
+        return f"{self.__class__.__name__}({super().__repr__()})"
+
+    def apply_to_roadrunner(self, roadrunner_instance: roadrunner.RoadRunner):
+        """
+        Apply the solver options to a roadrunner object inplace.
+
+        Parameters
+        ----------
+        roadrunner_instance:
+            Roadrunner object to apply the solver options to.
+        """
+        # don't allow 'gillespie' integrator
+        if self.integrator == "gillespie":
+            raise ValueError("Gillespie integrator is not supported.")
+        # copy the options
+        options = self.copy()
+        # set integrator and remove integrator from options
+        roadrunner_instance.setIntegrator(options.pop("integrator"))
+        integrator = roadrunner_instance.getIntegrator()
+        # set the remaining options
+        for key, value in options.items():
+            # try to set the options, if it fails, raise a warning
+            try:
+                integrator.setValue(key, value)
+            except RuntimeError as e:
+                warnings.warn(
+                    f"Failed to set option {key} to {value}. Reason: {e}. "
+                    f"Valid keys are: {integrator.getSettings()}.",
+                    stacklevel=2,
+                )
 
 
 def unscale_parameters(value_dict: dict, petab_scale_dict: dict) -> dict:

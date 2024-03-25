@@ -7,7 +7,7 @@ import roadrunner
 from petab.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import MODE_FUN, MODE_RES, ModeType
-from .utils import ExpData, unscale_parameters
+from .utils import ExpData, SolverOptions, unscale_parameters
 
 LLH_TYPES = {
     "lin_normal": lambda x, y, z: -0.5
@@ -45,6 +45,7 @@ class RoadRunnerCalculator:
         x_ids: Sequence[str],
         parameter_mapping: list[ParMappingDictQuadruple],
         petab_problem: petab.Problem,
+        solver_options: Optional[SolverOptions],
     ):
         """Perform the RoadRunner call and obtain objective function values.
 
@@ -66,6 +67,8 @@ class RoadRunnerCalculator:
             Parameter parameter_mapping.
         petab_problem:
             PEtab problem.
+        solver_options:
+            Solver options of the roadrunner instance Integrator.
 
         Returns
         -------
@@ -76,6 +79,10 @@ class RoadRunnerCalculator:
             raise ValueError(
                 "Number of edatas and conditions are not consistent."
             )
+        if solver_options is None:
+            solver_options = SolverOptions()
+        # apply solver options
+        solver_options.apply_to_roadrunner(roadrunner_instance)
         simulation_results = {}
         llh_tot = 0
         for edata, mapping_per_condition in zip(edatas, parameter_mapping):

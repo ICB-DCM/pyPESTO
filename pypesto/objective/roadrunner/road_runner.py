@@ -7,7 +7,7 @@ import roadrunner
 from ...C import MODE_FUN, MODE_RES, ModeType
 from ..base import ObjectiveBase
 from .roadrunner_calculator import RoadRunnerCalculator
-from .utils import ExpData
+from .utils import ExpData, SolverOptions
 
 PetabProblem = "petab.Problem"
 ParameterMapping = "List[ParMappingDictQuadruple]"
@@ -24,6 +24,7 @@ class RoadRunnerObjective(ObjectiveBase):
         petab_problem: PetabProblem,
         calculator: Optional[RoadRunnerCalculator] = None,
         x_names: Optional[Sequence[str]] = None,
+        solver_options: Optional[SolverOptions] = None,
     ):
         """Initialize the RoadRunner objective function.
 
@@ -57,6 +58,9 @@ class RoadRunnerObjective(ObjectiveBase):
         if calculator is None:
             calculator = RoadRunnerCalculator()
         self.calculator = calculator
+        if solver_options is None:
+            solver_options = SolverOptions()
+        self.solver_options = solver_options
         super().__init__(x_names=x_names)
 
     def get_config(self) -> dict:
@@ -109,6 +113,7 @@ class RoadRunnerObjective(ObjectiveBase):
             x_ids=self.x_names,
             parameter_mapping=parameter_mapping,
             petab_problem=self.petab_problem,
+            solver_options=self.solver_options,
         )
         return ret
 
