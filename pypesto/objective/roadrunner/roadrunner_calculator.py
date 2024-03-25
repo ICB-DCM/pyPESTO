@@ -7,7 +7,12 @@ import roadrunner
 from petab.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import MODE_FUN, MODE_RES, ModeType
-from .utils import ExpData, SolverOptions, unscale_parameters
+from .utils import (
+    ExpData,
+    SolverOptions,
+    simulation_to_measurement_df,
+    unscale_parameters,
+)
 
 LLH_TYPES = {
     "lin_normal": lambda x, y, z: -0.5
@@ -96,10 +101,13 @@ class RoadRunnerCalculator:
                 "simulation_results": simulation_results,
                 "llh": llh_tot,
             }
-        if mode == MODE_RES:
+        if mode == MODE_RES:  # TODO: speed up by not using pandas
+            simulation_df = simulation_to_measurement_df(
+                simulation_results, petab_problem.measurement_df
+            )
             res_df = petab.calculate_residuals(
                 petab_problem.measurement_df,
-                simulation_results,
+                simulation_df,
                 petab_problem.observable_df,
                 petab_problem.parameter_df,
             )
