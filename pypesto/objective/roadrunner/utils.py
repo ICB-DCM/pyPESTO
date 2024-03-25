@@ -144,7 +144,7 @@ class ExpData:
         timepoints = sorted(set(map(float, timepoints)))
         # construct noise distributions and noise formulae
         noise_distributions, noise_formulae = construct_noise_matrices(
-            petab_problem, observale_ids, condition_id
+            petab_problem, observale_ids
         )
         return ExpData(
             condition_id=condition_id,

@@ -156,6 +156,10 @@ class RoadRunnerCalculator:
                 parameter_mapping_per_condition,
                 preeq=True,
             )
+            # allow simulation to reach steady state
+            roadrunner_instance.getSteadyStateSolver().setValue(
+                "allow_presimulation", True
+            )
             # steady state output = observables + state variables
             steady_state_selections = observables_ids + state_variables
             roadrunner_instance.steadyStateSelections = steady_state_selections

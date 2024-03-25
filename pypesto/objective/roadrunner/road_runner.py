@@ -66,7 +66,9 @@ class RoadRunnerObjective(ObjectiveBase):
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
         info = super().get_config()
-        # TODO: add RoadRunner specific information
+        info["solver_options"] = repr(self.solver_options)
+        info["x_names"] = self.x_names
+        info["roadrunner_instance"] = self.roadrunner_instance.getInfo()
         return info
 
     # TODO: add some form of pickling later
@@ -126,7 +128,7 @@ class RoadRunnerObjective(ObjectiveBase):
         if not sensi_orders:
             return True
         sensi_order = max(sensi_orders)
-        max_sensi_order = 0  # TODO: set to one with finite differences?
+        max_sensi_order = 0
 
         return sensi_order <= max_sensi_order
 
