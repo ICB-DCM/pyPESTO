@@ -15,31 +15,36 @@ from .utils import (
 )
 
 LLH_TYPES = {
-    "lin_normal": lambda x, y, z: -0.5
-    * (np.log(2 * np.pi * (z**2)) + ((x - y) / z) ** 2),
-    "log_normal": lambda x, y, z: -0.5
+    "lin_normal": lambda measurement, simulation, sigma: -0.5
     * (
-        np.log(2 * np.pi * (z**2) * (x**2))
-        + ((np.log(x) - np.log(y)) / z) ** 2
+        np.log(2 * np.pi * (sigma**2))
+        + ((measurement - simulation) / sigma) ** 2
     ),
-    "log10_normal": lambda x, y, z: -0.5
+    "log_normal": lambda measurement, simulation, sigma: -0.5
     * (
-        np.log(2 * np.pi * (z**2) * (x**2) * np.log(10) ** 2)
-        + ((np.log10(x) - np.log10(y)) / z) ** 2
+        np.log(2 * np.pi * (sigma**2) * (measurement**2))
+        + ((np.log(measurement) - np.log(simulation)) / sigma) ** 2
     ),
-    "lin_laplace": lambda x, y, z: -np.log(2 * z) - (np.abs(x - y) / z),
-    "log_laplace": lambda x, y, z: -np.log(2 * z * y)
-    - (np.abs(np.log(x) - np.log(y)) / z),
-    "log10_laplace": lambda x, y, z: -np.log(2 * z * y * np.log(10))
-    - (np.abs(np.log10(x) - np.log10(y)) / z),
+    "log10_normal": lambda measurement, simulation, sigma: -0.5
+    * (
+        np.log(2 * np.pi * (sigma**2) * (measurement**2) * np.log(10) ** 2)
+        + ((np.log10(measurement) - np.log10(simulation)) / sigma) ** 2
+    ),
+    "lin_laplace": lambda measurement, simulation, sigma: -np.log(2 * sigma)
+    - (np.abs(measurement - simulation) / sigma),
+    "log_laplace": lambda measurement, simulation, sigma: -np.log(
+        2 * sigma * simulation
+    )
+    - (np.abs(np.log(measurement) - np.log(simulation)) / sigma),
+    "log10_laplace": lambda measurement, simulation, sigma: -np.log(
+        2 * sigma * simulation * np.log(10)
+    )
+    - (np.abs(np.log10(measurement) - np.log10(simulation)) / sigma),
 }
 
 
 class RoadRunnerCalculator:
     """Class to handle RoadRunner simulation and obtain objective value."""
-
-    def __init__(self):
-        pass
 
     def __call__(
         self,
@@ -71,13 +76,14 @@ class RoadRunnerCalculator:
         petab_problem:
             PEtab problem.
         solver_options:
-            Solver options of the roadrunner instance Integrator.
+            Solver options of the roadrunner instance Integrator. These will
+            modify the roadrunner instance inplace.
 
         Returns
         -------
         Tuple of objective function values.
         """
-        # sanitiy check that edatas and conditions are consistent
+        # sanity check that edatas and conditions are consistent
         if len(edatas) != len(parameter_mapping):
             raise ValueError(
                 "Number of edatas and conditions are not consistent."
@@ -123,7 +129,7 @@ class RoadRunnerCalculator:
         roadrunner_instance: roadrunner.RoadRunner,
         edata: ExpData,
         parameter_mapping_per_condition: ParMappingDictQuadruple,
-    ):
+    ) -> tuple[np.ndarray, float]:
         """Simulate the model for a single condition.
 
         Parameters
@@ -136,6 +142,11 @@ class RoadRunnerCalculator:
             ExpData of a single condition.
         parameter_mapping_per_condition:
             Parameter parameter_mapping for a single condition.
+
+        Returns
+        -------
+        Tuple of simulation results in form of a numpy array and the
+        negative log-likelihood.
         """
         # get timepoints and outputs to simulate
         timepoints = edata.get_timepoints()
@@ -222,8 +233,6 @@ class RoadRunnerCalculator:
     ) -> dict:
         """Fill in parameters into the roadrunner instance.
 
-        Largly taken from amici.petab.parameter_mapping.fill_in_parameters
-
         Parameters
         ----------
         roadrunner_instance:
@@ -248,6 +257,12 @@ class RoadRunnerCalculator:
         """
         if filling_mode is None:
             filling_mode = "all"
+        # check for valid filling modes
+        if filling_mode not in ["all", "only_parameters", "only_species"]:
+            raise ValueError(
+                "Invalid filling mode. Choose from 'all', "
+                "'only_parameters', 'only_species'."
+            )
         mapping = parameter_mapping[1]
         scaling = parameter_mapping[3]
         if preeq:
@@ -321,7 +336,7 @@ def calculate_llh(
     edata: ExpData,
     parameter_mapping: dict,
 ) -> float:
-    """Calculate the negative log-likelihood. for a single condition.
+    """Calculate the negative log-likelihood for a single condition.
 
     Parameters
     ----------
@@ -354,7 +369,7 @@ def calculate_llh(
         Returns
         -------
         np.ndarray:
-            An array of simulations where each row has its peaundant in the
+            An array of simulations where each row has its counterpart in the
             measurements. Replicates in measurements result in copies of the
             corresponding simulation.
         """
@@ -415,10 +430,6 @@ def calculate_llh(
     # check that the rows of noise are the columns of the simulation
     if noise_formulae.shape[0] != simulations.shape[1]:
         raise ValueError("Noise and Simulation have different dimensions.")
-    # # duplicate the noise formulae to match the number of rows of the simulation
-    # noise_formulae = np.tile(noise_formulae, (simulations.shape[0], 1))
-    # # do the same for the noise distributions
-    # noise_dist = np.tile(edata.noise_distributions, (simulations.shape[0], 1))
     # per observable, decide on the llh function based on the noise dist
     llhs = np.array(
         [

@@ -14,7 +14,10 @@ ParameterMapping = "List[ParMappingDictQuadruple]"
 
 
 class RoadRunnerObjective(ObjectiveBase):
-    """Objective function for RoadRunner models."""
+    """Objective function for RoadRunner models.
+
+    Currently does not support sensitivities.
+    """
 
     def __init__(
         self,
@@ -71,7 +74,7 @@ class RoadRunnerObjective(ObjectiveBase):
         info["roadrunner_instance"] = self.roadrunner_instance.getInfo()
         return info
 
-    # TODO: add some form of pickling later
+    # TODO: Check whether we need some sort of pickling
 
     def __call__(
         self,

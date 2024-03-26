@@ -9,6 +9,11 @@ from typing import Any, Iterable, Optional, Union
 import libsbml
 import petab
 import roadrunner
+from petab.C import (
+    OBSERVABLE_FORMULA,
+    PREEQUILIBRATION_CONDITION_ID,
+    SIMULATION_CONDITION_ID,
+)
 from petab.models.sbml_model import SbmlModel
 from petab.parameter_mapping import ParMappingDictQuadruple
 
@@ -47,12 +52,10 @@ class PetabImporterRR:
             Flag indicating if the PEtab problem shall be validated.
         """
         self.petab_problem = petab_problem
-        self.rr = roadrunner.RoadRunner()
-
-        self.validate_petab = validate_petab
-        if self.validate_petab:
+        if validate_petab:
             if petab.lint_problem(petab_problem):
                 raise ValueError("Invalid PEtab problem.")
+        self.rr = roadrunner.RoadRunner()
 
     @staticmethod
     def from_yaml(yaml_config: Union[Path, str]) -> PetabImporterRR:
@@ -120,7 +123,7 @@ class PetabImporterRR:
                     stacklevel=2,
                 )
         formulae = self.petab_problem.observable_df[
-            "observableFormula"
+            OBSERVABLE_FORMULA
         ].to_dict()
 
         # add all observable formulas as assignment rules
@@ -190,8 +193,8 @@ class PetabImporterRR:
             simulation_conditions.iterrows(), mapping
         ):
             for override in overrides:
-                preeq_id = condition.get("preequilibrationConditionId")
-                sim_id = condition.get("simulationConditionId")
+                preeq_id = condition.get(PREEQUILIBRATION_CONDITION_ID)
+                sim_id = condition.get(SIMULATION_CONDITION_ID)
                 if preeq_id:
                     mapping_per_condition[0][
                         override
@@ -252,37 +255,35 @@ class PetabImporterRR:
         """
         prior_list = []
 
-        if petab.OBJECTIVE_PRIOR_TYPE in self.petab_problem.parameter_df:
-            for i, x_id in enumerate(self.petab_problem.x_ids):
-                prior_type_entry = self.petab_problem.parameter_df.loc[
-                    x_id, petab.OBJECTIVE_PRIOR_TYPE
+        if petab.OBJECTIVE_PRIOR_TYPE not in self.petab_problem.parameter_df:
+            return None
+
+        for i, x_id in enumerate(self.petab_problem.x_ids):
+            prior_type_entry = self.petab_problem.parameter_df.loc[
+                x_id, petab.OBJECTIVE_PRIOR_TYPE
+            ]
+
+            if (
+                isinstance(prior_type_entry, str)
+                and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
+            ):
+                prior_params = [
+                    float(param)
+                    for param in self.petab_problem.parameter_df.loc[
+                        x_id, petab.OBJECTIVE_PRIOR_PARAMETERS
+                    ].split(";")
                 ]
 
-                if (
-                    isinstance(prior_type_entry, str)
-                    and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
-                ):
-                    prior_params = [
-                        float(param)
-                        for param in self.petab_problem.parameter_df.loc[
-                            x_id, petab.OBJECTIVE_PRIOR_PARAMETERS
-                        ].split(";")
-                    ]
+                scale = self.petab_problem.parameter_df.loc[
+                    x_id, petab.PARAMETER_SCALE
+                ]
 
-                    scale = self.petab_problem.parameter_df.loc[
-                        x_id, petab.PARAMETER_SCALE
-                    ]
-
-                    prior_list.append(
-                        get_parameter_prior_dict(
-                            i, prior_type_entry, prior_params, scale
-                        )
+                prior_list.append(
+                    get_parameter_prior_dict(
+                        i, prior_type_entry, prior_params, scale
                     )
-
-        if len(prior_list):
-            return NegLogParameterPriors(prior_list)
-        else:
-            return None
+                )
+        return NegLogParameterPriors(prior_list)
 
     def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.

@@ -8,7 +8,20 @@ import numpy as np
 import pandas as pd
 import petab
 import roadrunner
-from petab.C import LIN, LOG, LOG10
+from petab.C import (
+    LIN,
+    LOG,
+    LOG10,
+    MEASUREMENT,
+    NOISE_DISTRIBUTION,
+    NOISE_FORMULA,
+    NORMAL,
+    OBSERVABLE_ID,
+    OBSERVABLE_TRANSFORMATION,
+    SIMULATION,
+    SIMULATION_CONDITION_ID,
+    TIME,
+)
 
 
 class ExpData:
@@ -38,7 +51,7 @@ class ExpData:
         timepoints:
             Timepoints of the measurement data.
         observable_ids:
-            Observable ids of the measurement data. Order should match the
+            Observable ids of the measurement data. Order must match the
             columns of the measurements array (-time).
         noise_distributions:
             Numpy Array describing noise distributions of the measurement
@@ -57,9 +70,7 @@ class ExpData:
         self.noise_distributions = noise_distributions
         self.noise_formulae = noise_formulae
 
-        # run sanity checks
-        if not self.sanity_check():
-            raise ValueError("Data is not sane.")
+        self.sanity_check()
 
     def get_timepoints(self):
         """
@@ -84,16 +95,28 @@ class ExpData:
         return self.observable_ids
 
     def sanity_check(self):
-        """
-        Perform a sanity check of the data.
-
-        Returns
-        -------
-        sanity_check:
-            True if the data is sane, False otherwise.
-        """
-        # TODO: needs to be implemented
-        return True
+        """Perform a sanity check of the data."""
+        if not np.allclose(self.measurements[:, 0], self.timepoints):
+            raise ValueError(
+                "Timepoints do not match the first column of measurements."
+            )
+        if self.measurements.shape[1] != len(self.observable_ids) + 1:
+            raise ValueError(
+                "Number of columns in measurements does not match number of "
+                "observable ids + time."
+            )
+        # check that the noise distributions and noise formulae have the
+        # same length as the number of observables
+        if len(self.noise_distributions) != len(self.observable_ids):
+            raise ValueError(
+                "Number of noise distributions does not match number of "
+                "observable ids."
+            )
+        if len(self.noise_formulae) != len(self.observable_ids):
+            raise ValueError(
+                "Number of noise formulae does not match number of "
+                "observable ids."
+            )
 
     @staticmethod
     def from_petab_problem(petab_problem: petab.Problem) -> list[ExpData]:
@@ -133,14 +156,14 @@ class ExpData:
         """
         # extract measurement data for a single condition
         measurement_df = petab_problem.measurement_df[
-            petab_problem.measurement_df["simulationConditionId"]
+            petab_problem.measurement_df[SIMULATION_CONDITION_ID]
             == condition_id
         ]
         # turn measurement data into a numpy array
         measurements, observale_ids = measurement_df_to_matrix(measurement_df)
         # timepoints are the first column of the measurements array
         timepoints = measurements[:, 0]
-        # TODO: perhaps needs to be revised at a later stage
+        # TODO: Needs to be revised when roadrunner allows for duplicate time
         timepoints = sorted(set(map(float, timepoints)))
         # construct noise distributions and noise formulae
         noise_distributions, noise_formulae = construct_noise_matrices(
@@ -261,7 +284,9 @@ def unscale_parameters(value_dict: dict, petab_scale_dict: dict) -> dict:
         raise AssertionError("Keys don't match.")
 
     for key, value in value_dict.items():
-        value_dict[key] = unscale_parameter(value, petab_scale_dict[key])
+        value_dict[key] = petab.parameters.unscale(
+            value, petab_scale_dict[key]
+        )
 
     return value_dict
 
@@ -311,29 +336,24 @@ def measurement_df_to_matrix(
         Numpy array containing the measurement data. It is a 2D array of
         dimension (n_timepoints, n_observables + 1). The first column is
         the timepoints, the remaining columns are the observable values.
-        Observables not measured at a given timepoint should be NaN.
+        Observables not measured at a given timepoint will be NaN.
     observable_ids:
         Observable ids of the measurement data.
     """
-    # select only 'observableId', 'time', and 'measurement' columns
     measurement_df = measurement_df[["observableId", "time", "measurement"]]
-    # add a count to get replicates
+    # get potential replicates via placeholder "count"
     measurement_df["count"] = measurement_df.groupby(
         ["observableId", "time"]
     ).cumcount()
-    # pivot the DataFrame to have unique observables as columns, index=time
     pivot_df = measurement_df.pivot(
         index=["time", "count"],
         columns="observableId",
         values="measurement",
     ).fillna(np.nan)
-    # reset the index
     pivot_df.reset_index(inplace=True)
-    # drop the count column
     pivot_df.drop(columns="count", inplace=True)
-    # get observable ids
+
     observable_ids = pivot_df.columns[1:]
-    # convert the pivoted DataFrame to a NumPy array
     measurement_matrix = pivot_df.to_numpy()
 
     return measurement_matrix, list(observable_ids)
@@ -382,26 +402,26 @@ def construct_noise_matrices(
         """
         obs_df = petab_problem.observable_df
         # check whether Index name is "observableId", if yes, get the row
-        if obs_df.index.name == "observableId":
+        if obs_df.index.name == OBSERVABLE_ID:
             row = obs_df.loc[observable_id]
-        elif "observableId" in obs_df.columns:
-            row = obs_df[obs_df["observableId"] == observable_id].iloc[0]
+        elif OBSERVABLE_ID in obs_df.columns:
+            row = obs_df[obs_df[OBSERVABLE_ID] == observable_id].iloc[0]
         else:
             raise ValueError("No observableId in observable_df.")
         # noise distribution
-        noise_scale = "lin"
-        noise_type = "normal"
+        noise_scale = LIN
+        noise_type = NORMAL
         # check if "observableTransformation" and "noiseDistribution" exist
-        if "observableTransformation" in obs_df.columns:
-            if not pd.isna(row["observableTransformation"]):
-                noise_scale = row["observableTransformation"]
-        if "noiseDistribution" in obs_df.columns:
-            if not pd.isna(row["noiseDistribution"]):
-                noise_type = row["noiseDistribution"]
+        if OBSERVABLE_TRANSFORMATION in obs_df.columns:
+            if not pd.isna(row[OBSERVABLE_TRANSFORMATION]):
+                noise_scale = row[OBSERVABLE_TRANSFORMATION]
+        if NOISE_DISTRIBUTION in obs_df.columns:
+            if not pd.isna(row[NOISE_DISTRIBUTION]):
+                noise_type = row[NOISE_DISTRIBUTION]
         noise_distribution = f"{noise_scale}_{noise_type}"
         # TODO: check if noise_distribution is a allowed
         # noise formula
-        noise_formula = row["noiseFormula"]
+        noise_formula = row[NOISE_FORMULA]
         return noise_distribution, noise_formula
 
     # extract noise distributions and noise formulae
@@ -431,21 +451,19 @@ def simulation_to_measurement_df(
     meas_dfs = []
     for _, condition_id in simulation_conditions.iterrows():
         meas_df_cond = measurement_df[
-            measurement_df["simulationConditionId"]
-            == condition_id["simulationConditionId"]
+            measurement_df[SIMULATION_CONDITION_ID]
+            == condition_id[SIMULATION_CONDITION_ID]
         ]
-        sim_res = simulations[condition_id["simulationConditionId"]]
+        sim_res = simulations[condition_id[SIMULATION_CONDITION_ID]]
         # in each row, replace the "measurement" with the simulation value
         for index, row in meas_df_cond.iterrows():
-            timepoint = row["time"]
-            observable_id = row["observableId"]
-            time_index = np.where(sim_res["time"] == timepoint)[0][0]
+            timepoint = row[TIME]
+            observable_id = row[OBSERVABLE_ID]
+            time_index = np.where(sim_res[TIME] == timepoint)[0][0]
             sim_value = sim_res[observable_id][time_index]
-            meas_df_cond.at[index, "measurement"] = sim_value
+            meas_df_cond.at[index, MEASUREMENT] = sim_value
         # rename measurement to simulation
-        meas_df_cond = meas_df_cond.rename(
-            columns={"measurement": "simulation"}
-        )
+        meas_df_cond = meas_df_cond.rename(columns={MEASUREMENT: SIMULATION})
         meas_dfs.append(meas_df_cond)
     sim_res_df = pd.concat(meas_dfs)
     return sim_res_df
