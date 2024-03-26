@@ -5,6 +5,7 @@ Utilities
 Package-wide utilities.
 
 """
+
 from numbers import Number
 from operator import itemgetter
 from typing import Any, Callable, Optional, Sequence, Tuple, Union
@@ -190,7 +191,7 @@ def get_condition_label(condition_id: str) -> str:
     -------
     The condition label.
     """
-    return f'condition_{condition_id}'
+    return f"condition_{condition_id}"
 
 
 def assign_clusters(vals):
@@ -225,7 +226,7 @@ def assign_clusters(vals):
 
     # get clustering based on distance
     clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(vals), t=0.1, criterion='distance'
+        cluster.hierarchy.linkage(vals), t=0.1, criterion="distance"
     )
 
     # get unique clusters
@@ -288,11 +289,13 @@ def delete_nan_inf(
             x = np.empty(
                 (
                     0,
-                    x.shape[1]
-                    if x.ndim == 2
-                    else x[0].shape[0]
-                    if x[0] is not None
-                    else xdim,
+                    (
+                        x.shape[1]
+                        if x.ndim == 2
+                        else x[0].shape[0]
+                        if x[0] is not None
+                        else xdim
+                    ),
                 )
             )
     return x, fvals[finite_fvals]

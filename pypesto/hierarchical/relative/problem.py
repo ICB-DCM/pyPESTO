@@ -1,4 +1,5 @@
 """Inner optimization problem in hierarchical optimization."""
+
 import logging
 
 import numpy as np
@@ -56,10 +57,10 @@ class RelativeInnerProblem(AmiciInnerProblem):
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: 'petab.Problem',
-        amici_model: 'amici.Model',
-        edatas: list['amici.ExpData'],
-    ) -> 'RelativeInnerProblem':
+        petab_problem: "petab.Problem",
+        amici_model: "amici.Model",
+        edatas: list["amici.ExpData"],
+    ) -> "RelativeInnerProblem":
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
         return inner_problem_from_petab_problem(
             petab_problem, amici_model, edatas
@@ -84,7 +85,7 @@ class RelativeInnerProblem(AmiciInnerProblem):
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
         data = [
-            amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas
+            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
         ]
 
         if len(self.data) != len(data):
@@ -98,9 +99,9 @@ class RelativeInnerProblem(AmiciInnerProblem):
 
 
 def inner_problem_from_petab_problem(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
-    edatas: list['amici.ExpData'],
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
+    edatas: list["amici.ExpData"],
 ) -> AmiciInnerProblem:
     """
     Create inner problem from PEtab problem.
@@ -122,7 +123,7 @@ def inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
+    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -132,14 +133,14 @@ def inner_problem_from_petab_problem(
         par.ixs = ix_matrices[par.inner_parameter_id]
 
     par_group_types = {
-        tuple(obs_pars.split(';')): (
+        tuple(obs_pars.split(";")): (
             petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
-            for obs_par in obs_pars.split(';')
+            for obs_par in obs_pars.split(";")
         )
         for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby(
             [petab.OBSERVABLE_ID, petab.OBSERVABLE_PARAMETERS], dropna=True
         )
-        if ';' in obs_pars  # prefilter for at least 2 observable parameters
+        if ";" in obs_pars  # prefilter for at least 2 observable parameters
     }
 
     coupled_pars = {
@@ -231,8 +232,8 @@ def inner_parameters_from_parameter_df(
 
 
 def ixs_for_measurement_specific_parameters(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
     x_ids: list[str],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """

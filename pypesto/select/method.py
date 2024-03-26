@@ -1,4 +1,5 @@
 """Functionality related to using a PEtab Select model selection method."""
+
 import logging
 from dataclasses import dataclass
 from enum import Enum
@@ -22,8 +23,8 @@ class MethodSignalProceed(str, Enum):
     """Indicators for how a model selection method should proceed."""
 
     # TODO move to PEtab Select?
-    STOP = 'stop'
-    CONTINUE = 'continue'
+    STOP = "stop"
+    CONTINUE = "continue"
 
 
 @dataclass
@@ -61,7 +62,7 @@ class MethodLogger:
     column_width: int = 12
     column_sep: str = " | "
 
-    def __init__(self, level: str = 'info'):
+    def __init__(self, level: str = "info"):
         self.logger = logging.getLogger(__name__)
         self.level = level
 
@@ -83,7 +84,7 @@ class MethodLogger:
     def new_selection(self) -> None:
         """Start logging a new model selection."""
         padding = 20
-        self.log('-' * padding + 'New Selection' + '-' * padding)
+        self.log("-" * padding + "New Selection" + "-" * padding)
         columns = {
             "Predecessor model subspace:ID": "model0",
             "Model subspace:ID": "model",
@@ -140,9 +141,9 @@ class MethodLogger:
             -------
             The ID.
             """
-            model_subspace_id = model.model_subspace_id or ''
+            model_subspace_id = model.model_subspace_id or ""
             original_model_id = model.model_id or model.get_hash()
-            model_id = model_subspace_id + ':' + original_model_id
+            model_id = model_subspace_id + ":" + original_model_id
             return model_id
 
         def float_to_str(value: float, precision: int = 3) -> str:
@@ -265,22 +266,22 @@ class MethodCaller:
         # TODO deprecated
         old_model_problem_options = {}
         for key, value in [
-            ('postprocessor', model_postprocessor),
+            ("postprocessor", model_postprocessor),
             (
-                'model_to_pypesto_problem_method',
+                "model_to_pypesto_problem_method",
                 model_to_pypesto_problem_method,
             ),
-            ('minimize_options', minimize_options),
-            ('objective_customizer', objective_customizer),
+            ("minimize_options", minimize_options),
+            ("objective_customizer", objective_customizer),
         ]:
             if value is not None:
                 old_model_problem_options[key] = value
                 self.logger.log(
-                    f'Specifying `{key}` as an individual argument is '
-                    'deprecated. Please instead specify it within some '
-                    '`model_problem_options` dictionary, e.g. '
+                    f"Specifying `{key}` as an individual argument is "
+                    "deprecated. Please instead specify it within some "
+                    "`model_problem_options` dictionary, e.g. "
                     f'`model_problem_options={{"{key}": ...}}`.',
-                    level='warning',
+                    level="warning",
                 )
         self.model_problem_options = {}
         self.model_problem_options |= old_model_problem_options
@@ -295,24 +296,26 @@ class MethodCaller:
         if candidate_space is not None and method is not None:
             self.logger.log(
                 (
-                    'Both `candidate_space` and `method` were provided. '
-                    'Please only provide one. The method will be ignored here.'
+                    "Both `candidate_space` and `method` were provided. "
+                    "Please only provide one. The method will be ignored here."
                 ),
-                level='warning',
+                level="warning",
             )
         # Get method.
         self.method = (
             method
             if method is not None
-            else candidate_space.method
-            if candidate_space is not None
-            else self.petab_select_problem.method
+            else (
+                candidate_space.method
+                if candidate_space is not None
+                else self.petab_select_problem.method
+            )
         )
         # Require either a candidate space or a method.
         if candidate_space is None and self.method is None:
             raise ValueError(
-                'Please provide one of either `candidate_space` or `method`, '
-                'or specify the `method` in the PEtab Select problem.'
+                "Please provide one of either `candidate_space` or `method`, "
+                "or specify the `method` in the PEtab Select problem."
             )
         # Use candidate space if provided.
         if candidate_space is not None:
@@ -542,10 +545,10 @@ class MethodCaller:
             ]
             if str(model.petab_yaml) != str(predecessor_model.petab_yaml):
                 raise NotImplementedError(
-                    'The PEtab YAML files differ between the model and its '
-                    'predecessor model. This may imply different (fixed union '
-                    'estimated) parameter sets. Support for this is not yet '
-                    'implemented.'
+                    "The PEtab YAML files differ between the model and its "
+                    "predecessor model. This may imply different (fixed union "
+                    "estimated) parameter sets. Support for this is not yet "
+                    "implemented."
                 )
             x_guess = {
                 **predecessor_model.parameters,

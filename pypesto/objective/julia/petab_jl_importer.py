@@ -1,4 +1,5 @@
 """Contains the PetabJlImporter class."""
+
 from __future__ import annotations
 
 import logging
@@ -112,7 +113,6 @@ class PetabJlImporter:
         precompile:
             Whether to precompile the julia module for speed up in
             multistart optimization.
-
         """
         # lazy imports
         try:
@@ -121,7 +121,7 @@ class PetabJlImporter:
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         if self.source_file is None:
             self.source_file = f"{self.module}.jl"
 

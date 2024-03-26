@@ -1,4 +1,5 @@
 """Definition of an optimal scaling solver class."""
+
 import warnings
 
 import numpy as np
@@ -74,7 +75,7 @@ class OrdinalInnerSolver(InnerSolver):
             raise ValueError(
                 f"Inner solver method cannot be {self.options[METHOD]}. Please enter either {STANDARD} or {REDUCED}"
             )
-        elif type(self.options[REPARAMETERIZED]) is not bool:
+        elif not isinstance(self.options[REPARAMETERIZED], bool):
             raise ValueError(
                 f"Inner solver option 'reparameterized' has to be boolean, not {type(self.options[REPARAMETERIZED])}."
             )
@@ -82,7 +83,7 @@ class OrdinalInnerSolver(InnerSolver):
             raise ValueError(
                 f"Inner solver method cannot be {self.options[INTERVAL_CONSTRAINTS]}. Please enter either {MAX} or {MAXMIN}"
             )
-        elif type(self.options[MIN_GAP]) is not float:
+        elif not isinstance(self.options[MIN_GAP], float):
             raise ValueError(
                 f"Inner solver option 'reparameterized' has to be a float, not {type(self.options[MIN_GAP])}."
             )
@@ -90,13 +91,14 @@ class OrdinalInnerSolver(InnerSolver):
             self.options[METHOD] == STANDARD and self.options[REPARAMETERIZED]
         ):
             raise NotImplementedError(
-                'Combining standard approach with '
-                'reparameterization not implemented.'
+                "Combining standard approach with "
+                "reparameterization not implemented."
             )
         elif self.options[METHOD] == STANDARD:
             warnings.warn(
-                'Standard approach is not recommended, as it is less efficient.'
-                'Please consider using the reduced approach instead.'
+                "Standard approach is not recommended, as it is less efficient."
+                "Please consider using the reduced approach instead.",
+                stacklevel=2,
             )
         # Check for any other options
         for key in self.options:
@@ -184,7 +186,7 @@ class OrdinalInnerSolver(InnerSolver):
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
         ]:
             obj = np.inf
-            warnings.warn("Inner optimization failed.")
+            warnings.warn("Inner optimization failed.", stacklevel=2)
         else:
             obj = np.sum(
                 [
@@ -264,9 +266,11 @@ class OrdinalInnerSolver(InnerSolver):
                 par_opt_idx = par_opt_ids.index(par_opt)
                 par_sim_idx = par_sim_ids.index(par_sim)
                 par_edata_idx = [
-                    par_edata_indices.index(par_sim_idx)
-                    if par_sim_idx in par_edata_indices
-                    else None
+                    (
+                        par_edata_indices.index(par_sim_idx)
+                        if par_sim_idx in par_edata_indices
+                        else None
+                    )
                     for par_edata_indices in par_edatas_indices
                 ]
 
@@ -460,7 +464,7 @@ def get_mu(group: int, problem: OrdinalProblem, residual: np.ndarray):
     mu = linalg.lstsq(
         problem.groups[group][C_MATRIX].transpose(),
         -2 * residual.dot(problem.groups[group][W_MATRIX]),
-        lapack_driver='gelsy',
+        lapack_driver="gelsy",
     )
     return mu[0]
 
@@ -562,9 +566,10 @@ def optimize_surrogate_data_per_group(
         results = minimize(obj_surr, jac=grad_surr, **inner_options)
     except ValueError:
         warnings.warn(
-            "x0 violate bound constraints. Retrying with array of zeros."
+            "x0 violate bound constraints. Retrying with array of zeros.",
+            stacklevel=2,
         )
-        inner_options['x0'] = np.zeros(len(inner_options['x0']))
+        inner_options["x0"] = np.zeros(len(inner_options["x0"]))
         results = minimize(obj_surr, jac=grad_surr, **inner_options)
 
     return results
@@ -609,7 +614,7 @@ def get_inner_optimization_options(
                 np.asarray([x.value for x in category_lower_bounds]),
                 np.asarray([x.value for x in category_upper_bounds]),
             ],
-            'F',
+            "F",
         )
 
     if options[METHOD] == REDUCED:
@@ -648,10 +653,10 @@ def get_inner_optimization_options(
             * parameter_length,
         )
         inner_options = {
-            'x0': x0,
-            'method': 'L-BFGS-B',
-            'options': {'maxiter': 2000, 'ftol': 1e-10},
-            'bounds': bounds,
+            "x0": x0,
+            "method": "L-BFGS-B",
+            "options": {"maxiter": 2000, "ftol": 1e-10},
+            "bounds": bounds,
         }
     else:
         constraints = get_constraints_for_optimization(
@@ -659,10 +664,10 @@ def get_inner_optimization_options(
         )
 
         inner_options = {
-            'x0': x0,
-            'method': 'SLSQP',
-            'options': {'maxiter': 2000, 'ftol': 1e-10, 'disp': None},
-            'constraints': constraints,
+            "x0": x0,
+            "method": "SLSQP",
+            "options": {"maxiter": 2000, "ftol": 1e-10, "disp": None},
+            "constraints": constraints,
         }
     return inner_options
 
@@ -996,7 +1001,7 @@ def get_bounds_for_category(
         elif x_category > 1:
             x_lower = optimal_scaling_bounds[x_category - 2] + interval_gap
         else:
-            raise ValueError('Category value needs to be larger than 0.')
+            raise ValueError("Category value needs to be larger than 0.")
     elif options[METHOD] == STANDARD:
         x_lower = optimal_scaling_bounds[2 * x_category - 2]
         x_upper = optimal_scaling_bounds[2 * x_category - 1]
@@ -1033,7 +1038,7 @@ def get_constraints_for_optimization(
         b[0] = 0
         b[1::2] = interval_range
         b[2::2] = interval_gap
-    ineq_cons = {'type': 'ineq', 'fun': lambda x: a.dot(x) - b}
+    ineq_cons = {"type": "ineq", "fun": lambda x: a.dot(x) - b}
 
     return ineq_cons
 
@@ -1139,7 +1144,7 @@ def calculate_censored_obj(
     return_dictionary = {
         SCIPY_SUCCESS: True,
         SCIPY_FUN: obj,
-        SCIPY_X: np.ravel([cat_lb_values, cat_ub_values], order='F'),
+        SCIPY_X: np.ravel([cat_lb_values, cat_ub_values], order="F"),
     }
     return return_dictionary
 
@@ -1231,9 +1236,11 @@ def calculate_censored_grad(
     )
     quantitative_sy = np.concatenate(
         [
-            sy_i[:, edata_idx, :][mask_i]
-            if edata_idx is not None
-            else np.full(sy_i[:, 0, :][mask_i].shape, 0)
+            (
+                sy_i[:, edata_idx, :][mask_i]
+                if edata_idx is not None
+                else np.full(sy_i[:, 0, :][mask_i].shape, 0)
+            )
             for sy_i, mask_i, edata_idx in zip(
                 sy, quantitative_ixs, par_edata_idx
             )
@@ -1241,9 +1248,11 @@ def calculate_censored_grad(
     )
     quantitative_ssigma = np.concatenate(
         [
-            ssigma_i[:, edata_idx, :][mask_i]
-            if edata_idx is not None
-            else np.full(ssigma_i[:, 0, :][mask_i].shape, 0)
+            (
+                ssigma_i[:, edata_idx, :][mask_i]
+                if edata_idx is not None
+                else np.full(ssigma_i[:, 0, :][mask_i].shape, 0)
+            )
             for ssigma_i, mask_i, edata_idx in zip(
                 ssigma, quantitative_ixs, par_edata_idx
             )

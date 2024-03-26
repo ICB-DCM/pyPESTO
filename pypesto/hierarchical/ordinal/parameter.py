@@ -1,4 +1,5 @@
 """Definition of an optimal scaling inner parameter class."""
+
 import logging
 from typing import Literal
 

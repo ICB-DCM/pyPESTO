@@ -15,8 +15,8 @@ from ...C import (
     MODE_RES,
     RDATAS,
     RES,
+    SPLINE_KNOTS,
     SRES,
-    X_INNER_OPT,
 )
 from ...objective.amici.amici_calculator import (
     AmiciCalculator,
@@ -78,12 +78,12 @@ class SemiquantCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list['amici.ExpData'],
+        edatas: list["amici.ExpData"],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list['amici.ReturnData'] = None,
+        rdatas: list["amici.ReturnData"] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -119,7 +119,8 @@ class SemiquantCalculator(AmiciCalculator):
         Returns
         -------
         inner_result:
-            A dict containing the calculation results: FVAL, GRAD, RDATAS and X_INNER_OPT.
+            A dict containing the calculation results: FVAL, GRAD, RDATAS,
+            INNER_PARAMETERS, and SPLINE_KNOTS.
         """
         if mode == MODE_RES:
             raise ValueError(
@@ -175,7 +176,6 @@ class SemiquantCalculator(AmiciCalculator):
             RES: res,
             SRES: sres,
             RDATAS: rdatas,
-            X_INNER_OPT: self.inner_problem.get_inner_parameter_dictionary(),
         }
 
         # if any amici simulation failed, it's unlikely we can compute
@@ -198,9 +198,7 @@ class SemiquantCalculator(AmiciCalculator):
         inner_result[FVAL] = self.inner_solver.calculate_obj_function(
             x_inner_opt
         )
-        inner_result[
-            X_INNER_OPT
-        ] = self.inner_problem.get_inner_parameter_dictionary()
+        inner_result[SPLINE_KNOTS] = self.inner_problem.get_spline_knots()
 
         inner_result[
             INNER_PARAMETERS

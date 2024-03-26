@@ -1,4 +1,5 @@
 """Definition of an optimal scaling parameter class."""
+
 import numpy as np
 import pandas as pd
 
@@ -152,8 +153,8 @@ class OrdinalProblem(AmiciInnerProblem):
                 self.groups[group][W_DOT_MATRIX] = self.initialize_w(group)
             else:
                 raise ValueError(
-                    'Censoring types of optimal scaling parameters of a group '
-                    'have to either be all None, or all not None.'
+                    "Censoring types of optimal scaling parameters of a group "
+                    "have to either be all None, or all not None."
                 )
 
     def initialize(self) -> None:
@@ -171,10 +172,10 @@ class OrdinalProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: 'amici.Model',
-        edatas: list['amici.ExpData'],
+        amici_model: "amici.Model",
+        edatas: list["amici.ExpData"],
         method: str = None,
-    ) -> 'OrdinalProblem':
+    ) -> "OrdinalProblem":
         """Construct the inner problem from the `petab_problem`."""
         if not method:
             method = REDUCED
@@ -387,10 +388,10 @@ class OrdinalProblem(AmiciInnerProblem):
         d = np.zeros(self.groups[group][NUM_CONSTR_FULL])
 
         d[
-            2 * self.groups[group][NUM_DATAPOINTS]
-            + 1 : 2 * self.groups[group][NUM_DATAPOINTS]
+            2 * self.groups[group][NUM_DATAPOINTS] + 1 : 2
+            * self.groups[group][NUM_DATAPOINTS]
             + self.groups[group][NUM_CATEGORIES]
-        ] = (interval_gap + eps)
+        ] = interval_gap + eps
 
         d[
             2 * self.groups[group][NUM_DATAPOINTS]
@@ -414,8 +415,8 @@ class OrdinalProblem(AmiciInnerProblem):
         dinterval_gap_dtheta = max_sy / (4 * (len(xs) - 1) + 1)
 
         dd_dtheta[
-            2 * self.groups[group][NUM_DATAPOINTS]
-            + 1 : 2 * self.groups[group][NUM_DATAPOINTS]
+            2 * self.groups[group][NUM_DATAPOINTS] + 1 : 2
+            * self.groups[group][NUM_DATAPOINTS]
             + self.groups[group][NUM_CATEGORIES]
         ] = dinterval_gap_dtheta
 
@@ -474,8 +475,8 @@ class OrdinalProblem(AmiciInnerProblem):
 
 def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
-    amici_model: 'amici.Model',
-    edatas: list['amici.ExpData'],
+    amici_model: "amici.Model",
+    edatas: list["amici.ExpData"],
     method: str,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -490,7 +491,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)['observedData'] for edata in edatas]
+    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -510,7 +511,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
 def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
-    amici_model: 'amici.Model',
+    amici_model: "amici.Model",
 ) -> list[OrdinalParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
@@ -532,7 +533,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
             # Add optimal scaling parameters for ordinal measurements.
             for par_type, par_estimate in zip(par_types, estimate):
                 for _, row in observable_df.iterrows():
-                    par_id = f'{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{int(row[MEASUREMENT_CATEGORY])}'
+                    par_id = f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{int(row[MEASUREMENT_CATEGORY])}"
 
                     # Create only one set of bound parameters per category of a group.
                     if par_id not in [
@@ -569,7 +570,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
                         unique_censoring_bounds.index(row[CENSORING_BOUNDS])
                         + 1
                     )
-                    par_id = f'{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}'
+                    par_id = f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{category}"
                     # Create only one set of bound parameters per category of a group.
                     if par_id not in [
                         inner_par.inner_parameter_id
@@ -610,8 +611,8 @@ def get_estimate_for_method(method: str) -> tuple[bool, bool]:
 
 
 def optimal_scaling_ixs_for_measurement_specific_parameters(
-    petab_problem: 'petab.Problem',
-    amici_model: 'amici.Model',
+    petab_problem: "petab.Problem",
+    amici_model: "amici.Model",
     inner_parameters: list[OrdinalParameter],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.

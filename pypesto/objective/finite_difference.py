@@ -336,7 +336,7 @@ class FD(ObjectiveBase):
     def __deepcopy__(
         self,
         memodict: Dict = None,
-    ) -> 'FD':
+    ) -> "FD":
         """Create deepcopy of Objective."""
         other = self.__class__.__new__(self.__class__)
         for attr, val in self.__dict__.items():

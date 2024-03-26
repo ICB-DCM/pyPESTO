@@ -156,7 +156,7 @@ class AmiciPredictor:
         x: np.ndarray,
         sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
-        output_file: str = '',
+        output_file: str = "",
         output_format: str = CSV,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
@@ -199,8 +199,8 @@ class AmiciPredictor:
         # sanity check for output
         if 2 in sensi_orders:
             raise Exception(
-                'Prediction simulation does currently not support '
-                'second order output.'
+                "Prediction simulation does currently not support "
+                "second order output."
             )
         # add llh and sigmay to amici output fields if requested
         if include_llh_weights and AMICI_LLH not in self.amici_output_fields:
@@ -257,8 +257,8 @@ class AmiciPredictor:
                 results.write_to_h5(output_file=output_file)
             else:
                 raise ValueError(
-                    f'Call to unknown format {output_format} for '
-                    f'output of pyPESTO prediction.'
+                    f"Call to unknown format {output_format} for "
+                    f"output of pyPESTO prediction."
                 )
 
         # return dependent on sensitivity order
@@ -345,7 +345,7 @@ class AmiciPredictor:
             )
 
         def _default_output(
-            amici_outputs: list[dict[str, np.array]]
+            amici_outputs: list[dict[str, np.array]],
         ) -> tuple[
             list[np.array],
             list[np.array],
@@ -371,42 +371,52 @@ class AmiciPredictor:
             outputs_weights = []
             outputs_sigmay = []
             timepoints = [
-                amici_output[AMICI_T]
-                if amici_output[AMICI_STATUS] == 0
-                else np.full((amici_nt[i_condition],), np.nan)
+                (
+                    amici_output[AMICI_T]
+                    if amici_output[AMICI_STATUS] == 0
+                    else np.full((amici_nt[i_condition],), np.nan)
+                )
                 for i_condition, amici_output in enumerate(amici_outputs)
             ]
             # add outputs and sensitivities if requested
             if 0 in sensi_orders:
                 outputs = [
-                    amici_output[AMICI_Y]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    (
+                        amici_output[AMICI_Y]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             if 1 in sensi_orders:
                 outputs_sensi = [
-                    amici_output[AMICI_SY]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full(
-                        (amici_nt[i_condition], amici_np, amici_ny), np.nan
+                    (
+                        amici_output[AMICI_SY]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full(
+                            (amici_nt[i_condition], amici_np, amici_ny), np.nan
+                        )
                     )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             # add likelihood as weights if requested
             if include_llh_weights:
                 outputs_weights = [
-                    amici_output[AMICI_LLH]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.nan
+                    (
+                        amici_output[AMICI_LLH]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.nan
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             # add standard deviations if requested
             if include_sigmay:
                 outputs_sigmay = [
-                    amici_output[AMICI_SIGMAY]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full((1, amici_ny), np.nan)
+                    (
+                        amici_output[AMICI_SIGMAY]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full((1, amici_ny), np.nan)
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
 

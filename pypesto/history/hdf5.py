@@ -1,6 +1,5 @@
 """HDF5 history."""
 
-
 import contextlib
 import time
 from functools import wraps
@@ -143,7 +142,7 @@ class Hdf5History(HistoryBase):
         super().finalize()
 
         # add message and exitflag to trace
-        grp = self._f.require_group(f'{HISTORY}/{self.id}/{MESSAGES}/')
+        grp = self._f.require_group(f"{HISTORY}/{self.id}/{MESSAGES}/")
         if message is not None:
             grp.attrs[MESSAGE] = message
         if exitflag is not None:
@@ -154,7 +153,7 @@ class Hdf5History(HistoryBase):
         id: str,
         file: Union[str, Path],
         options: Union[HistoryOptions, dict] = None,
-    ) -> 'Hdf5History':
+    ) -> "Hdf5History":
         """Load the History object from memory."""
         history = Hdf5History(id=id, file=file, options=options)
         if options is None:
@@ -289,7 +288,7 @@ class Hdf5History(HistoryBase):
     def message(self) -> str:
         """Optimizer message in case of finished optimization."""
         try:
-            return self._f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[MESSAGE]
+            return self._f[f"{HISTORY}/{self.id}/{MESSAGES}/"].attrs[MESSAGE]
         except KeyError:
             return None
 
@@ -298,7 +297,7 @@ class Hdf5History(HistoryBase):
     def exitflag(self) -> str:
         """Optimizer exitflag in case of finished optimization."""
         try:
-            return self._f[f'{HISTORY}/{self.id}/{MESSAGES}/'].attrs[EXITFLAG]
+            return self._f[f"{HISTORY}/{self.id}/{MESSAGES}/"].attrs[EXITFLAG]
         except KeyError:
             return None
 
@@ -341,22 +340,22 @@ class Hdf5History(HistoryBase):
 
         for key in values.keys():
             if values[key] is not None:
-                self._require_group()[f'{iteration}/{key}'] = values[key]
+                self._require_group()[f"{iteration}/{key}"] = values[key]
 
         self._require_group().attrs[N_ITERATIONS] += 1
 
     @with_h5_file("r")
     def _get_group(self) -> h5py.Group:
         """Get the HDF5 group for the current history."""
-        return self._f[f'{HISTORY}/{self.id}/{TRACE}/']
+        return self._f[f"{HISTORY}/{self.id}/{TRACE}/"]
 
     @with_h5_file("a")
     def _require_group(self) -> h5py.Group:
         """Get, or if necessary create, the group in the hdf5 file."""
         with contextlib.suppress(KeyError):
-            return self._f[f'{HISTORY}/{self.id}/{TRACE}/']
+            return self._f[f"{HISTORY}/{self.id}/{TRACE}/"]
 
-        grp = self._f.create_group(f'{HISTORY}/{self.id}/{TRACE}/')
+        grp = self._f.create_group(f"{HISTORY}/{self.id}/{TRACE}/")
         grp.attrs[N_ITERATIONS] = 0
         grp.attrs[N_FVAL] = 0
         grp.attrs[N_GRAD] = 0
@@ -397,7 +396,7 @@ class Hdf5History(HistoryBase):
         for iteration in ix:
             try:
                 dataset = self._f[
-                    f'{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}'
+                    f"{HISTORY}/{self.id}/{TRACE}/{iteration}/{entry_id}"
                 ]
                 if dataset.shape == ():
                     entry = dataset[()]  # scalar

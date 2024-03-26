@@ -1,4 +1,5 @@
 """Pymc v4 Sampler."""
+
 from __future__ import annotations
 
 import logging
@@ -127,7 +128,7 @@ class PymcSampler(Sampler):
             Options configuring the sampler.
         """
         if not options:
-            options = {'chains': 1}
+            options = {"chains": 1}
         return options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -163,7 +164,7 @@ class PymcSampler(Sampler):
         try:
             import pymc
         except ImportError:
-            raise SamplerImportError("pymc")
+            raise SamplerImportError("pymc") from None
 
         problem = self.problem
         log_post = PymcObjectiveOp.create_instance(problem.objective, beta)

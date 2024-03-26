@@ -52,15 +52,15 @@ class SemiquantInnerSolver(InnerSolver):
 
     def validate_options(self):
         """Validate the current options dictionary."""
-        if type(self.options[MIN_DIFF_FACTOR]) is not float:
+        if not isinstance(self.options[MIN_DIFF_FACTOR], float):
             raise TypeError(f"{MIN_DIFF_FACTOR} must be of type float.")
         elif self.options[MIN_DIFF_FACTOR] < 0:
             raise ValueError(f"{MIN_DIFF_FACTOR} must not be negative.")
 
-        elif type(self.options[REGULARIZE_SPLINE]) is not bool:
+        elif not isinstance(self.options[REGULARIZE_SPLINE], bool):
             raise TypeError(f"{REGULARIZE_SPLINE} must be of type bool.")
         if self.options[REGULARIZE_SPLINE]:
-            if type(self.options[REGULARIZATION_FACTOR]) is not float:
+            if not isinstance(self.options[REGULARIZATION_FACTOR], float):
                 raise TypeError(
                     f"{REGULARIZATION_FACTOR} must be of type float."
                 )
@@ -142,7 +142,10 @@ class SemiquantInnerSolver(InnerSolver):
             x_inner_opt[idx][SCIPY_SUCCESS] for idx in range(len(x_inner_opt))
         ):
             obj = np.inf
-            warnings.warn("Inner optimization failed.")
+            warnings.warn(
+                "Inner optimization failed.",
+                stacklevel=2,
+            )
         else:
             obj = np.sum(
                 [
@@ -217,17 +220,21 @@ class SemiquantInnerSolver(InnerSolver):
                 grad = 0.0
 
                 sy_for_outer_parameter = [
-                    sy_cond[:, par_edata_indices.index(par_sim_idx), :]
-                    if par_sim_idx in par_edata_indices
-                    else np.zeros(sy_cond[:, 0, :].shape)
+                    (
+                        sy_cond[:, par_edata_indices.index(par_sim_idx), :]
+                        if par_sim_idx in par_edata_indices
+                        else np.zeros(sy_cond[:, 0, :].shape)
+                    )
                     for sy_cond, par_edata_indices in zip(
                         sy, par_edatas_indices
                     )
                 ]
                 ssigma_for_outer_parameter = [
-                    ssigma_cond[:, par_edata_indices.index(par_sim_idx), :]
-                    if par_sim_idx in par_edata_indices
-                    else np.zeros(ssigma_cond[:, 0, :].shape)
+                    (
+                        ssigma_cond[:, par_edata_indices.index(par_sim_idx), :]
+                        if par_sim_idx in par_edata_indices
+                        else np.zeros(ssigma_cond[:, 0, :].shape)
+                    )
                     for ssigma_cond, par_edata_indices in zip(
                         amici_ssigma, par_edatas_indices
                     )
@@ -292,9 +299,11 @@ class SemiquantInnerSolver(InnerSolver):
                     min_diff_all[0] = 0.0
                     mu = np.asarray(
                         [
-                            mu[i]
-                            if np.isclose(s[i] - min_diff_all[i], 0)
-                            else 0
+                            (
+                                mu[i]
+                                if np.isclose(s[i] - min_diff_all[i], 0)
+                                else 0
+                            )
                             for i in range(len(s))
                         ]
                     )
@@ -325,8 +334,7 @@ class SemiquantInnerSolver(InnerSolver):
                             n=n,
                         )
                         dJ_dsigma2 = (
-                            K / (2 * sigma**2)
-                            - residual_squared / sigma**4
+                            K / (2 * sigma**2) - residual_squared / sigma**4
                         )
                         dsigma2_dtheta = ssigma_all[0] * sigma
                         dsigma_grad_term = dJ_dsigma2 * dsigma2_dtheta
@@ -432,7 +440,8 @@ class SemiquantInnerSolver(InnerSolver):
 
         return results
 
-    def _rescale_spline_bases(self, sim_all: np.ndarray, N: int, K: int):
+    @staticmethod
+    def _rescale_spline_bases(sim_all: np.ndarray, N: int, K: int):
         """Rescale the spline bases.
 
         Before the optimization of the spline parameters, we have to fix the
@@ -486,7 +495,9 @@ class SemiquantInnerSolver(InnerSolver):
                 if n[i] > N:
                     n[i] = N
                     warnings.warn(
-                        "Interval for a simulation has been set to a larger value than the number of spline parameters."
+                        "Interval for a simulation has been set to a larger "
+                        "value than the number of spline parameters.",
+                        stacklevel=2,
                     )
         # In case the simulations are sufficiently apart:
         else:
@@ -569,7 +580,7 @@ class SemiquantInnerSolver(InnerSolver):
         inner_options = {
             "x0": x0,
             "method": "L-BFGS-B",
-            "options": {"ftol": 1e-16, "disp": None},
+            "options": {"disp": None},
             "bounds": Bounds(lb=constraint_min_diff),
         }
 
@@ -751,8 +762,7 @@ def _calculate_nllh_gradient_for_group(
 
     # Combine all terms into the gradient of the negative log-likelihood
     nllh_gradient = (
-        residuals_squared_gradient / (sigma**2)
-        + regularization_term_gradient
+        residuals_squared_gradient / (sigma**2) + regularization_term_gradient
     )
     return nllh_gradient
 
@@ -862,9 +872,12 @@ def _calculate_regularization_for_group(
     c_squares_sum = np.sum(c**2)
     c_dot_xi = np.dot(c, xi)
     # Calculate the optimal linear function offset
-    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
-        N * c_squares_sum - c_sum**2
-    )
+    if np.isclose(N * c_squares_sum - c_sum**2, 0):
+        beta_opt = xi_sum / N
+    else:
+        beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+            N * c_squares_sum - c_sum**2
+        )
 
     # If the offset is smaller than 0, we set it to 0
     if beta_opt < 0:
@@ -900,9 +913,12 @@ def _calculate_regularization_gradient_for_group(
     c_dot_xi = np.dot(c, xi)
 
     # Calculate the optimal linear function offset
-    beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
-        N * c_squares_sum - c_sum**2
-    )
+    if np.isclose(N * c_squares_sum - c_sum**2, 0):
+        beta_opt = xi_sum / N
+    else:
+        beta_opt = (xi_sum * c_squares_sum - c_dot_xi * c_sum) / (
+            N * c_squares_sum - c_sum**2
+        )
 
     # If the offset is smaller than 0, we set it to 0.
     # Otherwise, we calculate the gradient of the offset.
@@ -1074,11 +1090,8 @@ def save_inner_parameters_to_inner_problem(
         group
     )
 
-    lower_trian = np.tril(np.ones((len(s), len(s))))
-    xi = np.dot(lower_trian, s)
-
     for idx in range(len(inner_spline_parameters)):
-        inner_spline_parameters[idx].value = xi[idx]
+        inner_spline_parameters[idx].value = s[idx]
 
     sigma = group_dict[INNER_NOISE_PARS]
 

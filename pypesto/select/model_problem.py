@@ -1,4 +1,5 @@
 """Calibrate a PEtab Select model with pyPESTO."""
+
 import time
 from typing import Any, Callable, Optional
 
@@ -171,7 +172,7 @@ class ModelProblem:
         self.model.set_criterion(Criterion.NLLH, float(self.best_start.fval))
         self.model.compute_criterion(criterion=self.criterion)
 
-        self.model.estimated_parameters = {
+        estimated_parameters = {
             id: float(value)
             for index, (id, value) in enumerate(
                 zip(
@@ -181,6 +182,10 @@ class ModelProblem:
             )
             if index in self.pypesto_problem.x_free_indices
         }
+        self.model.set_estimated_parameters(
+            estimated_parameters=estimated_parameters,
+            scaled=True,
+        )
 
         if self.postprocessor is not None:
             self.postprocessor(self)

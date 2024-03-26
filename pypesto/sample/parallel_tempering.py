@@ -1,12 +1,16 @@
 import copy
+import logging
 from typing import Dict, List, Sequence, Union
 
 import numpy as np
 
+from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
-from ..result import McmcPtResult
+from ..result import McmcPtResult, Result
 from ..util import tqdm
 from .sampler import InternalSampler, Sampler
+
+logger = logging.getLogger(__name__)
 
 
 class ParallelTemperingSampler(Sampler):
@@ -43,18 +47,24 @@ class ParallelTemperingSampler(Sampler):
         # set betas
         if (betas is None) == (n_chains is None):
             raise ValueError("Set either betas or n_chains.")
-        if betas is None:
+        if betas is None and self.options["beta_init"] == EXPONENTIAL_DECAY:
+            logger.info('Initializing betas with "near-exponential decay".')
             betas = near_exponential_decay_betas(
                 n_chains=n_chains,
-                exponent=self.options['exponent'],
-                max_temp=self.options['max_temp'],
+                exponent=self.options["exponent"],
+                max_temp=self.options["max_temp"],
+            )
+        elif betas is None and self.options["beta_init"] == BETA_DECAY:
+            logger.info('Initializing betas with "beta decay".')
+            betas = beta_decay_betas(
+                n_chains=n_chains, alpha=self.options["alpha"]
             )
         if betas[0] != 1.0:
             raise ValueError("The first chain must have beta=1.0")
         self.betas0 = np.array(betas)
         self.betas = None
 
-        self.temper_lpost = self.options['temper_log_posterior']
+        self.temper_lpost = self.options["temper_log_posterior"]
 
         self.samplers = [
             copy.deepcopy(internal_sampler) for _ in range(len(self.betas0))
@@ -67,10 +77,12 @@ class ParallelTemperingSampler(Sampler):
     def default_options(cls) -> Dict:
         """Return the default options for the sampler."""
         return {
-            'max_temp': 5e4,
-            'exponent': 4,
-            'temper_log_posterior': False,
-            'show_progress': None,
+            "max_temp": 5e4,
+            "exponent": 4,
+            "temper_log_posterior": False,
+            "show_progress": None,
+            "beta_init": BETA_DECAY,  # replaced in adaptive PT
+            "alpha": 0.3,
         }
 
     def initialize(
@@ -89,7 +101,7 @@ class ParallelTemperingSampler(Sampler):
 
     def sample(self, n_samples: int, beta: float = 1.0):
         """Sample and swap in between samplers."""
-        show_progress = self.options.get('show_progress', None)
+        show_progress = self.options.get("show_progress", None)
         # loop over iterations
         for i_sample in tqdm(range(int(n_samples)), enable=show_progress):
             # TODO test
@@ -163,6 +175,71 @@ class ParallelTemperingSampler(Sampler):
 
     def adjust_betas(self, i_sample: int, swapped: Sequence[bool]):
         """Adjust temperature values. Default: Do nothing."""
+
+    def compute_log_evidence(
+        self, result: Result, method: str = "trapezoid"
+    ) -> float:
+        """Perform thermodynamic integration to estimate the log evidence.
+
+        Parameters
+        ----------
+        result:
+            Result object containing the samples.
+        method:
+            Integration method, either 'trapezoid' or 'simpson' (uses scipy for integration).
+        """
+        from scipy.integrate import simpson, trapezoid
+
+        if self.options["beta_init"] == EXPONENTIAL_DECAY:
+            logger.warning(
+                "The temperature schedule is not optimal for thermodynamic integration. "
+                f"Carefully check the results. Consider using beta_init='{BETA_DECAY}' for better results."
+            )
+
+        burn_in = result.sample_result.burn_in
+        trace_loglike = (
+            result.sample_result.trace_neglogprior[::-1, burn_in:]
+            - result.sample_result.trace_neglogpost[::-1, burn_in:]
+        )
+        mean_loglike_per_beta = np.mean(trace_loglike, axis=1)
+        if method == "trapezoid":
+            log_evidence = trapezoid(
+                y=mean_loglike_per_beta, x=self.betas[::-1]
+            )
+        elif method == "simpson":
+            log_evidence = simpson(
+                y=mean_loglike_per_beta, x=self.betas[::-1], even="last"
+            )
+        else:
+            raise ValueError(
+                f"Unknown method {method}. Choose 'trapezoid' or 'simpson'."
+            )
+
+        return log_evidence
+
+
+def beta_decay_betas(n_chains: int, alpha: float) -> np.ndarray:
+    """Initialize betas to the (j-1)th quantile of a Beta(alpha, 1) distribution.
+
+    Proposed by Xie et al. (2011) to be used for thermodynamic integration.
+
+    Parameters
+    ----------
+    n_chains:
+        Number of chains to use.
+    alpha:
+        Tuning parameter that modulates the skew of the distribution over the temperatures.
+        For alpha=1 we have a uniform distribution, and as alpha decreases towards zero,
+        temperatures become positively skewed. Xie et al. (2011) propose alpha=0.3 as a good start.
+    """
+    if alpha <= 0 or alpha > 1:
+        raise ValueError("alpha must be in (0, 1]")
+
+    # special case of one chain
+    if n_chains == 1:
+        return np.array([1.0])
+
+    return np.power(np.arange(n_chains) / (n_chains - 1), 1 / alpha)[::-1]
 
 
 def near_exponential_decay_betas(

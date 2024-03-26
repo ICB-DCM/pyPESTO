@@ -108,7 +108,7 @@ class JuliaObjective(Objective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
 
         # store module name and source file
         self.module: str = module
@@ -170,7 +170,7 @@ class JuliaObjective(Objective):
         fun, grad, hess, res, sres = self._get_callables()
         super().__init__(fun=fun, grad=grad, hess=hess, res=res, sres=sres)
 
-    def __deepcopy__(self, memodict=None) -> 'JuliaObjective':
+    def __deepcopy__(self, memodict=None) -> "JuliaObjective":
         return JuliaObjective(
             module=self.module,
             source_file=self.source_file,
@@ -195,7 +195,7 @@ def display_source_ipython(source_file: str):
     formatter = HtmlFormatter()
     return display.HTML(
         '<style type="text/css">{}</style>{}'.format(
-            formatter.get_style_defs('.highlight'),
+            formatter.get_style_defs(".highlight"),
             highlight(code, JuliaLexer(), formatter),
         )
     )

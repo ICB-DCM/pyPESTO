@@ -1,4 +1,5 @@
 """Interface to PEtab.jl."""
+
 import logging
 import os
 
@@ -43,7 +44,7 @@ class PEtabJlObjective(JuliaObjective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
 
         self.module = module
         self.source_file = source_file
@@ -75,9 +76,9 @@ class PEtabJlObjective(JuliaObjective):
         """Get state for pickling."""
         # if not dumped, dump it via JLD2
         return {
-            'module': self.module,
-            'source_file': self.source_file,
-            '_petab_problem_name': self._petab_problem_name,
+            "module": self.module,
+            "source_file": self.source_file,
+            "_petab_problem_name": self._petab_problem_name,
         }
 
     def __setstate__(self, state):
@@ -86,15 +87,17 @@ class PEtabJlObjective(JuliaObjective):
             setattr(self, key, value)
         # lazy imports
         try:
-            from julia import Main  # noqa: F401
-            from julia import Pkg
+            from julia import (
+                Main,  # noqa: F401
+                Pkg,
+            )
 
             Pkg.activate(".")
         except ImportError:
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         # Include module if not already included
         _read_source(self.module, self.source_file)
 
@@ -140,7 +143,7 @@ class PEtabJlObjective(JuliaObjective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         # setting up a local project, where the precompilation will be done in
         from julia import Pkg
 

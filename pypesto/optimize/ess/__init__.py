@@ -1,5 +1,5 @@
 """Enhanced Scatter Search."""
-from .cess import CESSOptimizer
+
 from .ess import ESSOptimizer
 from .function_evaluator import (
     FunctionEvaluator,

@@ -1,4 +1,5 @@
 """Manage all components of a pyPESTO model selection problem."""
+
 import warnings
 from typing import Any, Iterable, Optional
 
@@ -49,11 +50,13 @@ class Problem:
         # TODO deprecated
         if model_postprocessor is not None:
             warnings.warn(
-                'Specifying `model_postprocessor` directly is deprecated. '
-                'Please specify it with `model_problem_options`, e.g. '
-                'model_problem_options={"postprocessor": ...}`.'
+                "Specifying `model_postprocessor` directly is deprecated. "
+                "Please specify it with `model_problem_options`, e.g. "
+                'model_problem_options={"postprocessor": ...}`.',
+                DeprecationWarning,
+                stacklevel=1,
             )
-            self.model_problem_options['postprocessor'] = model_postprocessor
+            self.model_problem_options["postprocessor"] = model_postprocessor
 
         self.set_state(
             calibrated_models={},
@@ -74,7 +77,7 @@ class Problem:
         """
         kwargs = kwargs.copy()
         model_problem_options = self.model_problem_options | kwargs.pop(
-            'model_problem_options', {}
+            "model_problem_options", {}
         )
 
         return MethodCaller(
@@ -116,13 +119,13 @@ class Problem:
         """Check keyword arguments to select calls."""
         if "newly_calibrated_models" in kwargs:
             raise ValueError(
-                'Please supply `newly_calibrated_models` via '
-                '`pypesto.select.Problem.set_state`.'
+                "Please supply `newly_calibrated_models` via "
+                "`pypesto.select.Problem.set_state`."
             )
         if "calibrated_models" in kwargs:
             raise ValueError(
-                'Please supply `calibrated_models` via '
-                '`pypesto.select.Problem.set_state`.'
+                "Please supply `calibrated_models` via "
+                "`pypesto.select.Problem.set_state`."
             )
 
     def select(

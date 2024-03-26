@@ -67,7 +67,7 @@ def test_fix_parameters(problem):
         problem.fix_parameters(3.5, 2)
 
     with pytest.raises(ValueError):
-        problem.fix_parameters(1, '2')
+        problem.fix_parameters(1, "2")
 
 
 def test_full_index_to_free_index(problem):
@@ -81,30 +81,30 @@ def test_full_index_to_free_index(problem):
 def test_x_names():
     """Test that `x_names` are handled properly."""
     kwargs = {
-        'objective': pypesto.Objective(),
-        'lb': [-5] * 3,
-        'ub': [4] * 3,
-        'x_fixed_indices': [1],
-        'x_fixed_vals': [42.0],
+        "objective": pypesto.Objective(),
+        "lb": [-5] * 3,
+        "ub": [4] * 3,
+        "x_fixed_indices": [1],
+        "x_fixed_vals": [42.0],
     }
 
     # non-unique values
     with pytest.raises(ValueError):
-        pypesto.Problem(x_names=['x1', 'x2', 'x2'], **kwargs)
+        pypesto.Problem(x_names=["x1", "x2", "x2"], **kwargs)
 
     # too few or too many arguments
     with pytest.raises(AssertionError):
-        pypesto.Problem(x_names=['x1', 'x2'], **kwargs)
+        pypesto.Problem(x_names=["x1", "x2"], **kwargs)
     with pytest.raises(AssertionError):
-        pypesto.Problem(x_names=['x1', 'x2', 'x3', 'x4'], **kwargs)
+        pypesto.Problem(x_names=["x1", "x2", "x3", "x4"], **kwargs)
 
     # all fine
-    problem = pypesto.Problem(x_names=['a', 'b', 'c'], **kwargs)
-    assert problem.x_names == ['a', 'b', 'c']
+    problem = pypesto.Problem(x_names=["a", "b", "c"], **kwargs)
+    assert problem.x_names == ["a", "b", "c"]
 
     # defaults
     problem = pypesto.Problem(**kwargs)
-    assert problem.x_names == ['x0', 'x1', 'x2']
+    assert problem.x_names == ["x0", "x1", "x2"]
 
 
 def test_out_of_bounds_x_guesses(caplog):
