@@ -70,6 +70,8 @@ HESSP = "hessp"  # Hessian vector product
 RES = "res"  # residual
 SRES = "sres"  # residual sensitivities
 RDATAS = "rdatas"  # returned simulated data sets
+OBJECTIVE_NEGLOGPOST = "neglogpost"  # objective is negative log-posterior
+OBJECTIVE_NEGLOGLIKE = "negloglike"  # objective is negative log-likelihood
 
 TIME = "time"  # time
 N_FVAL = "n_fval"  # number of function evaluations
@@ -256,6 +258,13 @@ LOG_UNIFORM = "logUniform"
 LOG_NORMAL = "logNormal"
 LOG_LAPLACE = "logLaplace"
 
+###############################################################################
+# SAMPLING
+
+EXPONENTIAL_DECAY = (
+    "exponential_decay"  # temperature schedule for parallel tempering
+)
+BETA_DECAY = "beta_decay"  # temperature schedule for parallel tempering
 
 ###############################################################################
 # PREDICT

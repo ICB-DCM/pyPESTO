@@ -580,7 +580,7 @@ class SemiquantInnerSolver(InnerSolver):
         inner_options = {
             "x0": x0,
             "method": "L-BFGS-B",
-            "options": {"ftol": 1e-16, "disp": None},
+            "options": {"disp": None},
             "bounds": Bounds(lb=constraint_min_diff),
         }
 
@@ -1090,11 +1090,8 @@ def save_inner_parameters_to_inner_problem(
         group
     )
 
-    lower_trian = np.tril(np.ones((len(s), len(s))))
-    xi = np.dot(lower_trian, s)
-
     for idx in range(len(inner_spline_parameters)):
-        inner_spline_parameters[idx].value = xi[idx]
+        inner_spline_parameters[idx].value = s[idx]
 
     sigma = group_dict[INNER_NOISE_PARS]
 

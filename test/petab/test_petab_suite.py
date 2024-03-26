@@ -2,7 +2,7 @@
 
 import logging
 
-import amici.petab_objective
+import amici.petab.simulations
 import petab
 import petabtests
 import pytest
@@ -95,7 +95,7 @@ def _execute_case(case, model_type, version):
     rdatas = ret["rdatas"]
     chi2 = sum(rdata["chi2"] for rdata in rdatas)
     llh = -ret["fval"]
-    simulation_df = amici.petab_objective.rdatas_to_measurement_df(
+    simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
         rdatas, model, importer.petab_problem.measurement_df
     )
 

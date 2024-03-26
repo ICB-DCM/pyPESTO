@@ -132,10 +132,10 @@ class RelativeAmiciCalculator(AmiciCalculator):
             )
 
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
-            or 2 in sensi_orders
-        ):
+            1 in sensi_orders
+            and amici_solver.getSensitivityMethod()
+            == amici.SensitivityMethod.adjoint
+        ) or 2 in sensi_orders:
             inner_result, inner_parameters = self.call_amici_twice(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
