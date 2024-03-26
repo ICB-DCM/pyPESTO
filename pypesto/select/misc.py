@@ -1,6 +1,7 @@
 """Miscellaneous methods."""
 
 import logging
+from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
@@ -10,6 +11,7 @@ from petab.C import ESTIMATE, NOMINAL_VALUE
 from petab_select import Model, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
 
+from ..history import Hdf5History
 from ..objective import Objective
 from ..optimize.ess import (
     SacessOptimizer,
@@ -181,21 +183,29 @@ class SacessMinimizeMethod:
     Class attributes correspond to pyPESTO's SaCeSS optimizer, and are
     documented there. Extra keyword arguments supplied to the constructor
     will be passed on to the constructor of the SaCeSS optimizer, for example,
-    `max_walltime_s` can be specified in this way.
+    `max_walltime_s` can be specified in this way. If specified, `tmpdir` will
+    be treated as a parent directory.
     """
 
     def __init__(
         self,
         num_workers: int,
         local_optimizer,
+        tmpdir=None,
+        save_history: bool = False,
         **optimizer_kwargs,
     ):
         """Construct a minimize-like object."""
         self.num_workers = num_workers
         self.local_optimizer = local_optimizer
         self.optimizer_kwargs = optimizer_kwargs
+        self.tmpdir = Path(tmpdir)
+        self.save_history = save_history
 
-    def __call__(self, problem: Problem, **minimize_options):
+        if self.save_history and self.tmpdir is None:
+            self.tmpdir = Path.cwd() / "sacess_tmpdir"
+
+    def __call__(self, problem: Problem, model_hash: str, **minimize_options):
         """Create then run a problem-specific sacess optimizer."""
         # create optimizer
         ess_init_args = get_default_ess_options(
@@ -204,8 +214,13 @@ class SacessMinimizeMethod:
         )
         for x in ess_init_args:
             x["local_optimizer"] = self.local_optimizer
+        if self.tmpdir is not None:
+            model_tmpdir = self.tmpdir / model_hash
+            model_tmpdir.mkdir(exist_ok=False, parents=True)
+
         ess = SacessOptimizer(
             ess_init_args=ess_init_args,
+            tmpdir=model_tmpdir,
             **self.optimizer_kwargs,
         )
 
@@ -214,4 +229,14 @@ class SacessMinimizeMethod:
             problem=problem,
             **minimize_options,
         )
+
+        if self.save_history:
+            history_dir = model_tmpdir / "history"
+            history_dir.mkdir(exist_ok=False, parents=True)
+            for history_index, history in enumerate(ess.histories):
+                Hdf5History.from_history(
+                    other=history,
+                    file=history_dir / (str(history_index) + ".hdf5"),
+                    id_=history_index,
+                )
         return result
