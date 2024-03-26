@@ -11,6 +11,10 @@ from petab_select import Model, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
 
 from ..objective import Objective
+from ..optimize.ess import (
+    SacessOptimizer,
+    get_default_ess_options,
+)
 from ..petab import PetabImporter
 from ..problem import Problem
 
@@ -163,3 +167,51 @@ def correct_x_guesses(
                 corrected_x_guess.append(corrected_value)
             corrected_x_guesses.append(corrected_x_guess)
     return corrected_x_guesses
+
+
+class SacessMinimizeMethod:
+    """Create a minimize method for SaCeSS that adapts to each problem.
+
+    When a pyPESTO SaCeSS optimizer is created, it takes the problem
+    dimension as input. Hence, an optimizer needs to be constructed for
+    each problem. Objects of this class act like a minimize method for model
+    selection, but a new problem-specific SaCeSS optimizer will be created
+    every time a model is minimized.
+
+    Class attributes correspond to pyPESTO's SaCeSS optimizer, and are
+    documented there.
+    """
+
+    def __init__(
+        self,
+        num_workers: int,
+        local_optimizer,
+        max_walltime_s: int,
+    ):
+        """Construct a minimize-like object."""
+        self.num_workers = num_workers
+        self.local_optimizer = local_optimizer
+        self.max_walltime_s = max_walltime_s
+
+    def __call__(self, problem: Problem, **minimize_options):
+        """Create then run a problem-specific sacess optimizer."""
+        # create optimizer
+        ess_init_args = get_default_ess_options(
+            num_workers=self.num_workers,
+            dim=problem.dim,
+        )
+        for x in ess_init_args:
+            x["local_optimizer"] = self.local_optimizer
+        ess = SacessOptimizer(
+            max_walltime_s=self.max_walltime_s,
+            sacess_loglevel=logging.DEBUG,
+            ess_loglevel=logging.WARNING,
+            ess_init_args=ess_init_args,
+        )
+
+        # optimize
+        result = ess.minimize(
+            problem=problem,
+            **minimize_options,
+        )
+        return result
