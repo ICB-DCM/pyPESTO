@@ -147,6 +147,13 @@ class RoadRunnerCalculator:
         # steady state stuff
         steady_state_calculations = False
         state_variables = roadrunner_instance.model.getFloatingSpeciesIds()
+        # some states might be hidden as parameters with rate rules
+        rate_rule_ids = roadrunner_instance.getRateRuleIds()
+        state_variables += [
+            rate_rule_id
+            for rate_rule_id in rate_rule_ids
+            if rate_rule_id not in state_variables
+        ]
         # obs_ss = []  # TODO: add them to return values with info
         state_ss = []
 
@@ -413,13 +420,19 @@ def calculate_llh(
     # # do the same for the noise distributions
     # noise_dist = np.tile(edata.noise_distributions, (simulations.shape[0], 1))
     # per observable, decide on the llh function based on the noise dist
-    llhs = [
-        LLH_TYPES[noise_dist](
-            measurements[:, i], simulations[:, i], noise_formulae[i]
-        )
-        for i, noise_dist in enumerate(edata.noise_distributions)
-    ]
-    # sum over all observables
-    llhs = np.sum(llhs)
+    llhs = np.array(
+        [
+            LLH_TYPES[noise_dist](
+                measurements[:, i], simulations[:, i], noise_formulae[i]
+            )
+            for i, noise_dist in enumerate(edata.noise_distributions)
+        ]
+    ).transpose()
+    # check whether all nan values in llhs coincide with nan measurements
+    if not np.all(np.isnan(llhs) == np.isnan(measurements)):
+        return np.nan
+
+    # sum over all observables, ignoring nans
+    llhs = np.nansum(llhs)
 
     return llhs
