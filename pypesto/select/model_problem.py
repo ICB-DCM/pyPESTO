@@ -142,7 +142,8 @@ class ModelProblem:
     def minimize(self) -> Result:
         """Optimize the model.
 
-        Returns:
+        Returns
+        -------
             The optimization result.
         """
         return self.minimize_method(
@@ -150,7 +151,14 @@ class ModelProblem:
             **self.minimize_options,
         )
 
-    def set_result_from_model(self, model):
+    def set_result_from_model(self, model) -> None:
+        """Set the calibration result from a previously-calibrated model.
+
+        Parameters
+        ----------
+        model:
+            The previously-calibrated model.
+        """
         self.model.criteria = model.criteria
         self.model.estimated_parameters = model.estimated_parameters
         if self.postprocessor is not None:
@@ -201,6 +209,12 @@ def create_fake_pypesto_result_from_fval(
     ----------
     fval:
         The objective function value.
+    evaluation_time:
+        CPU time taken to compute the objective function value.
+
+    Returns
+    -------
+    The dummy result.
     """
     result = Result()
 
