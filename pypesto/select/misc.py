@@ -186,12 +186,12 @@ class SacessMinimizeMethod:
         self,
         num_workers: int,
         local_optimizer,
-        max_walltime_s: int,
+        **optimizer_kwargs,
     ):
         """Construct a minimize-like object."""
         self.num_workers = num_workers
         self.local_optimizer = local_optimizer
-        self.max_walltime_s = max_walltime_s
+        self.optimizer_kwargs = optimizer_kwargs
 
     def __call__(self, problem: Problem, **minimize_options):
         """Create then run a problem-specific sacess optimizer."""
@@ -203,10 +203,8 @@ class SacessMinimizeMethod:
         for x in ess_init_args:
             x["local_optimizer"] = self.local_optimizer
         ess = SacessOptimizer(
-            max_walltime_s=self.max_walltime_s,
-            sacess_loglevel=logging.DEBUG,
-            ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
+            **self.optimizer_kwargs,
         )
 
         # optimize
