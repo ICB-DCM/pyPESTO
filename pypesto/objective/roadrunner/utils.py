@@ -28,7 +28,6 @@ class ExpData:
         self,
         condition_id: str,
         measurements: np.ndarray,
-        timepoints: Sequence[float],
         observable_ids: Sequence[str],
         noise_distributions: np.ndarray,
         noise_formulae: np.ndarray,
@@ -62,23 +61,17 @@ class ExpData:
         """
         self.condition_id = condition_id
         self.measurements = measurements
-        self.timepoints = timepoints
         self.observable_ids = observable_ids
         self.noise_distributions = noise_distributions
         self.noise_formulae = noise_formulae
 
         self.sanity_check()
 
-    def get_timepoints(self):
-        """
-        Get the timepoints of the measurement data.
-
-        Returns
-        -------
-        timepoints:
-            Timepoints of the measurement data.
-        """
-        return self.timepoints
+    # define timepoints as a property
+    @property
+    def timepoints(self):
+        """Timepoints of the measurement data."""
+        return self.measurements[:, 0]
 
     def get_observable_ids(self):
         """
@@ -93,11 +86,6 @@ class ExpData:
 
     def sanity_check(self):
         """Perform a sanity check of the data."""
-        if not set(self.measurements[:, 0]) == set(self.timepoints):
-            raise ValueError(
-                "Timepoints do not match the first column of measurements ("
-                "minus replicates)."
-            )
         if self.measurements.shape[1] != len(self.observable_ids) + 1:
             raise ValueError(
                 "Number of columns in measurements does not match number of "
@@ -170,7 +158,6 @@ class ExpData:
         return ExpData(
             condition_id=condition_id,
             measurements=measurements,
-            timepoints=timepoints,
             observable_ids=observale_ids,
             noise_distributions=noise_distributions,
             noise_formulae=noise_formulae,

@@ -149,7 +149,7 @@ class RoadRunnerCalculator:
         negative log-likelihood.
         """
         # get timepoints and outputs to simulate
-        timepoints = edata.get_timepoints()
+        timepoints = list(edata.timepoints)
         if timepoints[0] != 0.0:
             timepoints = [0.0] + timepoints
         if len(timepoints) == 1:
