@@ -2,7 +2,7 @@
 
 import logging
 
-import amici.petab_objective
+import amici.petab.simulations
 import petab
 import petabtests
 import pytest
@@ -65,10 +65,10 @@ def _execute_case(case, model_type, version):
     model_name = (
         f'petab_test_case_{case}_{model_type}_{version.replace(".", "_" )}'
     )
-    output_folder = f'amici_models/{model_name}'
+    output_folder = f"amici_models/{model_name}"
 
     # import and create objective function
-    if case.startswith('0006'):
+    if case.startswith("0006"):
         petab_problem = petab.Problem.from_yaml(yaml_file)
         petab.flatten_timepoint_specific_output_overrides(petab_problem)
         importer = pypesto.petab.PetabImporter(
@@ -92,14 +92,14 @@ def _execute_case(case, model_type, version):
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
 
     # extract results
-    rdatas = ret['rdatas']
-    chi2 = sum(rdata['chi2'] for rdata in rdatas)
-    llh = -ret['fval']
-    simulation_df = amici.petab_objective.rdatas_to_measurement_df(
+    rdatas = ret["rdatas"]
+    chi2 = sum(rdata["chi2"] for rdata in rdatas)
+    llh = -ret["fval"]
+    simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
         rdatas, model, importer.petab_problem.measurement_df
     )
 
-    if case.startswith('0006'):
+    if case.startswith("0006"):
         simulation_df = petab.unflatten_simulation_df(
             simulation_df, petab_problem
         )

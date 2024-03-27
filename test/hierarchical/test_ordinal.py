@@ -47,12 +47,12 @@ inner_options = [
 
 example_ordinal_yaml = (
     Path(__file__).parent
-    / '..'
-    / '..'
-    / 'doc'
-    / 'example'
-    / 'example_ordinal'
-    / 'example_ordinal.yaml'
+    / ".."
+    / ".."
+    / "doc"
+    / "example"
+    / "example_ordinal"
+    / "example_ordinal.yaml"
 )
 
 
@@ -79,7 +79,7 @@ def test_optimization(inner_options: list[dict]):
     # Set seed for reproducibility.
     np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
-        method='L-BFGS-B', options={'maxiter': 10}
+        method="L-BFGS-B", options={"maxiter": 10}
     )
     for option in inner_options:
         problem = _create_problem(petab_problem, option)
@@ -87,13 +87,13 @@ def test_optimization(inner_options: list[dict]):
             problem=problem, n_starts=1, optimizer=optimizer
         )
         # Check that optimization finished without infinite or nan values.
-        assert np.isfinite(result.optimize_result.list[0]['fval'])
-        assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
-        assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
+        assert np.isfinite(result.optimize_result.list[0]["fval"])
+        assert np.all(np.isfinite(result.optimize_result.list[0]["x"]))
+        assert np.all(np.isfinite(result.optimize_result.list[0]["grad"][2:]))
         # Check that optimization finished with a lower objective value.
         assert (
-            result.optimize_result.list[0]['fval']
-            < result.optimize_result.list[0]['fval0']
+            result.optimize_result.list[0]["fval"]
+            < result.optimize_result.list[0]["fval0"]
         )
 
 
@@ -186,36 +186,36 @@ def test_ordinal_calculator_and_objective():
     # Check the inner calculator and the inner calculator collector
     # give the same results.
     assert np.allclose(
-        inner_calculator_results[STANDARD]['fval'],
-        calculator_results[STANDARD]['fval'],
+        inner_calculator_results[STANDARD]["fval"],
+        calculator_results[STANDARD]["fval"],
     )
     assert np.allclose(
-        inner_calculator_results[STANDARD]['grad'],
-        calculator_results[STANDARD]['grad'],
+        inner_calculator_results[STANDARD]["grad"],
+        calculator_results[STANDARD]["grad"],
     )
 
     # The results of the objective gradient and function value
     # should not depend on the method given.
     assert np.isclose(
-        calculator_results[STANDARD]['fval'],
-        calculator_results[REDUCED]['fval'],
+        calculator_results[STANDARD]["fval"],
+        calculator_results[REDUCED]["fval"],
     )
     assert np.allclose(
-        calculator_results[STANDARD]['grad'],
-        calculator_results[REDUCED]['grad'],
+        calculator_results[STANDARD]["grad"],
+        calculator_results[REDUCED]["grad"],
     )
 
     # Check that the gradient is the same as the one obtained
     # with finite differences.
     assert np.allclose(
         finite_differences_results[1],
-        calculator_results[STANDARD]['grad'],
+        calculator_results[STANDARD]["grad"],
     )
 
     # Since the nominal parameters are close to true ones,
     # the fval and grad should both be low.
-    assert np.all(calculator_results[STANDARD]['fval'] < 0.2)
-    assert np.all(calculator_results[STANDARD]['grad'] < 0.1)
+    assert np.all(calculator_results[STANDARD]["fval"] < 0.2)
+    assert np.all(calculator_results[STANDARD]["grad"] < 0.1)
 
 
 def _inner_problem_exp():
@@ -248,7 +248,7 @@ def _inner_problem_exp():
 
     categories = [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]
     inner_parameter_ids = [
-        f'{par_type}_{category}'
+        f"{par_type}_{category}"
         for par_type in par_types
         for category in set(categories)
     ]
@@ -306,10 +306,10 @@ def test_ordinal_solver():
     )[0]
 
     assert np.allclose(
-        standard_result['x'], expected_values[STANDARD], rtol=rtol
+        standard_result["x"], expected_values[STANDARD], rtol=rtol
     )
-    assert np.allclose(standard_result['fun'], 0, rtol=rtol)
-    assert np.allclose(standard_result['jac'], 0, rtol=rtol)
+    assert np.allclose(standard_result["fun"], 0, rtol=rtol)
+    assert np.allclose(standard_result["jac"], 0, rtol=rtol)
 
     solver = OrdinalInnerSolver(
         options={METHOD: REDUCED, REPARAMETERIZED: False}
@@ -322,10 +322,10 @@ def test_ordinal_solver():
     )[0]
 
     assert np.all(
-        np.isclose(reduced_result['x'], expected_values[REDUCED], rtol=rtol)
+        np.isclose(reduced_result["x"], expected_values[REDUCED], rtol=rtol)
     )
-    assert np.allclose(reduced_result['fun'], 0, rtol=rtol)
-    assert np.allclose(reduced_result['jac'], 0, rtol=rtol)
+    assert np.allclose(reduced_result["fun"], 0, rtol=rtol)
+    assert np.allclose(reduced_result["jac"], 0, rtol=rtol)
 
 
 def test_surrogate_data_analytical_calculation():
@@ -342,12 +342,12 @@ def test_surrogate_data_analytical_calculation():
     n_categories = len(optimal_inner_parameters) / 2
 
     expected_values = {}
-    expected_values['interval_range'] = max(sim) / (2 * n_categories + 1)
-    expected_values['interval_gap'] = max(sim) / (4 * (n_categories - 1) + 1)
+    expected_values["interval_range"] = max(sim) / (2 * n_categories + 1)
+    expected_values["interval_gap"] = max(sim) / (4 * (n_categories - 1) + 1)
 
     # As we have optimized the inner parameters, the surrogate data
     # should be the same as the simulation.
-    expected_values['surrogate_data'] = sim
+    expected_values["surrogate_data"] = sim
 
     options = {
         METHOD: STANDARD,
@@ -372,9 +372,9 @@ def test_surrogate_data_analytical_calculation():
     )
 
     assert np.isclose(
-        interval_range, expected_values['interval_range'], rtol=rtol
+        interval_range, expected_values["interval_range"], rtol=rtol
     )
-    assert np.isclose(interval_gap, expected_values['interval_gap'], rtol=rtol)
+    assert np.isclose(interval_gap, expected_values["interval_gap"], rtol=rtol)
     assert np.allclose(
-        surrogate_data, expected_values['surrogate_data'], rtol=rtol
+        surrogate_data, expected_values["surrogate_data"], rtol=rtol
     )

@@ -21,7 +21,7 @@ def read_hdf5_profile(
     f: h5py.File,
     profile_id: str,
     parameter_id: str,
-) -> 'ProfilerResult':
+) -> "ProfilerResult":
     """Read HDF5 results per start.
 
     Parameters
@@ -38,13 +38,13 @@ def read_hdf5_profile(
     result = ProfilerResult(np.empty((0, 0)), np.array([]), np.array([]))
 
     for profile_key in result.keys():
-        if profile_key in f[f'/profiling/{profile_id}/{parameter_id}']:
+        if profile_key in f[f"/profiling/{profile_id}/{parameter_id}"]:
             result[profile_key] = f[
-                f'/profiling/{profile_id}/{parameter_id}/{profile_key}'
+                f"/profiling/{profile_id}/{parameter_id}/{profile_key}"
             ][:]
-        elif profile_key in f[f'/profiling/{profile_id}/{parameter_id}'].attrs:
+        elif profile_key in f[f"/profiling/{profile_id}/{parameter_id}"].attrs:
             result[profile_key] = f[
-                f'/profiling/{profile_id}/{parameter_id}'
+                f"/profiling/{profile_id}/{parameter_id}"
             ].attrs[profile_key]
     return result
 
@@ -53,7 +53,7 @@ def read_hdf5_optimization(
     f: h5py.File,
     file_name: Union[Path, str],
     opt_id: str,
-) -> 'OptimizerResult':
+) -> "OptimizerResult":
     """Read HDF5 results per start.
 
     Parameters
@@ -68,18 +68,18 @@ def read_hdf5_optimization(
     result = OptimizerResult()
 
     for optimization_key in result.keys():
-        if optimization_key == 'history':
+        if optimization_key == "history":
             if optimization_key in f:
-                result['history'] = Hdf5History(id=opt_id, file=file_name)
-                result['history'].recover_options(file_name)
+                result["history"] = Hdf5History(id=opt_id, file=file_name)
+                result["history"].recover_options(file_name)
                 continue
-        if optimization_key in f[f'/optimization/results/{opt_id}']:
+        if optimization_key in f[f"/optimization/results/{opt_id}"]:
             result[optimization_key] = f[
-                f'/optimization/results/{opt_id}/{optimization_key}'
+                f"/optimization/results/{opt_id}/{optimization_key}"
             ][:]
-        elif optimization_key in f[f'/optimization/results/{opt_id}'].attrs:
+        elif optimization_key in f[f"/optimization/results/{opt_id}"].attrs:
             result[optimization_key] = f[
-                f'/optimization/results/{opt_id}'
+                f"/optimization/results/{opt_id}"
             ].attrs[optimization_key]
     return result
 
@@ -122,19 +122,20 @@ class ProblemHDF5Reader:
             objective = Objective()
             # raise warning that objective is not loaded.
             warnings.warn(
-                'You are loading a problem. This problem is not to be used '
-                'without a separately created objective.'
+                "You are loading a problem. This problem is not to be used "
+                "without a separately created objective.",
+                stacklevel=2,
             )
         problem = Problem(objective, [], [])
 
-        with h5py.File(self.storage_filename, 'r') as f:
-            for problem_key in f['/problem']:
-                if problem_key == 'config':
+        with h5py.File(self.storage_filename, "r") as f:
+            for problem_key in f["/problem"]:
+                if problem_key == "config":
                     continue
-                setattr(problem, problem_key, f[f'/problem/{problem_key}'][:])
-            for problem_attr in f['/problem'].attrs:
+                setattr(problem, problem_key, f[f"/problem/{problem_key}"][:])
+            for problem_attr in f["/problem"].attrs:
                 setattr(
-                    problem, problem_attr, f['/problem'].attrs[problem_attr]
+                    problem, problem_attr, f["/problem"].attrs[problem_attr]
                 )
 
         # h5 uses numpy for everything; convert to lists where necessary
@@ -170,7 +171,7 @@ class OptimizationResultHDF5Reader:
     def read(self) -> Result:
         """Read HDF5 result file and return pyPESTO result object."""
         with h5py.File(self.storage_filename, "r") as f:
-            for opt_id in f['/optimization/results']:
+            for opt_id in f["/optimization/results"]:
                 result = read_hdf5_optimization(
                     f, self.storage_filename, opt_id
                 )
@@ -204,10 +205,10 @@ class SamplingResultHDF5Reader:
         """Read HDF5 result file and return pyPESTO result object."""
         sample_result = {}
         with h5py.File(self.storage_filename, "r") as f:
-            for key in f['/sampling/results']:
-                sample_result[key] = f[f'/sampling/results/{key}'][:]
-            for key in f['/sampling/results'].attrs:
-                sample_result[key] = f['/sampling/results'].attrs[key]
+            for key in f["/sampling/results"]:
+                sample_result[key] = f[f"/sampling/results/{key}"][:]
+            for key in f["/sampling/results"].attrs:
+                sample_result[key] = f["/sampling/results"].attrs[key]
         try:
             self.results.sample_result = McmcPtResult(**sample_result)
         except TypeError:
@@ -244,13 +245,13 @@ class ProfileResultHDF5Reader:
         """Read HDF5 result file and return pyPESTO result object."""
         profiling_list = []
         with h5py.File(self.storage_filename, "r") as f:
-            for profile_id in f['/profiling']:
+            for profile_id in f["/profiling"]:
                 profiling_list.append(
-                    [None for _ in f[f'/profiling/{profile_id}']]
+                    [None for _ in f[f"/profiling/{profile_id}"]]
                 )
-                for parameter_id in f[f'/profiling/{profile_id}']:
-                    if f[f'/profiling/{profile_id}/' f'{parameter_id}'].attrs[
-                        'IsNone'
+                for parameter_id in f[f"/profiling/{profile_id}"]:
+                    if f[f"/profiling/{profile_id}/" f"{parameter_id}"].attrs[
+                        "IsNone"
                     ]:
                         continue
                     profiling_list[int(profile_id)][
@@ -309,9 +310,9 @@ def read_result(
             result.optimize_result = temp_result.optimize_result
         except KeyError:
             logger.warning(
-                'Loading the optimization result failed. It is '
-                'highly likely that no optimization result exists '
-                f'within {filename}.'
+                "Loading the optimization result failed. It is "
+                "highly likely that no optimization result exists "
+                f"within {filename}."
             )
 
     if profile:
@@ -321,9 +322,9 @@ def read_result(
             result.profile_result = temp_result.profile_result
         except KeyError:
             logger.warning(
-                'Loading the profiling result failed. It is '
-                'highly likely that no profiling result exists '
-                f'within {filename}.'
+                "Loading the profiling result failed. It is "
+                "highly likely that no profiling result exists "
+                f"within {filename}."
             )
 
     if sample:
@@ -333,9 +334,9 @@ def read_result(
             result.sample_result = temp_result.sample_result
         except KeyError:
             logger.warning(
-                'Loading the sampling result failed. It is '
-                'highly likely that no sampling result exists '
-                f'within {filename}.'
+                "Loading the sampling result failed. It is "
+                "highly likely that no sampling result exists "
+                f"within {filename}."
             )
 
     return result
@@ -354,7 +355,7 @@ def load_objective_config(filename: Union[str, Path]):
         A dictionary of the information, stored instead of the
         actual objective in problem.objective.
     """
-    with h5py.File(filename, 'r') as f:
-        info_str = f['problem/config'][()].decode()
+    with h5py.File(filename, "r") as f:
+        info_str = f["problem/config"][()].decode()
         info = ast.literal_eval(info_str)
         return info

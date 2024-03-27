@@ -14,24 +14,24 @@ from ..util import load_amici_objective
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 optimizers = {
-    'scipy': [
-        'Nelder-Mead',
-        'Powell',
-        'CG',
-        'BFGS',
-        'Newton-CG',
-        'L-BFGS-B',
-        'TNC',
-        'COBYLA',
-        'SLSQP',
-        'trust-ncg',
-        'trust-exact',
-        'trust-krylov',
-        'ls_trf',
-        'ls_dogbox',
+    "scipy": [
+        "Nelder-Mead",
+        "Powell",
+        "CG",
+        "BFGS",
+        "Newton-CG",
+        "L-BFGS-B",
+        "TNC",
+        "COBYLA",
+        "SLSQP",
+        "trust-ncg",
+        "trust-exact",
+        "trust-krylov",
+        "ls_trf",
+        "ls_dogbox",
     ],
     # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    'pyswarm': [''],
+    "pyswarm": [""],
 }
 
 ATOL = 1e-2
@@ -40,7 +40,7 @@ RTOL = 1e-3
 
 class AmiciObjectiveTest(unittest.TestCase):
     def runTest(self):
-        for example in ['conversion_reaction']:
+        for example in ["conversion_reaction"]:
             objective, model = load_amici_objective(example)
             x0 = np.array(list(model.getParameters()))
 
@@ -82,21 +82,21 @@ class AmiciObjectiveTest(unittest.TestCase):
 
 
 def parameter_estimation(objective, library, solver, fixed_pars, n_starts):
-    if re.match(r'(?i)^(ls_)', solver):
-        options = {'max_nfev': 10}
+    if re.match(r"(?i)^(ls_)", solver):
+        options = {"max_nfev": 10}
     else:
-        options = {'maxiter': 10}
+        options = {"maxiter": 10}
 
-    if library == 'scipy':
+    if library == "scipy":
         optimizer = pypesto.optimize.ScipyOptimizer(
             method=solver, options=options
         )
-    elif library == 'pyswarm':
+    elif library == "pyswarm":
         optimizer = pypesto.optimize.PyswarmOptimizer(options=options)
     else:
         raise ValueError("This code should not be reached")
 
-    optimizer.temp_file = os.path.join('test', 'tmp_{index}.csv')
+    optimizer.temp_file = os.path.join("test", "tmp_{index}.csv")
 
     dim = len(objective.x_ids)
     lb = -2 * np.ones((1, dim))
@@ -126,7 +126,7 @@ def parameter_estimation(objective, library, solver, fixed_pars, n_starts):
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(AmiciObjectiveTest())
     unittest.main()

@@ -34,12 +34,12 @@ def test_evaluate(integrated):
 
 
 def _test_evaluate(struct):
-    obj = struct['obj']
-    x = struct['x']
-    fval_true = struct['fval']
-    grad_true = struct['grad']
-    hess_true = struct['hess']
-    max_sensi_order = struct['max_sensi_order']
+    obj = struct["obj"]
+    x = struct["x"]
+    fval_true = struct["fval"]
+    grad_true = struct["grad"]
+    hess_true = struct["hess"]
+    max_sensi_order = struct["max_sensi_order"]
 
     # check function values
     if max_sensi_order >= 2:
@@ -82,9 +82,9 @@ def test_return_type(integrated, max_sensi_order):
 
 
 def _test_return_type(struct):
-    obj = struct['obj']
-    x = struct['x']
-    max_sensi_order = struct['max_sensi_order']
+    obj = struct["obj"]
+    x = struct["x"]
+    max_sensi_order = struct["max_sensi_order"]
 
     ret = obj(x, (0,))
     assert isinstance(ret, numbers.Number)
@@ -112,9 +112,9 @@ def test_sensis(integrated, max_sensi_order):
 
 
 def _test_sensis(struct):
-    obj = struct['obj']
-    x = struct['x']
-    max_sensi_order = struct['max_sensi_order']
+    obj = struct["obj"]
+    x = struct["x"]
+    max_sensi_order = struct["max_sensi_order"]
 
     obj(x, (0,))
     if max_sensi_order >= 1:
@@ -134,7 +134,7 @@ def test_finite_difference_checks():
     Test the finite difference gradient check methods by expected relative
     error.
     """
-    x = sp.Symbol('x')
+    x = sp.Symbol("x")
 
     # Setup single-parameter objective function
     fun_expr = x**10
@@ -161,7 +161,7 @@ def test_finite_difference_checks():
         np.array([theta]), eps=eps, verbosity=False
     )
     np.testing.assert_almost_equal(
-        result_single_eps['rel_err'].squeeze(),
+        result_single_eps["rel_err"].squeeze(),
         rel_err(eps),
     )
 
@@ -172,7 +172,7 @@ def test_finite_difference_checks():
     )
 
     np.testing.assert_almost_equal(
-        result_multi_eps['rel_err'].squeeze(),
+        result_multi_eps["rel_err"].squeeze(),
         min(rel_err(_eps) for _eps in multi_eps),
     )
 
@@ -186,30 +186,30 @@ def test_aesara(max_sensi_order, integrated):
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
     # create aesara specific symbolic tensor variables
-    x = aet.specify_shape(aet.vector('x'), (2,))
+    x = aet.specify_shape(aet.vector("x"), (2,))
 
     # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.arcsinh(prob['x'])
+    x_ref = np.arcsinh(prob["x"])
 
     # compose rosenbrock function with sinh transformation
-    obj = AesaraObjective(prob['obj'], x, aet.sinh(x))
+    obj = AesaraObjective(prob["obj"], x, aet.sinh(x))
 
     # check function values and derivatives, also after copy
     for _obj in (obj, copy.deepcopy(obj)):
         # function value
-        assert _obj(x_ref) == prob['fval']
+        assert _obj(x_ref) == prob["fval"]
 
         # gradient
         if max_sensi_order > 0:
             assert np.allclose(
-                _obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
+                _obj(x_ref, sensi_orders=(1,)), prob["grad"] * np.cosh(x_ref)
             )
 
         # hessian
         if max_sensi_order > 1:
             assert np.allclose(
-                prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
-                + np.diag(prob['grad'] * np.sinh(x_ref)),
+                prob["hess"] * (np.diag(np.power(np.cosh(x_ref), 2)))
+                + np.diag(prob["grad"] * np.sinh(x_ref)),
                 _obj(x_ref, sensi_orders=(2,)),
             )
 
@@ -224,30 +224,30 @@ def test_jax(max_sensi_order, integrated):
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
     # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.arcsinh(prob['x'])
+    x_ref = np.arcsinh(prob["x"])
 
     def jac_op(x: jnp.array) -> jnp.array:
         return jax.lax.sinh(x)
 
     # compose rosenbrock function with sinh transformation
-    obj = JaxObjective(prob['obj'], jac_op)
+    obj = JaxObjective(prob["obj"], jac_op)
 
     # check function values and derivatives, also after copy
     for _obj in (obj, copy.deepcopy(obj)):
         # function value
-        assert _obj(x_ref) == prob['fval']
+        assert _obj(x_ref) == prob["fval"]
 
         # gradient
         if max_sensi_order > 0:
             assert np.allclose(
-                _obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
+                _obj(x_ref, sensi_orders=(1,)), prob["grad"] * np.cosh(x_ref)
             )
 
         # hessian
         if max_sensi_order > 1:
             assert np.allclose(
-                prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
-                + np.diag(prob['grad'] * np.sinh(x_ref)),
+                prob["hess"] * (np.diag(np.power(np.cosh(x_ref), 2)))
+                + np.diag(prob["grad"] * np.sinh(x_ref)),
                 _obj(x_ref, sensi_orders=(2,)),
             )
 
@@ -329,7 +329,7 @@ def test_fds(fd_method, fd_delta):
     p = problem.p_true
 
     # check that function values coincide (call delegated)
-    for attr in ['fval', 'res']:
+    for attr in ["fval", "res"]:
         val = getattr(obj, f"get_{attr}")(p)
         val_fd = getattr(obj_fd, f"get_{attr}")(p)
         val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
@@ -347,7 +347,7 @@ def test_fds(fd_method, fd_delta):
         atol = rtol = 1e-4
     else:
         atol = rtol = 1e-2
-    for attr in ['grad', 'hess', 'sres']:
+    for attr in ["grad", "hess", "sres"]:
         val = getattr(obj, f"get_{attr}")(p)
         val_fd = getattr(obj_fd, f"get_{attr}")(p)
         val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
@@ -361,7 +361,7 @@ def test_fds(fd_method, fd_delta):
         # cannot completely coincide
         assert (val != val_fd_grad).any(), attr
 
-        if attr == 'hess':
+        if attr == "hess":
             assert (val_fd != val_fd_grad).any(), attr
         # should use available actual functionality
         assert (val == val_fd_fake).all(), attr

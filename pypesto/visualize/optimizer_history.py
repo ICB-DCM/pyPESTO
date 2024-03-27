@@ -27,7 +27,7 @@ def optimizer_history(
     size: Tuple = (18.5, 10.5),
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
-    scale_y: str = 'log10',
+    scale_y: str = "log10",
     offset_y: Optional[float] = None,
     colors: Optional[Union[RGBA, List[RGBA]]] = None,
     y_limits: Optional[Union[float, List[float], np.ndarray]] = None,
@@ -125,12 +125,12 @@ def optimizer_history(
 
 def optimizer_history_lowlevel(
     vals: List[np.ndarray],
-    scale_y: str = 'log10',
+    scale_y: str = "log10",
     colors: Optional[Union[RGBA, List[RGBA]]] = None,
     ax: Optional[plt.Axes] = None,
     size: Tuple = (18.5, 10.5),
-    x_label: str = 'Optimizer steps',
-    y_label: str = 'Objective value',
+    x_label: str = "Optimizer steps",
+    y_label: str = "Objective value",
     legend_text: Optional[str] = None,
 ) -> plt.Axes:
     """
@@ -181,9 +181,9 @@ def optimizer_history_lowlevel(
         vals = np.asarray(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
             raise ValueError(
-                'If numpy array is passed directly to lowlevel '
-                'routine of optimizer_history, shape needs to '
-                'be 2 x n.'
+                "If numpy array is passed directly to lowlevel "
+                "routine of optimizer_history, shape needs to "
+                "be 2 x n."
             )
         fvals = [vals[1, -1]]
         vals = [vals]
@@ -209,7 +209,7 @@ def optimizer_history_lowlevel(
             tmp_legend = None
 
         # line plots
-        if scale_y == 'log10':
+        if scale_y == "log10":
             ax.semilogy(val[0, :], val[1, :], color=color, label=tmp_legend)
         else:
             ax.plot(val[0, :], val[1, :], color=color, label=tmp_legend)
@@ -217,7 +217,7 @@ def optimizer_history_lowlevel(
     # set labels
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    ax.set_title('Optimizer history')
+    ax.set_title("Optimizer history")
     if legend_text is not None:
         ax.legend()
 
@@ -389,23 +389,22 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
     Returns
     -------
     labels for x and y axes
-
     """
-    x_label = ''
-    y_label = ''
+    x_label = ""
+    y_label = ""
 
     if trace_x == TRACE_X_TIME:
-        x_label = 'Computation time [s]'
+        x_label = "Computation time [s]"
     else:
-        x_label = 'Optimizer steps'
+        x_label = "Optimizer steps"
 
     if trace_y == TRACE_Y_GRADNORM:
-        y_label = 'Gradient norm'
+        y_label = "Gradient norm"
     else:
-        y_label = 'Objective value'
+        y_label = "Objective value"
 
     if offset_y != 0:
-        y_label = 'Offsetted ' + y_label.lower()
+        y_label = "Offsetted " + y_label.lower()
 
     return x_label, y_label
 
@@ -461,7 +460,7 @@ def handle_options(
                 ax.plot(
                     [0, max_len],
                     [i_ref.fval + offset_y, i_ref.fval + offset_y],
-                    '--',
+                    "--",
                     color=i_ref.color,
                     label=i_ref.legend,
                 )
@@ -471,8 +470,8 @@ def handle_options(
                     ax.legend()
     else:
         logger.warning(
-            f'Reference point is currently only implemented for trace_y == '
-            f'{TRACE_Y_FVAL} and will not be plotted for trace_y == {trace_y}.'
+            f"Reference point is currently only implemented for trace_y == "
+            f"{TRACE_Y_FVAL} and will not be plotted for trace_y == {trace_y}."
         )
 
     return ax

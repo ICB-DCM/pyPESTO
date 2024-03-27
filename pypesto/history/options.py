@@ -68,7 +68,7 @@ class HistoryOptions(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
@@ -91,8 +91,8 @@ class HistoryOptions(dict):
 
     @staticmethod
     def assert_instance(
-        maybe_options: Union['HistoryOptions', dict],
-    ) -> 'HistoryOptions':
+        maybe_options: Union["HistoryOptions", dict],
+    ) -> "HistoryOptions":
         """
         Return a valid options object.
 

@@ -19,7 +19,7 @@ def optimization_run_properties_one_plot(
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     colors: Optional[Union[List[float], List[List[float]]]] = None,
     legends: Optional[Union[str, List[str]]] = None,
-    plot_type: str = 'line',
+    plot_type: str = "line",
 ) -> matplotlib.axes.Axes:
     """
     Plot stats for allproperties specified in properties_to_plot on one plot.
@@ -64,12 +64,12 @@ def optimization_run_properties_one_plot(
     """
     if properties_to_plot is None:
         properties_to_plot = [
-            'time',
-            'n_fval',
-            'n_grad',
-            'n_hess',
-            'n_res',
-            'n_sres',
+            "time",
+            "n_fval",
+            "n_grad",
+            "n_hess",
+            "n_res",
+            "n_sres",
         ]
 
     if colors is None:
@@ -79,8 +79,8 @@ def optimization_run_properties_one_plot(
 
     if len(colors) != len(properties_to_plot):
         raise ValueError(
-            'Number of RGBA colors should be the same as number '
-            'of optimization properties to plot'
+            "Number of RGBA colors should be the same as number "
+            "of optimization properties to plot"
         )
 
     if legends is None:
@@ -90,8 +90,8 @@ def optimization_run_properties_one_plot(
 
     if len(legends) != len(properties_to_plot):
         raise ValueError(
-            'Number of legends should be the same as number of '
-            'optimization properties to plot'
+            "Number of legends should be the same as number of "
+            "optimization properties to plot"
         )
 
     ax = plt.subplots()[1]
@@ -122,7 +122,7 @@ def optimization_run_properties_per_multistart(
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     colors: Optional[Union[List[float], List[List[float]]]] = None,
     legends: Optional[Union[str, List[str]]] = None,
-    plot_type: str = 'line',
+    plot_type: str = "line",
 ) -> Dict[str, plt.Subplot]:
     """
     One plot per optimization property in properties_to_plot.
@@ -176,12 +176,12 @@ def optimization_run_properties_per_multistart(
     """
     if properties_to_plot is None:
         properties_to_plot = [
-            'time',
-            'n_fval',
-            'n_grad',
-            'n_hess',
-            'n_res',
-            'n_sres',
+            "time",
+            "n_fval",
+            "n_grad",
+            "n_hess",
+            "n_res",
+            "n_sres",
         ]
 
     num_subplot = len(properties_to_plot)
@@ -217,7 +217,7 @@ def optimization_run_property_per_multistart(
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     colors: Optional[Union[List[float], List[List[float]]]] = None,
     legends: Optional[Union[str, List[str]]] = None,
-    plot_type: str = 'line',
+    plot_type: str = "line",
 ) -> matplotlib.axes.Axes:
     """
     Plot stats for an optimization run property specified by opt_run_property.
@@ -257,12 +257,12 @@ def optimization_run_property_per_multistart(
         The plot axes.
     """
     supported_properties = {
-        'time': 'Wall-clock time (seconds)',
-        'n_fval': 'Number of function evaluations',
-        'n_grad': 'Number of gradient evaluations',
-        'n_hess': 'Number of Hessian evaluations',
-        'n_res': 'Number of residuals evaluations',
-        'n_sres': 'Number of residual sensitivity evaluations',
+        "time": "Wall-clock time (seconds)",
+        "n_fval": "Number of function evaluations",
+        "n_grad": "Number of gradient evaluations",
+        "n_hess": "Number of Hessian evaluations",
+        "n_res": "Number of residuals evaluations",
+        "n_sres": "Number of residual sensitivity evaluations",
     }
 
     if opt_run_property not in supported_properties:
@@ -277,20 +277,20 @@ def optimization_run_property_per_multistart(
 
     # axes
     if axes is None:
-        ncols = 2 if plot_type == 'both' else 1
+        ncols = 2 if plot_type == "both" else 1
         fig, axes = plt.subplots(1, ncols)
         fig.set_size_inches(*size)
         fig.suptitle(
-            f'{supported_properties[opt_run_property]} per optimizer run'
+            f"{supported_properties[opt_run_property]} per optimizer run"
         )
     else:
         axes.set_title(
-            f'{supported_properties[opt_run_property]} per optimizer run'
+            f"{supported_properties[opt_run_property]} per optimizer run"
         )
 
     # loop over results
     for j, result in enumerate(results):
-        if plot_type == 'both':
+        if plot_type == "both":
             axes[0] = stats_lowlevel(
                 result,
                 opt_run_property,
@@ -309,7 +309,7 @@ def optimization_run_property_per_multistart(
                 start_indices,
                 colors[j],
                 legends[j],
-                plot_type='hist',
+                plot_type="hist",
             )
         else:
             axes = stats_lowlevel(
@@ -324,7 +324,7 @@ def optimization_run_property_per_multistart(
             )
 
     if sum((legend is not None for legend in legends)) > 0:
-        if plot_type == 'both':
+        if plot_type == "both":
             for ax in axes:
                 ax.legend()
         else:
@@ -339,9 +339,9 @@ def stats_lowlevel(
     axis_label: str,
     ax: matplotlib.axes.Axes,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    color: Union[str, List[float], List[List[float]]] = 'C0',
+    color: Union[str, List[float], List[List[float]]] = "C0",
     legend: Optional[str] = None,
-    plot_type: str = 'line',
+    plot_type: str = "line",
 ):
     """
     Plot values of the optimization run property across different multistarts.
@@ -391,7 +391,7 @@ def stats_lowlevel(
     sorted_indices = sorted(range(n_starts), key=lambda j: fvals[j])
     values = values[sorted_indices]
 
-    if plot_type == 'line':
+    if plot_type == "line":
         # plot line
         ax.plot(range(n_starts), values, color=[0.7, 0.7, 0.7, 0.6])
 
@@ -401,12 +401,12 @@ def stats_lowlevel(
                 tmp_legend = legend
             else:
                 tmp_legend = None
-            ax.scatter(i, v, color=colors[i], marker='o', label=tmp_legend)
-        ax.set_xlabel('Ordered optimizer run')
+            ax.scatter(i, v, color=colors[i], marker="o", label=tmp_legend)
+        ax.set_xlabel("Ordered optimizer run")
         ax.set_ylabel(axis_label)
     else:
-        ax.hist(values, color=color, bins='auto', label=legend)
+        ax.hist(values, color=color, bins="auto", label=legend)
         ax.set_xlabel(axis_label)
-        ax.set_ylabel('Number of multistarts')
+        ax.set_ylabel("Number of multistarts")
 
     return ax

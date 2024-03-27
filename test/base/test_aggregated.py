@@ -18,25 +18,25 @@ RTOL = 1e-4
 
 
 def convreact_for_funmode(max_sensi_order, x=None):
-    obj = load_amici_objective('conversion_reaction')[0]
+    obj = load_amici_objective("conversion_reaction")[0]
     return {
-        'obj': obj,
-        'max_sensi_order': max_sensi_order,
-        'x': x,
-        'fval': obj.get_fval(x),
-        'grad': obj.get_grad(x),
-        'hess': obj.get_hess(x),
+        "obj": obj,
+        "max_sensi_order": max_sensi_order,
+        "x": x,
+        "fval": obj.get_fval(x),
+        "grad": obj.get_grad(x),
+        "hess": obj.get_hess(x),
     }
 
 
 def convreact_for_resmode(max_sensi_order, x=None):
-    obj = load_amici_objective('conversion_reaction')[0]
+    obj = load_amici_objective("conversion_reaction")[0]
     return {
-        'obj': obj,
-        'max_sensi_order': max_sensi_order,
-        'x': x,
-        'res': obj.get_res(x),
-        'sres': obj.get_sres(x),
+        "obj": obj,
+        "max_sensi_order": max_sensi_order,
+        "x": x,
+        "res": obj.get_res(x),
+        "sres": obj.get_sres(x),
     }
 
 
@@ -58,10 +58,10 @@ def test_evaluate():
 
 
 def _test_evaluate_prior(struct):
-    x = struct['x']
-    prior_list = [get_parameter_prior_dict(0, 'normal', [0, 1], 'lin')]
+    x = struct["x"]
+    prior_list = [get_parameter_prior_dict(0, "normal", [0, 1], "lin")]
     obj = pypesto.objective.AggregatedObjective(
-        [struct['obj'], NegLogParameterPriors(prior_list)]
+        [struct["obj"], NegLogParameterPriors(prior_list)]
     )
     for mode, max_sensi_order in zip([MODE_RES, MODE_FUN], [1, 2]):
         sensi_orders = range(max_sensi_order + 1)
@@ -71,12 +71,12 @@ def _test_evaluate_prior(struct):
 
 
 def _test_evaluate_funmode(struct):
-    obj = pypesto.objective.AggregatedObjective([struct['obj'], struct['obj']])
-    x = struct['x']
-    fval_true = 2 * struct['fval']
-    grad_true = 2 * struct['grad']
-    hess_true = 2 * struct['hess']
-    max_sensi_order = struct['max_sensi_order']
+    obj = pypesto.objective.AggregatedObjective([struct["obj"], struct["obj"]])
+    x = struct["x"]
+    fval_true = 2 * struct["fval"]
+    grad_true = 2 * struct["grad"]
+    hess_true = 2 * struct["hess"]
+    max_sensi_order = struct["max_sensi_order"]
 
     # check function values
     if max_sensi_order >= 2:
@@ -118,11 +118,11 @@ def _test_evaluate_funmode(struct):
 
 
 def _test_evaluate_resmode(struct):
-    obj = pypesto.objective.AggregatedObjective([struct['obj'], struct['obj']])
-    x = struct['x']
-    res_true = np.hstack([struct['res'], struct['res']])
-    sres_true = np.vstack([struct['sres'], struct['sres']])
-    max_sensi_order = struct['max_sensi_order']
+    obj = pypesto.objective.AggregatedObjective([struct["obj"], struct["obj"]])
+    x = struct["x"]
+    res_true = np.hstack([struct["res"], struct["res"]])
+    sres_true = np.vstack([struct["sres"], struct["sres"]])
+    max_sensi_order = struct["max_sensi_order"]
 
     # check function values
     if max_sensi_order >= 1:
@@ -144,7 +144,7 @@ def _test_evaluate_resmode(struct):
 def test_exceptions():
     with pytest.raises(TypeError):
         pypesto.objective.AggregatedObjective(
-            rosen_for_sensi(2, False, [0, 1])['obj']
+            rosen_for_sensi(2, False, [0, 1])["obj"]
         )
     with pytest.raises(TypeError):
         pypesto.objective.AggregatedObjective([0.5])

@@ -22,11 +22,11 @@ from .test_sbml_conversion import ATOL, RTOL
 
 # In CI, bionetgen is installed here
 BNGPATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.8.5')
+    os.path.join(os.path.dirname(__file__), "..", "..", "BioNetGen-2.8.5")
 )
-if 'BNGPATH' not in os.environ:
+if "BNGPATH" not in os.environ:
     logging.warning(f"Env var BNGPATH was not set. Setting to {BNGPATH}")
-    os.environ['BNGPATH'] = BNGPATH
+    os.environ["BNGPATH"] = BNGPATH
 
 
 class PetabImportTest(unittest.TestCase):
@@ -40,7 +40,7 @@ class PetabImportTest(unittest.TestCase):
         for model_name in ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]:
             # test yaml import for one model:
             yaml_config = os.path.join(
-                models.MODELS_DIR, model_name, model_name + '.yaml'
+                models.MODELS_DIR, model_name, model_name + ".yaml"
             )
             petab_problem = petab.Problem.from_yaml(yaml_config)
             self.petab_problems.append(petab_problem)
@@ -98,15 +98,14 @@ class PetabImportTest(unittest.TestCase):
         for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
             obj = obj_edatas[0]
             optimizer = pypesto.optimize.ScipyOptimizer(
-                options={'maxiter': 10}
+                options={"maxiter": 10}
             )
             problem = importer.create_problem(obj)
-            startpoints = importer.create_startpoint_method()
+            problem.startpoint_method = importer.create_startpoint_method()
             result = pypesto.optimize.minimize(
                 problem=problem,
                 optimizer=optimizer,
                 n_starts=2,
-                startpoint_method=startpoints,
                 progress_bar=False,
             )
 
@@ -117,7 +116,7 @@ class PetabImportTest(unittest.TestCase):
         # Check gradients of simple model (should always be a true positive)
         model_name = "Bachmann_MSB2011"
         petab_problem = pypesto.petab.PetabImporter.from_yaml(
-            os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+            os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
         )
 
         objective = petab_problem.create_objective()
@@ -138,7 +137,7 @@ def test_plist_mapping():
     edata.plist)."""
     model_name = "Boehm_JProteomeRes2014"
     petab_problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
 
     # define test parameter
@@ -169,7 +168,7 @@ def test_max_sensi_order():
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
     problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
 
     # define test parameter
@@ -209,14 +208,14 @@ def test_max_sensi_order():
 
 
 def test_petab_pysb_optimization():
-    test_case = '0001'
+    test_case = "0001"
     test_case_dir = petabtests.get_case_dir(
-        test_case, version='v2.0.0', format_='pysb'
+        test_case, version="v2.0.0", format_="pysb"
     )
     petab_yaml = test_case_dir / petabtests.problem_yaml_name(test_case)
     # expected results
     solution = petabtests.load_solution(
-        test_case, format='pysb', version='v2.0.0'
+        test_case, format="pysb", version="v2.0.0"
     )
 
     petab_problem = petab.Problem.from_yaml(petab_yaml)
@@ -241,7 +240,7 @@ def test_petab_pysb_optimization():
     assert np.all(fvals <= -solution[petabtests.LLH])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(PetabImportTest())
     unittest.main()

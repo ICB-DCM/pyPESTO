@@ -119,13 +119,13 @@ class Objective(ObjectiveBase):
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
         info = super().get_config()
-        info['x_names'] = self.x_names
+        info["x_names"] = self.x_names
         sensi_order = 0
         while self.check_sensi_orders(
             sensi_orders=(sensi_order,), mode=MODE_FUN
         ):
             sensi_order += 1
-        info['sensi_order'] = sensi_order - 1
+        info["sensi_order"] = sensi_order - 1
         return info
 
     def call_unprocessed(

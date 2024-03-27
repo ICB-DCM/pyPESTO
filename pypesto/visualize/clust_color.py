@@ -152,9 +152,9 @@ def assign_colors(
 
     # Shape of array did not match n_vals. Error due to size mismatch:
     raise ValueError(
-        'Incorrect color input. Colors must be specified either as '
-        'list of `[r, g, b, alpha]` with length equal to that of `vals` '
-        f'(here: {n_vals}), or as a single `[r, g, b, alpha]`.'
+        "Incorrect color input. Colors must be specified either as "
+        "list of `[r, g, b, alpha]` with length equal to that of `vals` "
+        f"(here: {n_vals}), or as a single `[r, g, b, alpha]`."
     )
 
 
@@ -198,10 +198,10 @@ def assign_colors_for_list(
     # if the user specified color lies does not match the number of results
     if len(colors) != num_entries:
         raise (
-            'Incorrect color input. Colors must be specified either as '
-            'list of [r, g, b, alpha] with length equal to function '
-            'values Number of function (here: ' + str(num_entries) + '), '
-            'or as one single [r, g, b, alpha] color.'
+            "Incorrect color input. Colors must be specified either as "
+            "list of [r, g, b, alpha] with length equal to function "
+            "values Number of function (here: " + str(num_entries) + "), "
+            "or as one single [r, g, b, alpha] color."
         )
 
     return colors

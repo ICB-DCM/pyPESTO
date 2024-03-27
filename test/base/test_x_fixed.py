@@ -46,7 +46,7 @@ def test_optimize():
 
 
 def create_problem():
-    objective = rosen_for_sensi(2)['obj']
+    objective = rosen_for_sensi(2)["obj"]
     lb = [-3, -3, -3, -3, -3]
     ub = [3, 3, 3, 3, 3]
     x_fixed_indices = [1, 3]

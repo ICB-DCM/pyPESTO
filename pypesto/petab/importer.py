@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 import shutil
@@ -53,10 +52,12 @@ from ..startpoint import CheckedStartpoints, StartpointMethod
 
 try:
     import amici
-    import amici.parameter_mapping
-    import amici.petab_import
-    import amici.petab_objective
+    import amici.petab
+    import amici.petab.conditions
+    import amici.petab.parameter_mapping
+    import amici.petab.simulations
     import petab
+    from amici.petab.import_helpers import check_model
     from petab.C import (
         ESTIMATE,
         NOISE_PARAMETERS,
@@ -331,7 +332,7 @@ class PetabImporter(AmiciObjectBuilder):
             module_name=self.model_name, module_path=self.output_folder
         )
         model = module.getModel()
-        amici.petab_import.check_model(
+        check_model(
             amici_model=model,
             petab_problem=self.petab_problem,
         )
@@ -353,7 +354,7 @@ class PetabImporter(AmiciObjectBuilder):
         # try to import (in particular checks version)
         try:
             # importing will already raise an exception if version wrong
-            importlib.import_module(self.model_name)
+            amici.import_model_module(self.model_name, self.output_folder)
         except ModuleNotFoundError:
             return True
         except amici.AmiciVersionError as e:
@@ -382,7 +383,7 @@ class PetabImporter(AmiciObjectBuilder):
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        amici.petab_import.import_petab_problem(
+        amici.petab.import_petab_problem(
             petab_problem=self.petab_problem,
             model_name=self.model_name,
             model_output_dir=self.output_folder,
@@ -413,7 +414,7 @@ class PetabImporter(AmiciObjectBuilder):
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        return amici.petab_objective.create_edatas(
+        return amici.petab.conditions.create_edatas(
             amici_model=model,
             petab_problem=self.petab_problem,
             simulation_conditions=simulation_conditions,
@@ -472,12 +473,14 @@ class PetabImporter(AmiciObjectBuilder):
                 model=model, simulation_conditions=simulation_conditions
             )
 
-        parameter_mapping = amici.petab_objective.create_parameter_mapping(
-            petab_problem=self.petab_problem,
-            simulation_conditions=simulation_conditions,
-            scaled_parameters=True,
-            amici_model=model,
-            fill_fixed_parameters=False,
+        parameter_mapping = (
+            amici.petab.parameter_mapping.create_parameter_mapping(
+                petab_problem=self.petab_problem,
+                simulation_conditions=simulation_conditions,
+                scaled_parameters=True,
+                amici_model=model,
+                fill_fixed_parameters=False,
+            )
         )
 
         par_ids = self.petab_problem.x_ids
@@ -487,7 +490,7 @@ class PetabImporter(AmiciObjectBuilder):
         problem_parameters = dict(
             zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
         )
-        amici.parameter_mapping.fill_in_parameters(
+        amici.petab.conditions.fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
             scaled_parameters=True,
@@ -502,7 +505,7 @@ class PetabImporter(AmiciObjectBuilder):
             self._non_quantitative_data_types is not None
             and self._hierarchical
         ):
-            inner_options = kwargs.pop('inner_options', None)
+            inner_options = kwargs.pop("inner_options", None)
             inner_options = (
                 inner_options
                 if inner_options is not None
@@ -518,15 +521,17 @@ class PetabImporter(AmiciObjectBuilder):
             amici_reporting = amici.RDataReporting.full
 
             # FIXME: currently not supported with hierarchical
-            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
+            if "guess_steadystate" in kwargs and kwargs["guess_steadystate"]:
                 warnings.warn(
-                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
+                    "`guess_steadystate` not supported with hierarchical "
+                    "optimization. Disabling `guess_steadystate`.",
+                    stacklevel=1,
                 )
-            kwargs['guess_steadystate'] = False
+            kwargs["guess_steadystate"] = False
             inner_parameter_ids = calculator.get_inner_par_ids()
             par_ids = [x for x in par_ids if x not in inner_parameter_ids]
 
-        max_sensi_order = kwargs.get('max_sensi_order', None)
+        max_sensi_order = kwargs.get("max_sensi_order", None)
 
         if (
             self._non_quantitative_data_types is not None
@@ -622,11 +627,9 @@ class PetabImporter(AmiciObjectBuilder):
 
         # create a identifiers of preequilibration and simulation condition ids
         # which can then be stored in the prediction result
-        edata_conditions = (
-            objective.amici_object_builder.petab_problem.get_simulation_conditions_from_measurement_df()
-        )
+        edata_conditions = objective.amici_object_builder.petab_problem.get_simulation_conditions_from_measurement_df()
         if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
-            preeq_dummy = [''] * edata_conditions.shape[0]
+            preeq_dummy = [""] * edata_conditions.shape[0]
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
         edata_conditions.drop_duplicates(inplace=True)
 
@@ -674,7 +677,7 @@ class PetabImporter(AmiciObjectBuilder):
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[
                             x_id, petab.OBJECTIVE_PRIOR_PARAMETERS
-                        ].split(';')
+                        ].split(";")
                     ]
 
                     scale = self.petab_problem.parameter_df.loc[
@@ -836,7 +839,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         measurement_df = self.petab_problem.measurement_df
 
-        return amici.petab_objective.rdatas_to_measurement_df(
+        return amici.petab.simulations.rdatas_to_measurement_df(
             rdatas, model, measurement_df
         )
 

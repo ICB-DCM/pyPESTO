@@ -55,7 +55,7 @@ class ObjectiveBase(ABC):
         self.pre_post_processor = PrePostProcessor()
         self.history = NoHistory()
 
-    def __deepcopy__(self, memodict=None) -> 'ObjectiveBase':
+    def __deepcopy__(self, memodict=None) -> "ObjectiveBase":
         """Create deepcopy of objective object."""
         other = type(self)()  # maintain type for derived classes
         for attr, val in self.__dict__.items():
@@ -260,7 +260,7 @@ class ObjectiveBase(ABC):
 
         Return it as a dictionary.
         """
-        info = {'type': self.__class__.__name__}
+        info = {"type": self.__class__.__name__}
         return info
 
     def check_sensi_orders(
@@ -418,7 +418,7 @@ class ObjectiveBase(ABC):
         self,
         *args,
         multi_eps: Optional[Iterable] = None,
-        label: str = 'rel_err',
+        label: str = "rel_err",
         **kwargs,
     ):
         """
@@ -439,10 +439,10 @@ class ObjectiveBase(ABC):
             Valid options are the column labels of the dataframe returned by
             the `ObjectiveBase.check_grad` method.
         """
-        if 'eps' in kwargs:
+        if "eps" in kwargs:
             raise KeyError(
-                'Please use the `multi_eps` (not the `eps`) argument with '
-                '`check_grad_multi_eps` to specify step sizes.'
+                "Please use the `multi_eps` (not the `eps`) argument with "
+                "`check_grad_multi_eps` to specify step sizes."
             )
 
         if multi_eps is None:
@@ -456,7 +456,7 @@ class ObjectiveBase(ABC):
         # the step size (`eps`) that produced the smallest error (`label`).
         combined_result = None
         for eps, result in results.items():
-            result['eps'] = eps
+            result["eps"] = eps
             if combined_result is None:
                 combined_result = result
                 continue
@@ -574,14 +574,14 @@ class ObjectiveBase(ABC):
             # log for dimension ix
             if verbosity > 1:
                 logger.info(
-                    f'index:    {ix}\n'
-                    f'grad:     {grad_ix}\n'
-                    f'fd_f:     {fd_f_ix}\n'
-                    f'fd_b:     {fd_b_ix}\n'
-                    f'fd_c:     {fd_c_ix}\n'
-                    f'fd_err:   {fd_err_ix}\n'
-                    f'abs_err:  {abs_err_ix}\n'
-                    f'rel_err:  {rel_err_ix}\n'
+                    f"index:    {ix}\n"
+                    f"grad:     {grad_ix}\n"
+                    f"fd_f:     {fd_f_ix}\n"
+                    f"fd_b:     {fd_b_ix}\n"
+                    f"fd_c:     {fd_c_ix}\n"
+                    f"fd_err:   {fd_err_ix}\n"
+                    f"abs_err:  {abs_err_ix}\n"
+                    f"rel_err:  {rel_err_ix}\n"
                 )
 
             # append to lists
@@ -600,24 +600,24 @@ class ObjectiveBase(ABC):
 
         # create data dictionary for dataframe
         data = {
-            'grad': grad_list,
-            'fd_f': fd_f_list,
-            'fd_b': fd_b_list,
-            'fd_c': fd_c_list,
-            'fd_err': fd_err_list,
-            'abs_err': abs_err_list,
-            'rel_err': rel_err_list,
+            "grad": grad_list,
+            "fd_f": fd_f_list,
+            "fd_b": fd_b_list,
+            "fd_c": fd_c_list,
+            "fd_err": fd_err_list,
+            "abs_err": abs_err_list,
+            "rel_err": rel_err_list,
         }
 
         # update data dictionary if detailed output is requested
         if detailed:
             prefix_data = {
-                'fval': [fval] * len(x_indices),
-                'fval_p': fval_p_list,
-                'fval_m': fval_m_list,
+                "fval": [fval] * len(x_indices),
+                "fval_p": fval_p_list,
+                "fval_m": fval_m_list,
             }
-            std_str = '(grad-fd_c)/std({fd_f,fd_b,fd_c})'
-            mean_str = '|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)'
+            std_str = "(grad-fd_c)/std({fd_f,fd_b,fd_c})"
+            mean_str = "|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)"
             postfix_data = {
                 std_str: std_check_list,
                 mean_str: mean_check_list,
@@ -628,7 +628,7 @@ class ObjectiveBase(ABC):
         result = pd.DataFrame(
             data=data,
             index=[
-                self.x_names[ix] if self.x_names is not None else f'x_{ix}'
+                self.x_names[ix] if self.x_names is not None else f"x_{ix}"
                 for ix in x_indices
             ],
         )

@@ -98,7 +98,7 @@ def test_storage_problem(hdf5_file):
     problem_attrs = [
         value
         for name, value in vars(ProblemHDF5Writer).items()
-        if not name.startswith('_') and not callable(value)
+        if not name.startswith("_") and not callable(value)
     ]
     for attr in problem_attrs:
         if isinstance(problem.__dict__[attr], np.ndarray):
@@ -132,8 +132,8 @@ def test_storage_trace(hdf5_file):
         objective=objective2, lb=lb, ub=ub, x_guesses=startpoints
     )
 
-    optimizer1 = optimize.ScipyOptimizer(options={'maxiter': 10})
-    optimizer2 = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer1 = optimize.ScipyOptimizer(options={"maxiter": 10})
+    optimizer2 = optimize.ScipyOptimizer(options={"maxiter": 10})
 
     history_options_hdf5 = pypesto.HistoryOptions(
         trace_record=True, storage_file=hdf5_file
@@ -163,10 +163,10 @@ def test_storage_trace(hdf5_file):
     )
     for mem_res in result_memory.optimize_result.list:
         for hdf_res in result_hdf5.optimize_result.list:
-            if mem_res['id'] == hdf_res['id']:
+            if mem_res["id"] == hdf_res["id"]:
                 for entry in history_entries:
                     hdf5_entry_trace = getattr(
-                        hdf_res['history'], f'get_{entry}_trace'
+                        hdf_res["history"], f"get_{entry}_trace"
                     )()
                     for iteration in range(len(hdf5_entry_trace)):
                         # comparing nan and None difficult
@@ -177,7 +177,7 @@ def test_storage_trace(hdf5_file):
                             continue
                         np.testing.assert_array_equal(
                             getattr(
-                                mem_res['history'], f'get_{entry}_trace'
+                                mem_res["history"], f"get_{entry}_trace"
                             )()[iteration],
                             hdf5_entry_trace[iteration],
                         )
@@ -220,7 +220,7 @@ def test_storage_profiling():
         progress_bar=False,
     )
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         pypesto_profile_writer = ProfileResultHDF5Writer(fn)
         pypesto_profile_writer.write(profile_original)
@@ -230,7 +230,7 @@ def test_storage_profiling():
         for key in profile_original.profile_result.list[0][0].keys():
             if (
                 profile_original.profile_result.list[0][0].keys is None
-                or key == 'time_path'
+                or key == "time_path"
             ):
                 continue
             elif isinstance(
@@ -281,11 +281,11 @@ def test_storage_sampling():
         n_starts=n_starts,
         progress_bar=False,
     )
-    x_0 = result_optimization.optimize_result[0]['x']
+    x_0 = result_optimization.optimize_result[0]["x"]
     sampler = sample.AdaptiveParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
         n_chains=1,
     )
@@ -296,7 +296,7 @@ def test_storage_sampling():
         x0=[x_0],
     )
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         pypesto_sample_writer = SamplingResultHDF5Writer(fn)
         pypesto_sample_writer.write(sample_original)
@@ -304,7 +304,7 @@ def test_storage_sampling():
         sample_read = pypesto_sample_reader.read()
 
         for key in sample_original.sample_result.keys():
-            if sample_original.sample_result[key] is None or key == 'time':
+            if sample_original.sample_result[key] is None or key == "time":
                 continue
             elif isinstance(sample_original.sample_result[key], np.ndarray):
                 np.testing.assert_array_equal(
@@ -356,7 +356,7 @@ def test_storage_all():
     # Sampling
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         }
     )
     result = sample.sample(
@@ -366,7 +366,7 @@ def test_storage_all():
         result=result,
     )
     # Read and write
-    filename = 'test_file.hdf5'
+    filename = "test_file.hdf5"
     try:
         write_result(result=result, filename=filename)
         result_read = read_result(filename=filename)
@@ -374,7 +374,7 @@ def test_storage_all():
         # test optimize
         for i, opt_res in enumerate(result.optimize_result.list):
             for key in opt_res:
-                if key == 'history':
+                if key == "history":
                     continue
                 if isinstance(opt_res[key], np.ndarray):
                     np.testing.assert_array_equal(
@@ -387,7 +387,7 @@ def test_storage_all():
         for key in result.profile_result.list[0][0].keys():
             if (
                 result.profile_result.list[0][0].keys is None
-                or key == 'time_path'
+                or key == "time_path"
             ):
                 continue
             elif isinstance(result.profile_result.list[0][0][key], np.ndarray):
@@ -403,7 +403,7 @@ def test_storage_all():
 
         # test sample
         for key in result.sample_result.keys():
-            if result.sample_result[key] is None or key == 'time':
+            if result.sample_result[key] is None or key == "time":
                 continue
             elif isinstance(result.sample_result[key], np.ndarray):
                 np.testing.assert_array_equal(
@@ -426,11 +426,11 @@ def test_storage_objective_config():
     of the objective function.
     """
     # create a problem with a function objective
-    problem_fun = create_problem(2, x_names=['a', 'b'])
+    problem_fun = create_problem(2, x_names=["a", "b"])
     # create a problem with amici Objective
     problem_amici = create_petab_problem()
     # put together into aggregated objective
-    problem_agg = create_problem(2, x_names=['a', 'b'])
+    problem_agg = create_problem(2, x_names=["a", "b"])
     objective_agg = pypesto.objective.AggregatedObjective(
         objectives=[problem_fun.objective, problem_amici.objective]
     )
@@ -439,7 +439,7 @@ def test_storage_objective_config():
     config_amici = problem_amici.objective.get_config()
     config_agg = objective_agg.get_config()
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         writer = ProblemHDF5Writer(fn)
         writer.write(problem=problem_fun, overwrite=True)
@@ -455,7 +455,7 @@ def test_storage_objective_config():
         for key in config_amici:
             assert config_amici[key] == config_amici_r[key]
         for key in config_agg_r:
-            if key == 'type':
+            if key == "type":
                 assert config_agg[key] == config_agg_r[key]
             else:
                 assert len(config_agg_r[key]) == len(config_fun_r) or len(

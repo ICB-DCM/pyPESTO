@@ -125,10 +125,13 @@ class EnsemblePrediction:
         yield PREDICTION_ID, self.prediction_id
         yield PREDICTION_RESULTS, self.prediction_results
         yield PREDICTION_ARRAYS, self.prediction_arrays
-        yield PREDICTION_SUMMARY, {
-            i_key: dict(self.prediction_summary[i_key])
-            for i_key in self.prediction_summary.keys()
-        }
+        yield (
+            PREDICTION_SUMMARY,
+            {
+                i_key: dict(self.prediction_summary[i_key])
+                for i_key in self.prediction_summary.keys()
+            },
+        )
         yield LOWER_BOUND, self.lower_bound
         yield UPPER_BOUND, self.upper_bound
 
@@ -219,14 +222,14 @@ class EnsemblePrediction:
         # check if prediction results are available
         if not self.prediction_results:
             raise ArithmeticError(
-                'Cannot compute summary statistics from '
-                'empty prediction results.'
+                "Cannot compute summary statistics from "
+                "empty prediction results."
             )
         # if weightings shall be used, check whether weights are there
         if weighting:
             if not self.prediction_results[0].conditions[0].output_weight:
                 raise ValueError(
-                    'There are no weights in the prediction results.'
+                    "There are no weights in the prediction results."
                 )
 
         n_conditions = len(self.prediction_results[0].conditions)
@@ -432,7 +435,7 @@ class EnsemblePrediction:
                     weighting=True, compute_weighted_sigma=True
                 )
             except TypeError:
-                raise ValueError('Computing a summary failed.')
+                raise ValueError("Computing a summary failed.") from None
         n_conditions = len(self.prediction_results[0].conditions)
         chi_2 = []
         for i_cond in range(n_conditions):
@@ -452,8 +455,8 @@ class EnsemblePrediction:
             )
             if y_meas.shape != mean_traj.shape:
                 raise ValueError(
-                    'Shape of trajectory and shape '
-                    'of measurements does not match.'
+                    "Shape of trajectory and shape "
+                    "of measurements does not match."
                 )
             chi_2.append(
                 np.nansum(((y_meas - mean_traj) / weighted_sigmas) ** 2)
@@ -540,7 +543,7 @@ class Ensemble:
         if x_names is not None:
             self.x_names = x_names
         else:
-            self.x_names = [f'x_{ix}' for ix in range(self.n_x)]
+            self.x_names = [f"x_{ix}" for ix in range(self.n_x)]
 
         # Do we have predictions for this ensemble?
         self.predictions = []
@@ -642,8 +645,8 @@ class Ensemble:
             abs_cutoff = result.optimize_result[0].fval + rel_cutoff
             if percentile is not None:
                 logger.warning(
-                    'percentile is going to be ignored as '
-                    'rel_cutoff is not `None`.'
+                    "percentile is going to be ignored as "
+                    "rel_cutoff is not `None`."
                 )
         else:
             abs_cutoff = calculate_cutoff(result=result, percentile=percentile)
@@ -658,32 +661,32 @@ class Ensemble:
             # did not reach maximum size and the next value is still
             # lower than the cutoff value
             if (
-                start['fval'] <= abs_cutoff
+                start["fval"] <= abs_cutoff
                 and len(x_vectors) < max_size
                 # 'x' can be None if optimization failed at the startpoint
-                and start['x'] is not None
+                and start["x"] is not None
             ):
-                x_vectors.append(start['x'][result.problem.x_free_indices])
+                x_vectors.append(start["x"][result.problem.x_free_indices])
 
                 # the vector tag will be a -1 to indicate it is the last step
-                vector_tags.append((int(start['id']), -1))
+                vector_tags.append((int(start["id"]), -1))
             else:
                 break
 
         # print a warning if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError(
-                'The ensemble does not contain any vectors. '
-                'Either the cutoff value was too small\n or the '
-                'result.optimize_result object might be empty.'
+                "The ensemble does not contain any vectors. "
+                "Either the cutoff value was too small\n or the "
+                "result.optimize_result object might be empty."
             )
         elif len(x_vectors) < max_size:
             logger.info(
-                f'The ensemble contains {len(x_vectors)} parameter '
-                'vectors, which is less than the maximum size.\nIf '
-                'you want to include more \nvectors, you can consider '
-                'raising the cutoff value or including parameters '
-                'from \nthe history with the `from_history` function.'
+                f"The ensemble contains {len(x_vectors)} parameter "
+                "vectors, which is less than the maximum size.\nIf "
+                "you want to include more \nvectors, you can consider "
+                "raising the cutoff value or including parameters "
+                "from \nthe history with the `from_history` function."
             )
 
         x_vectors = np.stack(x_vectors, axis=1)
@@ -742,11 +745,11 @@ class Ensemble:
             abs_cutoff = result.optimize_result[0].fval + rel_cutoff
         else:
             abs_cutoff = calculate_cutoff(result=result, percentile=percentile)
-        if not result.optimize_result.list[0].history.options['trace_record']:
+        if not result.optimize_result.list[0].history.options["trace_record"]:
             logger.warning(
-                'The optimize result has no trace. The Ensemble '
-                'will automatically be created through '
-                'from_optimization_endpoints().'
+                "The optimize result has no trace. The Ensemble "
+                "will automatically be created through "
+                "from_optimization_endpoints()."
             )
             return Ensemble.from_optimization_endpoints(
                 result=result,
@@ -764,7 +767,7 @@ class Ensemble:
 
         # calculate the number of starts whose final nllh is below cutoff
         n_starts = sum(
-            start['fval'] <= abs_cutoff
+            start["fval"] <= abs_cutoff
             for start in result.optimize_result.list
         )
 
@@ -797,7 +800,7 @@ class Ensemble:
             x_vectors.extend([x_trace[start][ind] for ind in indices])
             vector_tags.extend(
                 [
-                    (int(result.optimize_result.list[start]['id']), ind)
+                    (int(result.optimize_result.list[start]["id"]), ind)
                     for ind in indices
                 ]
             )
@@ -805,10 +808,10 @@ class Ensemble:
         # raise a `ValueError` if there are no vectors within the ensemble
         if len(x_vectors) == 0:
             raise ValueError(
-                'The ensemble does not contain any vectors. '
-                'Either the `cutoff` value was too \nsmall '
-                'or the `result.optimize_result` object might '
-                'be empty.'
+                "The ensemble does not contain any vectors. "
+                "Either the `cutoff` value was too \nsmall "
+                "or the `result.optimize_result` object might "
+                "be empty."
             )
 
         x_vectors = np.stack(x_vectors, axis=1)
@@ -1034,33 +1037,33 @@ class Ensemble:
             perc_list = [
                 int(i_key[11:])
                 for i_key in self.summary.keys()
-                if i_key[0:4] == 'perc'
+                if i_key[0:4] == "perc"
             ]
             perc_lower = [perc for perc in perc_list if perc < 50]
             perc_upper = [perc for perc in perc_list if perc > 50]
 
             # create dict of identifiability
             tmp_identifiability = {
-                'parameterId': x_name,
-                'lowerBound': lb,
-                'upperBound': ub,
-                'ensemble_mean': mean,
-                'ensemble_std': std,
-                'ensemble_median': median,
-                'within lb: 1 std': lb < mean - std,
-                'within ub: 1 std': ub > mean + std,
-                'within lb: 2 std': lb < mean - 2 * std,
-                'within ub: 2 std': ub > mean + 2 * std,
-                'within lb: 3 std': lb < mean - 3 * std,
-                'within ub: 3 std': ub > mean + 3 * std,
+                "parameterId": x_name,
+                "lowerBound": lb,
+                "upperBound": ub,
+                "ensemble_mean": mean,
+                "ensemble_std": std,
+                "ensemble_median": median,
+                "within lb: 1 std": lb < mean - std,
+                "within ub: 1 std": ub > mean + std,
+                "within lb: 2 std": lb < mean - 2 * std,
+                "within ub: 2 std": ub > mean + 2 * std,
+                "within lb: 3 std": lb < mean - 3 * std,
+                "within ub: 3 std": ub > mean + 3 * std,
             }
             # handle percentiles
             for perc in perc_lower:
-                tmp_identifiability[f'within lb: perc {perc}'] = (
+                tmp_identifiability[f"within lb: perc {perc}"] = (
                     lb < self.summary[get_percentile_label(perc)][ix]
                 )
             for perc in perc_upper:
-                tmp_identifiability[f'within ub: perc {perc}'] = (
+                tmp_identifiability[f"within ub: perc {perc}"] = (
                     ub > self.summary[get_percentile_label(perc)][ix]
                 )
 
@@ -1069,14 +1072,14 @@ class Ensemble:
         # create DataFrame
         parameter_identifiability = pd.DataFrame(parameter_identifiability)
         parameter_identifiability.index = parameter_identifiability[
-            'parameterId'
+            "parameterId"
         ]
 
         return parameter_identifiability
 
 
 def entries_per_start(
-    fval_traces: list['np.ndarray'],
+    fval_traces: list["np.ndarray"],
     cutoff: float,
     max_size: int,
     max_per_start: int,
@@ -1191,12 +1194,12 @@ def get_percentile_label(percentile: Union[float, int, str]) -> str:
         if percentile == round(percentile):
             percentile = round(percentile)
     if isinstance(percentile, float):
-        percentile_str = f'{percentile:.2f}'
+        percentile_str = f"{percentile:.2f}"
         # Add `...` to the label if the percentile value changed after rounding
         if float(percentile_str) != percentile:
-            percentile_str += '...'
+            percentile_str += "..."
         percentile = percentile_str
-    return f'{PERCENTILE} {percentile}'
+    return f"{PERCENTILE} {percentile}"
 
 
 def calculate_cutoff(

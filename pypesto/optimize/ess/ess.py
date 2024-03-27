@@ -22,7 +22,7 @@ from .refset import RefSet
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['ESSOptimizer', 'ESSExitFlag']
+__all__ = ["ESSOptimizer", "ESSExitFlag"]
 
 
 class ESSExitFlag(int, enum.Enum):
@@ -167,11 +167,12 @@ class ESSOptimizer:
         self.x_best: Optional[np.array] = None
         # Overall best function value found so far
         self.fx_best: float = np.inf
-        # Results from local searches
+        # Results from local searches (only those with finite fval)
         self.local_solutions: list[OptimizerResult] = []
         # Index of current iteration
         self.n_iter: int = 0
         # ESS iteration at which the last local search took place
+        # (only local searches with a finite result are counted)
         self.last_local_search_niter: int = 0
         # Whether self.x_best has changed in the current iteration
         self.x_best_has_changed: bool = False
@@ -192,8 +193,10 @@ class ESSOptimizer:
         """
         if startpoint_method is not None:
             warn(
-                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                "Passing `startpoint_method` directly is deprecated, "
+                "use `problem.startpoint_method` instead.",
                 DeprecationWarning,
+                stacklevel=1,
             )
 
         self._initialize()
@@ -301,12 +304,12 @@ class ESSOptimizer:
         Currently, this returns the overall best value and the final RefSet.
         """
         common_result_fields = {
-            'exitflag': self.exit_flag,
+            "exitflag": self.exit_flag,
             # meaningful? this is the overall time, and identical for all
             #  reported points
-            'time': time.time() - self.starttime,
-            'n_fval': self.evaluator.n_eval,
-            'optimizer': str(self),
+            "time": time.time() - self.starttime,
+            "n_fval": self.evaluator.n_eval,
+            "optimizer": str(self),
         }
         i_result = 0
         result = pypesto.Result(problem=self.evaluator.problem)
@@ -467,14 +470,14 @@ class ESSOptimizer:
             self.logger.debug("Local search only from best point.")
             local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         # first local search?
-        elif not self.local_solutions and self.n_iter >= self.local_n1:
+        elif self.n_iter == self.local_n1:
             self.logger.debug(
                 "First local search from best point due to "
                 f"local_n1={self.local_n1}."
             )
             local_search_x0_fx0_candidates = ((self.x_best, self.fx_best),)
         elif (
-            self.local_solutions
+            self.n_iter >= self.local_n1
             and self.n_iter - self.last_local_search_niter >= self.local_n2
         ):
             quality_order = np.argsort(fx_best_children)
@@ -541,6 +544,11 @@ class ESSOptimizer:
                     optimizer_result.fval,
                 )
                 break
+        else:
+            self.logger.debug(
+                "Local search: No finite value found in any local search."
+            )
+            return
 
         self.last_local_search_niter = self.n_iter
         self.evaluator.reset_round_counter()
@@ -616,7 +624,7 @@ class ESSOptimizer:
     def _report_iteration(self):
         """Log the current iteration."""
         if self.n_iter == 0:
-            self.logger.info("iter | best | nf | refset         |")
+            self.logger.info("iter | best | nf | refset         | nlocal")
 
         with np.printoptions(
             edgeitems=5,

@@ -24,7 +24,7 @@ def waterfall(
     ax: Optional[plt.Axes] = None,
     size: Optional[tuple[float, float]] = (18.5, 10.5),
     y_limits: Optional[Tuple[float]] = None,
-    scale_y: Optional[str] = 'log10',
+    scale_y: Optional[str] = "log10",
     offset_y: Optional[float] = None,
     start_indices: Optional[Union[Sequence[int], int]] = None,
     n_starts_to_zoom: int = 0,
@@ -85,7 +85,7 @@ def waterfall(
     if n_starts_to_zoom:
         # create zoom in
         inset_axes = inset_locator.inset_axes(
-            ax, width="30%", height="30%", loc='center right'
+            ax, width="30%", height="30%", loc="center right"
         )
         inset_locator.mark_inset(ax, inset_axes, loc1=2, loc2=4)
     else:
@@ -175,12 +175,12 @@ def waterfall(
     if any(legends):
         ax.legend()
     # labels
-    ax.set_xlabel('Ordered optimizer run')
+    ax.set_xlabel("Ordered optimizer run")
     if offset_y == 0.0:
-        ax.set_ylabel('Function value')
+        ax.set_ylabel("Function value")
     else:
-        ax.set_ylabel(f'Objective value (offset={offset_y:0.3e})')
-    ax.set_title('Waterfall plot')
+        ax.set_ylabel(f"Objective value (offset={offset_y:0.3e})")
+    ax.set_title("Waterfall plot")
     return ax
 
 
@@ -188,7 +188,7 @@ def waterfall_lowlevel(
     fvals,
     ax: Optional[plt.Axes] = None,
     size: Optional[Tuple[float]] = (18.5, 10.5),
-    scale_y: str = 'log10',
+    scale_y: str = "log10",
     offset_y: float = 0.0,
     colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
     legend_text: Optional[str] = None,
@@ -239,7 +239,7 @@ def waterfall_lowlevel(
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     # plot line
-    if scale_y == 'log10':
+    if scale_y == "log10":
         ax.semilogy(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
     else:
         ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
@@ -255,18 +255,18 @@ def waterfall_lowlevel(
             tmp_legend = None
 
         # line plot (linear or logarithmic)
-        if scale_y == 'log10':
+        if scale_y == "log10":
             ax.semilogy(
-                j, fval, color=color, marker='o', label=tmp_legend, alpha=1.0
+                j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0
             )
         else:
             ax.plot(
-                j, fval, color=color, marker='o', label=tmp_legend, alpha=1.0
+                j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0
             )
 
     # check if y-axis has a reasonable scale
     y_min, y_max = ax.get_ylim()
-    if scale_y == 'log10':
+    if scale_y == "log10":
         if np.log10(y_max) - np.log10(y_min) < 1.0:
             ax.set_ylim(
                 ax.dataLim.y0 - 0.001 * abs(ax.dataLim.y0),
@@ -278,12 +278,12 @@ def waterfall_lowlevel(
             ax.set_ylim(y_mean - 0.5, y_mean + 0.5)
 
     # labels
-    ax.set_xlabel('Ordered optimizer run')
+    ax.set_xlabel("Ordered optimizer run")
     if offset_y == 0.0:
-        ax.set_ylabel('Function value')
+        ax.set_ylabel("Function value")
     else:
-        ax.set_ylabel('Objective value (offset={offset_y:0.3e})')
-    ax.set_title('Waterfall plot')
+        ax.set_ylabel("Objective value (offset={offset_y:0.3e})")
+    ax.set_title("Waterfall plot")
     if legend_text is not None:
         ax.legend()
 
@@ -337,7 +337,7 @@ def process_offset_for_list(
 
     # if there are references, also account for those
     if references:
-        min_val = min(min_val, np.nanmin([r['fval'] for r in references]))
+        min_val = min(min_val, np.nanmin([r["fval"] for r in references]))
 
     offset_y = process_offset_y(offset_y, scale_y, float(min_val))
 
@@ -430,7 +430,7 @@ def handle_options(ax, max_len_fvals, ref, y_limits, offset_y):
         ax.plot(
             [0, max_len_fvals - 1],
             [i_ref.fval + offset_y, i_ref.fval + offset_y],
-            '--',
+            "--",
             color=i_ref.color,
             label=i_ref.legend,
         )

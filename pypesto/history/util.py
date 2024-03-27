@@ -9,7 +9,7 @@ import numpy as np
 from ..C import SUFFIXES
 
 ResultDict = dict[str, Union[float, np.ndarray]]
-MaybeArray = Union[np.ndarray, 'np.nan']
+MaybeArray = Union[np.ndarray, "np.nan"]
 
 
 class HistoryTypeError(ValueError):

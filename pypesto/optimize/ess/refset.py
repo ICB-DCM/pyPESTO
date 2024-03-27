@@ -136,7 +136,7 @@ class RefSet:
             for j in range(i + 1, self.dim):
                 # check proximity
                 # zero-division may occur here
-                with np.errstate(divide='ignore', invalid='ignore'):
+                with np.errstate(divide="ignore", invalid="ignore"):
                     while (
                         np.max(np.abs((x[i] - x[j]) / x[j]))
                         <= self.proximity_threshold

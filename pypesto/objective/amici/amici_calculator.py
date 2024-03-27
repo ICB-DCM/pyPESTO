@@ -32,8 +32,8 @@ if TYPE_CHECKING:
     except ImportError:
         ParameterMapping = None
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
 
 
 class AmiciCalculator:
@@ -122,16 +122,16 @@ class AmiciCalculator:
         ):
             if not amici_model.getAddSigmaResiduals() and any(
                 (
-                    (r['ssigmay'] is not None and np.any(r['ssigmay']))
-                    or (r['ssigmaz'] is not None and np.any(r['ssigmaz']))
+                    (r["ssigmay"] is not None and np.any(r["ssigmay"]))
+                    or (r["ssigmaz"] is not None and np.any(r["ssigmaz"]))
                 )
                 for r in rdatas
             ):
                 raise RuntimeError(
-                    'Cannot use least squares solver with'
-                    'parameter dependent sigma! Support can be '
-                    'enabled via '
-                    'amici_model.setAddSigmaResiduals().'
+                    "Cannot use least squares solver with"
+                    "parameter dependent sigma! Support can be "
+                    "enabled via "
+                    "amici_model.setAddSigmaResiduals()."
                 )
             self._known_least_squares_safe = True  # don't check this again
 
@@ -166,7 +166,7 @@ def calculate_function_values(
     dim = len(x_ids)
 
     # check if the simulation failed
-    if any(rdata['status'] < 0.0 for rdata in rdatas):
+    if any(rdata["status"] < 0.0 for rdata in rdatas):
         return get_error_output(
             amici_model, edatas, rdatas, sensi_orders, mode, dim
         )
@@ -185,7 +185,7 @@ def calculate_function_values(
         condition_map_sim_var = parameter_mapping[data_ix].map_sim_var
 
         # add objective value
-        nllh -= rdata['llh']
+        nllh -= rdata["llh"]
 
         if mode == MODE_FUN:
             if not np.isfinite(nllh):
@@ -199,7 +199,7 @@ def calculate_function_values(
                     x_ids,
                     par_sim_ids,
                     condition_map_sim_var,
-                    rdata['sllh'],
+                    rdata["sllh"],
                     snllh,
                     coefficient=-1.0,
                 )
@@ -221,7 +221,7 @@ def calculate_function_values(
                     x_ids,
                     par_sim_ids,
                     condition_map_sim_var,
-                    rdata['FIM'],
+                    rdata["FIM"],
                     s2nllh,
                     coefficient=+1.0,
                 )
@@ -232,18 +232,18 @@ def calculate_function_values(
 
         elif mode == MODE_RES:
             if 0 in sensi_orders:
-                chi2 += rdata['chi2']
+                chi2 += rdata["chi2"]
                 res = (
-                    np.hstack([res, rdata['res']])
+                    np.hstack([res, rdata["res"]])
                     if res.size
-                    else rdata['res']
+                    else rdata["res"]
                 )
             if 1 in sensi_orders:
                 opt_sres = sim_sres_to_opt_sres(
                     x_ids,
                     par_sim_ids,
                     condition_map_sim_var,
-                    rdata['sres'],
+                    rdata["sres"],
                     coefficient=1.0,
                 )
                 sres = np.vstack([sres, opt_sres]) if sres.size else opt_sres

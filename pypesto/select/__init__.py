@@ -20,5 +20,6 @@ except ImportError:
     warnings.warn(
         "pyPESTO's model selection methods require an installation of PEtab "
         "Select (https://github.com/PEtab-dev/petab_select). Install via "
-        "`pip3 install petab-select` or `pip3 install pypesto[select]`."
+        "`pip3 install petab-select` or `pip3 install pypesto[select]`.",
+        stacklevel=1,
     )

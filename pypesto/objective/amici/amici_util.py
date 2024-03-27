@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     except ImportError:
         ParameterMapping = ParameterMappingForCondition = None
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
-AmiciSolver = Union['amici.Solver', 'amici.SolverPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +101,7 @@ def create_plist_from_par_opt_to_par_sim(mapping_par_opt_to_par_sim):
     warnings.warn(
         "This function will be removed in future releases. ",
         DeprecationWarning,
+        stacklevel=2,
     )
     plist = []
 
@@ -350,7 +351,7 @@ def log_simulation(data_ix, rdata) -> None:
     logger.debug(f"status: {rdata['status']}")
     logger.debug(f"llh: {rdata['llh']}")
 
-    t_steadystate = 't_steadystate'
+    t_steadystate = "t_steadystate"
     if t_steadystate in rdata and rdata[t_steadystate] != np.nan:
         logger.debug(f"t_steadystate: {rdata[t_steadystate]}")
 
@@ -360,8 +361,8 @@ def log_simulation(data_ix, rdata) -> None:
 
 def get_error_output(
     amici_model: AmiciModel,
-    edatas: Sequence['amici.ExpData'],
-    rdatas: Sequence['amici.ReturnData'],
+    edatas: Sequence["amici.ExpData"],
+    rdatas: Sequence["amici.ReturnData"],
     sensi_orders: Tuple[int, ...],
     mode: ModeType,
     dim: int,

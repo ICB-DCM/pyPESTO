@@ -30,19 +30,19 @@ class AggregatedObjective(ObjectiveBase):
         # input typechecks
         if not isinstance(objectives, Sequence):
             raise TypeError(
-                f'Objectives must be a Sequence, ' f'was {type(objectives)}.'
+                f"Objectives must be a Sequence, " f"was {type(objectives)}."
             )
 
         if not all(
             isinstance(objective, ObjectiveBase) for objective in objectives
         ):
             raise TypeError(
-                'Objectives must only contain elements of type'
-                'pypesto.Objective'
+                "Objectives must only contain elements of type"
+                "pypesto.Objective"
             )
 
         if not objectives:
-            raise ValueError('Length of objectives must be at least one')
+            raise ValueError("Length of objectives must be at least one")
 
         self._objectives = objectives
 
@@ -54,7 +54,7 @@ class AggregatedObjective(ObjectiveBase):
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
         )
-        for key in set(self.__dict__.keys()) - {'_objectives', 'x_names'}:
+        for key in set(self.__dict__.keys()) - {"_objectives", "x_names"}:
             other.__dict__[key] = deepcopy(self.__dict__[key])
 
         return other
@@ -125,7 +125,7 @@ class AggregatedObjective(ObjectiveBase):
         """Return basic information of the objective configuration."""
         info = super().get_config()
         for n_obj, obj in enumerate(self._objectives):
-            info[f'objective_{n_obj}'] = obj.get_config()
+            info[f"objective_{n_obj}"] = obj.get_config()
         return info
 
 

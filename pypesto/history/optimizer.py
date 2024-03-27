@@ -156,7 +156,7 @@ class OptimizerHistory:
             )
             # update everything
             for key in self.MIN_KEYS:
-                setattr(self, key + '_min', result[key])
+                setattr(self, key + "_min", result[key])
 
         # check if history has same point
         if (
@@ -169,7 +169,7 @@ class OptimizerHistory:
             for key in self.MIN_KEYS:
                 if result[key] is not None:
                     # if getattr(self, f'{key}_min') is None:
-                    setattr(self, f'{key}_min', result[key])
+                    setattr(self, f"{key}_min", result[key])
 
     def _update_vals(self, x: np.ndarray, result: ResultDict) -> None:
         """Update initial and best function values."""
@@ -188,7 +188,7 @@ class OptimizerHistory:
         ):
             # need to update all values, as better fval found
             for key in HistoryBase.RESULT_KEYS:
-                setattr(self, f'{key}_min', result.get(key))
+                setattr(self, f"{key}_min", result.get(key))
             self.x_min = x
             return
 
@@ -196,11 +196,11 @@ class OptimizerHistory:
         # identify this situation by checking that x hasn't changed.
         if self.x_min is not None and np.array_equal(self.x_min, x):
             for key in (GRAD, HESS, SRES):
-                val_min = getattr(self, f'{key}_min', None)
+                val_min = getattr(self, f"{key}_min", None)
                 if is_none_or_nan_array(val_min) and not is_none_or_nan_array(
                     val := result.get(key)
                 ):
-                    setattr(self, f'{key}_min', val)
+                    setattr(self, f"{key}_min", val)
 
     def _maybe_compute_init_and_min_vals_from_trace(self) -> None:
         """Try to set initial and best function value from trace.
@@ -225,7 +225,7 @@ class OptimizerHistory:
 
         # assign values
         for key in OptimizerHistory.MIN_KEYS:
-            setattr(self, f'{key}_min', result[key])
+            setattr(self, f"{key}_min", result[key])
 
     def _admissible(self, x: np.ndarray) -> bool:
         """Check whether point `x` is admissible (i.e. within bounds).
@@ -264,7 +264,7 @@ class OptimizerHistory:
 
         # fill in parameter and function value from that index
         for var in (X, FVAL, RES):
-            val = getattr(self.history, f'get_{var}_trace')(ix_min)
+            val = getattr(self.history, f"get_{var}_trace")(ix_min)
             if val is not None and not np.all(np.isnan(val)):
                 result[var] = val
             # convert to float if var is FVAL to be sure
@@ -279,7 +279,7 @@ class OptimizerHistory:
                 if not allclose(result[X], self.history.get_x_trace(ix)):
                     # different parameter
                     continue
-                val = getattr(self.history, f'get_{var}_trace')(ix)
+                val = getattr(self.history, f"get_{var}_trace")(ix)
                 if not is_none_or_nan_array(val):
                     result[var] = val
                     # successfuly found

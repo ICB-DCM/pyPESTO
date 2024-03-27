@@ -46,8 +46,10 @@ class FunctionEvaluator:
         """
         if startpoint_method is not None:
             warn(
-                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                "Passing `startpoint_method` directly is deprecated, "
+                "use `problem.startpoint_method` instead.",
                 DeprecationWarning,
+                stacklevel=1,
             )
 
         self.problem: Problem = problem
@@ -168,7 +170,7 @@ class FunctionEvaluatorMT(FunctionEvaluator):
         return {
             k: v
             for k, v in vars(self).items()
-            if k not in {'_thread_local', '_executor'}
+            if k not in {"_thread_local", "_executor"}
         }
 
     def __setstate__(self, state):

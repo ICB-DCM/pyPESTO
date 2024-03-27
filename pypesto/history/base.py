@@ -535,7 +535,7 @@ def reduce_result_via_options(
     # apply options to result
     for key in HistoryBase.RESULT_KEYS:
         if result.get(key) is None or not options.get(
-            f'trace_record_{key}', True
+            f"trace_record_{key}", True
         ):
             result[key] = np.nan
 
