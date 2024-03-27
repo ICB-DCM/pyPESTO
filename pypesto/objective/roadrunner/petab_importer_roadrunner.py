@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import numbers
-import warnings
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
 
@@ -99,13 +98,7 @@ class PetabImporterRR:
         """Write observables of petab problem to the model."""
         # add all observables as species
         for obs_id in self.petab_problem.observable_df.index:
-            try:
-                self.rr.addParameter(obs_id, 0.0)
-            except RuntimeError:
-                warnings.warn(
-                    "Observable already exists in model. Skipping.",
-                    stacklevel=2,
-                )
+            self.rr.addParameter(obs_id, 0.0, False)
         # extract all parameters from observable formulas
         parameters = petab.get_output_parameters(
             self.petab_problem.observable_df,
@@ -115,30 +108,24 @@ class PetabImporterRR:
         )
         # add all parameters to the model
         for param_id in parameters:
-            try:
-                self.rr.addParameter(param_id, 0.0)
-            except RuntimeError:
-                warnings.warn(
-                    "Parameter already exists in model. Skipping.",
-                    stacklevel=2,
-                )
+            self.rr.addParameter(param_id, 0.0, False)
         formulae = self.petab_problem.observable_df[
             OBSERVABLE_FORMULA
         ].to_dict()
 
         # add all observable formulas as assignment rules
         for obs_id, formula in formulae.items():
-            if obs_id == list(formulae.keys())[-1]:
-                self.rr.addAssignmentRule(obs_id, formula)
-                continue
             self.rr.addAssignmentRule(obs_id, formula, forceRegenerate=False)
 
-    def create_edatas(self):
-        """Create an ExpData object from the PEtab problem."""
+        # regenerate model to apply changes
+        self.rr.regenerateModel()
+
+    def create_edatas(self) -> list[ExpData]:
+        """Create a List of :class:`ExpData` objects from the PEtab problem."""
         # Create Dataframes per condition
         return ExpData.from_petab_problem(self.petab_problem)
 
-    def fill_model(self, return_model: bool = False):
+    def fill_model(self):
         """Fill the RoadRunner model inplace from the PEtab problem.
 
         Parameters
@@ -163,9 +150,6 @@ class PetabImporterRR:
         sbml_string = sbml_writer.writeSBMLToString(sbml_document)
         self.rr.load(sbml_string)
         self._write_observables_to_model()
-
-        if return_model:
-            return self.rr.getModel()
 
     def create_parameter_mapping(self):
         """Create a parameter mapping from the PEtab problem."""

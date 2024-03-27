@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numbers
 import warnings
 from typing import Optional, Sequence
 
@@ -10,8 +9,6 @@ import petab
 import roadrunner
 from petab.C import (
     LIN,
-    LOG,
-    LOG10,
     MEASUREMENT,
     NOISE_DISTRIBUTION,
     NOISE_FORMULA,
@@ -96,9 +93,10 @@ class ExpData:
 
     def sanity_check(self):
         """Perform a sanity check of the data."""
-        if not np.allclose(self.measurements[:, 0], self.timepoints):
+        if not set(self.measurements[:, 0]) == set(self.timepoints):
             raise ValueError(
-                "Timepoints do not match the first column of measurements."
+                "Timepoints do not match the first column of measurements ("
+                "minus replicates)."
             )
         if self.measurements.shape[1] != len(self.observable_ids) + 1:
             raise ValueError(
@@ -289,34 +287,6 @@ def unscale_parameters(value_dict: dict, petab_scale_dict: dict) -> dict:
         )
 
     return value_dict
-
-
-def unscale_parameter(
-    value: numbers.Number, petab_scale: str
-) -> numbers.Number:
-    """Bring a parameter from target scale to linear scale.
-
-    Parameters
-    ----------
-    value:
-        Value to scale.
-    petab_scale:
-        Target scale of ``value``.
-
-    Returns
-    -------
-    ``value`` in linear scale.
-    """
-    if petab_scale == LIN:
-        return value
-    if petab_scale == LOG10:
-        return np.power(10, value)
-    if petab_scale == LOG:
-        return np.exp(value)
-    raise ValueError(
-        f"Unknown parameter scale {petab_scale}. "
-        f"Must be from {(LIN, LOG, LOG10)}"
-    )
 
 
 def measurement_df_to_matrix(

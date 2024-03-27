@@ -90,7 +90,7 @@ def _execute_case_rr(case, model_type, version):
     # log matches
     logger.log(
         logging.INFO if simulations_match else logging.ERROR,
-        f"LLH: simulated: {llh}, expected: {gt_llh}, " f"match = {llhs_match}",
+        f"LLH: simulated: {llh}, expected: {gt_llh}, match = {llhs_match}",
     )
     logger.log(
         logging.INFO if simulations_match else logging.ERROR,
@@ -100,7 +100,7 @@ def _execute_case_rr(case, model_type, version):
     if not all([llhs_match, simulations_match]):
         logger.error(f"Case {version}/{model_type}/{case} failed.")
         raise AssertionError(
-            f"Case {case}: Test results do not match " "expectations"
+            f"Case {case}: Test results do not match expectations"
         )
 
     logger.info(f"Case {version}/{model_type}/{case} passed.")
