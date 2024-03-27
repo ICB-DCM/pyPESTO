@@ -1,3 +1,7 @@
+"""RoadRunner calculator for PEtab problems.
+
+Handles all RoadRunner.simualte calls, calculates likelihoods and residuals.
+"""
 import numbers
 from typing import Optional, Sequence
 

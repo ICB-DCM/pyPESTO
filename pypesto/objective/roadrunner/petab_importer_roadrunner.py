@@ -1,4 +1,4 @@
-# eventually to be added to pypesto.petab
+"""Importer for PEtab problems using RoadRunner."""
 from __future__ import annotations
 
 import numbers

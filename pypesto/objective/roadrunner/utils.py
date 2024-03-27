@@ -1,3 +1,4 @@
+"""Utility functions for working with roadrunner and PEtab."""
 from __future__ import annotations
 
 import warnings

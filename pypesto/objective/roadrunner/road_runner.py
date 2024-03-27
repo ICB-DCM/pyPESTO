@@ -1,3 +1,4 @@
+"""Objective function for RoadRunner models."""
 from collections import OrderedDict
 from typing import Optional, Sequence, Tuple, Union
 
