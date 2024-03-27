@@ -238,8 +238,8 @@ def minimize_decorator_collection(minimize):
     @wraps(minimize)
     @fix_decorator
     @time_decorator
-    @history_decorator
     @hierarchical_decorator
+    @history_decorator
     def wrapped_minimize(
         self,
         problem: Problem,
