@@ -147,10 +147,6 @@ class ExpData:
         ]
         # turn measurement data into a numpy array
         measurements, observale_ids = measurement_df_to_matrix(measurement_df)
-        # timepoints are the first column of the measurements array
-        timepoints = measurements[:, 0]
-        # TODO: Needs to be revised when roadrunner allows for duplicate time
-        timepoints = sorted(set(map(float, timepoints)))
         # construct noise distributions and noise formulae
         noise_distributions, noise_formulae = construct_noise_matrices(
             petab_problem, observale_ids

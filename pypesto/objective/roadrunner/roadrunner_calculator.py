@@ -318,16 +318,12 @@ class RoadRunnerCalculator:
 
         if filling_mode == "only_parameters" or filling_mode == "all":
             # set parameters.
-            roadrunner_instance.setValues(
-                mapping_params.keys(), mapping_params.values()
-            )
+            roadrunner_instance.setValues(mapping_params)
             # reset is necessary to apply the changes to initial assignments
             roadrunner_instance.reset()
         if filling_mode == "only_species" or filling_mode == "all":
             # set species
-            roadrunner_instance.setValues(
-                mapping_species.keys(), mapping_species.values()
-            )
+            roadrunner_instance.setValues(mapping_species)
         return mapping_values
 
 
@@ -356,55 +352,9 @@ def calculate_llh(
     if 0.0 not in edata.timepoints:
         simulations = simulations[1:, :]
 
-    def _fill_simulation_w_replicates(simulation, measurement) -> np.ndarray:
-        """Fill the simulation with replicates.
-
-        Parameters
-        ----------
-        simulation:
-            Simulations, without replicates.
-        measurement:
-            Measurements, with replicates.
-
-        Returns
-        -------
-        np.ndarray:
-            An array of simulations where each row has its counterpart in the
-            measurements. Replicates in measurements result in copies of the
-            corresponding simulation.
-        """
-        # Find unique time values in measurement
-        unique_time_values = np.unique(measurement[:, 0])
-
-        # Initialize an empty list to store the replicated rows
-        replicated_rows = []
-
-        # Iterate over unique time values
-        for time_value in unique_time_values:
-            # Find the rows in measurement with the current time value
-            matching_rows = measurement[measurement[:, 0] == time_value]
-            # Append replicated rows from simulation for each matching row in measurement
-            replicated_rows.extend(
-                [
-                    row_sim
-                    for row_sim in simulation[simulation[:, 0] == time_value]
-                    for _ in range(len(matching_rows))
-                ]
-            )
-
-        # Convert the list of replicated rows to a NumPy array
-        replicated_simulations = np.array(replicated_rows)
-
-        return replicated_simulations
-
     if not np.array_equal(simulations[:, 0], edata.timepoints):
         raise ValueError(
             "Simulation and Measurement have different timepoints."
-        )
-    # if timepoints in measurements and simulations are not the same, fill
-    if len(simulations[:, 0]) != len(edata.measurements[:, 0]):
-        simulations = _fill_simulation_w_replicates(
-            simulations, edata.measurements
         )
     # check that simulation and condition have same dimensions and timepoints
     if simulations.shape != edata.measurements.shape:
