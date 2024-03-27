@@ -14,7 +14,7 @@ from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData, SolverOptions
 
 PetabProblem = "petab.Problem"
-ParameterMapping = "List[ParMappingDictQuadruple]"
+ParameterMapping = "list[ParMappingDictQuadruple]"
 
 
 class RoadRunnerObjective(ObjectiveBase):
