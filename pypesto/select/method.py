@@ -213,6 +213,11 @@ class MethodCaller:
         Specify the predecessor (initial) model for the model selection
         algorithm. If ``None``, then the algorithm will generate an initial
         predecessor model if required.
+    user_calibrated_models:
+        Supply calibration results for models yourself, as a list of models.
+        If a model with the same hash is encountered in the current model
+        selection run, and the user-supplied calibrated model has the
+        `criterion` value set, the model will not be calibrated again.
     select_first_improvement:
         If ``True``, model selection will terminate as soon as a better model
         is found. If `False`, all candidate models will be tested.
@@ -245,7 +250,7 @@ class MethodCaller:
         # TODO deprecated
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
         model_problem_options: dict = None,
-        previously_calibrated_models=None,
+        user_calibrated_models: list[Model] = None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
@@ -257,9 +262,11 @@ class MethodCaller:
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
 
-        self.previously_calibrated_models = {}
-        if previously_calibrated_models is not None:
-            self.previously_calibrated_models = previously_calibrated_models
+        self.user_calibrated_models = {}
+        if user_calibrated_models is not None:
+            self.user_calibrated_models = {
+                model.get_hash(): model for model in user_calibrated_models
+            }
 
         self.logger = MethodLogger()
 
@@ -379,6 +386,7 @@ class MethodCaller:
             newly_calibrated_models=newly_calibrated_models,
             excluded_model_hashes=self.calibrated_models.keys(),
             criterion=self.criterion,
+            user_calibrated_models=self.user_calibrated_models,
         )
         predecessor_model = self.candidate_space.predecessor_model
 
@@ -389,17 +397,15 @@ class MethodCaller:
         #      `self.select_first_improvement`)
         newly_calibrated_models = {}
         for candidate_model in candidate_space.models:
-            # If the user has previously calibrated this model,
-            # skip calibration.
-            if candidate_model.get_hash() in self.previously_calibrated_models:
-                _model_problem = self.new_model_problem(
-                    model=candidate_model,
-                    autorun=False,
-                )
-                _model_problem.set_result_from_model(
-                    self.previously_calibrated_models[candidate_model.get_hash()]
-                )
-            else:
+            # PEtab Select will set the criterion if the user has provided
+            # a previously calibrated copy of this model, in which case
+            # calibration can be skipped.
+            none_if_uncalibrated = candidate_model.get_criterion(
+                criterion=self.criterion,
+                compute=True,
+                raise_on_failure=False,
+            )
+            if none_if_uncalibrated is None:
                 self.new_model_problem(model=candidate_model)
 
             newly_calibrated_models[

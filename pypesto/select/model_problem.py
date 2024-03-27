@@ -157,19 +157,6 @@ class ModelProblem:
             **self.minimize_options,
         )
 
-    def set_result_from_model(self, model) -> None:
-        """Set the calibration result from a previously-calibrated model.
-
-        Parameters
-        ----------
-        model:
-            The previously-calibrated model.
-        """
-        self.model.criteria = model.criteria
-        self.model.estimated_parameters = model.estimated_parameters
-        if self.postprocessor is not None:
-            self.postprocessor(self)
-
     def set_result(self, result: Result):
         """Postprocess a result.
 
