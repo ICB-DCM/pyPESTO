@@ -447,10 +447,13 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_grad=True,
             trace_record_hess=False,
         )
-
-        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
-            with pytest.warns(UserWarning, match="fun and hess as one func"):
-                self.check_history()
+        # Expect RuntimeWarning since we cannot handle bounds and
+        # UserWarning for integrated=True
+        with pytest.warns(Warning) as warninfo:
+            self.check_history()
+        warns = {warn.category for warn in warninfo}
+        expected_warns = {RuntimeWarning, UserWarning}
+        assert warns == expected_warns
 
     def test_trace_all(self):
         self.obj = rosen_for_sensi(
