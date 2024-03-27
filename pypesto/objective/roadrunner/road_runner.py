@@ -1,4 +1,7 @@
-"""Objective function for RoadRunner models."""
+"""Objective function for RoadRunner models.
+
+Currently does not support sensitivities.
+"""
 from collections import OrderedDict
 from typing import Optional, Sequence, Tuple, Union
 

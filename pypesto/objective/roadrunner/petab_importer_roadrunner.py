@@ -1,4 +1,9 @@
-"""Importer for PEtab problems using RoadRunner."""
+"""Importer for PEtab problems using RoadRunner.
+
+Creates from a PEtab problem a roadrunner model, a roadrunner objective or a
+pypesto problem with a roadrunner objective. The actual form of the likelihood
+depends on the noise model specified in the provided PEtab problem.
+"""
 from __future__ import annotations
 
 import numbers
