@@ -112,7 +112,6 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def initialize(self):
         """Initialize."""
-        self.best_fval = np.inf
         for calculator in self.inner_calculators:
             calculator.initialize()
 
@@ -125,7 +124,6 @@ class InnerCalculatorCollector(AmiciCalculator):
     ):
         """Construct inner calculators for each data type."""
         self.necessary_par_dummy_values = {}
-        self.best_fval = np.inf
 
         if RELATIVE in self.data_types:
             relative_inner_problem = RelativeInnerProblem.from_petab_amici(
@@ -382,9 +380,6 @@ class InnerCalculatorCollector(AmiciCalculator):
                 parameter_mapping=parameter_mapping,
                 fim_for_hess=fim_for_hess,
             )
-            # only return inner parameters if the objective value improved
-            if ret[FVAL] > self.best_fval:
-                ret[INNER_PARAMETERS] = None
             return filter_return_dict(ret)
 
         # get dimension of outer problem
@@ -517,16 +512,12 @@ class InnerCalculatorCollector(AmiciCalculator):
             RDATAS: rdatas,
         }
 
-        # Add inner parameters to return dict
-        # only if the objective value improved.
-        if ret[FVAL] < self.best_fval:
-            ret[SPLINE_KNOTS] = spline_knots
-            ret[INNER_PARAMETERS] = (
-                interpretable_inner_pars
-                if len(interpretable_inner_pars) > 0
-                else None
-            )
-            self.best_fval = ret[FVAL]
+        ret[INNER_PARAMETERS] = (
+            interpretable_inner_pars
+            if len(interpretable_inner_pars) > 0
+            else None
+        )
+        ret[SPLINE_KNOTS] = spline_knots
 
         return filter_return_dict(ret)
 

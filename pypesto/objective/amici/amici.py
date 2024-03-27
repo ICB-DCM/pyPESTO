@@ -10,11 +10,9 @@ import numpy as np
 
 from ...C import (
     FVAL,
-    INNER_PARAMETERS,
     MODE_FUN,
     MODE_RES,
     RDATAS,
-    SPLINE_KNOTS,
     SUFFIXES_CSV,
     SUFFIXES_HDF5,
     ModeType,
@@ -232,10 +230,6 @@ class AmiciObjective(ObjectiveBase):
         # Custom (condition-specific) timepoints. See the
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
-
-        # Initialize the list for saving of inner parameter values.
-        self.inner_parameters: list[float] = None
-        self.spline_knots: list[list[list[float]]] = None
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
@@ -503,11 +497,6 @@ class AmiciObjective(ObjectiveBase):
 
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]
-        if ret.get(INNER_PARAMETERS, None) is not None:
-            self.inner_parameters = ret[INNER_PARAMETERS]
-
-        if ret.get(SPLINE_KNOTS, None) is not None:
-            self.spline_knots = ret[SPLINE_KNOTS]
 
         # check whether we should update data for preequilibration guesses
         if (
