@@ -424,7 +424,7 @@ class FunModeHistoryTest(HistoryTest):
 
     def test_trace_grad(self):
         self.obj = rosen_for_sensi(
-            max_sensi_order=1,
+            max_sensi_order=2,
             integrated=False,
         )["obj"]
 
@@ -438,7 +438,7 @@ class FunModeHistoryTest(HistoryTest):
 
     def test_trace_grad_integrated(self):
         self.obj = rosen_for_sensi(
-            max_sensi_order=1,
+            max_sensi_order=2,
             integrated=True,
         )["obj"]
 
@@ -449,12 +449,13 @@ class FunModeHistoryTest(HistoryTest):
         )
 
         with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
-            self.check_history()
+            with pytest.warns(UserWarning, match="fun and hess as one func"):
+                self.check_history()
 
     def test_trace_all(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=True,
+            integrated=False,
         )["obj"]
 
         self.history_options = HistoryOptions(
@@ -469,7 +470,7 @@ class FunModeHistoryTest(HistoryTest):
             self.check_history()
 
     def test_trace_all_aggregated(self):
-        self.obj = rosen_for_sensi(max_sensi_order=2, integrated=True)["obj"]
+        self.obj = rosen_for_sensi(max_sensi_order=2, integrated=False)["obj"]
 
         self.history_options = HistoryOptions(
             trace_record=True,
