@@ -424,7 +424,7 @@ class FunModeHistoryTest(HistoryTest):
 
     def test_trace_grad(self):
         self.obj = rosen_for_sensi(
-            max_sensi_order=2,
+            max_sensi_order=1,
             integrated=False,
         )["obj"]
 
@@ -438,7 +438,7 @@ class FunModeHistoryTest(HistoryTest):
 
     def test_trace_grad_integrated(self):
         self.obj = rosen_for_sensi(
-            max_sensi_order=2,
+            max_sensi_order=1,
             integrated=True,
         )["obj"]
 
