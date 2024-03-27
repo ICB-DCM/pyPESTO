@@ -433,8 +433,8 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_grad=True,
             trace_record_hess=False,
         )
-
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
     def test_trace_grad_integrated(self):
         self.obj = rosen_for_sensi(
@@ -448,7 +448,8 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_hess=False,
         )
 
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
     def test_trace_all(self):
         self.obj = rosen_for_sensi(
@@ -464,7 +465,8 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_sres=True,
         )
         self.fix_pars = False
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
     def test_trace_all_aggregated(self):
         self.obj = rosen_for_sensi(max_sensi_order=2, integrated=True)["obj"]
@@ -478,7 +480,8 @@ class FunModeHistoryTest(HistoryTest):
         )
         self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
         self.fix_pars = False
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
 
 class CRFunModeHistoryTest(HistoryTest):
@@ -511,7 +514,8 @@ class CRFunModeHistoryTest(HistoryTest):
         )
 
         self.fix_pars = False
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
 
 @pytest.fixture(params=["memory", "csv", "hdf5", ""])
