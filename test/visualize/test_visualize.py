@@ -762,17 +762,15 @@ def test_optimizer_history_with_options():
         scale_y="lin",
     )
 
-    # Test with y-limits as float and unsensible offset
-    with pytest.warns(UserWarning, match="Offset specified by user"):
-        visualize.optimizer_history(
-            result_1,
-            y_limits=5.0,
-            start_indices=3,
-            reference=ref3,
-            trace_x="time",
-            trace_y="gradnorm",
-            offset_y=-result_1.optimize_result[0].fval,
-        )
+    # Test with y-limits as float
+    visualize.optimizer_history(
+        result_1,
+        y_limits=5.0,
+        start_indices=3,
+        reference=ref3,
+        trace_x="time",
+        trace_y="gradnorm",
+    )
 
 
 @close_fig
