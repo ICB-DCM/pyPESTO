@@ -17,7 +17,6 @@ from ..base import ObjectiveBase, ResultDict
 
 try:
     import jax
-    import jax.experimental.host_callback as hcb
     import jax.numpy as jnp
     from jax import custom_jvp, grad
 except ImportError:
@@ -52,7 +51,7 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
     but this is not possible at the time of writing as this is not supported
     by signature inspection in the underlying bind call.
     """
-    return hcb.call(
+    return jax.pure_callback(
         obj.cached_fval,
         x,
         result_shape=jax.ShapeDtypeStruct((), np.float64),
@@ -80,7 +79,7 @@ def _device_fun_grad(obj: "JaxObjective", x: jnp.array):
     but this is not possible at the time of writing as this is not supported
     by signature inspection in the underlying bind call.
     """
-    return hcb.call(
+    return jax.pure_callback(
         obj.cached_grad,
         x,
         result_shape=jax.ShapeDtypeStruct(
@@ -110,7 +109,7 @@ def _device_fun_hess(obj: "JaxObjective", x: jnp.array):
     but this is not possible at the time of writing as this is not supported
     by signature inspection in the underlying bind call.
     """
-    return hcb.call(
+    return jax.pure_callback(
         obj.cached_hess,
         x,
         result_shape=jax.ShapeDtypeStruct(
