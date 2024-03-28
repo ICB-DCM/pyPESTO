@@ -214,10 +214,13 @@ def test_aesara(max_sensi_order, integrated):
             )
 
 
-def test_jax(max_sensi_order, integrated):
+@pytest.mark.parametrize("enable_x64", [True, False])
+def test_jax(max_sensi_order, integrated, enable_x64):
     """Test function composition and gradient computation via jax"""
     import jax
     import jax.numpy as jnp
+
+    jax.config.update("jax_enable_x64", enable_x64)
 
     from pypesto.objective.jax import JaxObjective
 
