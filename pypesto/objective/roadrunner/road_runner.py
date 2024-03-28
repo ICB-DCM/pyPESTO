@@ -7,14 +7,13 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import roadrunner
+from petab import Problem as PetabProblem
 from petab.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import MODE_FUN, MODE_RES, ModeType
 from ..base import ObjectiveBase
 from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData, SolverOptions
-
-PetabProblem = "petab.Problem"
 
 
 class RoadRunnerObjective(ObjectiveBase):

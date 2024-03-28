@@ -299,7 +299,9 @@ def measurement_df_to_matrix(
     observable_ids:
         Observable ids of the measurement data.
     """
-    measurement_df = measurement_df[["observableId", "time", "measurement"]]
+    measurement_df = measurement_df.loc[
+        :, ["observableId", "time", "measurement"]
+    ]
     # get potential replicates via placeholder "count"
     measurement_df["count"] = measurement_df.groupby(
         ["observableId", "time"]
