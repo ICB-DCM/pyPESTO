@@ -7,6 +7,7 @@ from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 import roadrunner
+from petab.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import MODE_FUN, MODE_RES, ModeType
 from ..base import ObjectiveBase
@@ -14,7 +15,6 @@ from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData, SolverOptions
 
 PetabProblem = "petab.Problem"
-ParameterMapping = "list[ParMappingDictQuadruple]"
 
 
 class RoadRunnerObjective(ObjectiveBase):
@@ -27,7 +27,7 @@ class RoadRunnerObjective(ObjectiveBase):
         self,
         rr: roadrunner.RoadRunner,
         edatas: Union[Sequence[ExpData], ExpData],
-        parameter_mapping: ParameterMapping,
+        parameter_mapping: list[ParMappingDictQuadruple],
         petab_problem: PetabProblem,
         calculator: Optional[RoadRunnerCalculator] = None,
         x_names: Optional[Sequence[str]] = None,
@@ -97,7 +97,7 @@ class RoadRunnerObjective(ObjectiveBase):
         sensi_orders: Tuple[int, ...],
         mode: ModeType,
         edatas: Optional[Sequence[ExpData]] = None,
-        parameter_mapping: Optional[ParameterMapping] = None,
+        parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
     ) -> dict:
         """
         Call objective function without pre- or post-processing and formatting.
