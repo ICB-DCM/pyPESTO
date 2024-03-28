@@ -364,7 +364,7 @@ def test_mpipoolengine():
         )
 
         # read results
-        with pytest.warns(UserWarning, "You are loading a problem."):
+        with pytest.warns(UserWarning, match="You are loading a problem."):
             result1 = read_result(
                 "temp_result.h5", problem=True, optimize=True
             )
