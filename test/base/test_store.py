@@ -4,6 +4,7 @@ import os
 import tempfile
 
 import numpy as np
+import pytest
 import scipy.optimize as so
 
 import pypesto
@@ -94,7 +95,8 @@ def test_storage_problem(hdf5_file):
     problem_writer = ProblemHDF5Writer(hdf5_file)
     problem_writer.write(problem)
     problem_reader = ProblemHDF5Reader(hdf5_file)
-    read_problem = problem_reader.read()
+    with pytest.warns(UserWarning, match="loading a problem"):
+        read_problem = problem_reader.read()
     problem_attrs = [
         value
         for name, value in vars(ProblemHDF5Writer).items()
@@ -369,7 +371,8 @@ def test_storage_all():
     filename = "test_file.hdf5"
     try:
         write_result(result=result, filename=filename)
-        result_read = read_result(filename=filename)
+        with pytest.warns(UserWarning, match="loading a problem"):
+            result_read = read_result(filename=filename)
 
         # test optimize
         for i, opt_res in enumerate(result.optimize_result.list):

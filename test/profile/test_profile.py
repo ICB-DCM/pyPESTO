@@ -113,17 +113,24 @@ class ProfilerTest(unittest.TestCase):
             pypesto.engine.MultiProcessEngine(),
             pypesto.engine.MultiThreadEngine(),
         ]
-        for engine in engines:
+        expected_warns = [
+            pytest.warns(UserWarning, match="fun and hess as one func"),
+            pytest.warns(UserWarning, match="fun and hess as one func"),
+            warnings.catch_warnings(),  # No warnings
+            warnings.catch_warnings(),  # No warnings
+        ]
+        for engine, expected_warn in zip(engines, expected_warns):
             # run profiling, profile results get appended
             # in self.result.profile_result
-            profile.parameter_profile(
-                problem=self.problem,
-                result=self.result,
-                optimizer=self.optimizer,
-                next_guess_method="fixed_step",
-                engine=engine,
-                progress_bar=False,
-            )
+            with expected_warn:
+                profile.parameter_profile(
+                    problem=self.problem,
+                    result=self.result,
+                    optimizer=self.optimizer,
+                    next_guess_method="fixed_step",
+                    engine=engine,
+                    progress_bar=False,
+                )
 
         # check results
         for count, _engine in enumerate(engines[1:]):

@@ -219,7 +219,6 @@ def test_unbounded_minimize(optimizer):
                 problem=problem,
                 optimizer=opt,
                 n_starts=1,
-                startpoint_method=pypesto.startpoint.uniform,
                 options=options,
                 progress_bar=False,
             )
@@ -229,7 +228,6 @@ def test_unbounded_minimize(optimizer):
             problem=problem,
             optimizer=opt,
             n_starts=1,
-            startpoint_method=pypesto.startpoint.uniform,
             options=options,
             progress_bar=False,
         )
@@ -295,7 +293,6 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         problem=problem,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         progress_bar=False,
     )
@@ -328,7 +325,6 @@ def test_trim_results(problem):
         problem=prob,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         progress_bar=False,
     )
@@ -340,7 +336,6 @@ def test_trim_results(problem):
         problem=prob,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         progress_bar=False,
     )
@@ -369,7 +364,10 @@ def test_mpipoolengine():
         )
 
         # read results
-        result1 = read_result("temp_result.h5", problem=True, optimize=True)
+        with pytest.warns(UserWarning, match="You are loading a problem."):
+            result1 = read_result(
+                "temp_result.h5", problem=True, optimize=True
+            )
         # set optimizer
         optimizer = optimize.FidesOptimizer(verbose=40)
         # initialize problem with x_guesses and objective
@@ -499,7 +497,6 @@ def test_ess(problem, local_optimizer, ess_type, request):
 
     res = ess.minimize(
         problem=problem,
-        startpoint_method=pypesto.startpoint.UniformStartpoints(),
     )
     print("ESS result: ", res.summary())
 
@@ -561,15 +558,15 @@ def test_scipy_integrated_grad():
     optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
     history_options = pypesto.HistoryOptions(trace_record=True)
-    result = optimize.minimize(
-        problem=problem,
-        optimizer=optimizer,
-        n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
-        options=optimize_options,
-        history_options=history_options,
-        progress_bar=False,
-    )
+    with pytest.warns(UserWarning, match="fun and hess as one func"):
+        result = optimize.minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=1,
+            options=optimize_options,
+            history_options=history_options,
+            progress_bar=False,
+        )
     assert (
         len(result.optimize_result.history[0].get_fval_trace())
         == result.optimize_result.history[0].n_fval
@@ -592,7 +589,6 @@ def test_ipopt_approx_grad():
         problem=problem,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
         progress_bar=False,
@@ -606,7 +602,6 @@ def test_ipopt_approx_grad():
         problem=problem2,
         optimizer=optimizer2,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
         progress_bar=False,
