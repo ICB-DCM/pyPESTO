@@ -26,8 +26,9 @@ except ImportError:
         "`pip install jax jaxlib`."
     ) from None
 
-# jax compatible (jittable) objective function using host callback, see
-# https://jax.readthedocs.io/en/latest/jax.experimental.host_callback.html
+# jax compatible (jit-able) objective function using external callback, see
+# https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
+# note that these functions are impure since they rely on cached values
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
@@ -35,7 +36,7 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
     """Jax compatible objective function execution using host callback.
 
     This function does not actually call the underlying objective function,
-    but instead extracts cached return values. Thus it must only be called
+    but instead extracts cached return values. Thus, it must only be called
     from within obj.call_unprocessed, and obj.cached_base_ret must be populated.
 
     Parameters
@@ -53,8 +54,8 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
     """
     return jax.pure_callback(
         obj.cached_fval,
-        x,
-        result_shape=jax.ShapeDtypeStruct((), np.float64),
+        jax.ShapeDtypeStruct((), x.dtype),
+        (x,),
     )
 
 
@@ -63,7 +64,7 @@ def _device_fun_grad(obj: "JaxObjective", x: jnp.array):
     """Jax compatible objective gradient execution using host callback.
 
     This function does not actually call the underlying objective function,
-    but instead extracts cached return values. Thus it must only be called
+    but instead extracts cached return values. Thus, it must only be called
     from within obj.call_unprocessed and obj.cached_base_ret must be populated.
 
     Parameters
@@ -81,11 +82,11 @@ def _device_fun_grad(obj: "JaxObjective", x: jnp.array):
     """
     return jax.pure_callback(
         obj.cached_grad,
-        x,
-        result_shape=jax.ShapeDtypeStruct(
+        jax.ShapeDtypeStruct(
             obj.cached_base_ret[GRAD].shape,  # bootstrap from cached value
-            np.float64,
+            x.dtype,
         ),
+        (x,),
     )
 
 
@@ -93,7 +94,7 @@ def _device_fun_hess(obj: "JaxObjective", x: jnp.array):
     """Jax compatible objective Hessian execution using host callback.
 
     This function does not actually call the underlying objective function,
-    but instead extracts cached return values. Thus it must only be called
+    but instead extracts cached return values. Thus, it must only be called
     from within obj.call_unprocessed and obj.cached_base_ret must be populated.
 
     Parameters
@@ -111,11 +112,11 @@ def _device_fun_hess(obj: "JaxObjective", x: jnp.array):
     """
     return jax.pure_callback(
         obj.cached_hess,
-        x,
-        result_shape=jax.ShapeDtypeStruct(
+        jax.ShapeDtypeStruct(
             obj.cached_base_ret[HESS].shape,  # bootstrap from cached value
-            np.float64,
+            x.dtype,
         ),
+        (x,),
     )
 
 
