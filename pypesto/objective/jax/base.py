@@ -8,17 +8,17 @@ combination of objective based methods and jax based autodiff.
 
 import copy
 from functools import partial
-from typing import Callable, Sequence, Tuple
+from typing import Callable, Sequence, Tuple, Union
 
 import numpy as np
 
-from ...C import FVAL, GRAD, HESS, MODE_FUN, RDATAS, ModeType
+from ...C import MODE_FUN, ModeType
 from ..base import ObjectiveBase, ResultDict
 
 try:
     import jax
     import jax.numpy as jnp
-    from jax import custom_jvp, grad
+    from jax import custom_jvp
 except ImportError:
     raise ImportError(
         "Using a jax objective requires an installation of "
@@ -53,14 +53,13 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
     by signature inspection in the underlying bind call.
     """
     return jax.pure_callback(
-        obj.cached_fval,
+        partial(obj.base_objective, sensi_orders=(0,)),
         jax.ShapeDtypeStruct((), x.dtype),
-        (x,),
+        x,
     )
 
 
-@partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun_grad(obj: "JaxObjective", x: jnp.array):
+def _device_fun_value_and_grad(obj: "JaxObjective", x: jnp.array):
     """Jax compatible objective gradient execution using host callback.
 
     This function does not actually call the underlying objective function,
@@ -81,42 +80,21 @@ def _device_fun_grad(obj: "JaxObjective", x: jnp.array):
     by signature inspection in the underlying bind call.
     """
     return jax.pure_callback(
-        obj.cached_grad,
-        jax.ShapeDtypeStruct(
-            obj.cached_base_ret[GRAD].shape,  # bootstrap from cached value
-            x.dtype,
+        partial(
+            obj.base_objective,
+            sensi_orders=(
+                0,
+                1,
+            ),
         ),
-        (x,),
-    )
-
-
-def _device_fun_hess(obj: "JaxObjective", x: jnp.array):
-    """Jax compatible objective Hessian execution using host callback.
-
-    This function does not actually call the underlying objective function,
-    but instead extracts cached return values. Thus, it must only be called
-    from within obj.call_unprocessed and obj.cached_base_ret must be populated.
-
-    Parameters
-    ----------
-    obj:
-        The wrapped jax objective.
-    x:
-        jax computed input array.
-
-    Note
-    ----
-    This function should rather be implemented as class method of JaxObjective,
-    but this is not possible at the time of writing as this is not supported
-    by signature inspection in the underlying bind call.
-    """
-    return jax.pure_callback(
-        obj.cached_hess,
-        jax.ShapeDtypeStruct(
-            obj.cached_base_ret[HESS].shape,  # bootstrap from cached value
-            x.dtype,
+        (
+            jax.ShapeDtypeStruct((), x.dtype),
+            jax.ShapeDtypeStruct(
+                x.shape,  # bootstrap from cached value
+                x.dtype,
+            ),
         ),
-        (x,),
+        x,
     )
 
 
@@ -131,17 +109,8 @@ def _device_fun_jvp(
     """JVP implementation for device_fun."""
     (x,) = primals
     (x_dot,) = tangents
-    return _device_fun(obj, x), _device_fun_grad(obj, x).dot(x_dot)
-
-
-@_device_fun_grad.defjvp
-def _device_fun_grad_jvp(
-    obj: "JaxObjective", primals: jnp.array, tangents: jnp.array
-):
-    """JVP implementation for device_fun_grad."""
-    (x,) = primals
-    (x_dot,) = tangents
-    return _device_fun_grad(obj, x), _device_fun_hess(obj, x).dot(x_dot)
+    value, grad = _device_fun_value_and_grad(obj, x)
+    return value, grad @ x_dot
 
 
 class JaxObjective(ObjectiveBase):
@@ -169,7 +138,11 @@ class JaxObjective(ObjectiveBase):
             raise NotImplementedError(
                 f"objective must support mode={MODE_FUN}"
             )
-        super().__init__(x_names)
+        # store names directly rather than calling __init__ of super class
+        # as we can't initialize history as we are exposing the history of the
+        # inner objective
+        self._x_names = x_names
+
         self.base_objective = objective
 
         self.jax_fun = jax_fun
@@ -182,28 +155,7 @@ class JaxObjective(ObjectiveBase):
             y = jax_fun(x)
             return _device_fun(self, y)
 
-        # jit objective & derivatives (not integrated)
-        self.jax_objective = jax.jit(jax_objective)
-        self.jax_objective_grad = jax.jit(grad(jax_objective))
-        self.jax_objective_hess = jax.jit(jax.hessian(jax_objective))
-
-        # jit input function
-        self.infun = jax.jit(self.jax_fun)
-
-        # temporary storage for evaluation results of objective
-        self.cached_base_ret: ResultDict = {}
-
-    def cached_fval(self, _):
-        """Return cached function value."""
-        return self.cached_base_ret[FVAL]
-
-    def cached_grad(self, _):
-        """Return cached gradient."""
-        return self.cached_base_ret[GRAD]
-
-    def cached_hess(self, _):
-        """Return cached Hessian."""
-        return self.cached_base_ret[HESS]
+        self.jax_objective = jax_objective
 
     def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -214,7 +166,44 @@ class JaxObjective(ObjectiveBase):
         if not self.check_mode(mode):
             return False
         else:
-            return self.base_objective.check_sensi_orders(sensi_orders, mode)
+            return (
+                self.base_objective.check_sensi_orders(sensi_orders, mode)
+                and max(sensi_orders) == 0
+            )
+
+    def __call__(
+        self,
+        x: jnp.ndarray,
+        sensi_orders: Tuple[int, ...] = (0,),
+        mode: ModeType = MODE_FUN,
+        return_dict: bool = False,
+        **kwargs,
+    ) -> Union[jnp.ndarray, Tuple, ResultDict]:
+        """
+        See `ObjectiveBase` for more documentation.
+
+        Note that this function delegates pre- and post-processing as well as
+        history handling to the inner objective.
+        """
+
+        if not self.check_mode(mode):
+            raise ValueError(
+                f"This Objective cannot be called with mode" f"={mode}."
+            )
+        if not self.check_sensi_orders(sensi_orders, mode):
+            raise ValueError(
+                f"This Objective cannot be called with "
+                f"sensi_orders= {sensi_orders} and mode={mode}."
+            )
+
+        # this computes all the results from the inner objective, rendering
+        # them accessible as cached values for device_fun, etc.
+        if kwargs.pop("return_dict", False):
+            raise ValueError(
+                "return_dict=True is not available for JaxObjective evaluation"
+            )
+
+        return self.jax_objective(x)
 
     def call_unprocessed(
         self,
@@ -226,40 +215,11 @@ class JaxObjective(ObjectiveBase):
         """
         See `ObjectiveBase` for more documentation.
 
-        Main method to overwrite from the base class. It handles and
-        delegates the actual objective evaluation.
+        This function is not implemented for JaxObjective as it is not called
+        in the override for __call__. However, it's marked as abstract so we
+        need to implement it.
         """
-        # derivative computation in jax always requires lower order
-        # derivatives, see jvp rules for device_fun and device_fun_grad.
-        if 2 in sensi_orders:
-            sensi_orders = (0, 1, 2)
-        elif 1 in sensi_orders:
-            sensi_orders = (0, 1)
-        else:
-            sensi_orders = (0,)
-
-        # this computes all the results from the inner objective, rendering
-        # them accessible as cached values for device_fun, etc.
-        set_return_dict, return_dict = (
-            "return_dict" in kwargs,
-            kwargs.pop("return_dict", False),
-        )
-        self.cached_base_ret = self.base_objective(
-            self.infun(x), sensi_orders, mode, return_dict=True, **kwargs
-        )
-        if set_return_dict:
-            kwargs["return_dict"] = return_dict
-        ret = {}
-        if RDATAS in self.cached_base_ret:
-            ret[RDATAS] = self.cached_base_ret[RDATAS]
-        if 0 in sensi_orders:
-            ret[FVAL] = float(self.jax_objective(x))
-        if 1 in sensi_orders:
-            ret[GRAD] = self.jax_objective_grad(x)
-        if 2 in sensi_orders:
-            ret[HESS] = self.jax_objective_hess(x)
-
-        return ret
+        pass
 
     def __deepcopy__(self, memodict=None):
         other = JaxObjective(
@@ -267,5 +227,14 @@ class JaxObjective(ObjectiveBase):
             copy.deepcopy(self.jax_fun),
             copy.deepcopy(self.x_names),
         )
-
         return other
+
+    @property
+    def history(self):
+        """Exposes the history of the inner objective."""
+        return self.base_objective.history
+
+    @property
+    def pre_post_processor(self):
+        """Exposes the pre_post_processor of inner objective."""
+        return self.base_objective.pre_post_processor

@@ -220,6 +220,9 @@ def test_jax(max_sensi_order, integrated, enable_x64):
     import jax
     import jax.numpy as jnp
 
+    if max_sensi_order == 2:
+        pytest.skip("Not Implemented")
+
     jax.config.update("jax_enable_x64", enable_x64)
 
     from pypesto.objective.jax import JaxObjective
@@ -227,32 +230,39 @@ def test_jax(max_sensi_order, integrated, enable_x64):
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
     # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.arcsinh(prob["x"])
+    x_ref = np.asarray(prob["x"]) / 2
 
-    def jac_op(x: jnp.array) -> jnp.array:
-        return jax.lax.sinh(x)
+    def jax_op(x: jnp.array) -> jnp.array:
+        # pick a simple function here to avoid numerical issues
+        return 2.0 * x
 
     # compose rosenbrock function with sinh transformation
-    obj = JaxObjective(prob["obj"], jac_op)
+    obj = JaxObjective(prob["obj"], jax_op)
 
-    # check function values and derivatives, also after copy
+    # evaluate for a couple of random points such that we can assess
+    # compatibility with vmap
+    xx = x_ref + np.random.randn(10, x_ref.shape[0])
+    rvals_ref = [
+        prob["obj"](jax_op(xxi), sensi_orders=(max_sensi_order,)) for xxi in xx
+    ]
     for _obj in (obj, copy.deepcopy(obj)):
-        # function value
-        assert _obj(x_ref) == prob["fval"]
-
-        # gradient
-        if max_sensi_order > 0:
-            assert np.allclose(
-                _obj(x_ref, sensi_orders=(1,)), prob["grad"] * np.cosh(x_ref)
-            )
-
-        # hessian
-        if max_sensi_order > 1:
-            assert np.allclose(
-                prob["hess"] * (np.diag(np.power(np.cosh(x_ref), 2)))
-                + np.diag(prob["grad"] * np.sinh(x_ref)),
-                _obj(x_ref, sensi_orders=(2,)),
-            )
+        jaxfun = _obj
+        if max_sensi_order == 1:
+            jaxfun = jax.grad(jaxfun)
+        # check compatibility with vmap and jit
+        vmapped = jax.vmap(jaxfun)
+        rvals_jax = vmapped(xx)
+        atol = 0
+        # also need to account for roundoff errors in input, so we are not
+        # we can't use rtol = 1e-8 for 32bit
+        rtol = 1e-16 if enable_x64 else 1e-6
+        for x, rref, rj in zip(xx, rvals_ref, rvals_jax):
+            if max_sensi_order == 0:
+                np.testing.assert_allclose(rref, rj, atol=atol, rtol=rtol)
+            if max_sensi_order == 1:
+                np.testing.assert_allclose(
+                    rref @ jax.jacfwd(jax_op)(x), rj, atol=atol, rtol=rtol
+                )
 
 
 @pytest.fixture(
