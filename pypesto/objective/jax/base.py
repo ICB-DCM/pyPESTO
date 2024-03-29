@@ -180,7 +180,7 @@ class JaxObjective(ObjectiveBase):
         **kwargs,
     ) -> Union[jnp.ndarray, Tuple, ResultDict]:
         """
-        See `ObjectiveBase` for more documentation.
+        See :class:`ObjectiveBase` for more documentation.
 
         Note that this function delegates pre- and post-processing as well as
         history handling to the inner objective.
@@ -213,7 +213,7 @@ class JaxObjective(ObjectiveBase):
         **kwargs,
     ) -> ResultDict:
         """
-        See `ObjectiveBase` for more documentation.
+        See :class:`ObjectiveBase` for more documentation.
 
         This function is not implemented for JaxObjective as it is not called
         in the override for __call__. However, it's marked as abstract so we
