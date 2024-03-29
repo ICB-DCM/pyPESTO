@@ -230,8 +230,7 @@ def test_jax(max_sensi_order, integrated, enable_x64):
 
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
-    # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.asarray(prob["x"]) / 2
+    x_ref = np.asarray(prob["x"])
 
     def jax_op_in(x: jnp.array) -> jnp.array:
         # pick a simple function here to avoid numerical issues
