@@ -271,8 +271,8 @@ def test_jax(max_sensi_order, integrated, enable_x64):
         vmapped_fun = jax.vmap(fun)
         rvals_jax = vmapped_fun(xx)
         atol = 0
-        # also need to account for roundoff errors in input, so we are not
-        # we can't use rtol = 1e-8 for 32bit
+        # also need to account for roundoff errors in input, so we
+        # can't use rtol = 1e-8 for 32bit
         rtol = 1e-16 if enable_x64 else 1e-5
         for x, rref, rj in zip(xx, rvals_ref, rvals_jax):
             if max_sensi_order == 0:
