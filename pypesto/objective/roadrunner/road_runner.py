@@ -10,7 +10,7 @@ import roadrunner
 from petab import Problem as PetabProblem
 from petab.parameter_mapping import ParMappingDictQuadruple
 
-from ...C import MODE_FUN, MODE_RES, ModeType
+from ...C import MODE_FUN, MODE_RES, ROADRUNNER_INSTANCE, X_NAMES, ModeType
 from ..base import ObjectiveBase
 from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData, SolverOptions
@@ -73,8 +73,8 @@ class RoadRunnerObjective(ObjectiveBase):
         """Return basic information of the objective configuration."""
         info = super().get_config()
         info["solver_options"] = repr(self.solver_options)
-        info["x_names"] = self.x_names
-        info["roadrunner_instance"] = self.roadrunner_instance.getInfo()
+        info[X_NAMES] = self.x_names
+        info[ROADRUNNER_INSTANCE] = self.roadrunner_instance.getInfo()
         return info
 
     # TODO: Check whether we need some sort of pickling

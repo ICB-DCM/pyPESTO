@@ -10,7 +10,16 @@ import petab
 import roadrunner
 from petab.parameter_mapping import ParMappingDictQuadruple
 
-from ...C import MODE_FUN, MODE_RES, ModeType
+from ...C import (
+    FVAL,
+    MODE_FUN,
+    MODE_RES,
+    RES,
+    ROADRUNNER_LLH,
+    ROADRUNNER_SIMULATION,
+    TIME,
+    ModeType,
+)
 from .utils import (
     ExpData,
     SolverOptions,
@@ -107,9 +116,9 @@ class RoadRunnerCalculator:
 
         if mode == MODE_FUN:
             return {
-                "fval": -llh_tot,
-                "simulation_results": simulation_results,
-                "llh": llh_tot,
+                FVAL: -llh_tot,
+                ROADRUNNER_SIMULATION: simulation_results,
+                ROADRUNNER_LLH: llh_tot,
             }
         if mode == MODE_RES:  # TODO: speed up by not using pandas
             simulation_df = simulation_to_measurement_df(
@@ -122,9 +131,9 @@ class RoadRunnerCalculator:
                 petab_problem.parameter_df,
             )
             return {
-                "res": res_df,
-                "simulation_results": simulation_results,
-                "fval": -llh_tot,
+                RES: res_df,
+                ROADRUNNER_SIMULATION: simulation_results,
+                FVAL: -llh_tot,
             }
 
     def simulate_per_condition(
@@ -217,7 +226,7 @@ class RoadRunnerCalculator:
             )
 
         sim_res = roadrunner_instance.simulate(
-            times=timepoints, selections=["time"] + observables_ids
+            times=timepoints, selections=[TIME] + observables_ids
         )
 
         llhs = calculate_llh(sim_res, edata, par_map)
@@ -246,7 +255,11 @@ class RoadRunnerCalculator:
             parameters included here will be set. Remaining parameters will
             be used as already set in `amici_model` and `edata`.
         parameter_mapping:
-            Parameter mapping for current condition.
+            Parameter mapping for current condition. Quadruple of dicts,
+            where the first dict contains the parameter mapping for pre-
+            equilibration, the second dict contains the parameter mapping
+            for the simulation, the third and fourth dict contain the scaling
+            factors for the pre-equilibration and simulation, respectively.
         preeq:
             Whether to fill in parameters for pre-equilibration.
         filling_mode:
@@ -267,11 +280,11 @@ class RoadRunnerCalculator:
                 "Invalid filling mode. Choose from 'all', "
                 "'only_parameters', 'only_species'."
             )
-        mapping = parameter_mapping[1]
-        scaling = parameter_mapping[3]
+        mapping = parameter_mapping[1]  # default: simulation condition mapping
+        scaling = parameter_mapping[3]  # default: simulation condition scaling
         if preeq:
-            mapping = parameter_mapping[0]
-            scaling = parameter_mapping[2]
+            mapping = parameter_mapping[0]  # pre-equilibration mapping
+            scaling = parameter_mapping[2]  # pre-equilibration scaling
 
         # Parameter parameter_mapping may contain parameter_ids as values,
         # these *must* be replaced
