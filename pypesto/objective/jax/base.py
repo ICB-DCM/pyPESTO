@@ -8,7 +8,7 @@ combination of objective based methods and jax based autodiff.
 
 import copy
 from functools import partial
-from typing import Callable, Sequence, Tuple, Union
+from typing import Sequence, Tuple, Union
 
 import numpy as np
 
@@ -28,16 +28,11 @@ except ImportError:
 
 # jax compatible (jit-able) objective function using external callback, see
 # https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
-# note that these functions are impure since they rely on cached values
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
 def _device_fun(obj: "JaxObjective", x: jnp.array):
-    """Jax compatible objective function execution using host callback.
-
-    This function does not actually call the underlying objective function,
-    but instead extracts cached return values. Thus, it must only be called
-    from within obj.call_unprocessed, and obj.cached_base_ret must be populated.
+    """Jax compatible objective function execution using external callback.
 
     Parameters
     ----------
@@ -45,12 +40,6 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
         The wrapped jax objective.
     x:
         jax computed input array.
-
-    Note
-    ----
-    This function should rather be implemented as class method of JaxObjective,
-    but this is not possible at the time of writing as this is not supported
-    by signature inspection in the underlying bind call.
     """
     return jax.pure_callback(
         partial(obj.base_objective, sensi_orders=(0,)),
@@ -60,11 +49,13 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
 
 
 def _device_fun_value_and_grad(obj: "JaxObjective", x: jnp.array):
-    """Jax compatible objective gradient execution using host callback.
+    """Jax compatible objective gradient execution using external callback.
 
-    This function does not actually call the underlying objective function,
-    but instead extracts cached return values. Thus, it must only be called
-    from within obj.call_unprocessed and obj.cached_base_ret must be populated.
+    This function will be called when computing the gradient of the
+    `JaxObjective` using `jax.grad` or `jax.value_and_grad`. In the latter
+    case, the function will return both the function value and the gradient,
+    so no caching is necessary. For higher order derivatives, caching would
+    be advantageous, but unclear how to implement this.
 
     Parameters
     ----------
@@ -72,12 +63,6 @@ def _device_fun_value_and_grad(obj: "JaxObjective", x: jnp.array):
         The wrapped jax objective.
     x:
         jax computed input array.
-
-    Note
-    ----
-    This function should rather be implemented as class method of JaxObjective,
-    but this is not possible at the time of writing as this is not supported
-    by signature inspection in the underlying bind call.
     """
     return jax.pure_callback(
         partial(
@@ -98,7 +83,7 @@ def _device_fun_value_and_grad(obj: "JaxObjective", x: jnp.array):
     )
 
 
-# define custom jvp for device_fun & device_fun_grad to enable autodiff, see
+# define custom jvp for device_fun to enable autodiff, see
 # https://jax.readthedocs.io/en/latest/notebooks/Custom_derivative_rules_for_Python_code.html
 
 
@@ -114,22 +99,26 @@ def _device_fun_jvp(
 
 
 class JaxObjective(ObjectiveBase):
-    """Objective function that combines pypesto objectives with jax functions.
+    """Objective function that enables use of pypesto objectives in jax models.
 
-    The generated objective function will evaluate objective(jax_fun(x)).
+    The generated function should generally be compatible with jax, but cannot
+    compute higher order derivatives and is not vectorized (but still
+    compatible with jax.vmap)
 
     Parameters
     ----------
     objective:
-        pyPESTO objective
-    jax_fun:
-        jax function (not jitted) that computes input to the pyPESTO objective
+        pyPESTO objective to be wrapped.
+
+    Note
+    ----
+    Currently only implements MODE_FUN and sensi_orders=(0,). Support for
+    MODE_RES should be straightforward to add.
     """
 
     def __init__(
         self,
         objective: ObjectiveBase,
-        jax_fun: Callable,
         x_names: Sequence[str] = None,
     ):
         if not isinstance(objective, ObjectiveBase):
@@ -145,17 +134,9 @@ class JaxObjective(ObjectiveBase):
 
         self.base_objective = objective
 
-        self.jax_fun = jax_fun
-
         # would be cleaner to also have this as class method, but not supported
         # by signature inspection in bind call.
-        def jax_objective(x):
-            # device fun doesn't actually need the value of y, but we need to
-            # compute this here for autodiff to work
-            y = jax_fun(x)
-            return _device_fun(self, y)
-
-        self.jax_objective = jax_objective
+        self.jax_objective = partial(_device_fun, self)
 
     def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -224,7 +205,6 @@ class JaxObjective(ObjectiveBase):
     def __deepcopy__(self, memodict=None):
         other = JaxObjective(
             copy.deepcopy(self.base_objective),
-            copy.deepcopy(self.jax_fun),
             copy.deepcopy(self.x_names),
         )
         return other
