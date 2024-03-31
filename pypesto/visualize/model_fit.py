@@ -13,7 +13,7 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import petab
-from amici.petab_objective import rdatas_to_simulation_df
+from amici.petab.simulations import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
 from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
