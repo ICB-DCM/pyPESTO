@@ -54,6 +54,7 @@ Algorithms and features
    example/ordinal_data.ipynb
    example/censored_data.ipynb
    example/semiquantitative_data.ipynb
+   example/roadrunner.ipynb
 
 Application examples
 --------------------
