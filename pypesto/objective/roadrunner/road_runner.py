@@ -2,6 +2,7 @@
 
 Currently does not support sensitivities.
 """
+import copy
 from collections import OrderedDict
 from typing import Optional, Sequence, Tuple, Union
 
@@ -68,6 +69,26 @@ class RoadRunnerObjective(ObjectiveBase):
             solver_options = SolverOptions()
         self.solver_options = solver_options
         super().__init__(x_names=x_names)
+
+    def __deepcopy__(
+        self, memodict: Optional[dict] = None
+    ) -> "RoadRunnerObjective":
+        """Deepcopy function for RoadRunner objective.
+
+        Needed for e.g. profiling.
+        """
+        import roadrunner
+
+        other_dict = {}
+
+        for key in {"edatas", "parameter_mapping", "petab_problem"}:
+            other_dict[key] = copy.deepcopy(self.__dict__[key])
+        other_dict["x_names"] = self._x_names
+        other_rr = roadrunner.RoadRunner()
+        state = self.roadrunner_instance.saveStateS()
+        other_rr.loadStateS(state=state)
+
+        return RoadRunnerObjective(rr=other_rr, **other_dict)
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""

@@ -1,7 +1,9 @@
 """Test the roadrunner interface."""
-
+import copy
 import logging
+import os
 
+import benchmark_models_petab as models
 import petab
 import petabtests
 import pytest
@@ -104,3 +106,31 @@ def _execute_case_rr(case, model_type, version):
         )
 
     logger.info(f"Case {version}/{model_type}/{case} passed.")
+
+
+def test_deepcopy():
+    "Test that deepcopy works as intended"
+    model_name = "Boehm_JProteomeRes2014"
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+    )
+    petab_problem.model_name = model_name
+    importer = objective_rr.PetabImporterRR(petab_problem)
+    problem_parameters = petab_problem.x_nominal_scaled
+
+    obj = importer.create_objective()
+
+    copied_objective = copy.deepcopy(obj)
+
+    assert obj(problem_parameters) == copied_objective(problem_parameters)
+
+    # !!not adviced, only done here for testing purposes!!
+    obj.roadrunner_instance.removeParameter(
+        "pSTAT5A_rel", forceRegenerate=False
+    )
+    obj.roadrunner_instance.addParameter("pSTAT5A_rel", 0.0, False)
+    obj.roadrunner_instance.addAssignmentRule(
+        "pSTAT5A_rel", "(100 * pApB + 200 * pApA * specC17)"
+    )
+
+    assert obj(problem_parameters) != copied_objective(problem_parameters)
