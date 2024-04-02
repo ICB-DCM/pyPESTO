@@ -292,6 +292,10 @@ AMICI_SIGMAY = "sigmay"  # return field in amici simulation result
 AMICI_SSIGMAY = "ssigmay"  # return field in amici simulation result
 AMICI_SSIGMAZ = "ssigmaz"  # return field in amici simulation result
 
+ROADRUNNER_LLH = "llh"  # return field in roadrunner objective
+ROADRUNNER_INSTANCE = "roadrunner_instance"
+ROADRUNNER_SIMULATION = "simulation_results"
+
 CONDITION = "condition"
 CONDITION_IDS = "condition_ids"
 
