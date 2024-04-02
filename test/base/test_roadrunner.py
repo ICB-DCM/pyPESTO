@@ -116,11 +116,13 @@ def test_deepcopy():
     )
     petab_problem.model_name = model_name
     importer = objective_rr.PetabImporterRR(petab_problem)
-    problem_parameters = petab_problem.x_nominal_scaled
+    problem_parameters = petab_problem.x_nominal_free_scaled
 
-    obj = importer.create_objective()
+    problem = importer.create_problem()
+    obj = problem.objective
 
-    copied_objective = copy.deepcopy(obj)
+    problem_copied = copy.deepcopy(problem)
+    copied_objective = problem_copied.objective
 
     assert obj(problem_parameters) == copied_objective(problem_parameters)
 

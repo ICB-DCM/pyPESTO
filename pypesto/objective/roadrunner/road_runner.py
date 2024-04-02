@@ -79,16 +79,16 @@ class RoadRunnerObjective(ObjectiveBase):
         """
         import roadrunner
 
-        other_dict = {}
+        other = self.__class__.__new__(self.__class__)
 
-        for key in {"edatas", "parameter_mapping", "petab_problem"}:
-            other_dict[key] = copy.deepcopy(self.__dict__[key])
-        other_dict["x_names"] = self._x_names
+        for key in set(self.__dict__.keys()) - {"roadrunner_instance"}:
+            other.__dict__[key] = copy.deepcopy(self.__dict__[key])
         other_rr = roadrunner.RoadRunner()
         state = self.roadrunner_instance.saveStateS()
         other_rr.loadStateS(state=state)
+        other.roadrunner_instance = other_rr
 
-        return RoadRunnerObjective(rr=other_rr, **other_dict)
+        return other
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
