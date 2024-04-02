@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 from scipy.stats import multivariate_normal

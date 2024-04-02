@@ -1,7 +1,8 @@
 """Manage all components of a pyPESTO model selection problem."""
 
 import warnings
-from typing import Any, Iterable, Optional
+from collections.abc import Iterable
+from typing import Any, Optional
 
 import petab_select
 from petab_select import Model

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 import pandas as pd
@@ -67,7 +68,7 @@ class EnsemblePrediction:
 
     def __init__(
         self,
-        predictor: Optional[Callable[[Sequence], PredictionResult]] = None,
+        predictor: Callable[[Sequence], PredictionResult] | None = None,
         prediction_id: str = None,
         prediction_results: Sequence[PredictionResult] = None,
         lower_bound: Sequence[np.ndarray] = None,
@@ -272,7 +273,7 @@ class EnsemblePrediction:
             # stack into one numpy array
             return np.stack(output_sensi_list, axis=-1)
 
-        def _stack_weights(ic: int) -> Union[np.ndarray, None]:
+        def _stack_weights(ic: int) -> np.ndarray | None:
             """
             Stack weights.
 
@@ -845,7 +846,7 @@ class Ensemble:
         self,
         predictor: Callable,
         default_value: float = None,
-    ) -> list[Union[int, float]]:
+    ) -> list[int | float]:
         """
         Create mapping for parameters from ensemble to predictor.
 
@@ -1079,7 +1080,7 @@ class Ensemble:
 
 
 def entries_per_start(
-    fval_traces: list["np.ndarray"],
+    fval_traces: list[np.ndarray],
     cutoff: float,
     max_size: int,
     max_per_start: int,
@@ -1168,7 +1169,7 @@ def get_vector_indices(
         return sorted(candidates, key=lambda i: trace_start[i])[:n_vectors]
 
 
-def get_percentile_label(percentile: Union[float, int, str]) -> str:
+def get_percentile_label(percentile: float | int | str) -> str:
     """Convert a percentile to a label.
 
     Labels for percentiles are used at different locations (e.g. ensemble

@@ -1,7 +1,7 @@
 """Miscellaneous methods."""
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 import pandas as pd
 import petab

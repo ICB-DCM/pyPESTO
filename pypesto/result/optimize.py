@@ -3,8 +3,9 @@
 import logging
 import warnings
 from collections import Counter
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import Sequence, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd

@@ -28,7 +28,6 @@ from __future__ import annotations
 import importlib
 import logging
 import warnings
-from typing import List, Union
 
 import cloudpickle  # noqa: S403
 import numpy as np
@@ -120,12 +119,10 @@ class DynestySampler(Sampler):
         self.objective_type = objective_type
 
         # set in initialize
-        self.problem: Union[Problem, None] = None
-        self.sampler: Union[
-            dynesty.DynamicNestedSampler,
-            dynesty.NestedSampler,
-            None,
-        ] = None
+        self.problem: Problem | None = None
+        self.sampler: (
+            dynesty.DynamicNestedSampler | dynesty.NestedSampler | None
+        ) = None
 
     def prior_transform(self, prior_sample: np.ndarray) -> np.ndarray:
         """Transform prior sample from unit cube to pyPESTO prior.
@@ -165,7 +162,7 @@ class DynestySampler(Sampler):
     def initialize(
         self,
         problem: Problem,
-        x0: Union[np.ndarray, List[np.ndarray]] = None,
+        x0: np.ndarray | list[np.ndarray] = None,
     ) -> None:
         """Initialize the sampler."""
         self.problem = problem

@@ -1,7 +1,7 @@
 """Convenience functions for working with HDF5 files."""
 
+from collections.abc import Collection
 from numbers import Integral, Number, Real
-from typing import Collection
 
 import h5py
 import numpy as np

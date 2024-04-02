@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -60,7 +60,7 @@ def get_spectral_decomposition_parameters(
     only_identifiable_directions: bool = False,
     cutoff_absolute_identifiable: float = 1e-16,
     cutoff_relative_identifiable: float = 1e-16,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the spectral decomposition of ensemble parameters.
 
@@ -128,7 +128,7 @@ def get_spectral_decomposition_predictions(
     only_identifiable_directions: bool = False,
     cutoff_absolute_identifiable: float = 1e-16,
     cutoff_relative_identifiable: float = 1e-16,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the spectral decomposition of ensemble predictions.
 
@@ -191,7 +191,7 @@ def get_spectral_decomposition_lowlevel(
     only_identifiable_directions: bool = False,
     cutoff_absolute_identifiable: float = 1e-16,
     cutoff_relative_identifiable: float = 1e-16,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute the spectral decomposition of ensemble parameters or predictions.
 

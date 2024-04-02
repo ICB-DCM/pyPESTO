@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Union
 
 
 class ProfileOptions(dict):
@@ -80,7 +80,7 @@ class ProfileOptions(dict):
 
     @staticmethod
     def create_instance(
-        maybe_options: Union["ProfileOptions", Dict],
+        maybe_options: Union["ProfileOptions", dict],
     ) -> "ProfileOptions":
         """
         Return a valid options object.

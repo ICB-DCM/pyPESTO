@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -209,8 +210,8 @@ def ensemble_crosstab_scatter_lowlevel(
 
 def ensemble_scatter_lowlevel(
     dataset,
-    ax: Optional[plt.Axes] = None,
-    size: Optional[Tuple[float]] = (12, 6),
+    ax: plt.Axes | None = None,
+    size: tuple[float] | None = (12, 6),
     x_label: str = "component 1",
     y_label: str = "component 2",
     color_by: Sequence[float] = None,

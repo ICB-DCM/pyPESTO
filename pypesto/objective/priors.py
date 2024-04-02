@@ -1,7 +1,8 @@
 import logging
 import math
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import Callable, Dict, List, Sequence, Tuple, Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -50,7 +51,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def __init__(
         self,
-        prior_list: List[Dict],
+        prior_list: list[dict],
         x_names: Sequence[str] = None,
     ):
         """
@@ -75,7 +76,7 @@ class NegLogParameterPriors(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: C.ModeType,
         **kwargs,
     ) -> ResultDict:
@@ -115,7 +116,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: C.ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
