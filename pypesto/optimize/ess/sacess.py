@@ -7,7 +7,7 @@ import multiprocessing
 import os
 import time
 from math import ceil, sqrt
-from multiprocessing import Manager, Process
+from multiprocessing import get_context
 from multiprocessing.managers import SyncManager
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
@@ -67,6 +67,7 @@ class SacessOptimizer:
         sacess_loglevel: int = logging.INFO,
         ess_loglevel: int = logging.WARNING,
         tmpdir: Union[Path, str] = None,
+        mp_start_method: str = "spawn",
     ):
         """Construct.
 
@@ -105,6 +106,9 @@ class SacessOptimizer:
             current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
             parallel have a unique `tmpdir`.
+        mp_start_method:
+            The start method for the multiprocessing context.
+            See :mod:`multiprocessing` for details.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -135,6 +139,7 @@ class SacessOptimizer:
         self.histories: Optional[
             list["pypesto.history.memory.MemoryHistory"]
         ] = None
+        self.mp_ctx = get_context(mp_start_method)
 
     def minimize(
         self,
@@ -195,12 +200,12 @@ class SacessOptimizer:
             )
         )
         logging_thread = logging.handlers.QueueListener(
-            multiprocessing.Queue(-1), logging_handler
+            self.mp_ctx.Queue(-1), logging_handler
         )
 
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
-        with Manager() as shmem_manager:
+        with self.mp_ctx.Manager() as shmem_manager:
             sacess_manager = SacessManager(
                 shmem_manager=shmem_manager,
                 ess_options=ess_init_args,
@@ -223,7 +228,7 @@ class SacessOptimizer:
             ]
             # launch worker processes
             worker_processes = [
-                Process(
+                self.mp_ctx.Process(
                     name=f"{self.__class__.__name__}-worker-{i:02d}",
                     target=_run_worker,
                     args=(
