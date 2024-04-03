@@ -73,10 +73,7 @@ class RoadRunnerObjective(ObjectiveBase):
     def __deepcopy__(
         self, memodict: Optional[dict] = None
     ) -> "RoadRunnerObjective":
-        """Deepcopy function for RoadRunner objective.
-
-        Needed for e.g. profiling.
-        """
+        """Deepcopy function for RoadRunner objective."""
         import roadrunner
 
         other = self.__class__.__new__(self.__class__)
