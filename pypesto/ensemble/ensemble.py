@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from functools import partial
-from typing import TYPE_CHECKING, Callable, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -480,7 +480,7 @@ class Ensemble:
         self,
         x_vectors: np.ndarray,
         x_names: Sequence[str] = None,
-        vector_tags: Sequence[tuple[int, int]] = None,
+        vector_tags: Sequence[Any] = None,
         ensemble_type: EnsembleType = None,
         predictions: Sequence[EnsemblePrediction] = None,
         lower_bound: np.ndarray = None,
@@ -522,7 +522,7 @@ class Ensemble:
         self.x_vectors = x_vectors
         self.n_x = x_vectors.shape[0]
         self.n_vectors = x_vectors.shape[1]
-        self.vector_tags = vector_tags
+        self.vector_tags = list(vector_tags) if vector_tags is not None else []
         self.summary = None
 
         # store bounds
@@ -669,7 +669,7 @@ class Ensemble:
                 x_vectors.append(start["x"][result.problem.x_free_indices])
 
                 # the vector tag will be a -1 to indicate it is the last step
-                vector_tags.append((int(start["id"]), -1))
+                vector_tags.append((start["id"], -1))
             else:
                 break
 
@@ -800,7 +800,7 @@ class Ensemble:
             x_vectors.extend([x_trace[start][ind] for ind in indices])
             vector_tags.extend(
                 [
-                    (int(result.optimize_result.list[start]["id"]), ind)
+                    (result.optimize_result.list[start]["id"], ind)
                     for ind in indices
                 ]
             )
