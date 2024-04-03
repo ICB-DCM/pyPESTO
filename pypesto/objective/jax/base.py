@@ -8,7 +8,7 @@ combination of objective based methods and jax based autodiff.
 
 import copy
 from functools import partial
-from typing import Sequence, Tuple, Union
+from typing import Tuple, Union
 
 import numpy as np
 
@@ -119,7 +119,6 @@ class JaxObjective(ObjectiveBase):
     def __init__(
         self,
         objective: ObjectiveBase,
-        x_names: Sequence[str] = None,
     ):
         if not isinstance(objective, ObjectiveBase):
             raise TypeError("objective must be an ObjectiveBase instance")
@@ -127,11 +126,6 @@ class JaxObjective(ObjectiveBase):
             raise NotImplementedError(
                 f"objective must support mode={MODE_FUN}"
             )
-        # store names directly rather than calling __init__ of super class
-        # as we can't initialize history as we are exposing the history of the
-        # inner objective
-        self._x_names = x_names
-
         self.base_objective = objective
 
         # would be cleaner to also have this as class method, but not supported
@@ -205,7 +199,6 @@ class JaxObjective(ObjectiveBase):
     def __deepcopy__(self, memodict=None):
         other = JaxObjective(
             copy.deepcopy(self.base_objective),
-            copy.deepcopy(self.x_names),
         )
         return other
 
@@ -218,3 +211,8 @@ class JaxObjective(ObjectiveBase):
     def pre_post_processor(self):
         """Exposes the pre_post_processor of inner objective."""
         return self.base_objective.pre_post_processor
+
+    @property
+    def x_names(self):
+        """Exposes the x_names of inner objective."""
+        return self.base_objective.x_names
