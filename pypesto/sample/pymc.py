@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
-import arviz as az
 import numpy as np
 import pymc
 import pytensor.tensor as pt
@@ -15,6 +14,9 @@ from ..objective import ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult
 from .sampler import Sampler, SamplerImportError
+
+if TYPE_CHECKING:
+    import arviz as az
 
 logger = logging.getLogger(__name__)
 
