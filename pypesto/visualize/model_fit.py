@@ -13,13 +13,12 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import petab
-from amici.petab_objective import rdatas_to_simulation_df
+from amici.petab.simulations import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
 from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
-from ..hierarchical.relative.calculator import RelativeAmiciCalculator
 from ..petab.importer import get_petab_non_quantitative_data_types
-from ..problem import Problem
+from ..problem import HierarchicalProblem, Problem
 from ..result import Result
 from .ordinal_categories import plot_categories_from_pypesto_result
 from .spline_approximation import _add_spline_mapped_simulations_to_model_fit
@@ -241,7 +240,7 @@ def _get_simulation_rdatas(
     parameters = problem.get_reduced_vector(parameters)
 
     # simulate with custom timepoints for hierarchical model
-    if isinstance(problem.objective.calculator, RelativeAmiciCalculator):
+    if isinstance(problem, HierarchicalProblem):
         # get parameter dictionary
         x_dct = dict(
             zip(problem.x_names, result.optimize_result.list[start_index].x)
@@ -253,8 +252,10 @@ def _get_simulation_rdatas(
         )
 
         # update parameter dictionary with inner parameters
-        inner_parameters = ret["inner_parameters"]
-        x_dct.update(inner_parameters)
+        inner_parameter_dict = dict(
+            zip(problem.inner_x_names, ret["inner_parameters"])
+        )
+        x_dct.update(inner_parameter_dict)
 
         parameter_mapping = problem.objective.parameter_mapping
         edatas = copy.deepcopy(problem.objective.edatas)

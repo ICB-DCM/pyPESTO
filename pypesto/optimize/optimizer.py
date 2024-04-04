@@ -14,7 +14,7 @@ import scipy.optimize
 from ..C import FVAL, GRAD, INNER_PARAMETERS, MODE_FUN, MODE_RES, SPLINE_KNOTS
 from ..history import HistoryOptions, NoHistory, OptimizerHistory
 from ..objective import Objective
-from ..problem import Problem
+from ..problem import HierarchicalProblem, Problem
 from ..result import OptimizerResult
 from .load import fill_result_from_history
 from .options import OptimizeOptions
@@ -61,18 +61,17 @@ def hierarchical_decorator(minimize):
             optimize_options=optimize_options,
         )
 
-        # add inner parameters
-        if (
-            hasattr(problem.objective, INNER_PARAMETERS)
-            and problem.objective.inner_parameters is not None
-        ):
-            result[INNER_PARAMETERS] = problem.objective.inner_parameters
-
-        if (
-            hasattr(problem.objective, SPLINE_KNOTS)
-            and problem.objective.spline_knots is not None
-        ):
-            result[SPLINE_KNOTS] = problem.objective.spline_knots
+        if isinstance(problem, HierarchicalProblem):
+            # Call the objective to obtain inner parameters of
+            # the optimal outer optimization parameters
+            return_dict = problem.objective(
+                result.x,
+                return_dict=True,
+            )
+            if INNER_PARAMETERS in return_dict:
+                result[INNER_PARAMETERS] = return_dict[INNER_PARAMETERS]
+            if SPLINE_KNOTS in return_dict:
+                result[SPLINE_KNOTS] = return_dict[SPLINE_KNOTS]
 
         return result
 
@@ -239,8 +238,8 @@ def minimize_decorator_collection(minimize):
     @wraps(minimize)
     @fix_decorator
     @time_decorator
-    @history_decorator
     @hierarchical_decorator
+    @history_decorator
     def wrapped_minimize(
         self,
         problem: Problem,
