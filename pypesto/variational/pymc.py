@@ -5,6 +5,7 @@ import numpy as np
 import pytensor.tensor as pt
 from scipy import stats
 
+from ..objective import FD
 from ..result import McmcPtResult
 from ..sample.pymc import PymcObjectiveOp, PymcSampler
 from ..sample.sampler import SamplerImportError
@@ -31,7 +32,7 @@ class PymcVariational(PymcSampler):
     def fit(
         self,
         n_iterations: int,
-        method: str = 'advi',
+        method: str = "advi",
         random_seed: Optional[int] = None,
         start_sigma: Optional = None,
         inf_kwargs: Optional = None,
@@ -63,9 +64,15 @@ class PymcVariational(PymcSampler):
         try:
             import pymc
         except ImportError:
-            raise SamplerImportError("pymc")
+            raise SamplerImportError("pymc") from None
 
         problem = self.problem
+        if not problem.objective.has_grad:
+            logger.info(
+                "The objective function does not provide gradients. "
+                "Finite differences will be used."
+            )
+            problem.objective = FD(obj=problem.objective)
         log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
 
         x0 = None
@@ -136,7 +143,7 @@ class PymcVariational(PymcSampler):
             burn_in=0,
             auto_correlation=0,
             effective_sample_size=n_samples,
-            message='variational inference results',
+            message="variational inference results",
         )
 
     def get_variational_parameters(self) -> (list, list):
@@ -169,7 +176,7 @@ class PymcVariational(PymcSampler):
         """
         # TODO: add support for other methods
         logger.warning(
-            'currently only supports the methods `advi` and `fullrank_advi`'
+            "currently only supports the methods `advi` and `fullrank_advi`"
         )
 
         if x.ndim == 1:
