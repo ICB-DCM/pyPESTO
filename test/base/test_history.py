@@ -3,8 +3,8 @@
 import os
 import tempfile
 import unittest
+from collections.abc import Sequence
 from stat import S_IMODE, S_IWGRP, S_IWOTH, S_IWRITE
-from typing import Sequence
 
 import numpy as np
 import pytest

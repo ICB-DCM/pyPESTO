@@ -1,8 +1,8 @@
 import functools
 import logging
 import os
+from collections.abc import Sequence
 from functools import wraps
-from typing import Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np

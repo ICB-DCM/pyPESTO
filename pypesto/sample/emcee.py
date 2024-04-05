@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Union
 
 import numpy as np
 
@@ -60,9 +59,9 @@ class EmceeSampler(Sampler):
         self.run_args: dict = run_args
 
         # set in initialize
-        self.problem: Union[Problem, None] = None
-        self.sampler: Union[emcee.EnsembleSampler, None] = None
-        self.state: Union[emcee.State, None] = None
+        self.problem: Problem | None = None
+        self.sampler: emcee.EnsembleSampler | None = None
+        self.state: emcee.State | None = None
 
     def get_epsilon_ball_initial_state(
         self,
@@ -123,7 +122,7 @@ class EmceeSampler(Sampler):
     def initialize(
         self,
         problem: Problem,
-        x0: Union[np.ndarray, List[np.ndarray]],
+        x0: np.ndarray | list[np.ndarray],
     ) -> None:
         """Initialize the sampler.
 

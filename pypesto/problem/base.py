@@ -1,9 +1,8 @@
 import copy
 import logging
+from collections.abc import Iterable
 from typing import (
     Callable,
-    Iterable,
-    List,
     Optional,
     SupportsFloat,
     SupportsInt,
@@ -90,8 +89,8 @@ class Problem:
     def __init__(
         self,
         objective: ObjectiveBase,
-        lb: Union[np.ndarray, List[float]],
-        ub: Union[np.ndarray, List[float]],
+        lb: Union[np.ndarray, list[float]],
+        ub: Union[np.ndarray, list[float]],
         dim_full: Optional[int] = None,
         x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
         x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
@@ -99,8 +98,8 @@ class Problem:
         x_names: Optional[Iterable[str]] = None,
         x_scales: Optional[Iterable[str]] = None,
         x_priors_defs: Optional[NegLogParameterPriors] = None,
-        lb_init: Union[np.ndarray, List[float], None] = None,
-        ub_init: Union[np.ndarray, List[float], None] = None,
+        lb_init: Union[np.ndarray, list[float], None] = None,
+        ub_init: Union[np.ndarray, list[float], None] = None,
         copy_objective: bool = True,
         startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     ):
@@ -124,7 +123,7 @@ class Problem:
         if x_fixed_indices is None:
             x_fixed_indices = []
         x_fixed_indices = _make_iterable_if_value(x_fixed_indices, "int")
-        self.x_fixed_indices: List[int] = [
+        self.x_fixed_indices: list[int] = [
             _type_conversion_with_check(idx, ix, "fixed indices", "int")
             for idx, ix in enumerate(x_fixed_indices)
         ]
@@ -134,7 +133,7 @@ class Problem:
         if x_fixed_vals is None:
             x_fixed_vals = []
         x_fixed_vals = _make_iterable_if_value(x_fixed_vals, "float")
-        self.x_fixed_vals: List[float] = [
+        self.x_fixed_vals: list[float] = [
             _type_conversion_with_check(idx, x, "fixed values", "float")
             for idx, x in enumerate(x_fixed_vals)
         ]
@@ -149,7 +148,7 @@ class Problem:
             x_names = [f"x{j}" for j in range(0, self.dim_full)]
         if len(set(x_names)) != len(x_names):
             raise ValueError("Parameter names x_names must be unique")
-        self.x_names: List[str] = list(x_names)
+        self.x_names: list[str] = list(x_names)
 
         if x_scales is None:
             x_scales = ["lin"] * self.dim_full
@@ -197,7 +196,7 @@ class Problem:
         return self.dim_full - len(self.x_fixed_indices)
 
     @property
-    def x_free_indices(self) -> List[int]:
+    def x_free_indices(self) -> list[int]:
         """Return non fixed parameters."""
         return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
@@ -394,7 +393,7 @@ class Problem:
     def get_reduced_vector(
         self,
         x_full: Union[np.ndarray, None],
-        x_indices: Optional[List[int]] = None,
+        x_indices: Optional[list[int]] = None,
     ) -> Union[np.ndarray, None]:
         """
         Keep only those elements, which indices are specified in x_indices.

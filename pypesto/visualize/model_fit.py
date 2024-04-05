@@ -5,7 +5,8 @@ Currently only for PEtab problems.
 """
 
 import copy
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import amici
 import amici.plotting

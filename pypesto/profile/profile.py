@@ -1,6 +1,7 @@
 import copy
 import logging
-from typing import Callable, Iterable, Union
+from collections.abc import Iterable
+from typing import Callable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer

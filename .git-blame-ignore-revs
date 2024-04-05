@@ -1,4 +1,6 @@
 # .git-blame-ignore-revs
+# https://github.com/ICB-DCM/pyPESTO/pull/1352
+321ee9dbd0223da0c08172fc08d61796e0d176aa
 # Adjusted to ruff code-checks. Timestamp: 05.03.2024
 82b7d5da1273b9d442a634e5aabbda9685279d77
 # Adjusted to black formatting. Timestamp: 11.01.2022
