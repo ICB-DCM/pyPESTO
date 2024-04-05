@@ -9,6 +9,7 @@ from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
 from ..result import McmcPtResult, Result
 from ..util import tqdm
+from .diagnostics import geweke_test
 from .sampler import InternalSampler, Sampler
 
 logger = logging.getLogger(__name__)
@@ -197,12 +198,27 @@ class ParallelTemperingSampler(Sampler):
                 f"Carefully check the results. Consider using beta_init='{BETA_DECAY}' for better results."
             )
 
-        burn_in = result.sample_result.burn_in
-        trace_loglike = (
-            result.sample_result.trace_neglogprior[::-1, burn_in:]
-            - result.sample_result.trace_neglogpost[::-1, burn_in:]
-        )
-        mean_loglike_per_beta = np.mean(trace_loglike, axis=1)
+        # compute burn in for all chains and then estimate mean of log likelihood for each beta
+        mean_loglike_per_beta = []
+        temps = []
+        for i_chain in reversed(range(len(self.betas))):
+            burn_in_i = geweke_test(result, chain_number=i_chain)
+
+            if (
+                burn_in_i < result.sample_result.trace_x.shape[1]
+                or i_chain == len(self.betas) - 1
+            ):
+                # save temperature-chain as it is converged
+                # last chain converges always, only samples from prior
+                temps.append(i_chain)
+                trace_loglike_i = (
+                    result.sample_result.trace_neglogprior[i_chain, burn_in_i:]
+                    - result.sample_result.trace_neglogpost[
+                        i_chain, burn_in_i:
+                    ]
+                )
+                mean_loglike_per_beta.append(np.mean(trace_loglike_i))
+
         if method == "trapezoid":
             log_evidence = trapezoid(
                 y=mean_loglike_per_beta, x=self.betas[::-1]
