@@ -8,7 +8,7 @@ combination of objective based methods and jax based autodiff.
 
 import copy
 from functools import partial
-from typing import Tuple, Union
+from typing import Union
 
 import numpy as np
 
@@ -31,7 +31,7 @@ except ImportError:
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun(obj: "JaxObjective", x: jnp.array):
+def _device_fun(base_objective: ObjectiveBase, x: jnp.array):
     """Jax compatible objective function execution using external callback.
 
     Parameters
@@ -42,13 +42,13 @@ def _device_fun(obj: "JaxObjective", x: jnp.array):
         jax computed input array.
     """
     return jax.pure_callback(
-        partial(obj.base_objective, sensi_orders=(0,)),
+        partial(base_objective, sensi_orders=(0,)),
         jax.ShapeDtypeStruct((), x.dtype),
         x,
     )
 
 
-def _device_fun_value_and_grad(obj: "JaxObjective", x: jnp.array):
+def _device_fun_value_and_grad(base_objective: ObjectiveBase, x: jnp.array):
     """Jax compatible objective gradient execution using external callback.
 
     This function will be called when computing the gradient of the
@@ -66,7 +66,7 @@ def _device_fun_value_and_grad(obj: "JaxObjective", x: jnp.array):
     """
     return jax.pure_callback(
         partial(
-            obj.base_objective,
+            base_objective,
             sensi_orders=(
                 0,
                 1,
@@ -130,7 +130,7 @@ class JaxObjective(ObjectiveBase):
 
         # would be cleaner to also have this as class method, but not supported
         # by signature inspection in bind call.
-        self.jax_objective = partial(_device_fun, self)
+        self.jax_objective = partial(_device_fun, self.base_objective)
 
     def check_mode(self, mode: ModeType) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -149,11 +149,11 @@ class JaxObjective(ObjectiveBase):
     def __call__(
         self,
         x: jnp.ndarray,
-        sensi_orders: Tuple[int, ...] = (0,),
+        sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
-    ) -> Union[jnp.ndarray, Tuple, ResultDict]:
+    ) -> Union[jnp.ndarray, tuple, ResultDict]:
         """
         See :class:`ObjectiveBase` for more documentation.
 
