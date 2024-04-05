@@ -109,7 +109,7 @@ def _execute_case_rr(case, model_type, version):
 
 
 def test_deepcopy():
-    "Test that deepcopy works as intended"
+    """Test that deepcopy works as intended"""
     model_name = "Boehm_JProteomeRes2014"
     petab_problem = petab.Problem.from_yaml(
         os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
