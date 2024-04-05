@@ -1,6 +1,6 @@
 """AdaptiveParallelTemperingSampler class."""
 
-from typing import Dict, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -30,7 +30,7 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
     """
 
     @classmethod
-    def default_options(cls) -> Dict:
+    def default_options(cls) -> dict:
         """Get default options for sampler."""
         options = super().default_options()
         # scaling factor for temperature adaptation

@@ -1,6 +1,5 @@
 """Visualization routines for model selection with pyPESTO."""
 
-from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -20,12 +19,12 @@ def default_label_maker(model: Model) -> str:
 
 # FIXME supply the problem to automatically detect the correct criterion?
 def plot_selected_models(
-    selected_models: List[Model],
+    selected_models: list[Model],
     criterion: str = Criterion.AIC,
     relative: bool = True,
     fz: int = 14,
-    size: Tuple[float, float] = (5, 4),
-    labels: Dict[str, str] = None,
+    size: tuple[float, float] = (5, 4),
+    labels: dict[str, str] = None,
     ax: plt.Axes = None,
 ) -> plt.Axes:
     """Plot criterion for calibrated models.
@@ -116,12 +115,12 @@ def plot_history_digraph(*args, **kwargs):
 
 def plot_calibrated_models_digraph(
     problem: pypesto_select.Problem,
-    calibrated_models: Dict[str, Model] = None,
+    calibrated_models: dict[str, Model] = None,
     criterion: Criterion = None,
     optimal_distance: float = 1,
     relative: bool = True,
-    options: Dict = None,
-    labels: Dict[str, str] = None,
+    options: dict = None,
+    labels: dict[str, str] = None,
     ax: plt.Axes = None,
 ) -> plt.Axes:
     """Plot all calibrated models in the model space, as a directed graph.
