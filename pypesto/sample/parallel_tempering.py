@@ -206,7 +206,7 @@ class ParallelTemperingSampler(Sampler):
 
             if (
                 burn_in_i < result.sample_result.trace_x.shape[1]
-                or i_chain == len(self.betas) - 1
+                or self.betas[i_chain] == 0
             ):
                 # save temperature-chain as it is converged
                 # last chain converges always, only samples from prior
