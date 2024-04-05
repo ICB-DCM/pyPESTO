@@ -3,8 +3,9 @@ import copy
 import os
 import tempfile
 from collections import OrderedDict
+from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import numpy as np
 
@@ -275,7 +276,7 @@ class AmiciObjective(ObjectiveBase):
         self.reset_steadystate_guesses()
         self.calculator.initialize()
 
-    def __deepcopy__(self, memodict: Dict = None) -> "AmiciObjective":
+    def __deepcopy__(self, memodict: dict = None) -> "AmiciObjective":
         import amici
 
         other = self.__class__.__new__(self.__class__)
@@ -294,7 +295,7 @@ class AmiciObjective(ObjectiveBase):
 
         return other
 
-    def __getstate__(self) -> Dict:
+    def __getstate__(self) -> dict:
         import amici
 
         if self.amici_object_builder is None:
@@ -336,7 +337,7 @@ class AmiciObjective(ObjectiveBase):
 
         return state
 
-    def __setstate__(self, state: Dict) -> None:
+    def __setstate__(self, state: dict) -> None:
         import amici
 
         if state["amici_object_builder"] is None:
@@ -384,7 +385,7 @@ class AmiciObjective(ObjectiveBase):
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -417,11 +418,11 @@ class AmiciObjective(ObjectiveBase):
     def __call__(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...] = (0,),
+        sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
-    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+    ) -> Union[float, np.ndarray, tuple, ResultDict]:
         """See `ObjectiveBase` documentation."""
         import amici
 
@@ -439,7 +440,7 @@ class AmiciObjective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         edatas: Sequence["amici.ExpData"] = None,
         parameter_mapping: "ParameterMapping" = None,
@@ -511,11 +512,11 @@ class AmiciObjective(ObjectiveBase):
 
         return ret
 
-    def par_arr_to_dct(self, x: Sequence[float]) -> Dict[str, float]:
+    def par_arr_to_dct(self, x: Sequence[float]) -> dict[str, float]:
         """Create dict from parameter vector."""
         return OrderedDict(zip(self.x_ids, x))
 
-    def apply_steadystate_guess(self, condition_ix: int, x_dct: Dict) -> None:
+    def apply_steadystate_guess(self, condition_ix: int, x_dct: dict) -> None:
         """
         Apply steady state guess to `edatas[condition_ix].x0`.
 
@@ -551,7 +552,7 @@ class AmiciObjective(ObjectiveBase):
     def store_steadystate_guess(
         self,
         condition_ix: int,
-        x_dct: Dict,
+        x_dct: dict,
         rdata: "amici.ReturnData",
     ) -> None:
         """

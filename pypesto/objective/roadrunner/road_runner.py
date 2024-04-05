@@ -3,7 +3,8 @@
 Currently does not support sensitivities.
 """
 from collections import OrderedDict
-from typing import Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import numpy as np
 import roadrunner
@@ -82,7 +83,7 @@ class RoadRunnerObjective(ObjectiveBase):
     def __call__(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...] = (0,),
+        sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
@@ -93,7 +94,7 @@ class RoadRunnerObjective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         edatas: Optional[Sequence[ExpData]] = None,
         parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
@@ -127,7 +128,7 @@ class RoadRunnerObjective(ObjectiveBase):
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
     ) -> bool:
         """See :class:`ObjectiveBase` documentation."""

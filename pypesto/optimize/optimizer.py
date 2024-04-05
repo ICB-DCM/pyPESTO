@@ -6,7 +6,7 @@ import re
 import time
 import warnings
 from functools import wraps
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 
 import numpy as np
 import scipy.optimize
@@ -327,7 +327,7 @@ class ScipyOptimizer(Optimizer):
         self,
         method: str = "L-BFGS-B",
         tol: float = None,
-        options: Dict = None,
+        options: dict = None,
     ):
         super().__init__()
 
@@ -546,7 +546,7 @@ class ScipyOptimizer(Optimizer):
 class IpoptOptimizer(Optimizer):
     """Use IpOpt (https://pypi.org/project/ipopt/) for optimization."""
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         """
         Initialize.
 
@@ -623,7 +623,7 @@ class IpoptOptimizer(Optimizer):
 class DlibOptimizer(Optimizer):
     """Use the Dlib toolbox for optimization."""
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         super().__init__()
 
         self.options = options
@@ -699,7 +699,7 @@ class DlibOptimizer(Optimizer):
 class PyswarmOptimizer(Optimizer):
     """Global optimization using pyswarm."""
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         super().__init__()
 
         if options is None:
@@ -760,7 +760,7 @@ class CmaOptimizer(Optimizer):
     (https://github.com/CMA-ES/pycma).
     """
 
-    def __init__(self, par_sigma0: float = 0.25, options: Dict = None):
+    def __init__(self, par_sigma0: float = 0.25, options: dict = None):
         """
         Initialize.
 
@@ -867,7 +867,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         population size, default value 15
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         super().__init__()
 
         if options is None:
@@ -938,7 +938,7 @@ class PyswarmsOptimizer(Optimizer):
         Default: 1000
     """
 
-    def __init__(self, par_popsize: float = 10, options: Dict = None):
+    def __init__(self, par_popsize: float = 10, options: dict = None):
         super().__init__()
 
         all_options = {"maxiter": 1000, "c1": 0.5, "c2": 0.3, "w": 0.9}
@@ -1045,8 +1045,8 @@ class NLoptOptimizer(Optimizer):
         self,
         method=None,
         local_method=None,
-        options: Dict = None,
-        local_options: Dict = None,
+        options: dict = None,
+        local_options: dict = None,
     ):
         """
         Initialize.
@@ -1291,11 +1291,10 @@ class FidesOptimizer(Optimizer):
 
     def __init__(
         self,
-        hessian_update: Optional[
-            fides.hessian_approximation.HessianApproximation
-        ] = "default",
-        options: Optional[Dict] = None,
-        verbose: Optional[int] = logging.INFO,
+        hessian_update: None
+        | (fides.hessian_approximation.HessianApproximation) = "default",
+        options: dict | None = None,
+        verbose: int | None = logging.INFO,
     ):
         """
         Initialize.

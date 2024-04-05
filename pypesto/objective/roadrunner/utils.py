@@ -7,7 +7,7 @@ PEtab measurement data and a roarunner simulation output back and forth.
 from __future__ import annotations
 
 import warnings
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -171,10 +171,10 @@ class SolverOptions(dict):
 
     def __init__(
         self,
-        integrator: Optional[str] = None,
-        relative_tolerance: Optional[float] = None,
-        absolute_tolerance: Optional[float] = None,
-        maximum_num_steps: Optional[int] = None,
+        integrator: str | None = None,
+        relative_tolerance: float | None = None,
+        absolute_tolerance: float | None = None,
+        maximum_num_steps: int | None = None,
         **kwargs,
     ):
         """

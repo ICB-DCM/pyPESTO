@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -46,7 +46,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
     def __init__(
         self,
         inner_problem: AmiciInnerProblem,
-        inner_solver: Optional[InnerSolver] = None,
+        inner_solver: InnerSolver | None = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -83,7 +83,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list["amici.ReturnData"] = None,
+        rdatas: list[amici.ReturnData] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -269,7 +269,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list["amici.ReturnData"] = None,
+        rdatas: list[amici.ReturnData] = None,
     ):
         """Calculate directly via solver calculate methods.
 

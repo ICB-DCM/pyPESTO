@@ -7,8 +7,9 @@ combination of objective based methods and jax based autodiff.
 """
 
 import copy
+from collections.abc import Sequence
 from functools import partial
-from typing import Callable, Sequence, Tuple
+from typing import Callable
 
 import numpy as np
 
@@ -219,7 +220,7 @@ class JaxObjective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         **kwargs,
     ) -> ResultDict:

@@ -1,6 +1,7 @@
 import copy
 import logging
-from typing import Dict, List, Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 
@@ -40,7 +41,7 @@ class ParallelTemperingSampler(Sampler):
         internal_sampler: InternalSampler,
         betas: Sequence[float] = None,
         n_chains: int = None,
-        options: Dict = None,
+        options: dict = None,
     ):
         super().__init__(options)
 
@@ -74,7 +75,7 @@ class ParallelTemperingSampler(Sampler):
             sampler.make_internal(temper_lpost=self.temper_lpost)
 
     @classmethod
-    def default_options(cls) -> Dict:
+    def default_options(cls) -> dict:
         """Return the default options for the sampler."""
         return {
             "max_temp": 5e4,
@@ -86,7 +87,7 @@ class ParallelTemperingSampler(Sampler):
         }
 
     def initialize(
-        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+        self, problem: Problem, x0: Union[np.ndarray, list[np.ndarray]]
     ):
         """Initialize all samplers."""
         n_chains = len(self.samplers)
