@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 import numpy as np
 
@@ -32,7 +32,7 @@ class EnsembleTask(Task):
         self.vectors = vectors
         self.id = id
 
-    def execute(self) -> List[Any]:
+    def execute(self) -> list[Any]:
         """Execute the task."""
         logger.debug(f"Executing task {self.id}.")
         results = []

@@ -5,7 +5,7 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Literal, Tuple, Union
+from typing import Literal, Union
 
 ###############################################################################
 # ENSEMBLE
@@ -307,8 +307,8 @@ H5 = "h5"  # return file format
 
 LEN_RGB = 3  # number of elements in an RGB color
 LEN_RGBA = 4  # number of elements in an RGBA color
-RGB = Tuple[(float,) * LEN_RGB]  # typing of an RGB color
-RGBA = Tuple[(float,) * LEN_RGBA]  # typing of an RGBA color
+RGB = tuple[(float,) * LEN_RGB]  # typing of an RGB color
+RGBA = tuple[(float,) * LEN_RGBA]  # typing of an RGBA color
 RGB_RGBA = Union[RGB, RGBA]  # typing of an RGB or RGBA color
 RGBA_MIN = 0  # min value for an RGBA element
 RGBA_MAX = 1  # max value for an RGBA element

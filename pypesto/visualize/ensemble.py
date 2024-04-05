@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +13,7 @@ from ..ensemble import Ensemble
 def ensemble_identifiability(
     ensemble: Ensemble,
     ax: Optional[plt.Axes] = None,
-    size: Optional[Tuple[float]] = (12, 6),
+    size: Optional[tuple[float]] = (12, 6),
 ):
     """
     Visualize identifiablity of parameter ensemble.
@@ -58,7 +58,7 @@ def ensemble_identifiability_lowlevel(
     ub_hit: np.ndarray,
     both_hit: np.ndarray,
     ax: Optional[plt.Axes] = None,
-    size: Optional[Tuple[float]] = (16, 10),
+    size: Optional[tuple[float]] = (16, 10),
 ):
     """
     Low-level identifiablity routine.
@@ -186,7 +186,7 @@ def ensemble_identifiability_lowlevel(
     ax.text(
         0,
         -0.7,
-        "identifiable parameters: {:4.1f}%".format(x_none * 100),
+        f"identifiable parameters: {x_none * 100:4.1f}%",
         va="top",
     )
 

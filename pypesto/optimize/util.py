@@ -2,8 +2,8 @@
 
 import logging
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 import h5py
 import numpy as np
@@ -79,7 +79,7 @@ def preprocess_hdf5_history(
 
 
 def postprocess_hdf5_history(
-    ret: List[OptimizerResult],
+    ret: list[OptimizerResult],
     storage_file: str,
     history_options: HistoryOptions,
 ) -> None:

@@ -1,4 +1,4 @@
-from typing import Callable, Tuple, Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -11,7 +11,7 @@ def get_umap_representation_parameters(
     n_components: int = 2,
     normalize_data: bool = False,
     **kwargs,
-) -> Tuple:
+) -> tuple:
     """
     UMAP of parameter ensemble.
 
@@ -51,7 +51,7 @@ def get_umap_representation_predictions(
     n_components: int = 2,
     normalize_data: bool = False,
     **kwargs,
-) -> Tuple:
+) -> tuple:
     """
     UMAP of ensemble prediction.
 
@@ -97,7 +97,7 @@ def get_pca_representation_parameters(
     n_components: int = 2,
     rescale_data: bool = True,
     rescaler: Union[Callable, None] = None,
-) -> Tuple:
+) -> tuple:
     """
     PCA of parameter ensemble.
 
@@ -139,7 +139,7 @@ def get_pca_representation_predictions(
     n_components: int = 2,
     rescale_data: bool = True,
     rescaler: Union[Callable, None] = None,
-) -> Tuple:
+) -> tuple:
     """
     PCA of ensemble prediction.
 
@@ -188,7 +188,7 @@ def _get_umap_representation_lowlevel(
     n_components: int = 2,
     normalize_data: bool = False,
     **kwargs,
-) -> Tuple:
+) -> tuple:
     """
     Low level UMAP of parameter ensemble.
 
@@ -239,7 +239,7 @@ def _get_pca_representation_lowlevel(
     n_components: int = 2,
     rescale_data: bool = True,
     rescaler: Union[Callable, None] = None,
-) -> Tuple:
+) -> tuple:
     """
     Low level PCA of parameter ensemble.
 

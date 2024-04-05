@@ -1,4 +1,5 @@
-from typing import Callable, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Callable, Union
 
 import numpy as np
 
@@ -131,7 +132,7 @@ class Objective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         **kwargs,
     ) -> ResultDict:
@@ -154,7 +155,7 @@ class Objective(ObjectiveBase):
     def _call_mode_fun(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
     ) -> ResultDict:
         if not sensi_orders:
             result = {}
@@ -224,7 +225,7 @@ class Objective(ObjectiveBase):
     def _call_mode_res(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
     ) -> ResultDict:
         if not sensi_orders:
             result = {}

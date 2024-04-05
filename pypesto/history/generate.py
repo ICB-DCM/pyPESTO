@@ -1,7 +1,7 @@
 """Generate a history from options and inputs."""
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from ..C import SUFFIXES_CSV, SUFFIXES_HDF5
 from .base import CountHistory, HistoryBase

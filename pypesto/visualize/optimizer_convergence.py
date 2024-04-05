@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,7 +12,7 @@ def optimizer_convergence(
     ax: Optional[plt.Axes] = None,
     xscale: str = "symlog",
     yscale: str = "log",
-    size: Tuple[float] = (18.5, 10.5),
+    size: tuple[float] = (18.5, 10.5),
 ) -> plt.Axes:
     """
     Visualize to help spotting convergence issues.

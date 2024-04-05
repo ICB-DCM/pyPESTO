@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Sequence, Union
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 
@@ -56,13 +57,13 @@ class AmiciPredictor:
     def __init__(
         self,
         amici_objective: AmiciObjective,
-        amici_output_fields: Union[Sequence[str], None] = None,
-        post_processor: Union[PostProcessor, None] = None,
-        post_processor_sensi: Union[PostProcessor, None] = None,
-        post_processor_time: Union[PostProcessor, None] = None,
-        max_chunk_size: Union[int, None] = None,
-        output_ids: Union[Sequence[str], None] = None,
-        condition_ids: Union[Sequence[str], None] = None,
+        amici_output_fields: Sequence[str] | None = None,
+        post_processor: PostProcessor | None = None,
+        post_processor_sensi: PostProcessor | None = None,
+        post_processor_time: PostProcessor | None = None,
+        max_chunk_size: int | None = None,
+        output_ids: Sequence[str] | None = None,
+        condition_ids: Sequence[str] | None = None,
     ):
         """
         Initialize predictor.
