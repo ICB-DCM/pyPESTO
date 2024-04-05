@@ -56,13 +56,6 @@ class ObjectiveBase(ABC):
         self.pre_post_processor = PrePostProcessor()
         self.history = NoHistory()
 
-    def __deepcopy__(self, memodict=None) -> "ObjectiveBase":
-        """Create deepcopy of objective object."""
-        other = type(self)()  # maintain type for derived classes
-        for attr, val in self.__dict__.items():
-            other.__dict__[attr] = copy.deepcopy(val)
-        return other
-
     # The following has_ properties can be used to find out what values
     # the objective supports.
     @property
