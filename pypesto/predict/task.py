@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 from ..C import ModeType
 from ..engine import Task
@@ -30,7 +30,7 @@ class PredictorTask(Task):
         self,
         predictor,  #: 'pypesto.predict.Predictor',  # noqa: F821
         x: Sequence[float],
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         id: str,
     ):

@@ -1,6 +1,7 @@
 """Utility function for profile module."""
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 import scipy.stats

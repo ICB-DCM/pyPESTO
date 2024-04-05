@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
@@ -47,12 +48,12 @@ class AmiciCalculator:
 
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int],
+        x_dct: dict,
+        sensi_orders: tuple[int],
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -150,11 +151,11 @@ class AmiciCalculator:
 
 def calculate_function_values(
     rdatas,
-    sensi_orders: Tuple[int, ...],
+    sensi_orders: tuple[int, ...],
     mode: ModeType,
     amici_model: AmiciModel,
     amici_solver: AmiciSolver,
-    edatas: List[amici.ExpData],
+    edatas: list[amici.ExpData],
     x_ids: Sequence[str],
     parameter_mapping: ParameterMapping,
     fim_for_hess: bool,

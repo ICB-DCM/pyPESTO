@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 import matplotlib.cm as cm
 import numpy as np
@@ -160,8 +160,8 @@ def assign_colors(
 
 def assign_colors_for_list(
     num_entries: int,
-    colors: Optional[Union[RGBA, List[RGBA], np.ndarray]] = None,
-) -> Union[List[List[float]], np.ndarray]:
+    colors: Optional[Union[RGBA, list[RGBA], np.ndarray]] = None,
+) -> Union[list[list[float]], np.ndarray]:
     """
     Create a list of colors for a list of items.
 
