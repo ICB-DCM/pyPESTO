@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Iterable
 from numbers import Number
-from typing import Iterable, List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -24,7 +25,7 @@ from .clust_color import assign_colors_for_list
 
 
 def process_result_list(
-    results: Union[Result, List[Result]], colors=None, legends=None
+    results: Union[Result, list[Result]], colors=None, legends=None
 ):
     """
     Assign colors and legends to a list of results, check user provided lists.

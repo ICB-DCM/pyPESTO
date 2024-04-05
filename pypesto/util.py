@@ -6,9 +6,10 @@ Package-wide utilities.
 
 """
 
+from collections.abc import Sequence
 from numbers import Number
 from operator import itemgetter
-from typing import Any, Callable, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 from scipy import cluster
@@ -247,7 +248,7 @@ def delete_nan_inf(
     x: Optional[Sequence[Union[np.ndarray, list[float]]]] = None,
     xdim: Optional[int] = 1,
     magnitude_bound: Optional[float] = np.inf,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Delete nan and inf values in fvals.
 

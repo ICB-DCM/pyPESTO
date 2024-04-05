@@ -1,4 +1,4 @@
-from typing import Dict, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -36,7 +36,7 @@ class PrePostProcessor:
         """
         return x
 
-    def postprocess(self, result: Dict) -> Dict:  # pylint: disable=R0201
+    def postprocess(self, result: dict) -> dict:  # pylint: disable=R0201
         """
         Convert all arrays into np.ndarrays if necessary, and return them.
 
@@ -65,7 +65,7 @@ class PrePostProcessor:
         return x
 
     @staticmethod
-    def as_ndarrays(result: Dict) -> Dict:
+    def as_ndarrays(result: dict) -> dict:
         """
         Convert all array_like objects to np.ndarrays.
 
@@ -128,7 +128,7 @@ class FixedParametersProcessor(PrePostProcessor):
         else:
             return x
 
-    def postprocess(self, result: Dict) -> Dict:
+    def postprocess(self, result: dict) -> dict:
         """Constrain results to optimization parameter dimensions."""
         result = super().postprocess(result)
 

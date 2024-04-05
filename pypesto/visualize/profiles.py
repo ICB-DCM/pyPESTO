@@ -1,4 +1,5 @@
-from typing import Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 from warnings import warn
 
 import matplotlib.pyplot as plt
@@ -180,7 +181,7 @@ def profiles_lowlevel(
         fvals = [fvals]
 
     # number of non-trivial profiles
-    n_profiles = sum((fval is not None for fval in fvals))
+    n_profiles = sum(fval is not None for fval in fvals)
 
     # if axes already exists, we have to match profiles to axes
     if not create_new_ax:

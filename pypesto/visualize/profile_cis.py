@@ -1,4 +1,5 @@
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt

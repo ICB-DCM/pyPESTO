@@ -26,7 +26,7 @@ def autocorrelation_sokal(chain: np.ndarray) -> np.ndarray:
         the MCMC chain.
     """
     nsamples, npar = chain.shape
-    tau_est = np.zeros((npar))
+    tau_est = np.zeros(npar)
 
     # Calculate the fast Fourier transform
     x = np.fft.fft(chain, axis=0)

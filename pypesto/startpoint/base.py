@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 
@@ -243,7 +243,7 @@ class FunctionStartpoints(CheckedStartpoints):
 
 
 def to_startpoint_method(
-    maybe_startpoint_method: Union[StartpointMethod, Callable, bool],
+    maybe_startpoint_method: StartpointMethod | Callable | bool,
 ) -> StartpointMethod:
     """Create StartpointMethod instance if possible, otherwise raise.
 

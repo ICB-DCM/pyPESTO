@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
 
 import arviz as az
 import numpy as np
@@ -112,10 +111,10 @@ class PymcSampler(Sampler):
     ):
         super().__init__(kwargs)
         self.step_function = step_function
-        self.problem: Union[Problem, None] = None
-        self.x0: Union[np.ndarray, None] = None
-        self.trace: Union[pymc.backends.Text, None] = None
-        self.data: Union[az.InferenceData, None] = None
+        self.problem: Problem | None = None
+        self.x0: np.ndarray | None = None
+        self.trace: pymc.backends.Text | None = None
+        self.data: az.InferenceData | None = None
 
     @classmethod
     def translate_options(cls, options):

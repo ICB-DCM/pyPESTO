@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any
 
 import numpy as np
 
@@ -67,7 +68,7 @@ class AggregatedObjective(ObjectiveBase):
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -79,9 +80,9 @@ class AggregatedObjective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
-        kwargs_list: Sequence[Dict[str, Any]] = None,
+        kwargs_list: Sequence[dict[str, Any]] = None,
         **kwargs,
     ) -> ResultDict:
         """

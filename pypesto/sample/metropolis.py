@@ -1,4 +1,5 @@
-from typing import Dict, Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 
@@ -36,7 +37,7 @@ class MetropolisSampler(InternalSampler):
     * https://github.com/ICB-DCM/PESTO/blob/master/private/performPT.m
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         super().__init__(options)
         self.problem: Union[Problem, None] = None
         self.neglogpost: Union[ObjectiveBase, None] = None

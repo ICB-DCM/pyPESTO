@@ -1,5 +1,6 @@
 import logging
-from typing import Iterable, List, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,20 +23,20 @@ logger = logging.getLogger(__name__)
 
 
 def optimizer_history(
-    results: Union[Result, List[Result]],
+    results: Union[Result, list[Result]],
     ax: Optional[plt.Axes] = None,
-    size: Tuple = (18.5, 10.5),
+    size: tuple = (18.5, 10.5),
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
     scale_y: str = "log10",
     offset_y: Optional[float] = None,
-    colors: Optional[Union[RGBA, List[RGBA]]] = None,
-    y_limits: Optional[Union[float, List[float], np.ndarray]] = None,
-    start_indices: Optional[Union[int, List[int]]] = None,
+    colors: Optional[Union[RGBA, list[RGBA]]] = None,
+    y_limits: Optional[Union[float, list[float], np.ndarray]] = None,
+    start_indices: Optional[Union[int, list[int]]] = None,
     reference: Optional[
-        Union[ReferencePoint, dict, List[ReferencePoint], List[dict]]
+        Union[ReferencePoint, dict, list[ReferencePoint], list[dict]]
     ] = None,
-    legends: Optional[Union[str, List[str]]] = None,
+    legends: Optional[Union[str, list[str]]] = None,
 ) -> plt.Axes:
     """
     Plot history of optimizer.
@@ -124,11 +125,11 @@ def optimizer_history(
 
 
 def optimizer_history_lowlevel(
-    vals: List[np.ndarray],
+    vals: list[np.ndarray],
     scale_y: str = "log10",
-    colors: Optional[Union[RGBA, List[RGBA]]] = None,
+    colors: Optional[Union[RGBA, list[RGBA]]] = None,
     ax: Optional[plt.Axes] = None,
-    size: Tuple = (18.5, 10.5),
+    size: tuple = (18.5, 10.5),
     x_label: str = "Optimizer steps",
     y_label: str = "Objective value",
     legend_text: Optional[str] = None,
@@ -226,7 +227,7 @@ def optimizer_history_lowlevel(
 
 def get_trace(
     result: Result, trace_x: Optional[str], trace_y: Optional[str]
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """
     Get the values of the optimizer trace from the pypesto.Result object.
 
@@ -253,7 +254,7 @@ def get_trace(
         label for y-axis to be plotted later.
     """
     # get data frames
-    histories: List[HistoryBase] = result.optimize_result.history
+    histories: list[HistoryBase] = result.optimize_result.history
 
     vals = []
 
@@ -306,12 +307,12 @@ def get_trace(
 
 
 def get_vals(
-    vals: List[np.ndarray],
+    vals: list[np.ndarray],
     scale_y: Optional[str],
     offset_y: float,
     trace_y: str,
     start_indices: Iterable[int],
-) -> Tuple[List[np.ndarray], float]:
+) -> tuple[list[np.ndarray], float]:
     """
     Postprocess the values of the optimization history.
 
@@ -373,7 +374,7 @@ def get_vals(
     return vals, offset_y
 
 
-def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
+def get_labels(trace_x: str, trace_y: str, offset_y: float) -> tuple[str, str]:
     """
     Generate labels for x and y axes of the history plot.
 
@@ -411,9 +412,9 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
 
 def handle_options(
     ax: plt.Axes,
-    vals: List[np.ndarray],
+    vals: list[np.ndarray],
     trace_y: str,
-    ref: List[ReferencePoint],
+    ref: list[ReferencePoint],
     y_limits: Union[float, np.ndarray, None],
     offset_y: float,
 ) -> plt.Axes:

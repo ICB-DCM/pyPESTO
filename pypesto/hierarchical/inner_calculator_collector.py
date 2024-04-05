@@ -7,7 +7,8 @@ to collect hierarchical inner calculators for each data type and merge their res
 from __future__ import annotations
 
 import copy
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 
@@ -89,9 +90,9 @@ class InnerCalculatorCollector(AmiciCalculator):
     def __init__(
         self,
         data_types: set[str],
-        petab_problem: "petab.Problem",
+        petab_problem: petab.Problem,
         model: AmiciModel,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
         inner_options: dict,
     ):
         super().__init__()
@@ -117,9 +118,9 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def construct_inner_calculators(
         self,
-        petab_problem: "petab.Problem",
+        petab_problem: petab.Problem,
         model: AmiciModel,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
         inner_options: dict,
     ):
         """Construct inner calculators for each data type."""
@@ -217,7 +218,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def _get_quantitative_data_mask(
         self,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
     ) -> list[np.ndarray]:
         # transform experimental data
         edatas = [

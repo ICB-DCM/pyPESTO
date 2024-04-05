@@ -1,6 +1,5 @@
 from functools import partial
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -77,7 +76,7 @@ def pypesto_select_problem(petab_select_problem) -> pypesto.select.Problem:
 
 
 @pytest.fixture
-def initial_models(petab_problem_yaml) -> List[Model]:
+def initial_models(petab_problem_yaml) -> list[Model]:
     """Models that can be used to initialize a search."""
     initial_model_1 = Model(
         model_id="myModel1",
