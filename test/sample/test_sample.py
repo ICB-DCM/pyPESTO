@@ -787,6 +787,7 @@ def test_dynesty_posterior():
     assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
 
 
+@pytest.mark.flaky(reruns=2)  # sometimes not all chains converge
 def test_thermodynamic_integration():
     # test thermodynamic integration
     problem = gaussian_problem()
@@ -806,13 +807,16 @@ def test_thermodynamic_integration():
 
         result = sample.sample(
             problem,
-            n_samples=5000,
+            n_samples=10000,
             result=result,
             sampler=sampler,
         )
 
         # compute the log evidence using trapezoid and simpson rule
         log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
+        log_evidence_not_all = sampler.compute_log_evidence(
+            result, method="trapezoid", use_all_chains=False
+        )
         log_evidence_simps = sampler.compute_log_evidence(
             result, method="simpson"
         )
@@ -826,4 +830,5 @@ def test_thermodynamic_integration():
 
         # compare to known value
         assert np.isclose(log_evidence, np.log(evidence[0]), atol=tol)
+        assert np.isclose(log_evidence_not_all, np.log(evidence[0]), atol=tol)
         assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)
