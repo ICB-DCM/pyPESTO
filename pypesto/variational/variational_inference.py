@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def variational_fit(
     problem: Problem,
     n_iterations: int,
-    method: str = 'advi',
+    method: str = "advi",
     n_samples: Optional[int] = None,
     random_seed: Optional[int] = None,
     start_sigma: Optional[dict[str, np.ndarray]] = None,
@@ -82,7 +82,7 @@ def variational_fit(
         result.optimize_result.sort()
         if len(result.optimize_result.list) > 0:
             x0 = problem.get_reduced_vector(
-                result.optimize_result.list[0]['x']
+                result.optimize_result.list[0]["x"]
             )
 
     # set variational inference
@@ -128,7 +128,7 @@ def variational_fit(
     ) = variational.get_variational_parameters()
     if filename is not None:
         logger.warning(
-            'Variational parameters are not saved in the hdf5 file. You have to save them manually.'
+            "Variational parameters are not saved in the hdf5 file. You have to save them manually."
         )
 
     return result
