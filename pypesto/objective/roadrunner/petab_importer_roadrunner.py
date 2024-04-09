@@ -7,6 +7,7 @@ depends on the noise model specified in the provided PEtab problem.
 from __future__ import annotations
 
 import numbers
+import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -85,20 +86,50 @@ class PetabImporterRR:
         # check that edatas are available
         if edatas is None:
             edatas = self.create_edatas()
+        # save formulae that need to be changed
+        to_change = []
         # check that noise formulae are valid
-        for edata, par_map in zip(edatas, parameter_mapping):
-            for noise_formula in edata.noise_formulae:
+        for i_edata, (edata, par_map) in enumerate(
+            zip(edatas, parameter_mapping)
+        ):
+            for j_formula, noise_formula in enumerate(edata.noise_formulae):
                 # constant values are allowed
                 if isinstance(noise_formula, numbers.Number):
                     continue
                 # single parameters are allowed
                 if noise_formula in par_map[1].keys():
                     continue
-                raise NotImplementedError(
-                    "Noise formulae must be either constants or single "
-                    "parameters. For more complex noise models, please "
-                    "use amici for now."
+                # extract the observable name via regex pattern
+                pattern = r"noiseParameter1_(.*?)($|\s)"
+                observable_name = re.search(pattern, noise_formula).group(1)
+                to_change.append((i_edata, j_formula, observable_name))
+
+                # raise NotImplementedError(
+                #     "Noise formulae must be either constants or single "
+                #     "parameters. For more complex noise models, please "
+                #     "use amici for now."
+                # )
+        # change formulae
+        formulae_changed = []
+        for i_edata, j_formula, obs_name in to_change:
+            # assign new parameter, formula in RR and parameter into mapping
+            original_formula = edatas[i_edata].noise_formulae[j_formula]
+            edatas[i_edata].noise_formulae[
+                j_formula
+            ] = f"noiseFormula_{obs_name}"
+            # different conditions will have the same noise formula
+            try:
+                self.rr.addParameter(f"noiseFormula_{obs_name}", 0.0, False)
+                self.rr.addAssignmentRule(
+                    f"noiseFormula_{obs_name}",
+                    original_formula,
+                    forceRegenerate=False,
                 )
+                self.rr.regenerateModel()
+                formulae_changed.append((obs_name, original_formula))
+            except RuntimeError as e:
+                if (obs_name, original_formula) not in formulae_changed:
+                    raise e
 
     def _write_observables_to_model(self):
         """Write observables of petab problem to the model."""
