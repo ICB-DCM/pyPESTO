@@ -103,12 +103,6 @@ class PetabImporterRR:
                 pattern = r"noiseParameter1_(.*?)($|\s)"
                 observable_name = re.search(pattern, noise_formula).group(1)
                 to_change.append((i_edata, j_formula, observable_name))
-
-                # raise NotImplementedError(
-                #     "Noise formulae must be either constants or single "
-                #     "parameters. For more complex noise models, please "
-                #     "use amici for now."
-                # )
         # change formulae
         formulae_changed = []
         for i_edata, j_formula, obs_name in to_change:
