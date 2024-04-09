@@ -2,7 +2,7 @@
 
 import copy
 import logging
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -315,7 +315,7 @@ class FD(ObjectiveBase):
         delta_grad: Union[FDDelta, np.ndarray, float, str] = 1e-6,
         delta_res: Union[FDDelta, float, np.ndarray, str] = 1e-6,
         method: str = CENTRAL,
-        x_names: List[str] = None,
+        x_names: list[str] = None,
     ):
         super().__init__(x_names=x_names)
         self.obj: ObjectiveBase = obj
@@ -335,7 +335,7 @@ class FD(ObjectiveBase):
 
     def __deepcopy__(
         self,
-        memodict: Dict = None,
+        memodict: dict = None,
     ) -> "FD":
         """Create deepcopy of Objective."""
         other = self.__class__.__new__(self.__class__)
@@ -371,7 +371,7 @@ class FD(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         **kwargs,
     ) -> ResultDict:
@@ -397,7 +397,7 @@ class FD(ObjectiveBase):
     def _call_mode_fun(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         **kwargs,
     ) -> ResultDict:
         """Handle calls in function value mode.
@@ -486,7 +486,7 @@ class FD(ObjectiveBase):
     def _call_mode_res(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         **kwargs,
     ) -> ResultDict:
         """Handle calls in residual mode.
@@ -531,9 +531,9 @@ class FD(ObjectiveBase):
     def _call_from_obj_fun(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         **kwargs,
-    ) -> Tuple[Tuple[int, ...], ResultDict]:
+    ) -> tuple[tuple[int, ...], ResultDict]:
         """
         Call objective function for sensitivities.
 
@@ -560,9 +560,9 @@ class FD(ObjectiveBase):
     def _call_from_obj_res(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         **kwargs,
-    ) -> Tuple[Tuple[int, ...], ResultDict]:
+    ) -> tuple[tuple[int, ...], ResultDict]:
         """
         Call objective function for sensitivities in residual mode.
 

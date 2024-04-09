@@ -1,7 +1,8 @@
 import copy
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Iterable, Sequence
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
 from ..history import NoHistory, create_history
 from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
-ResultDict = Dict[str, Union[float, np.ndarray, Dict]]
+ResultDict = dict[str, Union[float, np.ndarray, dict]]
 
 logger = logging.getLogger(__name__)
 
@@ -55,13 +56,6 @@ class ObjectiveBase(ABC):
         self.pre_post_processor = PrePostProcessor()
         self.history = NoHistory()
 
-    def __deepcopy__(self, memodict=None) -> "ObjectiveBase":
-        """Create deepcopy of objective object."""
-        other = type(self)()  # maintain type for derived classes
-        for attr, val in self.__dict__.items():
-            other.__dict__[attr] = copy.deepcopy(val)
-        return other
-
     # The following has_ properties can be used to find out what values
     # the objective supports.
     @property
@@ -96,7 +90,7 @@ class ObjectiveBase(ABC):
         return self.check_sensi_orders((1,), MODE_RES)
 
     @property
-    def x_names(self) -> Union[List[str], None]:
+    def x_names(self) -> Union[list[str], None]:
         """Parameter names."""
         if self._x_names is None:
             return self._x_names
@@ -126,11 +120,11 @@ class ObjectiveBase(ABC):
     def __call__(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...] = (0,),
+        sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
-    ) -> Union[float, np.ndarray, Tuple, ResultDict]:
+    ) -> Union[float, np.ndarray, tuple, ResultDict]:
         """
         Obtain arbitrary sensitivities.
 
@@ -208,7 +202,7 @@ class ObjectiveBase(ABC):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         **kwargs,
     ) -> ResultDict:
@@ -265,7 +259,7 @@ class ObjectiveBase(ABC):
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
     ) -> bool:
         """
@@ -317,10 +311,10 @@ class ObjectiveBase(ABC):
 
     @staticmethod
     def output_to_tuple(
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         **kwargs: Union[float, np.ndarray],
-    ) -> Tuple:
+    ) -> tuple:
         """
         Return values as requested by the caller.
 

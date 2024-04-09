@@ -1,5 +1,6 @@
 import warnings
-from typing import Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt

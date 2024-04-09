@@ -34,6 +34,7 @@ lint.select = [
     "T20",  # flake8-print
     "W",  # pycodestyle Warnings
     "E",  # pycodestyle Errors
+    "UP",  # pyupgrade
     # "ANN",  # flakes-annotations TODO: currently produces ~1500 errors to manual fix
 ]
 [tool.ruff.lint.pydocstyle]

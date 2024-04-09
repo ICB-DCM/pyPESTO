@@ -63,12 +63,12 @@ def test_ensemble_from_optimization():
 
     # compare vector_tags with the expected values:
     ep_tags = [
-        (int(result.optimize_result.list[i]["id"]), -1) for i in [0, 1, 2, 3]
+        (result.optimize_result.list[i]["id"], -1) for i in [0, 1, 2, 3]
     ]
 
     hist_tags = [
         (
-            int(result.optimize_result.list[i]["id"]),
+            result.optimize_result.list[i]["id"],
             len(result.optimize_result.list[i]["history"]._trace["fval"])
             - 1
             - j,

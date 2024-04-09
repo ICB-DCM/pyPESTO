@@ -7,8 +7,9 @@ depends on the noise model specified in the provided PEtab problem.
 from __future__ import annotations
 
 import numbers
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable, Optional, Union
+from typing import Any
 
 import libsbml
 import petab
@@ -62,7 +63,7 @@ class PetabImporterRR:
         self.rr = roadrunner.RoadRunner()
 
     @staticmethod
-    def from_yaml(yaml_config: Union[Path, str]) -> PetabImporterRR:
+    def from_yaml(yaml_config: Path | str) -> PetabImporterRR:
         """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
 
@@ -70,8 +71,8 @@ class PetabImporterRR:
 
     def _check_noise_formulae(
         self,
-        edatas: Optional[list[ExpData]] = None,
-        parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
+        edatas: list[ExpData] | None = None,
+        parameter_mapping: list[ParMappingDictQuadruple] | None = None,
     ):
         """Check if the noise formulae are valid.
 
@@ -198,8 +199,8 @@ class PetabImporterRR:
 
     def create_objective(
         self,
-        rr: Optional[roadrunner.RoadRunner] = None,
-        edatas: Optional[ExpData] = None,
+        rr: roadrunner.RoadRunner | None = None,
+        edatas: ExpData | None = None,
     ) -> RoadRunnerObjective:
         """Create a :class:`pypesto.objective.RoadRunnerObjective`.
 
@@ -236,7 +237,7 @@ class PetabImporterRR:
             x_names=x_names,
         )
 
-    def create_prior(self) -> Union[NegLogParameterPriors, None]:
+    def create_prior(self) -> NegLogParameterPriors | None:
         """
         Create a prior from the parameter table.
 
@@ -287,10 +288,10 @@ class PetabImporterRR:
 
     def create_problem(
         self,
-        objective: Optional[RoadRunnerObjective] = None,
-        x_guesses: Optional[Iterable[float]] = None,
-        problem_kwargs: Optional[dict[str, Any]] = None,
-        startpoint_kwargs: Optional[dict[str, Any]] = None,
+        objective: RoadRunnerObjective | None = None,
+        x_guesses: Iterable[float] | None = None,
+        problem_kwargs: dict[str, Any] | None = None,
+        startpoint_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> Problem:
         """Create a :class:`pypesto.problem.Problem`.

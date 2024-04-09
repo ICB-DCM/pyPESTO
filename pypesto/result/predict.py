@@ -1,9 +1,10 @@
 """PredictionResult and PredictionConditionResult."""
 
 import os
+from collections.abc import Sequence
 from pathlib import Path
 from time import time
-from typing import Dict, Sequence, Union
+from typing import Union
 from warnings import warn
 
 import h5py
@@ -122,7 +123,7 @@ class PredictionResult:
 
     def __init__(
         self,
-        conditions: Sequence[Union[PredictionConditionResult, Dict]],
+        conditions: Sequence[Union[PredictionConditionResult, dict]],
         condition_ids: Sequence[str] = None,
         comment: str = None,
     ):

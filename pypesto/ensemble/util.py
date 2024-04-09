@@ -1,8 +1,9 @@
 """Ensemble utilities."""
 
 import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Callable, Literal, Sequence, Union
+from typing import Callable, Literal, Union
 
 import h5py
 import numpy as np

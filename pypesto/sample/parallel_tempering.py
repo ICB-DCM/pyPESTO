@@ -1,6 +1,7 @@
 import copy
 import logging
-from typing import Dict, List, Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 
@@ -8,6 +9,7 @@ from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
 from ..result import McmcPtResult, Result
 from ..util import tqdm
+from .diagnostics import geweke_test
 from .sampler import InternalSampler, Sampler
 
 logger = logging.getLogger(__name__)
@@ -40,7 +42,7 @@ class ParallelTemperingSampler(Sampler):
         internal_sampler: InternalSampler,
         betas: Sequence[float] = None,
         n_chains: int = None,
-        options: Dict = None,
+        options: dict = None,
     ):
         super().__init__(options)
 
@@ -74,7 +76,7 @@ class ParallelTemperingSampler(Sampler):
             sampler.make_internal(temper_lpost=self.temper_lpost)
 
     @classmethod
-    def default_options(cls) -> Dict:
+    def default_options(cls) -> dict:
         """Return the default options for the sampler."""
         return {
             "max_temp": 5e4,
@@ -86,7 +88,7 @@ class ParallelTemperingSampler(Sampler):
         }
 
     def initialize(
-        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+        self, problem: Problem, x0: Union[np.ndarray, list[np.ndarray]]
     ):
         """Initialize all samplers."""
         n_chains = len(self.samplers)
@@ -177,8 +179,11 @@ class ParallelTemperingSampler(Sampler):
         """Adjust temperature values. Default: Do nothing."""
 
     def compute_log_evidence(
-        self, result: Result, method: str = "trapezoid"
-    ) -> float:
+        self,
+        result: Result,
+        method: str = "trapezoid",
+        use_all_chains: bool = True,
+    ) -> Union[float, None]:
         """Perform thermodynamic integration to estimate the log evidence.
 
         Parameters
@@ -187,6 +192,10 @@ class ParallelTemperingSampler(Sampler):
             Result object containing the samples.
         method:
             Integration method, either 'trapezoid' or 'simpson' (uses scipy for integration).
+        use_all_chains:
+            If True, calculate burn-in for each chain and use the maximal burn-in for all chains for the integration.
+            This will fail if not all chains have converged yet.
+            Otherwise, use only the converged chains for the integration (might increase the integration error).
         """
         from scipy.integrate import simpson, trapezoid
 
@@ -196,19 +205,62 @@ class ParallelTemperingSampler(Sampler):
                 f"Carefully check the results. Consider using beta_init='{BETA_DECAY}' for better results."
             )
 
-        burn_in = result.sample_result.burn_in
-        trace_loglike = (
-            result.sample_result.trace_neglogprior[::-1, burn_in:]
-            - result.sample_result.trace_neglogpost[::-1, burn_in:]
-        )
-        mean_loglike_per_beta = np.mean(trace_loglike, axis=1)
+        # compute burn in for all chains but the last one (prior only)
+        burn_ins = np.zeros(len(self.betas), dtype=int)
+        for i_chain in range(len(self.betas)):
+            burn_ins[i_chain] = geweke_test(result, chain_number=i_chain)
+        max_burn_in = int(np.max(burn_ins))
+
+        if max_burn_in >= result.sample_result.trace_x.shape[1]:
+            logger.warning(
+                f"At least {np.sum(burn_ins >= result.sample_result.trace_x.shape[1])} chains seem to not have "
+                f"converged yet. You may want to use a larger number of samples."
+            )
+            if use_all_chains:
+                raise ValueError(
+                    "Not all chains have converged yet. You may want to use a larger number of samples, "
+                    "or try ´use_all_chains=False´, which might increase the integration error."
+                )
+
+        if use_all_chains:
+            # estimate mean of log likelihood for each beta
+            trace_loglike = (
+                result.sample_result.trace_neglogprior[::-1, max_burn_in:]
+                - result.sample_result.trace_neglogpost[::-1, max_burn_in:]
+            )
+            mean_loglike_per_beta = np.mean(trace_loglike, axis=1)
+            temps = self.betas[::-1]
+        else:
+            # estimate mean of log likelihood for each beta if chain has converged
+            mean_loglike_per_beta = []
+            temps = []
+            for i_chain in reversed(range(len(self.betas))):
+                if burn_ins[i_chain] < result.sample_result.trace_x.shape[1]:
+                    # save temperature-chain as it is converged
+                    temps.append(self.betas[i_chain])
+                    # calculate mean log likelihood for each beta
+                    trace_loglike_i = (
+                        result.sample_result.trace_neglogprior[
+                            i_chain, burn_ins[i_chain] :
+                        ]
+                        - result.sample_result.trace_neglogpost[
+                            i_chain, burn_ins[i_chain] :
+                        ]
+                    )
+                    mean_loglike_per_beta.append(np.mean(trace_loglike_i))
+
         if method == "trapezoid":
             log_evidence = trapezoid(
-                y=mean_loglike_per_beta, x=self.betas[::-1]
+                # integrate from low to high temperature
+                y=mean_loglike_per_beta,
+                x=temps,
             )
         elif method == "simpson":
             log_evidence = simpson(
-                y=mean_loglike_per_beta, x=self.betas[::-1], even="last"
+                # integrate from low to high temperature
+                y=mean_loglike_per_beta,
+                x=temps,
+                even="last",
             )
         else:
             raise ValueError(

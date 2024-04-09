@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, Iterable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Iterable, Sequence
+from typing import Callable, Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -27,15 +28,15 @@ def parameters(
     results: Union[Result, Sequence[Result]],
     ax: Optional[matplotlib.axes.Axes] = None,
     parameter_indices: Union[str, Sequence[int]] = "free_only",
-    lb: Optional[Union[np.ndarray, List[float]]] = None,
-    ub: Optional[Union[np.ndarray, List[float]]] = None,
-    size: Optional[Tuple[float, float]] = None,
-    reference: Optional[List[ReferencePoint]] = None,
-    colors: Optional[Union[RGBA, List[RGBA]]] = None,
-    legends: Optional[Union[str, List[str]]] = None,
+    lb: Optional[Union[np.ndarray, list[float]]] = None,
+    ub: Optional[Union[np.ndarray, list[float]]] = None,
+    size: Optional[tuple[float, float]] = None,
+    reference: Optional[list[ReferencePoint]] = None,
+    colors: Optional[Union[RGBA, list[RGBA]]] = None,
+    legends: Optional[Union[str, list[str]]] = None,
     balance_alpha: bool = True,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    scale_to_interval: Optional[Tuple[float, float]] = None,
+    scale_to_interval: Optional[tuple[float, float]] = None,
     plot_inner_parameters: bool = True,
 ) -> matplotlib.axes.Axes:
     """
@@ -178,9 +179,9 @@ def parameter_hist(
     parameter_name: str,
     bins: Union[int, str] = "auto",
     ax: Optional["matplotlib.Axes"] = None,
-    size: Optional[Tuple[float]] = (18.5, 10.5),
-    color: Optional[List[float]] = None,
-    start_indices: Optional[Union[int, List[int]]] = None,
+    size: Optional[tuple[float]] = (18.5, 10.5),
+    color: Optional[list[float]] = None,
+    start_indices: Optional[Union[int, list[int]]] = None,
 ):
     """
     Plot parameter values as a histogram.
@@ -236,12 +237,12 @@ def parameter_hist(
 def parameters_lowlevel(
     xs: np.ndarray,
     fvals: np.ndarray,
-    lb: Optional[Union[np.ndarray, List[float]]] = None,
-    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    lb: Optional[Union[np.ndarray, list[float]]] = None,
+    ub: Optional[Union[np.ndarray, list[float]]] = None,
     x_labels: Optional[Iterable[str]] = None,
     ax: Optional[matplotlib.axes.Axes] = None,
-    size: Optional[Tuple[float, float]] = None,
-    colors: Optional[Sequence[Union[np.ndarray, List[float]]]] = None,
+    size: Optional[tuple[float, float]] = None,
+    colors: Optional[Sequence[Union[np.ndarray, list[float]]]] = None,
     linestyle: str = "-",
     legend_text: Optional[str] = None,
     balance_alpha: bool = True,
@@ -337,12 +338,12 @@ def parameters_lowlevel(
 
 def handle_inputs(
     result: Result,
-    parameter_indices: List[int],
-    lb: Optional[Union[np.ndarray, List[float]]] = None,
-    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    parameter_indices: list[int],
+    lb: Optional[Union[np.ndarray, list[float]]] = None,
+    ub: Optional[Union[np.ndarray, list[float]]] = None,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     plot_inner_parameters: bool = False,
-) -> Tuple[np.ndarray, np.ndarray, List[str], np.ndarray, List[np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray, list[np.ndarray]]:
     """
     Compute the correct bounds for the parameter indices to be plotted.
 
@@ -434,8 +435,8 @@ def handle_inputs(
 def _handle_inner_inputs(
     result: Result,
 ) -> Union[
-    Tuple[None, None, None, None],
-    Tuple[list[np.ndarray], list[str], np.ndarray, np.ndarray],
+    tuple[None, None, None, None],
+    tuple[list[np.ndarray], list[str], np.ndarray, np.ndarray],
 ]:
     """Handle inner parameters from hierarchical optimization, if available.
 
@@ -562,7 +563,7 @@ def optimization_scatter(
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     diag_kind: str = "kde",
     suptitle: str = None,
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
     show_bounds: bool = False,
 ):
     """

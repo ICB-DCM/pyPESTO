@@ -2,7 +2,6 @@
 
 import logging
 import warnings
-from typing import Tuple
 
 import numpy as np
 from scipy.stats import norm
@@ -51,7 +50,7 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
     index = np.arange(nw)
     # Normalizing scale factor
     kmu = k * np.linalg.norm(w) ** 2
-    spectral_density = np.zeros((nfft))
+    spectral_density = np.zeros(nfft)
 
     for _ in range(k):
         xw = w * x[index]
@@ -95,7 +94,7 @@ def spectrum0(x: np.ndarray) -> np.ndarray:
 
 def calculate_zscore(
     chain: np.ndarray, a: float = 0.1, b: float = 0.5
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Perform a Geweke test on a chain.
 
@@ -197,7 +196,7 @@ def burn_in_by_sequential_geweke(
     # to sorting p-values
     max_z = np.max(np.absolute(z), axis=1)
     idxs = max_z.argsort()[::-1]  # sort descend
-    alpha2 = zscore * np.ones((len(idxs)))
+    alpha2 = zscore * np.ones(len(idxs))
 
     for i in range(len(max_z)):
         alpha2[idxs[i]] /= len(fragments) - np.argwhere(idxs == i).item(0) + 1
