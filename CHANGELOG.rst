@@ -12,7 +12,7 @@ Release notes
 * General
     * Include pymc in the documentation. (#1305)
     * Ruff Codechecks (#1307)
-    * Support RoadRunner as simulator for PEtab problems (#1336, #1347)
+    * Support RoadRunner as simulator for PEtab problems (#1336, #1347, #1348)
 * Hierarchical
    * Semiquant: Fix spline knot initialization (#1313, #1323)
    * Semiquant: Add spline knots to the optimization result (#1314)
