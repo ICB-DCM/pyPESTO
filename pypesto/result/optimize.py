@@ -152,14 +152,17 @@ class OptimizerResult(dict):
                     "run update_to_full with the corresponding problem first."
                 )
             full = True
+        else:  # Otherwise guarantee that free_indices is an integer array
+            free_indices = self.free_indices.astype(int)
         message = (
             "### Optimizer Result\n\n"
             f"* optimizer used: {self.optimizer}\n"
             f"* message: {self.message} \n"
             f"* number of evaluations: {self.n_fval}\n"
             f"* time taken to optimize: {self.time:0.3f}s\n"
-            f"* startpoint: {self.x0 if full or self.x0 is None else self.x0[self.free_indices]}\n"
-            f"* endpoint: {self.x if full else self.x[self.free_indices]}\n"
+            f"* startpoint: "
+            f"{self.x0 if full or self.x0 is None else self.x0[free_indices]}\n"
+            f"* endpoint: {self.x if full else self.x[free_indices]}\n"
         )
         # add fval, gradient, hessian, res, sres if available
         if self.fval is not None:
@@ -167,12 +170,12 @@ class OptimizerResult(dict):
         if self.grad is not None:
             message += (
                 f"* final gradient value: "
-                f"{self.grad if full else self.grad[self.free_indices]}\n"
+                f"{self.grad if full else self.grad[free_indices]}\n"
             )
         if self.hess is not None and show_hess:
             hess = self.hess
             if not full:
-                hess = self.hess[np.ix_(self.free_indices, self.free_indices)]
+                hess = self.hess[np.ix_(free_indices, free_indices)]
             message += f"* final hessian value: {hess}\n"
         if self.res is not None:
             message += f"* final residual value: {self.res}\n"
