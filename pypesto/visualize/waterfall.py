@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1 import inset_locator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import WATERFALL_MAX_VALUE
+from ..C import ALL, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import RGBA, assign_colors
 from .misc import (
@@ -98,6 +98,13 @@ def waterfall(
     # handle `order_by_id`
     if order_by_id:
         start_id_ordering = get_ordering_by_start_id(results)
+        # Set start indices to all, and save actual start indices for later,
+        # so that all fvals are retrieved by `process_offset_for_list`.
+        # This enables use of `order_by_id` with `start_indices`.
+        ordered_start_indices = process_start_indices(
+            result=results[0], start_indices=start_indices
+        )
+        start_indices = ALL
 
     refs = create_references(references=reference)
 
@@ -134,6 +141,7 @@ def waterfall(
                     fvals.append(fvals_raw[start_index])
                 else:
                     fvals.append(None)
+            fvals = np.array(fvals)[ordered_start_indices]
         else:
             # remove nan or inf values in fvals
             # also remove extremely large values. These values result in `inf`
