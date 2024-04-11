@@ -172,7 +172,6 @@ def create_optimization_history():
         problem=problem,
         optimizer=optimizer,
         n_starts=5,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
         progress_bar=False,
@@ -458,7 +457,6 @@ def test_parameters_hist():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
@@ -772,7 +770,6 @@ def test_optimizer_history_with_options():
         reference=ref3,
         trace_x="time",
         trace_y="gradnorm",
-        offset_y=10.0,
     )
 
 
@@ -814,7 +811,6 @@ def test_optimization_stats():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
@@ -822,7 +818,6 @@ def test_optimization_stats():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 

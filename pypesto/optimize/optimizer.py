@@ -469,7 +469,7 @@ class ScipyOptimizer(Optimizer):
                     "evaluated again. This can lead to increased "
                     "computation times. If possible, separate fun "
                     "and hess.",
-                    stacklevel=1,
+                    stacklevel=2,
                 )
             if objective.grad is True:
 
