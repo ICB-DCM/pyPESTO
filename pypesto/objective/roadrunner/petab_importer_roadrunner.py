@@ -112,7 +112,7 @@ class PetabImporterRR:
                 j_formula
             ] = f"noiseFormula_{obs_name}"
             # different conditions will have the same noise formula
-            try:
+            if (obs_name, original_formula) not in formulae_changed:
                 self.rr.addParameter(f"noiseFormula_{obs_name}", 0.0, False)
                 self.rr.addAssignmentRule(
                     f"noiseFormula_{obs_name}",
@@ -121,9 +121,6 @@ class PetabImporterRR:
                 )
                 self.rr.regenerateModel()
                 formulae_changed.append((obs_name, original_formula))
-            except RuntimeError as e:
-                if (obs_name, original_formula) not in formulae_changed:
-                    raise e
 
     def _write_observables_to_model(self):
         """Write observables of petab problem to the model."""
