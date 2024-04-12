@@ -44,6 +44,18 @@ class Hdf5AmiciHistory(Hdf5History):
         super().__init__(id, file, options=options)
 
     @staticmethod
+    def load(
+        id: str,
+        file: Union[str, Path],
+        options: Union[HistoryOptions, dict] = None,
+    ) -> 'Hdf5AmiciHistory':
+        """Load the History object from memory."""
+        history = Hdf5AmiciHistory(id=id, file=file, options=options)
+        if options is None:
+            history.recover_options(file)
+        return history
+
+    @staticmethod
     def _simulation_to_values(x, result, used_time):
         values = Hdf5History._simulation_to_values(x, result, used_time)
         # default unit for time in amici is [ms], converted to [s]
