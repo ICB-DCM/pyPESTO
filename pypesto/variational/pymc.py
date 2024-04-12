@@ -1,3 +1,5 @@
+"""Pymc v4 Sampler for Variational Inference."""
+
 import logging
 from typing import Optional
 
@@ -162,6 +164,10 @@ class PymcVariational(PymcSampler):
         param_list:
             List of tuples of the form (param_name, param_value).
         """
+        if len(param_list) != len(self.data.params):
+            raise ValueError(
+                "The number of parameters does not match the number of variational parameters."
+            )
         for i, param in enumerate(param_list):
             self.data.params[i].set_value(param)
 

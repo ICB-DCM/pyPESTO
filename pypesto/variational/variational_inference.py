@@ -1,3 +1,5 @@
+"""Functions for variational inference accessible to the user. Currently only pymc is supported."""
+
 import logging
 from time import process_time
 from typing import Callable, List, Optional, Union
