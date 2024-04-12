@@ -29,6 +29,7 @@ nbs_1=(
   'censored_data.ipynb'
   'semiquantitative_data.ipynb'
   'getting_started.ipynb'
+  'roadrunner.ipynb'
 )
 
 # Sampling notebooks
