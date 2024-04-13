@@ -1,8 +1,9 @@
 """Ensemble utilities."""
 
 import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Callable, Literal, Sequence, Union
+from typing import Callable, Literal, Union
 
 import h5py
 import numpy as np
@@ -31,7 +32,7 @@ from .ensemble import Ensemble, EnsemblePrediction
 
 def read_from_csv(
     path: str,
-    sep: str = '\t',
+    sep: str = "\t",
     index_col: int = 0,
     headline_parser: Callable = None,
     ensemble_type: EnsembleType = None,
@@ -82,7 +83,7 @@ def read_from_csv(
 
 def read_ensemble_from_hdf5(
     filename: str,
-    input_type: Literal['optimize', 'sample'] = OPTIMIZE,
+    input_type: Literal["optimize", "sample"] = OPTIMIZE,
     remove_burn_in: bool = True,
     chain_slice: slice = None,
     cutoff: float = np.inf,
@@ -120,10 +121,10 @@ def read_ensemble_from_hdf5(
         )
     else:
         raise ValueError(
-            'The type you provided was neither '
+            "The type you provided was neither "
             f'"{SAMPLE}" nor "{OPTIMIZE}". Those are '
-            'currently the only supported types. '
-            'Please choose one of them.'
+            "currently the only supported types. "
+            "Please choose one of them."
         )
 
 
@@ -192,12 +193,12 @@ def write_ensemble_prediction_to_h5(
         An optional filepath where the file should be saved to.
     """
     # parse base path
-    base = Path('')
+    base = Path("")
     if base_path is not None:
         base = Path(base_path)
 
     # open file
-    with h5py.File(output_file, 'a') as f:
+    with h5py.File(output_file, "a") as f:
         # write prediction ID if available
         if ensemble_prediction.prediction_id is not None:
             f.create_dataset(
@@ -244,7 +245,7 @@ def write_ensemble_prediction_to_h5(
         ) in ensemble_prediction.prediction_summary.items():
             if summary is None:
                 continue
-            tmp_base_path = os.path.join(base, f'{SUMMARY}_{summary_id}')
+            tmp_base_path = os.path.join(base, f"{SUMMARY}_{summary_id}")
             f.create_group(tmp_base_path)
             summary.write_to_h5(output_file, base_path=tmp_base_path)
 
@@ -253,7 +254,7 @@ def write_ensemble_prediction_to_h5(
             ensemble_prediction.prediction_results
         ):
             tmp_base_path = os.path.join(
-                base, f'{PREDICTION_RESULTS}_{i_result}'
+                base, f"{PREDICTION_RESULTS}_{i_result}"
             )
             result.write_to_h5(output_file, base_path=tmp_base_path)
 
@@ -288,8 +289,8 @@ def get_prediction_dataset(
         dataset = ens.prediction_arrays[OUTPUT].transpose()
     else:
         raise Exception(
-            'Need either an Ensemble object with predictions or '
-            'an EnsemblePrediction object as input. Stopping.'
+            "Need either an Ensemble object with predictions or "
+            "an EnsemblePrediction object as input. Stopping."
         )
 
     return dataset
@@ -301,7 +302,7 @@ def read_ensemble_prediction_from_h5(
 ):
     """Read an ensemble prediction from an HDF5 File."""
     # open file
-    with h5py.File(input_file, 'r') as f:
+    with h5py.File(input_file, "r") as f:
         pred_res_list = []
         bounds = {}
         for key in f.keys():
@@ -315,25 +316,25 @@ def read_ensemble_prediction_from_h5(
                     bounds[key] = f[key][:]
                     continue
                 bounds[key] = [
-                    f[f'{key}/{cond}'][()] for cond in f[key].keys()
+                    f[f"{key}/{cond}"][()] for cond in f[key].keys()
                 ]
                 bounds[key] = np.array(bounds[key])
                 continue
-            x_names = list(decode_array(f[f'{key}/{X_NAMES}'][()]))
-            condition_ids = list(decode_array(f[f'{key}/condition_ids'][()]))
+            x_names = list(decode_array(f[f"{key}/{X_NAMES}"][()]))
+            condition_ids = list(decode_array(f[f"{key}/condition_ids"][()]))
             pred_cond_res_list = []
             for id, _ in enumerate(condition_ids):
-                output = f[f'{key}/{id}/{OUTPUT}'][:]
+                output = f[f"{key}/{id}/{OUTPUT}"][:]
                 output_ids = tuple(
-                    decode_array(f[f'{key}/{id}' f'/{OUTPUT_IDS}'][:])
+                    decode_array(f[f"{key}/{id}" f"/{OUTPUT_IDS}"][:])
                 )
-                timepoints = f[f'{key}/{id}/{TIMEPOINTS}'][:]
+                timepoints = f[f"{key}/{id}/{TIMEPOINTS}"][:]
                 try:
-                    output_weight = f[f'{key}/{id}/{OUTPUT_WEIGHT}'][()]
+                    output_weight = f[f"{key}/{id}/{OUTPUT_WEIGHT}"][()]
                 except KeyError:
                     output_weight = None
                 try:
-                    output_sigmay = f[f'{key}/{id}/{OUTPUT_SIGMAY}'][:]
+                    output_sigmay = f[f"{key}/{id}/{OUTPUT_SIGMAY}"][:]
                 except KeyError:
                     output_sigmay = None
                 pred_cond_res_list.append(

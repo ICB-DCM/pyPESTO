@@ -1,7 +1,8 @@
 import logging
 import math
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import Callable, Dict, List, Sequence, Tuple, Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -50,7 +51,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def __init__(
         self,
-        prior_list: List[Dict],
+        prior_list: list[dict],
         x_names: Sequence[str] = None,
     ):
         """
@@ -75,7 +76,7 @@ class NegLogParameterPriors(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: C.ModeType,
         **kwargs,
     ) -> ResultDict:
@@ -100,7 +101,7 @@ class NegLogParameterPriors(ObjectiveBase):
                 elif order == 2:
                     res[C.HESS] = self.hessian_neg_log_density(x)
                 else:
-                    raise ValueError(f'Invalid sensi order {order}.')
+                    raise ValueError(f"Invalid sensi order {order}.")
 
         if mode == C.MODE_RES:
             for order in sensi_orders:
@@ -109,13 +110,13 @@ class NegLogParameterPriors(ObjectiveBase):
                 elif order == 1:
                     res[C.SRES] = self.residual_jacobian(x)
                 else:
-                    raise ValueError(f'Invalid sensi order {order}.')
+                    raise ValueError(f"Invalid sensi order {order}.")
 
         return res
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: C.ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -127,20 +128,20 @@ class NegLogParameterPriors(ObjectiveBase):
             for order in sensi_orders:
                 if order == 0:
                     return all(
-                        prior.get('residual', None) is not None
+                        prior.get("residual", None) is not None
                         for prior in self.prior_list
                     )
                 elif order == 1:
                     return all(
-                        prior.get('residual_dx', None) is not None
+                        prior.get("residual_dx", None) is not None
                         for prior in self.prior_list
                     )
                 else:
                     return False
         else:
             raise ValueError(
-                f'Invalid input: Expected mode {C.MODE_FUN} or '
-                f'{C.MODE_RES}, received {mode} instead.'
+                f"Invalid input: Expected mode {C.MODE_FUN} or "
+                f"{C.MODE_RES}, received {mode} instead."
             )
 
         return True
@@ -151,20 +152,20 @@ class NegLogParameterPriors(ObjectiveBase):
             return True
         elif mode == C.MODE_RES:
             return all(
-                prior.get('residual', None) is not None
+                prior.get("residual", None) is not None
                 for prior in self.prior_list
             )
         else:
             raise ValueError(
-                f'Invalid input: Expected mode {C.MODE_FUN} or '
-                f'{C.MODE_RES}, received {mode} instead.'
+                f"Invalid input: Expected mode {C.MODE_FUN} or "
+                f"{C.MODE_RES}, received {mode} instead."
             )
 
     def neg_log_density(self, x):
         """Evaluate the negative log-density at x."""
         density_val = 0
         for prior in self.prior_list:
-            density_val -= prior['density_fun'](x[prior['index']])
+            density_val -= prior["density_fun"](x[prior["index"]])
 
         return density_val
 
@@ -173,7 +174,7 @@ class NegLogParameterPriors(ObjectiveBase):
         grad = np.zeros_like(x)
 
         for prior in self.prior_list:
-            grad[prior['index']] -= prior['density_dx'](x[prior['index']])
+            grad[prior["index"]] -= prior["density_dx"](x[prior["index"]])
 
         return grad
 
@@ -182,8 +183,8 @@ class NegLogParameterPriors(ObjectiveBase):
         hessian = np.zeros((len(x), len(x)))
 
         for prior in self.prior_list:
-            hessian[prior['index'], prior['index']] -= prior['density_ddx'](
-                x[prior['index']]
+            hessian[prior["index"], prior["index"]] -= prior["density_ddx"](
+                x[prior["index"]]
             )
 
         return hessian
@@ -193,8 +194,8 @@ class NegLogParameterPriors(ObjectiveBase):
         h_dot_p = np.zeros_like(p)
 
         for prior in self.prior_list:
-            h_dot_p[prior['index']] -= (
-                prior['density_ddx'](x[prior['index']]) * p[prior['index']]
+            h_dot_p[prior["index"]] -= (
+                prior["density_ddx"](x[prior["index"]]) * p[prior["index"]]
             )
 
         return h_dot_p
@@ -202,7 +203,7 @@ class NegLogParameterPriors(ObjectiveBase):
     def residual(self, x):
         """Evaluate the residual representation of the prior at x."""
         return np.asarray(
-            [prior['residual'](x[prior['index']]) for prior in self.prior_list]
+            [prior["residual"](x[prior["index"]]) for prior in self.prior_list]
         )
 
     def residual_jacobian(self, x):
@@ -214,8 +215,8 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         sres = np.zeros((len(self.prior_list), len(x)))
         for iprior, prior in enumerate(self.prior_list):
-            sres[iprior, prior['index']] = prior['residual_dx'](
-                x[prior['index']]
+            sres[iprior, prior["index"]] = prior["residual_dx"](
+                x[prior["index"]]
             )
 
         return sres
@@ -249,14 +250,14 @@ def get_parameter_prior_dict(
         prior_type, prior_parameters
     )
 
-    if parameter_scale == C.LIN or prior_type.startswith('parameterScale'):
+    if parameter_scale == C.LIN or prior_type.startswith("parameterScale"):
         return {
-            'index': index,
-            'density_fun': log_f,
-            'density_dx': d_log_f_dx,
-            'density_ddx': dd_log_f_ddx,
-            'residual': res,
-            'residual_dx': d_res_dx,
+            "index": index,
+            "density_fun": log_f,
+            "density_dx": d_log_f_dx,
+            "density_ddx": dd_log_f_ddx,
+            "residual": res,
+            "residual_dx": d_res_dx,
         }
 
     elif parameter_scale == C.LOG:
@@ -295,12 +296,12 @@ def get_parameter_prior_dict(
             d_res_log = None
 
         return {
-            'index': index,
-            'density_fun': log_f_log,
-            'density_dx': d_log_f_log,
-            'density_ddx': dd_log_f_log,
-            'residual': res_log,
-            'residual_dx': d_res_log,
+            "index": index,
+            "density_fun": log_f_log,
+            "density_dx": d_log_f_log,
+            "density_ddx": dd_log_f_log,
+            "residual": res_log,
+            "residual_dx": d_res_log,
         }
 
     elif parameter_scale == C.LOG10:
@@ -340,12 +341,12 @@ def get_parameter_prior_dict(
                 return d_res_dx(10**x_log10) * log10 * 10**x_log10
 
         return {
-            'index': index,
-            'density_fun': log_f_log10,
-            'density_dx': d_log_f_log10,
-            'density_ddx': dd_log_f_log10,
-            'residual': res_log,
-            'residual_dx': d_res_log,
+            "index": index,
+            "density_fun": log_f_log10,
+            "density_dx": d_log_f_log10,
+            "density_ddx": dd_log_f_log10,
+            "residual": res_log,
+            "residual_dx": d_res_log,
         }
 
     else:
@@ -521,9 +522,7 @@ def _prior_densities(
             return -1 / x - (np.log(x) - mean) / (sigma**2 * x)
 
         def dd_log_f_ddx(x):
-            return 1 / (x**2) - (1 - np.log(x) + mean) / (
-                sigma**2 * x**2
-            )
+            return 1 / (x**2) - (1 - np.log(x) + mean) / (sigma**2 * x**2)
 
         return log_f, d_log_f_dx, dd_log_f_ddx, None, None
 
@@ -532,7 +531,7 @@ def _prior_densities(
         raise NotImplementedError
     else:
         raise ValueError(
-            f'NegLogPriors of type {prior_type} are currently ' 'not supported'
+            f"NegLogPriors of type {prior_type} are currently " "not supported"
         )
 
 

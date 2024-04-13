@@ -1,4 +1,5 @@
-from typing import Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import numpy as np
 
@@ -79,17 +80,17 @@ class ReferencePoint(dict):
                 self.x = np.array(x)
             else:
                 raise ValueError(
-                    'Parameter vector x not passed, but is a '
-                    'mandatory input when creating a reference '
-                    'point. Stopping.'
+                    "Parameter vector x not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
                 )
             if fval is not None:
                 self.fval = fval
             else:
                 raise ValueError(
-                    'Objective value fval not passed, but is a '
-                    'mandatory input when creating a reference '
-                    'point. Stopping.'
+                    "Objective value fval not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
                 )
             if color is not None:
                 self.color = color
@@ -103,7 +104,7 @@ class ReferencePoint(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
@@ -125,7 +126,7 @@ def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
     # loop over reference points
     auto_color_count = 0
     for i_ref in ref:
-        if i_ref['auto_color']:
+        if i_ref["auto_color"]:
             auto_color_count += 1
 
     auto_colors = [
@@ -136,8 +137,8 @@ def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
     # loop over reference points and assign auto_colors
     auto_color_count = 0
     for i_num, i_ref in enumerate(ref):
-        if i_ref['auto_color']:
-            i_ref['color'] = auto_colors[i_num]
+        if i_ref["auto_color"]:
+            i_ref["color"] = auto_colors[i_num]
             auto_color_count += 1
 
     return ref

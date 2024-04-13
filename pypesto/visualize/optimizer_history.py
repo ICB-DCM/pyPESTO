@@ -1,5 +1,6 @@
 import logging
-from typing import Iterable, List, Optional, Tuple, Union
+from collections.abc import Iterable
+from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,20 +23,20 @@ logger = logging.getLogger(__name__)
 
 
 def optimizer_history(
-    results: Union[Result, List[Result]],
+    results: Union[Result, list[Result]],
     ax: Optional[plt.Axes] = None,
-    size: Tuple = (18.5, 10.5),
+    size: tuple = (18.5, 10.5),
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
-    scale_y: str = 'log10',
+    scale_y: str = "log10",
     offset_y: Optional[float] = None,
-    colors: Optional[Union[RGBA, List[RGBA]]] = None,
-    y_limits: Optional[Union[float, List[float], np.ndarray]] = None,
-    start_indices: Optional[Union[int, List[int]]] = None,
+    colors: Optional[Union[RGBA, list[RGBA]]] = None,
+    y_limits: Optional[Union[float, list[float], np.ndarray]] = None,
+    start_indices: Optional[Union[int, list[int]]] = None,
     reference: Optional[
-        Union[ReferencePoint, dict, List[ReferencePoint], List[dict]]
+        Union[ReferencePoint, dict, list[ReferencePoint], list[dict]]
     ] = None,
-    legends: Optional[Union[str, List[str]]] = None,
+    legends: Optional[Union[str, list[str]]] = None,
 ) -> plt.Axes:
     """
     Plot history of optimizer.
@@ -124,13 +125,13 @@ def optimizer_history(
 
 
 def optimizer_history_lowlevel(
-    vals: List[np.ndarray],
-    scale_y: str = 'log10',
-    colors: Optional[Union[RGBA, List[RGBA]]] = None,
+    vals: list[np.ndarray],
+    scale_y: str = "log10",
+    colors: Optional[Union[RGBA, list[RGBA]]] = None,
     ax: Optional[plt.Axes] = None,
-    size: Tuple = (18.5, 10.5),
-    x_label: str = 'Optimizer steps',
-    y_label: str = 'Objective value',
+    size: tuple = (18.5, 10.5),
+    x_label: str = "Optimizer steps",
+    y_label: str = "Objective value",
     legend_text: Optional[str] = None,
 ) -> plt.Axes:
     """
@@ -181,9 +182,9 @@ def optimizer_history_lowlevel(
         vals = np.asarray(vals)
         if vals.shape[0] != 2 or vals.ndim != 2:
             raise ValueError(
-                'If numpy array is passed directly to lowlevel '
-                'routine of optimizer_history, shape needs to '
-                'be 2 x n.'
+                "If numpy array is passed directly to lowlevel "
+                "routine of optimizer_history, shape needs to "
+                "be 2 x n."
             )
         fvals = [vals[1, -1]]
         vals = [vals]
@@ -209,7 +210,7 @@ def optimizer_history_lowlevel(
             tmp_legend = None
 
         # line plots
-        if scale_y == 'log10':
+        if scale_y == "log10":
             ax.semilogy(val[0, :], val[1, :], color=color, label=tmp_legend)
         else:
             ax.plot(val[0, :], val[1, :], color=color, label=tmp_legend)
@@ -217,7 +218,7 @@ def optimizer_history_lowlevel(
     # set labels
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    ax.set_title('Optimizer history')
+    ax.set_title("Optimizer history")
     if legend_text is not None:
         ax.legend()
 
@@ -226,7 +227,7 @@ def optimizer_history_lowlevel(
 
 def get_trace(
     result: Result, trace_x: Optional[str], trace_y: Optional[str]
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """
     Get the values of the optimizer trace from the pypesto.Result object.
 
@@ -253,7 +254,7 @@ def get_trace(
         label for y-axis to be plotted later.
     """
     # get data frames
-    histories: List[HistoryBase] = result.optimize_result.history
+    histories: list[HistoryBase] = result.optimize_result.history
 
     vals = []
 
@@ -306,12 +307,12 @@ def get_trace(
 
 
 def get_vals(
-    vals: List[np.ndarray],
+    vals: list[np.ndarray],
     scale_y: Optional[str],
     offset_y: float,
     trace_y: str,
     start_indices: Iterable[int],
-) -> Tuple[List[np.ndarray], float]:
+) -> tuple[list[np.ndarray], float]:
     """
     Postprocess the values of the optimization history.
 
@@ -373,7 +374,7 @@ def get_vals(
     return vals, offset_y
 
 
-def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
+def get_labels(trace_x: str, trace_y: str, offset_y: float) -> tuple[str, str]:
     """
     Generate labels for x and y axes of the history plot.
 
@@ -389,32 +390,31 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> Tuple[str, str]:
     Returns
     -------
     labels for x and y axes
-
     """
-    x_label = ''
-    y_label = ''
+    x_label = ""
+    y_label = ""
 
     if trace_x == TRACE_X_TIME:
-        x_label = 'Computation time [s]'
+        x_label = "Computation time [s]"
     else:
-        x_label = 'Optimizer steps'
+        x_label = "Optimizer steps"
 
     if trace_y == TRACE_Y_GRADNORM:
-        y_label = 'Gradient norm'
+        y_label = "Gradient norm"
     else:
-        y_label = 'Objective value'
+        y_label = "Objective value"
 
     if offset_y != 0:
-        y_label = 'Offsetted ' + y_label.lower()
+        y_label = "Offsetted " + y_label.lower()
 
     return x_label, y_label
 
 
 def handle_options(
     ax: plt.Axes,
-    vals: List[np.ndarray],
+    vals: list[np.ndarray],
     trace_y: str,
-    ref: List[ReferencePoint],
+    ref: list[ReferencePoint],
     y_limits: Union[float, np.ndarray, None],
     offset_y: float,
 ) -> plt.Axes:
@@ -461,7 +461,7 @@ def handle_options(
                 ax.plot(
                     [0, max_len],
                     [i_ref.fval + offset_y, i_ref.fval + offset_y],
-                    '--',
+                    "--",
                     color=i_ref.color,
                     label=i_ref.legend,
                 )
@@ -471,8 +471,8 @@ def handle_options(
                     ax.legend()
     else:
         logger.warning(
-            f'Reference point is currently only implemented for trace_y == '
-            f'{TRACE_Y_FVAL} and will not be plotted for trace_y == {trace_y}.'
+            f"Reference point is currently only implemented for trace_y == "
+            f"{TRACE_Y_FVAL} and will not be plotted for trace_y == {trace_y}."
         )
 
     return ax

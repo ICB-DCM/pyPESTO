@@ -3,7 +3,8 @@
 import numbers
 import time
 from abc import ABC, abstractmethod
-from typing import Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 
@@ -535,7 +536,7 @@ def reduce_result_via_options(
     # apply options to result
     for key in HistoryBase.RESULT_KEYS:
         if result.get(key) is None or not options.get(
-            f'trace_record_{key}', True
+            f"trace_record_{key}", True
         ):
             result[key] = np.nan
 

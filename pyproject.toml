@@ -9,12 +9,67 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
+[tool.ruff]
 line-length = 79
-target-version = ['py38', 'py39']
-skip-string-normalization = true
+exclude = ["amici_models"]
+extend-include = ["*.ipynb"]
+lint.ignore = [
+    "B027",
+    "D100",
+    "D105",
+    "D107",
+    "D202",
+    "E501",
+    "F403",
+    "F405",
+    "D413"
+]
+lint.select = [
+    "F",  # Pyflakes
+    "I",  # isort
+    "D",  # pydocstyle (PEP 257)
+    "S",  # flake8-bandit
+    "B",  # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "T20",  # flake8-print
+    "W",  # pycodestyle Warnings
+    "E",  # pycodestyle Errors
+    "UP",  # pyupgrade
+    # "ANN",  # flakes-annotations TODO: currently produces ~1500 errors to manual fix
+]
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
 
-[tool.isort]
-profile = "black"
-line_length = 79
-multi_line_output = 3
+[tool.ruff.lint.per-file-ignores]
+"test/julia/test_pyjulia.py" = ["E402"]
+"pypesto/C.py" = [
+    "D400",
+    "D205",
+]
+"*/__init__.py" = [
+    "F401",
+    "D400",
+    "D205",
+]
+"pypesto/logging.py" = [
+    "D400",
+    "D205",
+]
+"test/*" = [
+    "T201",
+    "S101",
+    "D",
+]
+"pypesto/util.py" = [
+    "D400",
+    "D205",
+]
+"doc/example/*.py" = [  # ignore docstyle in example pthon files.
+    "D",
+]
+"doc/conf.py" = [
+    "E402",
+]
+"*.ipynb" = [
+    "T20", "E402", "D"
+]

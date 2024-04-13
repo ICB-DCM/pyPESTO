@@ -27,7 +27,6 @@ Getting started
 
    example/getting_started.ipynb
    example/custom_objective_function.ipynb
-   example/workflow_comparison.ipynb
 
 PEtab and AMICI
 ---------------
@@ -55,6 +54,7 @@ Algorithms and features
    example/ordinal_data.ipynb
    example/censored_data.ipynb
    example/semiquantitative_data.ipynb
+   example/roadrunner.ipynb
 
 Application examples
 --------------------

@@ -1,6 +1,7 @@
 import warnings
+from collections.abc import Iterable
 from numbers import Number
-from typing import Iterable, List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -24,7 +25,7 @@ from .clust_color import assign_colors_for_list
 
 
 def process_result_list(
-    results: Union[Result, List[Result]], colors=None, legends=None
+    results: Union[Result, list[Result]], colors=None, legends=None
 ):
     """
     Assign colors and legends to a list of results, check user provided lists.
@@ -81,7 +82,7 @@ def process_result_list(
             # No legends were passed: create some custom legends
             legends = []
             for i_leg in range(len(results)):
-                legends.append('Result ' + str(i_leg))
+                legends.append("Result " + str(i_leg))
         else:
             # legends were passed by user: check length
             try:
@@ -89,8 +90,8 @@ def process_result_list(
                     legends = [legends]
                 if len(legends) != len(results):
                     raise ValueError(
-                        'List of results passed and list of labels do '
-                        'not have the same length.'
+                        "List of results passed and list of labels do "
+                        "not have the same length."
                     )
             except TypeError:
                 legend_type_error = True
@@ -126,18 +127,19 @@ def process_offset_y(
     """
     # check whether the offset specified by the user is sufficient
     if offset_y is not None:
-        if (scale_y == 'log10') and (min_val + offset_y <= 0.0):
+        if (scale_y == "log10") and (min_val + offset_y <= 0.0):
             warnings.warn(
                 "Offset specified by user is insufficient. "
                 "Ignoring specified offset and using "
                 + str(np.abs(min_val) + 1.0)
-                + " instead."
+                + " instead.",
+                stacklevel=2,
             )
         else:
             return offset_y
     else:
         # check whether scaling is lin or log10
-        if scale_y == 'lin':
+        if scale_y == "lin":
             # linear scaling doesn't need any offset
             return 0.0
 
@@ -175,19 +177,21 @@ def process_y_limits(ax, y_limits):
             y_limits = [y_limits[0], y_limits[1]]
 
         # check validity of bounds if plotting in log-scale
-        if ax.get_yscale() == 'log' and y_limits[0] <= 0.0:
+        if ax.get_yscale() == "log" and y_limits[0] <= 0.0:
             tmp_y_limits = ax.get_ylim()
             if y_limits[1] <= 0.0:
                 y_limits = tmp_y_limits
                 warnings.warn(
                     "Invalid bounds for plotting in "
-                    "log-scale. Using defaults bounds."
+                    "log-scale. Using defaults bounds.",
+                    stacklevel=2,
                 )
             else:
                 y_limits = [tmp_y_limits[0], y_limits[1]]
                 warnings.warn(
                     "Invalid lower bound for plotting in "
-                    "log-scale. Using only upper bound."
+                    "log-scale. Using only upper bound.",
+                    stacklevel=2,
                 )
 
         # set limits
@@ -202,7 +206,7 @@ def process_y_limits(ax, y_limits):
         if ax_limits[0] > data_limits[0] or ax_limits[1] < data_limits[1]:
             # Get range of data
             data_range = data_limits[1] - data_limits[0]
-            if ax.get_yscale() == 'log':
+            if ax.get_yscale() == "log":
                 data_range = np.log10(data_range)
                 new_limits = (
                     np.power(10, np.log10(data_limits[0]) - 0.02 * data_range),
@@ -243,7 +247,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
     else:
         if len(bg) != LEN_RGB:
             raise IndexError(
-                'A background color of unexpected length was provided: {bg}'
+                "A background color of unexpected length was provided: {bg}"
             )
         bg = (*bg, RGBA_MAX)
 
@@ -252,7 +256,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
         return fg
     if len(fg) != LEN_RGBA:
         raise IndexError(
-            'A foreground color of unexpected length was provided: {fg}'
+            "A foreground color of unexpected length was provided: {fg}"
         )
 
     def apparent_composite_color_component(

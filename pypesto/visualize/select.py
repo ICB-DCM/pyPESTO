@@ -1,6 +1,5 @@
 """Visualization routines for model selection with pyPESTO."""
 
-from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -20,12 +19,12 @@ def default_label_maker(model: Model) -> str:
 
 # FIXME supply the problem to automatically detect the correct criterion?
 def plot_selected_models(
-    selected_models: List[Model],
+    selected_models: list[Model],
     criterion: str = Criterion.AIC,
     relative: bool = True,
     fz: int = 14,
-    size: Tuple[float, float] = (5, 4),
-    labels: Dict[str, str] = None,
+    size: tuple[float, float] = (5, 4),
+    labels: dict[str, str] = None,
     ax: plt.Axes = None,
 ) -> plt.Axes:
     """Plot criterion for calibrated models.
@@ -75,8 +74,7 @@ def plot_selected_models(
     criterion_values = {
         labels.get(
             model.get_hash(), default_label_maker(model)
-        ): model.get_criterion(criterion)
-        - zero
+        ): model.get_criterion(criterion) - zero
         for model in selected_models
     }
 
@@ -84,14 +82,14 @@ def plot_selected_models(
         criterion_values.keys(),
         criterion_values.values(),
         linewidth=linewidth,
-        color='lightgrey',
+        color="lightgrey",
         # edgecolor='k'
     )
 
     ax.get_xticks()
     ax.set_xticks(list(range(len(criterion_values))))
     ax.set_ylabel(
-        criterion + ('(relative)' if relative else '(absolute)'), fontsize=fz
+        criterion + ("(relative)" if relative else "(absolute)"), fontsize=fz
     )
     # could change to compared_model_ids, if all models are plotted
     ax.set_xticklabels(
@@ -103,8 +101,8 @@ def plot_selected_models(
     ytl = ax.get_yticks()
     ax.set_ylim([min(ytl), max(ytl)])
     # removing top and right borders
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
     return ax
 
 
@@ -117,12 +115,12 @@ def plot_history_digraph(*args, **kwargs):
 
 def plot_calibrated_models_digraph(
     problem: pypesto_select.Problem,
-    calibrated_models: Dict[str, Model] = None,
+    calibrated_models: dict[str, Model] = None,
     criterion: Criterion = None,
     optimal_distance: float = 1,
     relative: bool = True,
-    options: Dict = None,
-    labels: Dict[str, str] = None,
+    options: dict = None,
+    labels: dict[str, str] = None,
     ax: plt.Axes = None,
 ) -> plt.Axes:
     """Plot all calibrated models in the model space, as a directed graph.
@@ -180,19 +178,19 @@ def plot_calibrated_models_digraph(
                 )
         else:
             raise NotImplementedError(
-                'Plots for models with `None` as their predecessor model are '
-                'not yet implemented.'
+                "Plots for models with `None` as their predecessor model are "
+                "not yet implemented."
             )
-            from_ = 'None'
+            from_ = "None"
         to = labels.get(model.get_hash(), default_label_maker(model))
         edges.append((from_, to))
 
     G.add_edges_from(edges)
     default_options = {
-        'node_color': 'lightgrey',
-        'arrowstyle': '-|>',
-        'node_shape': 's',
-        'node_size': 2500,
+        "node_color": "lightgrey",
+        "arrowstyle": "-|>",
+        "node_shape": "s",
+        "node_size": 2500,
     }
     if options is not None:
         default_options.update(options)

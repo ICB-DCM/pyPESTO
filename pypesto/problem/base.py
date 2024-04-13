@@ -1,9 +1,8 @@
 import copy
 import logging
+from collections.abc import Iterable
 from typing import (
     Callable,
-    Iterable,
-    List,
     Optional,
     SupportsFloat,
     SupportsInt,
@@ -90,8 +89,8 @@ class Problem:
     def __init__(
         self,
         objective: ObjectiveBase,
-        lb: Union[np.ndarray, List[float]],
-        ub: Union[np.ndarray, List[float]],
+        lb: Union[np.ndarray, list[float]],
+        ub: Union[np.ndarray, list[float]],
         dim_full: Optional[int] = None,
         x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
         x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
@@ -99,8 +98,8 @@ class Problem:
         x_names: Optional[Iterable[str]] = None,
         x_scales: Optional[Iterable[str]] = None,
         x_priors_defs: Optional[NegLogParameterPriors] = None,
-        lb_init: Union[np.ndarray, List[float], None] = None,
-        ub_init: Union[np.ndarray, List[float], None] = None,
+        lb_init: Union[np.ndarray, list[float], None] = None,
+        ub_init: Union[np.ndarray, list[float], None] = None,
         copy_objective: bool = True,
         startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     ):
@@ -123,9 +122,9 @@ class Problem:
 
         if x_fixed_indices is None:
             x_fixed_indices = []
-        x_fixed_indices = _make_iterable_if_value(x_fixed_indices, 'int')
-        self.x_fixed_indices: List[int] = [
-            _type_conversion_with_check(idx, ix, 'fixed indices', 'int')
+        x_fixed_indices = _make_iterable_if_value(x_fixed_indices, "int")
+        self.x_fixed_indices: list[int] = [
+            _type_conversion_with_check(idx, ix, "fixed indices", "int")
             for idx, ix in enumerate(x_fixed_indices)
         ]
 
@@ -133,9 +132,9 @@ class Problem:
         # or remove values during profile computation
         if x_fixed_vals is None:
             x_fixed_vals = []
-        x_fixed_vals = _make_iterable_if_value(x_fixed_vals, 'float')
-        self.x_fixed_vals: List[float] = [
-            _type_conversion_with_check(idx, x, 'fixed values', 'float')
+        x_fixed_vals = _make_iterable_if_value(x_fixed_vals, "float")
+        self.x_fixed_vals: list[float] = [
+            _type_conversion_with_check(idx, x, "fixed values", "float")
             for idx, x in enumerate(x_fixed_vals)
         ]
 
@@ -146,13 +145,13 @@ class Problem:
         if x_names is None and objective.x_names is not None:
             x_names = objective.x_names
         elif x_names is None:
-            x_names = [f'x{j}' for j in range(0, self.dim_full)]
+            x_names = [f"x{j}" for j in range(0, self.dim_full)]
         if len(set(x_names)) != len(x_names):
             raise ValueError("Parameter names x_names must be unique")
-        self.x_names: List[str] = list(x_names)
+        self.x_names: list[str] = list(x_names)
 
         if x_scales is None:
-            x_scales = ['lin'] * self.dim_full
+            x_scales = ["lin"] * self.dim_full
         self.x_scales = x_scales
 
         self.x_priors = x_priors_defs
@@ -197,7 +196,7 @@ class Problem:
         return self.dim_full - len(self.x_fixed_indices)
 
     @property
-    def x_free_indices(self) -> List[int]:
+    def x_free_indices(self) -> list[int]:
         """Return non fixed parameters."""
         return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
@@ -208,7 +207,7 @@ class Problem:
         Reduce all vectors to dimension dim and have the objective accept
         vectors of dimension dim.
         """
-        for attr in ['lb_full', 'lb_init_full', 'ub_full', 'ub_init_full']:
+        for attr in ["lb_full", "lb_init_full", "ub_full", "ub_init_full"]:
             value = self.__getattribute__(attr)
             if value.size == 1:
                 self.__setattr__(attr, value * np.ones(self.dim_full))
@@ -248,11 +247,11 @@ class Problem:
                 "x_fixed_indices and x_fixed_vals must have the same length."
             )
         if np.isnan(self.lb).any():
-            raise ValueError('lb must not contain nan values')
+            raise ValueError("lb must not contain nan values")
         if np.isnan(self.ub).any():
-            raise ValueError('ub must not contain nan values')
+            raise ValueError("ub must not contain nan values")
         if np.any(self.lb >= self.ub):
-            raise ValueError('lb<ub not fulfilled.')
+            raise ValueError("lb<ub not fulfilled.")
 
     def _check_x_guesses(self):
         """Check whether the supplied x_guesses adhere to the bounds."""
@@ -279,7 +278,7 @@ class Problem:
         x_guesses_full = np.array(x_guesses)
         if x_guesses_full.shape[1] != self.dim_full:
             raise ValueError(
-                'The dimension of individual x_guesses must be ' 'dim_full.'
+                "The dimension of individual x_guesses must be " "dim_full."
             )
         self.x_guesses_full = x_guesses_full
         self._check_x_guesses()
@@ -290,8 +289,8 @@ class Problem:
         parameter_vals: SupportsFloatIterableOrValue,
     ) -> None:
         """Fix specified parameters to specified values."""
-        parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
-        parameter_vals = _make_iterable_if_value(parameter_vals, 'float')
+        parameter_indices = _make_iterable_if_value(parameter_indices, "int")
+        parameter_vals = _make_iterable_if_value(parameter_vals, "float")
 
         # first clean to-be-fixed indices to avoid redundancies
         for iter_index, (x_index, x_value) in enumerate(
@@ -300,10 +299,10 @@ class Problem:
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters
             index = _type_conversion_with_check(
-                iter_index, x_index, 'indices', 'int'
+                iter_index, x_index, "indices", "int"
             )
             val = _type_conversion_with_check(
-                iter_index, x_value, 'values', 'float'
+                iter_index, x_value, "values", "float"
             )
             if index in self.x_fixed_indices:
                 self.x_fixed_vals[self.x_fixed_indices.index(index)] = val
@@ -318,12 +317,12 @@ class Problem:
     ) -> None:
         """Free specified parameters."""
         # check and adapt input
-        parameter_indices = _make_iterable_if_value(parameter_indices, 'int')
+        parameter_indices = _make_iterable_if_value(parameter_indices, "int")
 
         # first clean to-be-freed indices
         for iter_index, x_index in enumerate(parameter_indices):
             index = _type_conversion_with_check(
-                iter_index, x_index, 'indices', 'int'
+                iter_index, x_index, "indices", "int"
             )
             if index in self.x_fixed_indices:
                 fixed_x_index = self.x_fixed_indices.index(index)
@@ -394,7 +393,7 @@ class Problem:
     def get_reduced_vector(
         self,
         x_full: Union[np.ndarray, None],
-        x_indices: Optional[List[int]] = None,
+        x_indices: Optional[list[int]] = None,
     ) -> Union[np.ndarray, None]:
         """
         Keep only those elements, which indices are specified in x_indices.
@@ -470,20 +469,20 @@ class Problem:
             pd.DataFrame(
                 index=self.x_names,
                 data={
-                    'free': [
+                    "free": [
                         idx in self.x_free_indices
                         for idx in range(self.dim_full)
                     ],
-                    'lb_full': self.lb_full,
-                    'ub_full': self.ub_full,
+                    "lb_full": self.lb_full,
+                    "ub_full": self.ub_full,
                 },
             )
         )
 
 
 _convtypes = {
-    'float': {'attr': '__float__', 'conv': float},
-    'int': {'attr': '__int__', 'conv': int},
+    "float": {"attr": "__float__", "conv": float},
+    "int": {"attr": "__int__", "conv": int},
 }
 
 
@@ -499,24 +498,24 @@ def _type_conversion_with_check(
     Raises and appropriate error if not possible.
     """
     if convtype not in _convtypes:
-        raise ValueError(f'Unsupported type {convtype}')
+        raise ValueError(f"Unsupported type {convtype}")
 
-    can_convert = hasattr(value, _convtypes[convtype]['attr'])
+    can_convert = hasattr(value, _convtypes[convtype]["attr"])
     # this may fail for weird custom ypes that can be converted to int but
     # not float, but we probably don't want those as indiced anyways
-    lossless_conversion = not convtype == 'int' or (
-        hasattr(value, _convtypes['float']['attr'])
+    lossless_conversion = not convtype == "int" or (
+        hasattr(value, _convtypes["float"]["attr"])
         and (float(value) - int(value) == 0.0)
     )
 
     if not can_convert or not lossless_conversion:
         raise ValueError(
-            f'All {valuename} must support lossless conversion to {convtype}. '
-            f'Found type {type(value)} at index {index}, which cannot '
-            f'be converted to {convtype}.'
+            f"All {valuename} must support lossless conversion to {convtype}. "
+            f"Found type {type(value)} at index {index}, which cannot "
+            f"be converted to {convtype}."
         )
 
-    return _convtypes[convtype]['conv'](value)
+    return _convtypes[convtype]["conv"](value)
 
 
 def _make_iterable_if_value(
@@ -525,9 +524,9 @@ def _make_iterable_if_value(
 ) -> Union[Iterable[SupportsFloat], Iterable[SupportsInt]]:
     """Convert scalar values to iterables for scalar input, may update type."""
     if convtype not in _convtypes:
-        raise ValueError(f'Unsupported type {convtype}')
+        raise ValueError(f"Unsupported type {convtype}")
 
-    if not hasattr(value, '__iter__'):
-        return [_type_conversion_with_check(0, value, 'values', convtype)]
+    if not hasattr(value, "__iter__"):
+        return [_type_conversion_with_check(0, value, "values", convtype)]
     else:
         return value

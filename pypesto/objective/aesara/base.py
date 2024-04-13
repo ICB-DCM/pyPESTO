@@ -7,7 +7,8 @@ combination of objective based methods and aesara based backpropagation.
 """
 
 import copy
-from typing import Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Optional
 
 import numpy as np
 
@@ -24,7 +25,7 @@ except ImportError:
         "Using an aeasara objective requires an installation of "
         "the python package aesara. Please install aesara via "
         "`pip install aesara`."
-    )
+    ) from None
 
 
 class AesaraObjective(ObjectiveBase):
@@ -57,10 +58,10 @@ class AesaraObjective(ObjectiveBase):
         x_names: Sequence[str] = None,
     ):
         if not isinstance(objective, ObjectiveBase):
-            raise TypeError('objective must be an ObjectiveBase instance')
+            raise TypeError("objective must be an ObjectiveBase instance")
         if not objective.check_mode(MODE_FUN):
             raise NotImplementedError(
-                f'objective must support mode={MODE_FUN}'
+                f"objective must support mode={MODE_FUN}"
             )
         super().__init__(x_names)
         self.base_objective = objective
@@ -107,7 +108,7 @@ class AesaraObjective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         **kwargs,
     ) -> ResultDict:
@@ -125,14 +126,14 @@ class AesaraObjective(ObjectiveBase):
         # them accessible to aesara compiled functions
 
         set_return_dict, return_dict = (
-            'return_dict' in kwargs,
-            kwargs.pop('return_dict', False),
+            "return_dict" in kwargs,
+            kwargs.pop("return_dict", False),
         )
         self.cached_base_ret = self.base_objective(
             self.infun(x), sensi_orders, mode, return_dict=True, **kwargs
         )
         if set_return_dict:
-            kwargs['return_dict'] = return_dict
+            kwargs["return_dict"] = return_dict
         ret = {}
         if RDATAS in self.cached_base_ret:
             ret[RDATAS] = self.cached_base_ret[RDATAS]
@@ -196,7 +197,7 @@ class AesaraObjectiveOp(Op):
         parameter values.
         """
         if self._log_prob_grad is None:
-            return super(AesaraObjectiveOp, self).grad(inputs, g)
+            return super().grad(inputs, g)
         (theta,) = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
@@ -244,7 +245,7 @@ class AesaraObjectiveGradOp(Op):
         parameter values.
         """
         if self._log_prob_hess is None:
-            return super(AesaraObjectiveGradOp, self).grad(inputs, g)
+            return super().grad(inputs, g)
         (theta,) = inputs
         log_prob_hess = self._log_prob_hess(theta)
         return [g[0].dot(log_prob_hess)]

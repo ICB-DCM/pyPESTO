@@ -6,12 +6,14 @@ import numpy as np
 import petab
 import pytest
 import scipy.optimize as so
+from scipy.integrate import quad
 from scipy.stats import ks_2samp, kstest, multivariate_normal, norm, uniform
 
 import pypesto
 import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.sample as sample
+from pypesto.C import OBJECTIVE_NEGLOGLIKE, OBJECTIVE_NEGLOGPOST
 from pypesto.sample.pymc import PymcSampler
 
 
@@ -43,7 +45,7 @@ def gaussian_mixture_problem():
 
     objective = pypesto.Objective(fun=nllh)
     problem = pypesto.Problem(
-        objective=objective, lb=[-10], ub=[10], x_names=['x']
+        objective=objective, lb=[-10], ub=[10], x_names=["x"]
     )
     return problem
 
@@ -63,7 +65,7 @@ def gaussian_mixture_separated_modes_problem():
 
     objective = pypesto.Objective(fun=nllh)
     problem = pypesto.Problem(
-        objective=objective, lb=[-100], ub=[200], x_names=['x']
+        objective=objective, lb=[-100], ub=[200], x_names=["x"]
     )
     return problem
 
@@ -96,7 +98,7 @@ def rosenbrock_problem():
 def create_petab_problem():
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.abspath(
-        os.path.join(current_path, '..', '..', 'doc', 'example')
+        os.path.join(current_path, "..", "..", "doc", "example")
     )
     # import to petab
     petab_problem = petab.Problem.from_yaml(
@@ -116,7 +118,7 @@ def sample_petab_problem():
 
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
     result = sample.sample(
@@ -146,66 +148,66 @@ def negative_log_prior(x):
 
 @pytest.fixture(
     params=[
-        'Metropolis',
-        'AdaptiveMetropolis',
-        'ParallelTempering',
-        'AdaptiveParallelTempering',
-        'Pymc',
-        'Emcee',
-        'Dynesty',
+        "Metropolis",
+        "AdaptiveMetropolis",
+        "ParallelTempering",
+        "AdaptiveParallelTempering",
+        "Pymc",
+        "Emcee",
+        "Dynesty",
     ]
 )
 def sampler(request):
-    if request.param == 'Metropolis':
+    if request.param == "Metropolis":
         return sample.MetropolisSampler(
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
         )
-    elif request.param == 'AdaptiveMetropolis':
+    elif request.param == "AdaptiveMetropolis":
         return sample.AdaptiveMetropolisSampler(
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
         )
-    elif request.param == 'ParallelTempering':
+    elif request.param == "ParallelTempering":
         return sample.ParallelTemperingSampler(
             internal_sampler=sample.MetropolisSampler(),
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
             betas=[1, 1e-2, 1e-4],
         )
-    elif request.param == 'AdaptiveParallelTempering':
+    elif request.param == "AdaptiveParallelTempering":
         return sample.AdaptiveParallelTemperingSampler(
             internal_sampler=sample.AdaptiveMetropolisSampler(),
             options={
-                'show_progress': False,
+                "show_progress": False,
             },
             n_chains=5,
         )
-    elif request.param == 'Pymc':
+    elif request.param == "Pymc":
         return PymcSampler(tune=5, progressbar=False)
-    elif request.param == 'Emcee':
+    elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
-    elif request.param == 'Dynesty':
-        return sample.DynestySampler()
+    elif request.param == "Dynesty":
+        return sample.DynestySampler(objective_type="negloglike")
 
 
-@pytest.fixture(params=['gaussian', 'gaussian_mixture', 'rosenbrock'])
+@pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
 def problem(request):
-    if request.param == 'gaussian':
+    if request.param == "gaussian":
         return gaussian_problem()
-    if request.param == 'gaussian_mixture':
+    if request.param == "gaussian_mixture":
         return gaussian_mixture_problem()
-    elif request.param == 'rosenbrock':
+    elif request.param == "rosenbrock":
         return rosenbrock_problem()
 
 
 def test_pipeline(sampler, problem):
     """Check that a typical pipeline runs through."""
     # optimization
-    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     result = optimize.minimize(
         problem=problem,
         n_starts=3,
@@ -233,7 +235,7 @@ def test_ground_truth():
     sampler = sample.AdaptiveParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
         n_chains=5,
     )
@@ -257,11 +259,11 @@ def test_ground_truth():
 
     # test against different distributions
 
-    statistic, pval = kstest(samples, 'norm')
+    statistic, pval = kstest(samples, "norm")
     print(statistic, pval)
     assert statistic < 0.1
 
-    statistic, pval = kstest(samples, 'uniform')
+    statistic, pval = kstest(samples, "uniform")
     print(statistic, pval)
     assert statistic > 0.1
 
@@ -275,7 +277,7 @@ def test_ground_truth_separated_modes():
     sampler = sample.AdaptiveParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
         n_chains=3,
     )
@@ -309,7 +311,7 @@ def test_ground_truth_separated_modes():
     # initiated around the "first" mode of the distribution
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
     result = sample.sample(
@@ -339,7 +341,7 @@ def test_ground_truth_separated_modes():
     # initiated around the "second" mode of the distribution
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
     result = sample.sample(
@@ -372,7 +374,7 @@ def test_multiple_startpoints():
     sampler = sample.ParallelTemperingSampler(
         internal_sampler=sample.MetropolisSampler(),
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
         n_chains=2,
     )
@@ -426,7 +428,7 @@ def test_geweke_test_unconverged():
 
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -455,7 +457,7 @@ def test_autocorrelation_pipeline():
 
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -505,7 +507,7 @@ def test_autocorrelation_short_chain():
 
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -591,12 +593,12 @@ def test_empty_prior():
 
     # define pypesto problem without prior object
     test_problem = pypesto.Problem(
-        objective=posterior_fun, lb=-10, ub=10, x_names=['x']
+        objective=posterior_fun, lb=-10, ub=10, x_names=["x"]
     )
 
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -632,12 +634,12 @@ def test_prior():
         x_priors_defs=prior_object,
         lb=-10,
         ub=10,
-        x_names=['x'],
+        x_names=["x"],
     )
 
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -678,7 +680,7 @@ def test_samples_cis():
     # set a sampler
     sampler = sample.MetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
 
@@ -721,13 +723,13 @@ def test_samples_cis():
         assert (diff == 0).all()
         # check if lower bound is smaller than upper bound
         assert (lb < ub).all()
-        # check if dimmensions agree
+        # check if dimensions agree
         assert lb.shape == ub.shape
 
 
 def test_dynesty_mcmc_samples():
     problem = gaussian_problem()
-    sampler = sample.DynestySampler()
+    sampler = sample.DynestySampler(objective_type=OBJECTIVE_NEGLOGLIKE)
 
     result = sample.sample(
         problem=problem,
@@ -743,3 +745,90 @@ def test_dynesty_mcmc_samples():
     assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
     # MCMC samples are not
     assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
+
+
+def test_dynesty_posterior():
+    # define negative log posterior
+    posterior_fun = pypesto.Objective(fun=negative_log_posterior)
+
+    # define negative log prior
+    prior_fun = pypesto.Objective(fun=negative_log_prior)
+
+    # define pypesto prior object
+    prior_object = pypesto.NegLogPriors(objectives=[prior_fun])
+
+    # define pypesto problem using prior object
+    test_problem = pypesto.Problem(
+        objective=posterior_fun,
+        x_priors_defs=prior_object,
+        lb=-10,
+        ub=10,
+        x_names=["x"],
+    )
+
+    # define sampler
+    sampler = sample.DynestySampler(
+        objective_type=OBJECTIVE_NEGLOGPOST
+    )  # default
+
+    result = sample.sample(
+        problem=test_problem,
+        sampler=sampler,
+        n_samples=None,
+        filename=None,
+    )
+
+    original_sample_result = sampler.get_original_samples()
+    mcmc_sample_result = result.sample_result
+
+    # Nested sampling function values are monotonically increasing
+    assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
+    # MCMC samples are not
+    assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
+
+
+@pytest.mark.flaky(reruns=2)  # sometimes not all chains converge
+def test_thermodynamic_integration():
+    # test thermodynamic integration
+    problem = gaussian_problem()
+
+    # approximation should be better for more chains
+    for n_chains, tol in zip([10, 20], [1, 1e-1]):
+        sampler = sample.ParallelTemperingSampler(
+            internal_sampler=sample.AdaptiveMetropolisSampler(),
+            options={"show_progress": False, "beta_init": "beta_decay"},
+            n_chains=n_chains,
+        )
+
+        result = optimize.minimize(
+            problem,
+            progress_bar=False,
+        )
+
+        result = sample.sample(
+            problem,
+            n_samples=10000,
+            result=result,
+            sampler=sampler,
+        )
+
+        # compute the log evidence using trapezoid and simpson rule
+        log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
+        log_evidence_not_all = sampler.compute_log_evidence(
+            result, method="trapezoid", use_all_chains=False
+        )
+        log_evidence_simps = sampler.compute_log_evidence(
+            result, method="simpson"
+        )
+
+        # compute evidence
+        evidence = quad(
+            lambda x: 1 / (problem.ub - problem.lb) * np.exp(gaussian_llh(x)),
+            a=problem.lb,
+            b=problem.ub,
+        )
+
+        # compare to known value
+        assert np.isclose(log_evidence, np.log(evidence[0]), atol=tol)
+        assert np.isclose(log_evidence_not_all, np.log(evidence[0]), atol=tol)
+        assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)

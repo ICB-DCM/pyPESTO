@@ -7,10 +7,10 @@ import multiprocessing
 import os
 import time
 from math import ceil, sqrt
-from multiprocessing import Manager, Process
+from multiprocessing import get_context
 from multiprocessing.managers import SyncManager
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 from uuid import uuid1
 from warnings import warn
 
@@ -62,11 +62,12 @@ class SacessOptimizer:
     def __init__(
         self,
         num_workers: Optional[int] = None,
-        ess_init_args: Optional[List[Dict[str, Any]]] = None,
+        ess_init_args: Optional[list[dict[str, Any]]] = None,
         max_walltime_s: float = np.inf,
         sacess_loglevel: int = logging.INFO,
         ess_loglevel: int = logging.WARNING,
         tmpdir: Union[Path, str] = None,
+        mp_start_method: str = "spawn",
     ):
         """Construct.
 
@@ -105,6 +106,9 @@ class SacessOptimizer:
             current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
             parallel have a unique `tmpdir`.
+        mp_start_method:
+            The start method for the multiprocessing context.
+            See :mod:`multiprocessing` for details.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -135,6 +139,7 @@ class SacessOptimizer:
         self.histories: Optional[
             list["pypesto.history.memory.MemoryHistory"]
         ] = None
+        self.mp_ctx = get_context(mp_start_method)
 
     def minimize(
         self,
@@ -173,8 +178,10 @@ class SacessOptimizer:
         """
         if startpoint_method is not None:
             warn(
-                "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+                "Passing `startpoint_method` directly is deprecated, "
+                "use `problem.startpoint_method` instead.",
                 DeprecationWarning,
+                stacklevel=1,
             )
 
         start_time = time.time()
@@ -189,16 +196,16 @@ class SacessOptimizer:
         logging_handler = logging.StreamHandler()
         logging_handler.setFormatter(
             logging.Formatter(
-                '%(asctime)s %(name)s %(levelname)-8s %(message)s'
+                "%(asctime)s %(name)s %(levelname)-8s %(message)s"
             )
         )
         logging_thread = logging.handlers.QueueListener(
-            multiprocessing.Queue(-1), logging_handler
+            self.mp_ctx.Queue(-1), logging_handler
         )
 
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
-        with Manager() as shmem_manager:
+        with self.mp_ctx.Manager() as shmem_manager:
             sacess_manager = SacessManager(
                 shmem_manager=shmem_manager,
                 ess_options=ess_init_args,
@@ -221,7 +228,7 @@ class SacessOptimizer:
             ]
             # launch worker processes
             worker_processes = [
-                Process(
+                self.mp_ctx.Process(
                     name=f"{self.__class__.__name__}-worker-{i:02d}",
                     target=_run_worker,
                     args=(
@@ -338,7 +345,7 @@ class SacessManager:
     def __init__(
         self,
         shmem_manager: SyncManager,
-        ess_options: List[Dict[str, Any]],
+        ess_options: list[dict[str, Any]],
         dim: int,
     ):
         self._num_workers = len(ess_options)
@@ -358,12 +365,12 @@ class SacessManager:
         self._logger = logging.getLogger()
         self._result_queue = shmem_manager.Queue()
 
-    def get_best_solution(self) -> Tuple[np.array, float]:
+    def get_best_solution(self) -> tuple[np.array, float]:
         """Get the best objective value and corresponding parameters."""
         with self._lock:
             return np.array(self._best_known_x), self._best_known_fx.value
 
-    def reconfigure_worker(self, worker_idx: int) -> Dict:
+    def reconfigure_worker(self, worker_idx: int) -> dict:
         """Reconfigure the given worker.
 
         Updates the ESS options for the given worker to those of the worker at
@@ -488,7 +495,7 @@ class SacessWorker:
     def __init__(
         self,
         manager: SacessManager,
-        ess_kwargs: Dict[str, Any],
+        ess_kwargs: dict[str, Any],
         worker_idx: int,
         max_walltime_s: float = np.inf,
         loglevel: int = logging.INFO,
@@ -529,17 +536,17 @@ class SacessWorker:
         evaluator = create_function_evaluator(
             problem,
             startpoint_method,
-            n_procs=self._ess_kwargs.get('n_procs'),
-            n_threads=self._ess_kwargs.get('n_threads'),
+            n_procs=self._ess_kwargs.get("n_procs"),
+            n_threads=self._ess_kwargs.get("n_threads"),
         )
 
         # create initial refset
         self._refset = RefSet(
-            dim=self._ess_kwargs['dim_refset'], evaluator=evaluator
+            dim=self._ess_kwargs["dim_refset"], evaluator=evaluator
         )
         self._refset.initialize_random(
             n_diverse=max(
-                self._ess_kwargs.get('n_diverse', 10 * problem.dim),
+                self._ess_kwargs.get("n_diverse", 10 * problem.dim),
                 self._refset.dim,
             )
         )
@@ -581,8 +588,8 @@ class SacessWorker:
         """Run ESS."""
         ess_kwargs = self._ess_kwargs.copy()
         # account for sacess walltime limit
-        ess_kwargs['max_walltime_s'] = min(
-            ess_kwargs.get('max_walltime_s', np.inf),
+        ess_kwargs["max_walltime_s"] = min(
+            ess_kwargs.get("max_walltime_s", np.inf),
             self._max_walltime_s - (time.time() - self._start_time),
         )
 
@@ -635,7 +642,7 @@ class SacessWorker:
             self._ess_kwargs = self._manager.reconfigure_worker(
                 self._worker_idx
             )
-            self._refset.resize(self._ess_kwargs['dim_refset'])
+            self._refset.resize(self._ess_kwargs["dim_refset"])
             self._logger.debug(
                 f"Updated settings on worker {self._worker_idx} to "
                 f"{self._ess_kwargs}"
@@ -756,7 +763,7 @@ def get_default_ess_options(
         "pypesto.optimize.Optimizer",
         Callable[..., "pypesto.optimize.Optimizer"],
     ] = True,
-) -> List[Dict]:
+) -> list[dict]:
     """Get default ESS settings for (SA)CESS.
 
     Returns settings for ``num_workers`` parallel scatter searches, combining
@@ -789,161 +796,161 @@ def get_default_ess_options(
     settings = [
         # settings for first worker
         {
-            'dim_refset': dim_refset(10),
-            'balance': 0.5,
-            'local_n2': 10,
+            "dim_refset": dim_refset(10),
+            "balance": 0.5,
+            "local_n2": 10,
         },
         # for the remaining workers, cycle through these settings
         # 1
         {
-            'dim_refset': dim_refset(1),
-            'balance': 0.0,
-            'local_n1': 1,
-            'local_n2': 1,
+            "dim_refset": dim_refset(1),
+            "balance": 0.0,
+            "local_n1": 1,
+            "local_n2": 1,
         },
         # 2
         {
-            'dim_refset': dim_refset(3),
-            'balance': 0.0,
-            'local_n1': 1000,
-            'local_n2': 1000,
+            "dim_refset": dim_refset(3),
+            "balance": 0.0,
+            "local_n1": 1000,
+            "local_n2": 1000,
         },
         # 3
         {
-            'dim_refset': dim_refset(5),
-            'balance': 0.25,
-            'local_n1': 10,
-            'local_n2': 10,
+            "dim_refset": dim_refset(5),
+            "balance": 0.25,
+            "local_n1": 10,
+            "local_n2": 10,
         },
         # 4
         {
-            'dim_refset': dim_refset(10),
-            'balance': 0.5,
-            'local_n1': 20,
-            'local_n2': 20,
+            "dim_refset": dim_refset(10),
+            "balance": 0.5,
+            "local_n1": 20,
+            "local_n2": 20,
         },
         # 5
         {
-            'dim_refset': dim_refset(15),
-            'balance': 0.25,
-            'local_n1': 100,
-            'local_n2': 100,
+            "dim_refset": dim_refset(15),
+            "balance": 0.25,
+            "local_n1": 100,
+            "local_n2": 100,
         },
         # 6
         {
-            'dim_refset': dim_refset(12),
-            'balance': 0.25,
-            'local_n1': 1000,
-            'local_n2': 1000,
+            "dim_refset": dim_refset(12),
+            "balance": 0.25,
+            "local_n1": 1000,
+            "local_n2": 1000,
         },
         # 7
         {
-            'dim_refset': dim_refset(7.5),
-            'balance': 0.25,
-            'local_n1': 15,
-            'local_n2': 15,
+            "dim_refset": dim_refset(7.5),
+            "balance": 0.25,
+            "local_n1": 15,
+            "local_n2": 15,
         },
         # 8
         {
-            'dim_refset': dim_refset(5),
-            'balance': 0.25,
-            'local_n1': 7,
-            'local_n2': 7,
+            "dim_refset": dim_refset(5),
+            "balance": 0.25,
+            "local_n1": 7,
+            "local_n2": 7,
         },
         # 9
         {
-            'dim_refset': dim_refset(2),
-            'balance': 0.0,
-            'local_n1': 1000,
-            'local_n2': 1000,
+            "dim_refset": dim_refset(2),
+            "balance": 0.0,
+            "local_n1": 1000,
+            "local_n2": 1000,
         },
         # 10
         {
-            'dim_refset': dim_refset(0.5),
-            'balance': 0.0,
-            'local_n1': 1,
-            'local_n2': 1,
+            "dim_refset": dim_refset(0.5),
+            "balance": 0.0,
+            "local_n1": 1,
+            "local_n2": 1,
         },
         # 11
         {
-            'dim_refset': dim_refset(1.5),
-            'balance': 1.0,
-            'local_n1': 1,
-            'local_n2': 1,
+            "dim_refset": dim_refset(1.5),
+            "balance": 1.0,
+            "local_n1": 1,
+            "local_n2": 1,
         },
         # 12
         {
-            'dim_refset': dim_refset(3.5),
-            'balance': 1.0,
-            'local_n1': 4,
-            'local_n2': 4,
+            "dim_refset": dim_refset(3.5),
+            "balance": 1.0,
+            "local_n1": 4,
+            "local_n2": 4,
         },
         # 13
         {
-            'dim_refset': dim_refset(5.5),
-            'balance': 0.1,
-            'local_n1': 10,
-            'local_n2': 10,
+            "dim_refset": dim_refset(5.5),
+            "balance": 0.1,
+            "local_n1": 10,
+            "local_n2": 10,
         },
         # 14
         {
-            'dim_refset': dim_refset(10.5),
-            'balance': 0.3,
-            'local_n1': 20,
-            'local_n2': 20,
+            "dim_refset": dim_refset(10.5),
+            "balance": 0.3,
+            "local_n1": 20,
+            "local_n2": 20,
         },
         # 15
         {
-            'dim_refset': dim_refset(15.5),
-            'balance': 0.2,
-            'local_n1': 1000,
-            'local_n2': 1000,
+            "dim_refset": dim_refset(15.5),
+            "balance": 0.2,
+            "local_n1": 1000,
+            "local_n2": 1000,
         },
         # 16
         {
-            'dim_refset': dim_refset(12.5),
-            'balance': 0.2,
-            'local_n1': 10,
-            'local_n2': 10,
+            "dim_refset": dim_refset(12.5),
+            "balance": 0.2,
+            "local_n1": 10,
+            "local_n2": 10,
         },
         # 17
         {
-            'dim_refset': dim_refset(8),
-            'balance': 0.75,
-            'local_n1': 15,
-            'local_n2': 15,
+            "dim_refset": dim_refset(8),
+            "balance": 0.75,
+            "local_n1": 15,
+            "local_n2": 15,
         },
         # 18
         {
-            'dim_refset': dim_refset(5.5),
-            'balance': 0.75,
-            'local_n1': 1000,
-            'local_n2': 1000,
+            "dim_refset": dim_refset(5.5),
+            "balance": 0.75,
+            "local_n1": 1000,
+            "local_n2": 1000,
         },
         # 19
         {
-            'dim_refset': dim_refset(2.2),
-            'balance': 1.0,
-            'local_n1': 2,
-            'local_n2': 2,
+            "dim_refset": dim_refset(2.2),
+            "balance": 1.0,
+            "local_n1": 2,
+            "local_n2": 2,
         },
         # 20
         {
-            'dim_refset': dim_refset(1),
-            'balance': 1.0,
-            'local_n1': 1,
-            'local_n2': 1,
+            "dim_refset": dim_refset(1),
+            "balance": 1.0,
+            "local_n1": 1,
+            "local_n2": 1,
         },
     ]
 
     # Set local optimizer
     for cur_settings in settings:
         if local_optimizer is True:
-            cur_settings['local_optimizer'] = SacessFidesFactory(
+            cur_settings["local_optimizer"] = SacessFidesFactory(
                 fides_kwargs={"verbose": logging.WARNING}
             )
         elif local_optimizer is not False:
-            cur_settings['local_optimizer'] = local_optimizer
+            cur_settings["local_optimizer"] = local_optimizer
 
     return [
         settings[0],
@@ -967,7 +974,6 @@ class SacessFidesFactory:
     fides_kwargs:
         Keyword arguments for the :class:`FidesOptimizer`. See
         :meth:`FidesOptimizer.__init__`. Must not include ``options``.
-
     """
 
     def __init__(
@@ -989,7 +995,7 @@ class SacessFidesFactory:
         except ImportError:
             from ..optimizer import OptimizerImportError
 
-            raise OptimizerImportError("fides")
+            raise OptimizerImportError("fides") from None
 
     def __call__(
         self, max_walltime_s: int, max_eval: int

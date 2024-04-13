@@ -1,7 +1,7 @@
 """Convenience functions for working with HDF5 files."""
 
+from collections.abc import Collection
 from numbers import Integral, Number, Real
-from typing import Collection
 
 import h5py
 import numpy as np
@@ -47,11 +47,11 @@ def write_string_array(f: h5py.Group, path: str, strings: Collection) -> None:
     dset = f.create_dataset(path, (len(strings),), dtype=dt)
 
     if len(strings):
-        dset[:] = [s.encode('utf8') for s in strings]
+        dset[:] = [s.encode("utf8") for s in strings]
 
 
 def write_float_array(
-    f: h5py.Group, path: str, values: Collection[Number], dtype='f8'
+    f: h5py.Group, path: str, values: Collection[Number], dtype="f8"
 ) -> None:
     """
     Write float array to hdf5.
@@ -77,7 +77,7 @@ def write_float_array(
 
 
 def write_int_array(
-    f: h5py.Group, path: str, values: Collection[int], dtype='<i4'
+    f: h5py.Group, path: str, values: Collection[int], dtype="<i4"
 ):
     """
     Write integer array to hdf5.

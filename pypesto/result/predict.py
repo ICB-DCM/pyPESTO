@@ -1,9 +1,10 @@
 """PredictionResult and PredictionConditionResult."""
 
 import os
+from collections.abc import Sequence
 from pathlib import Path
 from time import time
-from typing import Dict, Sequence, Union
+from typing import Union
 from warnings import warn
 
 import h5py
@@ -72,18 +73,18 @@ class PredictionConditionResult:
         self.x_names = x_names
         if x_names is None and output_sensi is not None:
             self.x_names = [
-                f'parameter_{i_par}' for i_par in range(output_sensi.shape[1])
+                f"parameter_{i_par}" for i_par in range(output_sensi.shape[1])
             ]
 
     def __iter__(self):
         """Allow usage like a dict."""
-        yield 'timepoints', self.timepoints
-        yield 'output_ids', self.output_ids
-        yield 'x_names', self.x_names
-        yield 'output', self.output
-        yield 'output_sensi', self.output_sensi
-        yield 'output_weight', self.output_weight
-        yield 'output_sigmay', self.output_sigmay
+        yield "timepoints", self.timepoints
+        yield "output_ids", self.output_ids
+        yield "x_names", self.x_names
+        yield "output", self.output
+        yield "output_sensi", self.output_sensi
+        yield "output_weight", self.output_weight
+        yield "output_sigmay", self.output_sigmay
 
     def __eq__(self, other):
         """Check equality of two PredictionConditionResults."""
@@ -122,7 +123,7 @@ class PredictionResult:
 
     def __init__(
         self,
-        conditions: Sequence[Union[PredictionConditionResult, Dict]],
+        conditions: Sequence[Union[PredictionConditionResult, dict]],
         condition_ids: Sequence[str] = None,
         comment: str = None,
     ):
@@ -166,10 +167,10 @@ class PredictionResult:
         if self.conditions:
             parameter_ids = self.conditions[0].x_names
 
-        yield 'conditions', [dict(cond) for cond in self.conditions]
-        yield 'condition_ids', self.condition_ids
-        yield 'comment', self.comment
-        yield 'parameter_ids', parameter_ids
+        yield "conditions", [dict(cond) for cond in self.conditions]
+        yield "condition_ids", self.condition_ids
+        yield "comment", self.comment
+        yield "parameter_ids", parameter_ids
 
     def __eq__(self, other):
         """Check equality of two PredictionResults."""
@@ -206,8 +207,8 @@ class PredictionResult:
             makes sense. Returns a pathlib.Path object of the output.
             """
             # allow entering with names with and without file type endings
-            if '.' in output_file:
-                output_path, output_suffix = output_file.split('.')
+            if "." in output_file:
+                output_path, output_suffix = output_file.split(".")
             else:
                 output_path = output_file
                 output_suffix = CSV
@@ -220,7 +221,7 @@ class PredictionResult:
             output_path.mkdir(parents=True, exist_ok=False)
             # add the suffix
             output_dummy = Path(output_path.stem).with_suffix(
-                f'.{output_suffix}'
+                f".{output_suffix}"
             )
 
             return output_path, output_dummy
@@ -235,13 +236,13 @@ class PredictionResult:
             if cond.output is not None:
                 # create filename for this condition
                 filename = output_path.joinpath(
-                    output_dummy.stem + f'_{i_cond}' + output_dummy.suffix
+                    output_dummy.stem + f"_{i_cond}" + output_dummy.suffix
                 )
                 # create DataFrame and write to file
                 result = pd.DataFrame(
                     index=timepoints, columns=cond.output_ids, data=cond.output
                 )
-                result.to_csv(filename, sep='\t')
+                result.to_csv(filename, sep="\t")
 
             # handle output sensitivities, if computed
             if cond.output_sensi is not None:
@@ -250,7 +251,7 @@ class PredictionResult:
                     # create filename for this condition and parameter
                     filename = output_path.joinpath(
                         output_dummy.stem
-                        + f'_{i_cond}__s{i_par}'
+                        + f"_{i_cond}__s{i_par}"
                         + output_dummy.suffix
                     )
                     # create DataFrame and write to file
@@ -259,7 +260,7 @@ class PredictionResult:
                         columns=cond.output_ids,
                         data=cond.output_sensi[:, i_par, :],
                     )
-                    result.to_csv(filename, sep='\t')
+                    result.to_csv(filename, sep="\t")
 
     def write_to_h5(self, output_file: str, base_path: str = None):
         """
@@ -276,11 +277,11 @@ class PredictionResult:
         """
         # check if the file exists and append to it in case it does
         output_path = Path(output_file)
-        filemode = 'w'
+        filemode = "w"
         if os.path.exists(output_path):
-            filemode = 'r+'
+            filemode = "r+"
 
-        base = Path('.')
+        base = Path(".")
         if base_path is not None:
             base = Path(base_path)
 
@@ -339,11 +340,12 @@ class PredictionResult:
         output_path_out = output_path
         while output_path_out.exists():
             output_path_out = output_path_out.with_name(
-                output_path_out.stem + f'_{round(time() * 1000)}'
+                output_path_out.stem + f"_{round(time() * 1000)}"
             )
             warn(
-                'Output name already existed! Changed the name of the output '
-                'by appending the unix timestampp to make it unique!'
+                "Output name already existed! Changed the name of the output "
+                "by appending the unix timestamp to make it unique!",
+                stacklevel=3,
             )
 
         return output_path_out

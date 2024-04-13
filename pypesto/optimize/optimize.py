@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, Iterable, Union
+from collections.abc import Iterable
+from typing import Callable, Union
 from warnings import warn
 
 from ..engine import Engine, SingleCoreEngine
@@ -95,8 +96,10 @@ def minimize(
             startpoint_method = problem.startpoint_method
     else:
         warn(
-            "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+            "Passing `startpoint_method` directly is deprecated, "
+            "use `problem.startpoint_method` instead.",
             DeprecationWarning,
+            stacklevel=2,
         )
 
     # convert startpoint method to class instance

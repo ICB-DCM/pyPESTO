@@ -2,6 +2,7 @@
 
 import copy
 import numbers
+from functools import partial
 
 import numpy as np
 import pytest
@@ -34,12 +35,12 @@ def test_evaluate(integrated):
 
 
 def _test_evaluate(struct):
-    obj = struct['obj']
-    x = struct['x']
-    fval_true = struct['fval']
-    grad_true = struct['grad']
-    hess_true = struct['hess']
-    max_sensi_order = struct['max_sensi_order']
+    obj = struct["obj"]
+    x = struct["x"]
+    fval_true = struct["fval"]
+    grad_true = struct["grad"]
+    hess_true = struct["hess"]
+    max_sensi_order = struct["max_sensi_order"]
 
     # check function values
     if max_sensi_order >= 2:
@@ -82,9 +83,9 @@ def test_return_type(integrated, max_sensi_order):
 
 
 def _test_return_type(struct):
-    obj = struct['obj']
-    x = struct['x']
-    max_sensi_order = struct['max_sensi_order']
+    obj = struct["obj"]
+    x = struct["x"]
+    max_sensi_order = struct["max_sensi_order"]
 
     ret = obj(x, (0,))
     assert isinstance(ret, numbers.Number)
@@ -112,9 +113,9 @@ def test_sensis(integrated, max_sensi_order):
 
 
 def _test_sensis(struct):
-    obj = struct['obj']
-    x = struct['x']
-    max_sensi_order = struct['max_sensi_order']
+    obj = struct["obj"]
+    x = struct["x"]
+    max_sensi_order = struct["max_sensi_order"]
 
     obj(x, (0,))
     if max_sensi_order >= 1:
@@ -134,7 +135,7 @@ def test_finite_difference_checks():
     Test the finite difference gradient check methods by expected relative
     error.
     """
-    x = sp.Symbol('x')
+    x = sp.Symbol("x")
 
     # Setup single-parameter objective function
     fun_expr = x**10
@@ -161,7 +162,7 @@ def test_finite_difference_checks():
         np.array([theta]), eps=eps, verbosity=False
     )
     np.testing.assert_almost_equal(
-        result_single_eps['rel_err'].squeeze(),
+        result_single_eps["rel_err"].squeeze(),
         rel_err(eps),
     )
 
@@ -172,7 +173,7 @@ def test_finite_difference_checks():
     )
 
     np.testing.assert_almost_equal(
-        result_multi_eps['rel_err'].squeeze(),
+        result_multi_eps["rel_err"].squeeze(),
         min(rel_err(_eps) for _eps in multi_eps),
     )
 
@@ -186,70 +187,108 @@ def test_aesara(max_sensi_order, integrated):
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
     # create aesara specific symbolic tensor variables
-    x = aet.specify_shape(aet.vector('x'), (2,))
+    x = aet.specify_shape(aet.vector("x"), (2,))
 
     # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.arcsinh(prob['x'])
+    x_ref = np.arcsinh(prob["x"])
 
     # compose rosenbrock function with sinh transformation
-    obj = AesaraObjective(prob['obj'], x, aet.sinh(x))
+    obj = AesaraObjective(prob["obj"], x, aet.sinh(x))
 
     # check function values and derivatives, also after copy
     for _obj in (obj, copy.deepcopy(obj)):
         # function value
-        assert _obj(x_ref) == prob['fval']
+        assert _obj(x_ref) == prob["fval"]
 
         # gradient
         if max_sensi_order > 0:
             assert np.allclose(
-                _obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
+                _obj(x_ref, sensi_orders=(1,)), prob["grad"] * np.cosh(x_ref)
             )
 
         # hessian
         if max_sensi_order > 1:
             assert np.allclose(
-                prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
-                + np.diag(prob['grad'] * np.sinh(x_ref)),
+                prob["hess"] * (np.diag(np.power(np.cosh(x_ref), 2)))
+                + np.diag(prob["grad"] * np.sinh(x_ref)),
                 _obj(x_ref, sensi_orders=(2,)),
             )
 
 
-def test_jax(max_sensi_order, integrated):
+@pytest.mark.parametrize("enable_x64", [True, False])
+def test_jax(max_sensi_order, integrated, enable_x64):
     """Test function composition and gradient computation via jax"""
     import jax
     import jax.numpy as jnp
+
+    if max_sensi_order == 2:
+        pytest.skip("Not Implemented")
+
+    jax.config.update("jax_enable_x64", enable_x64)
 
     from pypesto.objective.jax import JaxObjective
 
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
-    # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.arcsinh(prob['x'])
+    x_ref = np.asarray(prob["x"])
 
-    def jac_op(x: jnp.array) -> jnp.array:
-        return jax.lax.sinh(x)
+    def jax_op_in(x: jnp.array) -> jnp.array:
+        # pick a simple function here to avoid numerical issues
+        return 3.0 * x
+
+    def jax_op_out(x: jnp.array) -> jnp.array:
+        # pick a simple function here to avoid numerical issues
+        return 0.5 * x
 
     # compose rosenbrock function with sinh transformation
-    obj = JaxObjective(prob['obj'], jac_op)
+    obj = JaxObjective(prob["obj"])
 
-    # check function values and derivatives, also after copy
+    # evaluate for a couple of random points such that we can assess
+    # compatibility with vmap
+    xx = x_ref + np.random.randn(10, x_ref.shape[0])
+    rvals_ref = [
+        jax_op_out(
+            prob["obj"](jax_op_in(xxi), sensi_orders=(max_sensi_order,))
+        )
+        for xxi in xx
+    ]
+
+    def _fun(y, pypesto_fun, jax_fun_in, jax_fun_out):
+        return jax_fun_out(pypesto_fun(jax_fun_in(y)))
+
     for _obj in (obj, copy.deepcopy(obj)):
-        # function value
-        assert _obj(x_ref) == prob['fval']
+        fun = partial(
+            _fun,
+            pypesto_fun=_obj,
+            jax_fun_in=jax_op_in,
+            jax_fun_out=jax_op_out,
+        )
 
-        # gradient
-        if max_sensi_order > 0:
-            assert np.allclose(
-                _obj(x_ref, sensi_orders=(1,)), prob['grad'] * np.cosh(x_ref)
-            )
-
-        # hessian
-        if max_sensi_order > 1:
-            assert np.allclose(
-                prob['hess'] * (np.diag(np.power(np.cosh(x_ref), 2)))
-                + np.diag(prob['grad'] * np.sinh(x_ref)),
-                _obj(x_ref, sensi_orders=(2,)),
-            )
+        if max_sensi_order == 1:
+            fun = jax.grad(fun)
+        # check compatibility with vmap and jit
+        vmapped_fun = jax.vmap(fun)
+        rvals_jax = vmapped_fun(xx)
+        atol = 0
+        # also need to account for roundoff errors in input, so we
+        # can't use rtol = 1e-8 for 32bit
+        rtol = 1e-16 if enable_x64 else 1e-4
+        for x, rref, rj in zip(xx, rvals_ref, rvals_jax):
+            if max_sensi_order == 0:
+                np.testing.assert_allclose(rref, rj, atol=atol, rtol=rtol)
+            if max_sensi_order == 1:
+                # g(x) = b(c(x)) => g'(x) = b'(c(x))) * c'(x)
+                # f(x) = a(g(x)) => f'(x) = a'(g(x)) * g'(x)
+                # c: jax_op_in, b: prob["obj"], a: jax_op_out
+                # g(x) = b(c(x))
+                g = prob["obj"](jax_op_in(x))
+                # g'(x) = b'(c(x))) * c'(x)
+                g_prime = prob["obj"](
+                    jax_op_in(x), sensi_orders=(1,)
+                ) @ jax.jacfwd(jax_op_in)(x)
+                # f'(x) = a'(g(x)) * g'(x)
+                f_prime = jax.jacfwd(jax_op_out)(g) * g_prime
+                np.testing.assert_allclose(f_prime, rj, atol=atol, rtol=rtol)
 
 
 @pytest.fixture(
@@ -329,7 +368,7 @@ def test_fds(fd_method, fd_delta):
     p = problem.p_true
 
     # check that function values coincide (call delegated)
-    for attr in ['fval', 'res']:
+    for attr in ["fval", "res"]:
         val = getattr(obj, f"get_{attr}")(p)
         val_fd = getattr(obj_fd, f"get_{attr}")(p)
         val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
@@ -347,7 +386,7 @@ def test_fds(fd_method, fd_delta):
         atol = rtol = 1e-4
     else:
         atol = rtol = 1e-2
-    for attr in ['grad', 'hess', 'sres']:
+    for attr in ["grad", "hess", "sres"]:
         val = getattr(obj, f"get_{attr}")(p)
         val_fd = getattr(obj_fd, f"get_{attr}")(p)
         val_fd_grad = getattr(obj_fd_grad, f"get_{attr}")(p)
@@ -361,7 +400,7 @@ def test_fds(fd_method, fd_delta):
         # cannot completely coincide
         assert (val != val_fd_grad).any(), attr
 
-        if attr == 'hess':
+        if attr == "hess":
             assert (val_fd != val_fd_grad).any(), attr
         # should use available actual functionality
         assert (val == val_fd_fake).all(), attr

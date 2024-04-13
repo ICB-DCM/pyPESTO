@@ -16,6 +16,7 @@ API reference
    pypesto.objective.aesara
    pypesto.objective.jax
    pypesto.objective.julia
+   pypesto.objective.roadrunner
    pypesto.optimize
    pypesto.petab
    pypesto.predict

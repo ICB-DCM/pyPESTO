@@ -6,15 +6,16 @@ import pandas as pd
 import petab
 import sympy as sp
 from more_itertools import one
-from petab.C import ESTIMATE, LIN
-from petab.C import LOWER_BOUND as PETAB_LOWER_BOUND
 from petab.C import (
+    ESTIMATE,
+    LIN,
     NOISE_PARAMETERS,
     OBSERVABLE_ID,
     OBSERVABLE_PARAMETERS,
     OBSERVABLE_TRANSFORMATION,
     PARAMETER_SEPARATOR,
 )
+from petab.C import LOWER_BOUND as PETAB_LOWER_BOUND
 from petab.C import UPPER_BOUND as PETAB_UPPER_BOUND
 from petab.observables import get_formula_placeholders
 
@@ -24,9 +25,6 @@ from ..C import (
     INNER_PARAMETER_BOUNDS,
     INTERVAL_CENSORED,
     LEFT_CENSORED,
-)
-from ..C import LOWER_BOUND as PYPESTO_LOWER_BOUND
-from ..C import (
     MEASUREMENT_CATEGORY,
     MEASUREMENT_TYPE,
     ORDINAL,
@@ -34,9 +32,10 @@ from ..C import (
     RELATIVE,
     RIGHT_CENSORED,
     SEMIQUANTITATIVE,
+    InnerParameterType,
 )
+from ..C import LOWER_BOUND as PYPESTO_LOWER_BOUND
 from ..C import UPPER_BOUND as PYPESTO_UPPER_BOUND
-from ..C import InnerParameterType
 
 
 def correct_parameter_df_bounds(parameter_df: pd.DataFrame) -> pd.DataFrame:
@@ -304,7 +303,7 @@ def _validate_measurement_specific_observable_formula(
     """
     formula, formula_inner_parameters = _get_symbolic_formula_from_measurement(
         measurement=measurement,
-        formula_type='observable',
+        formula_type="observable",
         petab_problem=petab_problem,
         inner_parameters=inner_parameters,
     )
@@ -389,7 +388,7 @@ def _validate_measurement_specific_noise_formula(
     """
     formula, formula_inner_parameters = _get_symbolic_formula_from_measurement(
         measurement=measurement,
-        formula_type='noise',
+        formula_type="noise",
         petab_problem=petab_problem,
         inner_parameters=inner_parameters,
     )
@@ -420,7 +419,7 @@ def _validate_measurement_specific_noise_formula(
 
 def _get_symbolic_formula_from_measurement(
     measurement: pd.Series,
-    formula_type: Literal['observable', 'noise'],
+    formula_type: Literal["observable", "noise"],
     petab_problem: petab.Problem,
     inner_parameters: dict[str, InnerParameterType],
 ) -> tuple[sp.Expr, dict[sp.Symbol, InnerParameterType]]:
@@ -447,7 +446,7 @@ def _get_symbolic_formula_from_measurement(
     observable_id = measurement[OBSERVABLE_ID]
 
     formula_string = petab_problem.observable_df.loc[
-        observable_id, formula_type + 'Formula'
+        observable_id, formula_type + "Formula"
     ]
     symbolic_formula = sp.sympify(formula_string)
 
@@ -457,7 +456,7 @@ def _get_symbolic_formula_from_measurement(
         override_type=formula_type,
     )
     if formula_placeholders:
-        overrides = measurement[formula_type + 'Parameters']
+        overrides = measurement[formula_type + "Parameters"]
         overrides = (
             overrides.split(PARAMETER_SEPARATOR)
             if isinstance(overrides, str)
@@ -472,10 +471,10 @@ def _get_symbolic_formula_from_measurement(
         if sp.Symbol(inner_parameter_id) in symbolic_formula.free_symbols
     }
 
-    if formula_type == 'noise':
+    if formula_type == "noise":
         max_parameters = 1
         expected_inner_parameter_types = [InnerParameterType.SIGMA]
-    elif formula_type == 'observable':
+    elif formula_type == "observable":
         max_parameters = 2
         expected_inner_parameter_types = [
             InnerParameterType.OFFSET,

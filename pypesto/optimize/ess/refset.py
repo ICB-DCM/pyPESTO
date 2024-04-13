@@ -1,6 +1,6 @@
 """ReferenceSet functionality for scatter search."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -65,7 +65,7 @@ class RefSet:
             self.fx = fx
 
         self.n_stuck = np.zeros(shape=[dim])
-        self.attributes: Dict[Any, np.array] = {}
+        self.attributes: dict[Any, np.array] = {}
 
     def sort(self):
         """Sort RefSet by quality."""
@@ -136,7 +136,7 @@ class RefSet:
             for j in range(i + 1, self.dim):
                 # check proximity
                 # zero-division may occur here
-                with np.errstate(divide='ignore', invalid='ignore'):
+                with np.errstate(divide="ignore", invalid="ignore"):
                     while (
                         np.max(np.abs((x[i] - x[j]) / x[j]))
                         <= self.proximity_threshold

@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +13,7 @@ from ..ensemble import Ensemble
 def ensemble_identifiability(
     ensemble: Ensemble,
     ax: Optional[plt.Axes] = None,
-    size: Optional[Tuple[float]] = (12, 6),
+    size: Optional[tuple[float]] = (12, 6),
 ):
     """
     Visualize identifiablity of parameter ensemble.
@@ -58,7 +58,7 @@ def ensemble_identifiability_lowlevel(
     ub_hit: np.ndarray,
     both_hit: np.ndarray,
     ax: Optional[plt.Axes] = None,
-    size: Optional[Tuple[float]] = (16, 10),
+    size: Optional[tuple[float]] = (16, 10),
 ):
     """
     Low-level identifiablity routine.
@@ -133,12 +133,12 @@ def ensemble_identifiability_lowlevel(
 
     # plot dashed lines indicating the number rof non-identifiable parameters
     vert = [-0.05, 1.05]
-    ax.plot([x_both, x_both], vert, 'k--', linewidth=1.5)
-    ax.plot([x_both + x_lb, x_both + x_lb], vert, 'k--', linewidth=1.5)
+    ax.plot([x_both, x_both], vert, "k--", linewidth=1.5)
+    ax.plot([x_both + x_lb, x_both + x_lb], vert, "k--", linewidth=1.5)
     ax.plot(
         [x_both + x_lb + x_ub, x_both + x_lb + x_ub],
         vert,
-        'k--',
+        "k--",
         linewidth=1.5,
     )
 
@@ -147,68 +147,68 @@ def ensemble_identifiability_lowlevel(
         ax.text(
             x_both / 2,
             -0.05,
-            'both bounds hit',
+            "both bounds hit",
             color=COLOR_HIT_BOTH_BOUNDS,
             rotation=-90,
-            va='top',
-            ha='center',
+            va="top",
+            ha="center",
         )
     if patches_lb_hit:
         ax.text(
             x_both + x_lb / 2,
             -0.05,
-            'lower bound hit',
+            "lower bound hit",
             color=COLOR_HIT_ONE_BOUND,
             rotation=-90,
-            va='top',
-            ha='center',
+            va="top",
+            ha="center",
         )
     if patches_ub_hit:
         ax.text(
             x_both + x_lb + x_ub / 2,
             -0.05,
-            'upper bound hit',
+            "upper bound hit",
             color=COLOR_HIT_ONE_BOUND,
             rotation=-90,
-            va='top',
-            ha='center',
+            va="top",
+            ha="center",
         )
     if patches_none_hit:
         ax.text(
             1 - x_none / 2,
             -0.05,
-            'no bounds hit',
+            "no bounds hit",
             color=COLOR_HIT_NO_BOUNDS,
             rotation=-90,
-            va='top',
-            ha='center',
+            va="top",
+            ha="center",
         )
     ax.text(
         0,
         -0.7,
-        'identifiable parameters: {:4.1f}%'.format(x_none * 100),
-        va='top',
+        f"identifiable parameters: {x_none * 100:4.1f}%",
+        va="top",
     )
 
     # plot upper and lower bounds
-    ax.text(-0.03, 1.0, 'upper\nbound', ha='right', va='center')
-    ax.text(-0.03, 0.0, 'lower\nbound', ha='right', va='center')
-    ax.plot([-0.02, 1.03], [0, 0], 'k:', linewidth=1.5)
-    ax.plot([-0.02, 1.03], [1, 1], 'k:', linewidth=1.5)
+    ax.text(-0.03, 1.0, "upper\nbound", ha="right", va="center")
+    ax.text(-0.03, 0.0, "lower\nbound", ha="right", va="center")
+    ax.plot([-0.02, 1.03], [0, 0], "k:", linewidth=1.5)
+    ax.plot([-0.02, 1.03], [1, 1], "k:", linewidth=1.5)
     plt.xticks([])
     plt.yticks([])
 
     # plot frame
-    ax.plot([0, 0], vert, 'k-', linewidth=1.5)
-    ax.plot([1, 1], vert, 'k-', linewidth=1.5)
+    ax.plot([0, 0], vert, "k-", linewidth=1.5)
+    ax.plot([1, 1], vert, "k-", linewidth=1.5)
 
     # beautify axes
     plt.xlim((-0.15, 1.1))
     plt.ylim((-0.78, 1.15))
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['top'].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["top"].set_visible(False)
 
     return ax
 
@@ -255,10 +255,10 @@ def _prepare_identifiability_plot(id_df: pd.DataFrame):
 
     def _affine_transform(par_info):
         # rescale parameters to bounds
-        lb = par_info['lowerBound']
-        ub = par_info['upperBound']
-        val_l = par_info['ensemble_mean'] - par_info['ensemble_std']
-        val_u = par_info['ensemble_mean'] + par_info['ensemble_std']
+        lb = par_info["lowerBound"]
+        ub = par_info["upperBound"]
+        val_l = par_info["ensemble_mean"] - par_info["ensemble_std"]
+        val_u = par_info["ensemble_mean"] + par_info["ensemble_std"]
         # check if parameter confidence intervals/credible ranges hit bound
         if val_l <= lb:
             lower_val = 0.0
@@ -274,13 +274,13 @@ def _prepare_identifiability_plot(id_df: pd.DataFrame):
     for par_id in list(id_df.index):
         # check which of the parameters seems to be identifiable and group them
         if (
-            id_df.loc[par_id, 'within lb: 1 std']
-            and id_df.loc[par_id, 'within ub: 1 std']
+            id_df.loc[par_id, "within lb: 1 std"]
+            and id_df.loc[par_id, "within ub: 1 std"]
         ):
             none_hit.append(_affine_transform(id_df.loc[par_id, :]))
-        elif id_df.loc[par_id, 'within lb: 1 std']:
+        elif id_df.loc[par_id, "within lb: 1 std"]:
             ub_hit.append(_affine_transform(id_df.loc[par_id, :]))
-        elif id_df.loc[par_id, 'within ub: 1 std']:
+        elif id_df.loc[par_id, "within ub: 1 std"]:
             lb_hit.append(_affine_transform(id_df.loc[par_id, :]))
         else:
             both_hit.append(_affine_transform(id_df.loc[par_id, :]))

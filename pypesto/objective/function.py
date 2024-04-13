@@ -1,4 +1,5 @@
-from typing import Callable, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Callable, Union
 
 import numpy as np
 
@@ -119,19 +120,19 @@ class Objective(ObjectiveBase):
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
         info = super().get_config()
-        info['x_names'] = self.x_names
+        info["x_names"] = self.x_names
         sensi_order = 0
         while self.check_sensi_orders(
             sensi_orders=(sensi_order,), mode=MODE_FUN
         ):
             sensi_order += 1
-        info['sensi_order'] = sensi_order - 1
+        info["sensi_order"] = sensi_order - 1
         return info
 
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         **kwargs,
     ) -> ResultDict:
@@ -154,7 +155,7 @@ class Objective(ObjectiveBase):
     def _call_mode_fun(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
     ) -> ResultDict:
         if not sensi_orders:
             result = {}
@@ -224,7 +225,7 @@ class Objective(ObjectiveBase):
     def _call_mode_res(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
     ) -> ResultDict:
         if not sensi_orders:
             result = {}

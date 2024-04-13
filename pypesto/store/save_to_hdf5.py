@@ -73,18 +73,18 @@ class ProblemHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'problem')
+            check_overwrite(f, overwrite, "problem")
             attrs_to_save = [
                 a
                 for a in dir(problem)
-                if not a.startswith('__')
+                if not a.startswith("__")
                 and not callable(getattr(problem, a))
                 and not hasattr(type(problem), a)
             ]
 
             problem_grp = f.create_group("problem")
             # save the configuration
-            f['problem/config'] = str(problem.objective.get_config())
+            f["problem/config"] = str(problem.objective.get_config())
 
             for problem_attr in attrs_to_save:
                 value = getattr(problem, problem_attr)
@@ -126,17 +126,17 @@ class OptimizationResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'optimization')
+            check_overwrite(f, overwrite, "optimization")
             optimization_grp = f.require_group("optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
             results_grp = optimization_grp.require_group("results")
 
             for start in result.optimize_result.list:
-                start_id = start['id']
+                start_id = start["id"]
                 start_grp = results_grp.require_group(start_id)
                 for key in start.keys():
-                    if key == 'history':
+                    if key == "history":
                         continue
                     if isinstance(start[key], np.ndarray):
                         write_array(start_grp, key, start[key])
@@ -185,7 +185,7 @@ class SamplingResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'sampling')
+            check_overwrite(f, overwrite, "sampling")
             results_grp = f.require_group("sampling/results")
 
             for key in result.sample_result.keys():
@@ -228,7 +228,7 @@ class ProfileResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'profiling')
+            check_overwrite(f, overwrite, "profiling")
             profiling_grp = f.require_group("profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
@@ -248,10 +248,10 @@ class ProfileResultHDF5Writer:
         Writes a single profile for a single parameter to the provided HDF5 group.
         """
         if parameter_profile is None:
-            result_grp.attrs['IsNone'] = True
+            result_grp.attrs["IsNone"] = True
             return
 
-        result_grp.attrs['IsNone'] = False
+        result_grp.attrs["IsNone"] = False
 
         for key, value in parameter_profile.items():
             try:

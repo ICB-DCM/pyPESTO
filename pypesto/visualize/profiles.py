@@ -1,4 +1,5 @@
-from typing import Optional, Sequence, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 from warnings import warn
 
 import matplotlib.pyplot as plt
@@ -180,7 +181,7 @@ def profiles_lowlevel(
         fvals = [fvals]
 
     # number of non-trivial profiles
-    n_profiles = sum((fval is not None for fval in fvals))
+    n_profiles = sum(fval is not None for fval in fvals)
 
     # if axes already exists, we have to match profiles to axes
     if not create_new_ax:
@@ -243,18 +244,18 @@ def profiles_lowlevel(
 
         # labels
         if x_labels is None:
-            ax[counter].set_xlabel(f'Parameter {i_plot}')
+            ax[counter].set_xlabel(f"Parameter {i_plot}")
         else:
             ax[counter].set_xlabel(x_labels[counter])
 
         if counter % columns == 0:
-            ax[counter].set_ylabel('Log-posterior ratio')
+            ax[counter].set_ylabel("Log-posterior ratio")
         else:
             # fix pyPESTO/pyPESTO/pypesto/visualize/profiles.py:228:
             # UserWarning: FixedFormatter should only be used
             # together with FixedLocator. Fix from matplotlib #18848.
             ax[counter].set_yticks(ax[counter].get_yticks())
-            ax[counter].set_yticklabels(['' for _ in ax[counter].get_yticks()])
+            ax[counter].set_yticklabels(["" for _ in ax[counter].get_yticks()])
 
         # increase counter and cleanup legend
         counter += 1
@@ -308,8 +309,8 @@ def profile_lowlevel(
     # axes
     if ax is None:
         ax = plt.subplots()[1]
-        ax.set_xlabel('Parameter value')
-        ax.set_ylabel('Log-posterior ratio')
+        ax.set_xlabel("Parameter value")
+        ax.set_ylabel("Log-posterior ratio")
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
@@ -345,7 +346,7 @@ def handle_reference_points(ref, ax, profile_indices):
         # loop over axes objects
         for i_par, i_ax in enumerate(ax):
             for i_ref in ref:
-                current_x = i_ref['x'][profile_indices[i_par]]
+                current_x = i_ref["x"][profile_indices[i_par]]
                 i_ax.plot(
                     [current_x, current_x],
                     [0.0, 1.0],
@@ -500,8 +501,9 @@ def process_profile_indices(
             if ind not in plottable_indices:
                 profile_indices_ret.remove(ind)
                 warn(
-                    'Requested to plot profile for parameter index %i, '
-                    'but profile has not been computed.' % ind
+                    f"Requested to plot profile for parameter index {ind}, "
+                    "but profile has not been computed.",
+                    stacklevel=2,
                 )
 
     return profile_indices_ret

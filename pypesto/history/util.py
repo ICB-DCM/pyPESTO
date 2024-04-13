@@ -1,15 +1,16 @@
 """History utility functions."""
 
 import numbers
+from collections.abc import Sequence
 from functools import wraps
-from typing import Sequence, Union
+from typing import Union
 
 import numpy as np
 
 from ..C import SUFFIXES
 
 ResultDict = dict[str, Union[float, np.ndarray]]
-MaybeArray = Union[np.ndarray, 'np.nan']
+MaybeArray = Union[np.ndarray, "np.nan"]
 
 
 class HistoryTypeError(ValueError):

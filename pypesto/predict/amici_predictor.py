@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, Sequence, Union
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 
@@ -56,13 +57,13 @@ class AmiciPredictor:
     def __init__(
         self,
         amici_objective: AmiciObjective,
-        amici_output_fields: Union[Sequence[str], None] = None,
-        post_processor: Union[PostProcessor, None] = None,
-        post_processor_sensi: Union[PostProcessor, None] = None,
-        post_processor_time: Union[PostProcessor, None] = None,
-        max_chunk_size: Union[int, None] = None,
-        output_ids: Union[Sequence[str], None] = None,
-        condition_ids: Union[Sequence[str], None] = None,
+        amici_output_fields: Sequence[str] | None = None,
+        post_processor: PostProcessor | None = None,
+        post_processor_sensi: PostProcessor | None = None,
+        post_processor_time: PostProcessor | None = None,
+        max_chunk_size: int | None = None,
+        output_ids: Sequence[str] | None = None,
+        condition_ids: Sequence[str] | None = None,
     ):
         """
         Initialize predictor.
@@ -156,7 +157,7 @@ class AmiciPredictor:
         x: np.ndarray,
         sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
-        output_file: str = '',
+        output_file: str = "",
         output_format: str = CSV,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
@@ -199,8 +200,8 @@ class AmiciPredictor:
         # sanity check for output
         if 2 in sensi_orders:
             raise Exception(
-                'Prediction simulation does currently not support '
-                'second order output.'
+                "Prediction simulation does currently not support "
+                "second order output."
             )
         # add llh and sigmay to amici output fields if requested
         if include_llh_weights and AMICI_LLH not in self.amici_output_fields:
@@ -257,8 +258,8 @@ class AmiciPredictor:
                 results.write_to_h5(output_file=output_file)
             else:
                 raise ValueError(
-                    f'Call to unknown format {output_format} for '
-                    f'output of pyPESTO prediction.'
+                    f"Call to unknown format {output_format} for "
+                    f"output of pyPESTO prediction."
                 )
 
         # return dependent on sensitivity order
@@ -345,7 +346,7 @@ class AmiciPredictor:
             )
 
         def _default_output(
-            amici_outputs: list[dict[str, np.array]]
+            amici_outputs: list[dict[str, np.array]],
         ) -> tuple[
             list[np.array],
             list[np.array],

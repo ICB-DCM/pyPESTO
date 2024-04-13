@@ -7,7 +7,6 @@ Multistart optimization with support for various optimizers.
 """
 
 from .ess import (
-    CESSOptimizer,
     ESSOptimizer,
     SacessFidesFactory,
     SacessOptimizer,
@@ -21,7 +20,7 @@ from .load import (
 )
 from .optimize import minimize
 from .optimizer import (
-    CmaesOptimizer,
+    CmaOptimizer,
     DlibOptimizer,
     FidesOptimizer,
     IpoptOptimizer,
