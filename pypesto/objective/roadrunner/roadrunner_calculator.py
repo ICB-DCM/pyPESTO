@@ -230,7 +230,7 @@ class RoadRunnerCalculator:
             times=timepoints, selections=[TIME] + observables_ids
         )
 
-        llhs = calculate_llh(sim_res, edata, par_map)
+        llhs = calculate_llh(sim_res, edata, par_map, roadrunner_instance)
 
         # reset the model
         roadrunner_instance.reset()
@@ -349,6 +349,7 @@ def calculate_llh(
     simulations: np.ndarray,
     edata: ExpData,
     parameter_mapping: dict,
+    roadrunner_instance: roadrunner.RoadRunner,
 ) -> float:
     """Calculate the negative log-likelihood for a single condition.
 
@@ -360,6 +361,8 @@ def calculate_llh(
         ExpData of a single condition.
     parameter_mapping:
         Parameter mapping for the condition.
+    roadrunner_instance:
+        RoadRunner instance. Needed to retrieve complex formulae.
 
     Returns
     -------
@@ -390,6 +393,9 @@ def calculate_llh(
         # if it is not a number, it is assumed to be a string
         if noise_formula in parameter_mapping.keys():
             return parameter_mapping[noise_formula]
+        # if the string starts with "noiseFormula_" it is saved in the model
+        if noise_formula.startswith("noiseFormula_"):
+            return roadrunner_instance.getValue(noise_formula)
 
     # replace noise formula with actual value from mapping
     noise_formulae = np.array(
