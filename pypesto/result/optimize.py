@@ -198,7 +198,7 @@ class OptimizerResult(dict):
         self.grad = problem.get_full_vector(self.grad)
         self.hess = problem.get_full_matrix(self.hess)
         self.x0 = problem.get_full_vector(self.x0, problem.x_fixed_vals)
-        self.free_indices = np.array(problem.x_free_indices)
+        self.free_indices = np.array(problem.x_free_indices).astype(int)
 
 
 class OptimizeResult:
