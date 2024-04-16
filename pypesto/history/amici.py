@@ -48,7 +48,7 @@ class Hdf5AmiciHistory(Hdf5History):
         id: str,
         file: Union[str, Path],
         options: Union[HistoryOptions, dict] = None,
-    ) -> 'Hdf5AmiciHistory':
+    ) -> "Hdf5AmiciHistory":
         """Load the History object from memory."""
         history = Hdf5AmiciHistory(id=id, file=file, options=options)
         if options is None:
