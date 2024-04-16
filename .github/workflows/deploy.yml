@@ -18,7 +18,7 @@ jobs:
     - name: Remove direct dependencies from setup.cfg
       # Remove any "git+https"-based dependencies that are not supported
       #  by PyPI and are only required for testing.
-      run: sed -i '/git+https/d' python/sdist/setup.cfg
+      run: sed -i '/git+https/d' setup.cfg
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
