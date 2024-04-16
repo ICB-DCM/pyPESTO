@@ -37,7 +37,7 @@ Release notes
 * Misc
    * Updated Code to match dependency updates (#1316, #1344, #1346, #1345)
    * Ignore code formatting in git blame (#1317)
-   * Updated deployment method (#1341)
+   * Updated deployment method (#1341, #1371, #1373)
    * add pyupgrade to codechecks (#1352)
    * Temporarily require scipy<1.13.0 for pypesto[pymc] (#1360)
 
