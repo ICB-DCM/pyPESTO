@@ -13,10 +13,15 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+
+    - name: Remove direct dependencies from setup.cfg
+      # Remove any "git+https"-based dependencies that are not supported
+      #  by PyPI and are only required for testing.
+      run: sed -i '/git+https/d' setup.cfg
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
