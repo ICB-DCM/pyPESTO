@@ -2,6 +2,46 @@ Release notes
 =============
 
 
+0.5 series
+..........
+
+
+0.5.0 (2024-04-10)
+-------------------
+
+* General
+    * Include pymc in the documentation. (#1305)
+    * Ruff Codechecks (#1307)
+    * Support RoadRunner as simulator for PEtab problems (#1336, #1347, #1348, #1363)
+* Hierarchical
+   * Semiquant: Fix spline knot initialization (#1313, #1323)
+   * Semiquant: Add spline knots to the optimization result (#1314)
+   * Semiquant: fix inner opt tolerance (#1330)
+   * Relative: Fix return of relative calculator if sim fails (#1315)
+   * Relative: Hierarchical optimization: fix unnecessary simulation (#1327)
+   * Relative: Fix return of inner parameters on objective call (#1333)
+* Optimize
+   * Support ipopt with gradient approximation (#1310)
+   * Deprecate CmaesOptimizer in favor of CmaOptimizer (#1311)
+   * ESSOptimizer: Respect local_n2 in case of failed initial local search (#1328)
+   * Remove CESSOptimizer (#1320)
+   * SacessOptimizer: use 'spawn' start method for multiprocessing (#1353)
+* PEtab
+   * Fix unwanted amici model recompilation in PEtab importer (#1319)
+* Sample
+   * Adding Thermodynamic Integration (#1326, #1361)
+   * Dynesty warnings added (#1324)
+   * Dynesty: method to save raw results (#1331)
+* Ensembles
+   * Ensembles: don't expect OptimizerResult.id to be convertible to `int` (#1351)
+* Misc
+   * Updated Code to match dependency updates (#1316, #1344, #1346, #1345)
+   * Ignore code formatting in git blame (#1317)
+   * Updated deployment method (#1341, #1371, #1373)
+   * add pyupgrade to codechecks (#1352)
+   * Temporarily require scipy<1.13.0 for pypesto[pymc] (#1360)
+
+
 0.4 series
 ..........
 
