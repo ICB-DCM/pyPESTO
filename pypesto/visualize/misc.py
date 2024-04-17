@@ -1,3 +1,4 @@
+import logging
 import warnings
 from collections.abc import Iterable
 from numbers import Number
@@ -22,6 +23,8 @@ from ..C import (
 from ..result import Result
 from ..util import assign_clusters, delete_nan_inf
 from .clust_color import assign_colors_for_list
+
+logger = logging.getLogger(__name__)
 
 
 def process_result_list(
@@ -360,11 +363,16 @@ def process_start_indices(
     ]
 
     # filter out the indices that are not finite
+    start_indices_unfiltered = len(start_indices)
     start_indices = [
         start_index
         for start_index in start_indices
         if np.isfinite(result.optimize_result[start_index].fval)
     ]
+    if len(start_indices) != start_indices_unfiltered:
+        logger.warning(
+            "Some start indices were removed due to inf or nan function values."
+        )
 
     return np.asarray(start_indices)
 
