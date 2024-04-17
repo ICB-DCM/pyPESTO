@@ -447,18 +447,31 @@ def compute_bounded_optimal_scaling_offset_coupled(
 
 
 def compute_nllh(
-    data: list[np.ndarray], sim: list[np.ndarray], sigma: list[np.ndarray]
+    data: list[np.ndarray],
+    sim: list[np.ndarray],
+    sigma: list[np.ndarray],
+    data_mask: list[np.ndarray],
 ) -> float:
     """Compute negative log-likelihood.
 
     Compute negative log-likelihood of the data, given the model outputs and
     sigmas.
     """
-    return sum(
-        0.5 * np.nansum(np.log(2 * np.pi * sigma_i**2))
-        + 0.5 * np.nansum((data_i - sim_i) ** 2 / sigma_i**2)
-        for data_i, sim_i, sigma_i in zip(data, sim, sigma)
-    )
+    nllh = 0.0
+    for data_i, sim_i, sigma_i, data_mask_i in zip(
+        data, sim, sigma, data_mask
+    ):
+        # Mask the data, sim and sigma
+        data_i = data_i[data_mask_i]
+        sim_i = sim_i[data_mask_i]
+        sigma_i = sigma_i[data_mask_i]
+
+        # Compute the negative log-likelihood
+        nllh += 0.5 * np.nansum(
+            np.log(2 * np.pi * sigma_i**2)
+        ) + 0.5 * np.nansum((data_i - sim_i) ** 2 / sigma_i**2)
+
+    return nllh
 
 
 def compute_nllh_gradient_for_condition(

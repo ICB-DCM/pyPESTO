@@ -82,7 +82,7 @@ class RelativeInnerSolver(InnerSolver):
                 mask=x.ixs,
             )
 
-        return compute_nllh(relevant_data, sim, sigma)
+        return compute_nllh(relevant_data, sim, sigma, problem.data_mask)
 
     def calculate_gradients(
         self,
