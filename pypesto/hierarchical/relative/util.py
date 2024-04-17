@@ -362,6 +362,11 @@ def compute_bounded_optimal_scaling_offset_coupled(
         relevant_data[i][~s.ixs[i]] = np.nan
         relevant_sim[i][~s.ixs[i]] = np.nan
 
+    # Get relevant data mask
+    relevant_data_mask = []
+    for i in range(len(data)):
+        relevant_data_mask.append(~np.isnan(relevant_data[i]))
+
     # Get bounds
     s_bounds = s.get_bounds()
     b_bounds = b.get_bounds()
@@ -407,6 +412,7 @@ def compute_bounded_optimal_scaling_offset_coupled(
                     for sim_i in relevant_sim
                 ],
                 sigma=sigma,
+                data_mask=relevant_data_mask,
             )
             for candidate_point in candidate_points
         ]
