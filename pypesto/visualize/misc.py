@@ -306,8 +306,8 @@ def process_start_indices(
     """
     Process the start_indices.
 
-    Create an array of indices if a number was provided and checks that the
-    indices do not exceed the max_index.
+    Create an array of indices if a number was provided, checks that the indices
+    do not exceed the max_index and removes starts with non-finite fval.
 
     Parameters
     ----------
