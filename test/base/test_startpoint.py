@@ -5,6 +5,8 @@ import pytest
 
 import pypesto
 
+from ..visualize import create_problem
+
 # default setting
 n_starts = 5
 dim = 2
@@ -121,3 +123,17 @@ def test_resampling(check_fval: bool, check_grad: bool):
         assert not np.allclose(x_guesses, xs[:n_guesses, :])
     else:
         assert np.allclose(x_guesses, xs[:n_guesses, :])
+
+
+def test_startpoints_from_problem():
+    """Test that startpoints can be generated from a problem."""
+    # create problem
+    problem = create_problem()
+
+    # generate startpoints
+    xs = problem.get_startpoints(n_starts=n_starts)
+
+    # check shape and bounds
+    assert xs.shape == (n_starts, problem.dim)
+    assert np.all(xs >= problem.lb)
+    assert np.all(xs <= problem.ub)
