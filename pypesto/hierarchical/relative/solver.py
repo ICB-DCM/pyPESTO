@@ -502,7 +502,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
                         f"`{par.inner_parameter_type}`."
                     )
 
-            return compute_nllh(_data, _sim, _sigma)
+            return compute_nllh(_data, _sim, _sigma, problem.data_mask)
 
         # TODO gradient
         objective = Objective(fun)
