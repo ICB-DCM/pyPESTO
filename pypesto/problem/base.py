@@ -479,6 +479,22 @@ class Problem:
             )
         )
 
+    def get_startpoints(self, n_starts: int) -> np.ndarray:
+        """
+        Sample startpoints from method.
+
+        Parameters
+        ----------
+        n_starts:
+            Number of start points.
+
+        Returns
+        -------
+        xs:
+            Start points, shape (n_starts, dim).
+        """
+        return self.startpoint_method(n_starts, self)
+
 
 _convtypes = {
     "float": {"attr": "__float__", "conv": float},

@@ -19,6 +19,15 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+import petab
+from petab.C import (
+    ESTIMATE,
+    NOISE_PARAMETERS,
+    OBSERVABLE_ID,
+    PREEQUILIBRATION_CONDITION_ID,
+    SIMULATION_CONDITION_ID,
+)
+from petab.models import MODEL_TYPE_SBML
 
 from ..C import (
     CENSORED,
@@ -50,16 +59,7 @@ try:
     import amici.petab.conditions
     import amici.petab.parameter_mapping
     import amici.petab.simulations
-    import petab
     from amici.petab.import_helpers import check_model
-    from petab.C import (
-        ESTIMATE,
-        NOISE_PARAMETERS,
-        OBSERVABLE_ID,
-        PREEQUILIBRATION_CONDITION_ID,
-        SIMULATION_CONDITION_ID,
-    )
-    from petab.models import MODEL_TYPE_SBML
 except ImportError:
     amici = None
 
