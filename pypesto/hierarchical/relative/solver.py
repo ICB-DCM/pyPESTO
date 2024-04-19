@@ -82,7 +82,7 @@ class RelativeInnerSolver(InnerSolver):
                 mask=x.ixs,
             )
 
-        return compute_nllh(relevant_data, sim, sigma)
+        return compute_nllh(relevant_data, sim, sigma, problem.data_mask)
 
     def calculate_gradients(
         self,
@@ -502,7 +502,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
                         f"`{par.inner_parameter_type}`."
                     )
 
-            return compute_nllh(_data, _sim, _sigma)
+            return compute_nllh(_data, _sim, _sigma, problem.data_mask)
 
         # TODO gradient
         objective = Objective(fun)
