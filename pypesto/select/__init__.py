@@ -7,7 +7,7 @@ Perform model selection with a
 """
 
 from . import postprocessors
-from .misc import model_to_pypesto_problem
+from .misc import SacessMinimizeMethod, model_to_pypesto_problem
 from .problem import Problem
 
 try:
