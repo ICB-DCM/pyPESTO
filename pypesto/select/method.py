@@ -397,15 +397,23 @@ class MethodCaller:
         #      `self.select_first_improvement`)
         newly_calibrated_models = {}
         for candidate_model in candidate_space.models:
-            # PEtab Select will set the criterion if the user has provided
-            # a previously calibrated copy of this model, in which case
-            # calibration can be skipped.
-            none_if_uncalibrated = candidate_model.get_criterion(
-                criterion=self.criterion,
-                compute=True,
-                raise_on_failure=False,
-            )
-            if none_if_uncalibrated is None:
+            if (
+                candidate_model.get_criterion(
+                    criterion=self.criterion,
+                    compute=True,
+                    raise_on_failure=False,
+                )
+                is not None
+            ):
+                self.logger.log(
+                    message=(
+                        "Unexpected calibration result already available for "
+                        f"model: `{candidate_model.get_hash()}`. Skipping "
+                        "calibration."
+                    ),
+                    level="warning",
+                )
+            else:
                 self.new_model_problem(model=candidate_model)
 
             newly_calibrated_models[
