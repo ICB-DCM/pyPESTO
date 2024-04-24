@@ -63,7 +63,9 @@ class MetropolisSampler(InternalSampler):
         if problem.x_priors is None:
             self.neglogprior = lambda x: -0.0
         else:
-            self.neglogprior = problem.x_priors
+            self.neglogprior = lambda x: problem.x_priors(
+                problem.get_full_vector(x=x, x_fixed_vals=problem.x_fixed_vals)
+            )
         self.trace_x = [x0]
         self.trace_neglogpost = [self.neglogpost(x0)]
         self.trace_neglogprior = [self.neglogprior(x0)]
