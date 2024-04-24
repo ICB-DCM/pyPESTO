@@ -238,12 +238,13 @@ class Problem:
         )
 
         # make prior aware of fixed parameters (for sampling etc.)
-        self.x_priors.update_from_problem(
-            dim_full=self.dim_full,
-            x_free_indices=self.x_free_indices,
-            x_fixed_indices=self.x_fixed_indices,
-            x_fixed_vals=self.x_fixed_vals,
-        )
+        if self.x_priors is not None:
+            self.x_priors.update_from_problem(
+                dim_full=self.dim_full,
+                x_free_indices=self.x_free_indices,
+                x_fixed_indices=self.x_fixed_indices,
+                x_fixed_vals=self.x_fixed_vals,
+            )
 
         # sanity checks
         if len(self.x_scales) != self.dim_full:
