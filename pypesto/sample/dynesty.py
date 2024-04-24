@@ -154,7 +154,12 @@ class DynestySampler(Sampler):
             # problem.objective returns negative log-posterior
             # compute log-likelihood by subtracting log-prior
             return -1.0 * (
-                self.problem.objective(x) - self.problem.x_priors(x)
+                self.problem.objective(x)
+                - self.problem.x_priors(
+                    self.problem.get_full_vector(
+                        x=x, x_fixed_vals=self.problem.x_fixed_vals
+                    )
+                )
             )
         # problem.objective returns negative log-likelihood
         return -1.0 * self.problem.objective(x)
