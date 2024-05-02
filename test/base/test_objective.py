@@ -15,7 +15,7 @@ from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
 
 pytest_skip_aesara = pytest.mark.skipif(
     sys.version_info >= (3, 12),
-    reason="Skipped Aesara tests on Python 3.12  or higher",
+    reason="Skipped Aesara tests on Python 3.12 or higher",
 )
 
 
