@@ -1,5 +1,6 @@
 import copy
 import logging
+import sys
 from collections.abc import Iterable
 from typing import (
     Callable,
@@ -15,6 +16,7 @@ import pandas as pd
 from ..objective import ObjectiveBase
 from ..objective.priors import NegLogParameterPriors
 from ..startpoint import StartpointMethod, to_startpoint_method, uniform
+from ..version import __version__
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
@@ -164,6 +166,9 @@ class Problem:
             startpoint_method = uniform
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
+        # safe python and pypesto version
+        self.python_version = ".".join(map(str, sys.version_info[:3]))
+        self.pypesto_version = __version__
 
     @property
     def lb(self) -> np.ndarray:
