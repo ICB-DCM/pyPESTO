@@ -63,7 +63,7 @@ jobs:
     runs-on: macos-12
     strategy:
       matrix:
-        python-version: ['3.12']
+        python-version: ['3.11']
 
     steps:
     - name: Check out repository
