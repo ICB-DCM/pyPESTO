@@ -647,8 +647,8 @@ class ESSOptimizer:
             formatter={"float": lambda x: "%.3g" % x},
         ):
             self.logger.info(
-                f"-- Final ESS fval after {self.n_iter} "
-                f"iterations: {self.fx_best}. "
+                f"-- Final ESS fval after {self.n_iter} iterations, "
+                f"{self.evaluator.n_eval} function evaluations: {self.fx_best}. "
                 f"Exit flag: {self.exit_flag.name}. "
                 f"Num local solutions: {len(self.local_solutions)}."
             )
