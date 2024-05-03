@@ -445,10 +445,15 @@ class SacessManager:
                 # reject solution
                 self._rejections.value += 1
 
+                rel_change = (
+                    abs(abs_change / self._best_known_fx.value)
+                    if self._best_known_fx.value != 0
+                    else np.nan
+                )
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
                     f"abs change: {abs_change} "
-                    f"rel change: {abs(abs_change / self._best_known_fx.value):.4g} "
+                    f"rel change: {rel_change:.4g} "
                     f"(threshold: {self._rejection_threshold.value}) "
                     f"(total rejections: {self._rejections.value})."
                 )
@@ -577,7 +582,8 @@ class SacessWorker:
 
             self._logger.info(
                 f"sacess worker {self._worker_idx} iteration {ess.n_iter} "
-                f"(best: {self._best_known_fx})."
+                f"(best: {self._best_known_fx}, "
+                f"n_eval: {ess.evaluator.n_eval})."
             )
 
         ess.history.finalize(exitflag=ess.exit_flag.name)
@@ -650,10 +656,13 @@ class SacessWorker:
 
     def maybe_update_best(self, x: np.array, fx: float):
         """Maybe update the best known solution and send it to the manager."""
+        rel_change = (
+            abs((fx - self._best_known_fx) / fx) if fx != 0 else np.nan
+        )
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
             f"best known: {self._best_known_fx}, "
-            f"rel change: {(fx - self._best_known_fx) / fx:.4g}, "
+            f"rel change: {rel_change:.4g}, "
             f"threshold: {self._acceptance_threshold}"
         )
 
