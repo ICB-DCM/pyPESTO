@@ -41,7 +41,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -60,7 +60,7 @@ jobs:
         file: ./coverage.xml
 
   mac:
-    runs-on: macos-12
+    runs-on: macos-latest
     strategy:
       matrix:
         python-version: ['3.12']
@@ -80,7 +80,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -116,7 +116,7 @@ jobs:
         path: |
           ~\AppData\Local\pip\Cache
           .tox
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: |
@@ -149,7 +149,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici pysb
@@ -193,7 +193,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install julia
       uses: julia-actions/setup-julia@v1
@@ -242,7 +242,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh ipopt
@@ -278,7 +278,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -314,7 +314,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -350,7 +350,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: pip install tox pre-commit
@@ -382,7 +382,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
@@ -415,7 +415,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici ipopt
@@ -445,7 +445,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
