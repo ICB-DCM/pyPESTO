@@ -160,7 +160,7 @@ class OptimizerResult(dict):
             f"* message: {self.message} \n"
             f"* number of evaluations: {self.n_fval}\n"
             f"* time taken to optimize: {self.time:0.3f}s\n"
-            f"* startpoint: "
+            "* startpoint: "
             f"{self.x0 if full or self.x0 is None else self.x0[free_indices]}\n"
             f"* endpoint: {self.x if full else self.x[free_indices]}\n"
         )
@@ -169,7 +169,7 @@ class OptimizerResult(dict):
             message += f"* final objective value: {self.fval}\n"
         if self.grad is not None:
             message += (
-                f"* final gradient value: "
+                "* final gradient value: "
                 f"{self.grad if full else self.grad[free_indices]}\n"
             )
         if self.hess is not None and show_hess:
