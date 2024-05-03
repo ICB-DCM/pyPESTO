@@ -23,6 +23,7 @@ from ..result import Result
 
 try:
     import amici
+    from amici.petab.conditions import fill_in_parameters
 
     from ..hierarchical import InnerCalculatorCollector
     from ..hierarchical.semiquantitative.calculator import SemiquantCalculator
@@ -105,7 +106,7 @@ def plot_splines_from_pypesto_result(
     observable_ids = amici_model.getObservableIds()
 
     # Fill in the parameters.
-    amici.parameter_mapping.fill_in_parameters(
+    fill_in_parameters(
         edatas=edatas,
         problem_parameters=x_dct,
         scaled_parameters=True,
@@ -379,7 +380,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     n_threads = pypesto_problem.objective.n_threads
 
     # Fill in the parameters.
-    amici.parameter_mapping.fill_in_parameters(
+    fill_in_parameters(
         edatas=edatas,
         problem_parameters=x_dct,
         scaled_parameters=True,
@@ -528,7 +529,7 @@ def _obtain_regularization_for_start(
     n_threads = pypesto_result.problem.objective.n_threads
 
     # Fill in the parameters.
-    amici.parameter_mapping.fill_in_parameters(
+    fill_in_parameters(
         edatas=edatas,
         problem_parameters=x_dct,
         scaled_parameters=True,

@@ -27,7 +27,7 @@ from .util import (
 
 try:
     import amici
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
