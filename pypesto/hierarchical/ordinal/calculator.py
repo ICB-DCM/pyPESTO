@@ -32,7 +32,8 @@ from .solver import OrdinalInnerSolver
 
 try:
     import amici
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.conditions import fill_in_parameters
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
@@ -155,7 +156,7 @@ class OrdinalCalculator(AmiciCalculator):
             x_dct = copy.deepcopy(x_dct)
 
             # fill in parameters
-            amici.parameter_mapping.fill_in_parameters(
+            fill_in_parameters(
                 edatas=edatas,
                 problem_parameters=x_dct,
                 scaled_parameters=True,
