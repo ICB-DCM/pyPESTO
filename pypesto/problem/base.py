@@ -166,7 +166,7 @@ class Problem:
             startpoint_method = uniform
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
-        # safe python and pypesto version
+        # save python and pypesto version
         self.python_version = ".".join(map(str, sys.version_info[:3]))
         self.pypesto_version = __version__
 
