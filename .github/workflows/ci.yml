@@ -225,7 +225,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # ipopt does not work on 3.9 (https://github.com/mechmotum/cyipopt/issues/225)
         python-version: ['3.12']
 
     steps:
