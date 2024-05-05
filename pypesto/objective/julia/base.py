@@ -27,7 +27,7 @@ def _read_source(module_name: str, source_file: str) -> None:
     module_name: Julia module name.
     source_file: Qualified Julia source file.
     """
-    from julia import Main
+    from juliacall import Main
 
     if not hasattr(Main, module_name):
         Main.include(source_file)
@@ -56,7 +56,7 @@ class JuliaObjective(Objective):
     Possible solutions are to pass ``compiled_modules=False`` to the Julia
     constructor early in your code:
 
-    >>> from julia.api import Julia
+    >>> from juliacall.api import Julia
     >>> jl = Julia(compiled_modules=False)
 
     This however slows down loading and using Julia packages, especially for
@@ -103,7 +103,7 @@ class JuliaObjective(Objective):
     ):
         # lazy imports
         try:
-            from julia import Main  # noqa: F401
+            from juliacall import Main  # noqa: F401
         except ImportError:
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
@@ -133,7 +133,7 @@ class JuliaObjective(Objective):
 
         Use this function to access any variable from the Julia module.
         """
-        from julia import Main
+        from juliacall import Main
 
         if name is not None:
             ret = getattr(getattr(Main, self.module), name, None)
