@@ -53,15 +53,19 @@ def optimization_run_properties_one_plot(
 
     Examples
     --------
-    optimization_run_properties_one_plot(
-        result1,
-        properties_to_plot=['time'],
-        colors=[.5, .9, .9, .3])
+    .. code-block:: python
 
-    optimization_run_properties_one_plot(
-        result1,
-        properties_to_plot=['time', 'n_grad'],
-        colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
+        optimization_run_properties_one_plot(
+            result1,
+            properties_to_plot=['time'],
+            colors=[.5, .9, .9, .3]
+        )
+
+        optimization_run_properties_one_plot(
+            result1,
+            properties_to_plot=['time', 'n_grad'],
+            colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
+        )
     """
     if properties_to_plot is None:
         properties_to_plot = [
@@ -156,24 +160,30 @@ def optimization_run_properties_per_multistart(
 
     Examples
     --------
-    optimization_run_properties_per_multistart(
-        result1,
-        properties_to_plot=['time'],
-        colors=[.5, .9, .9, .3])
+    .. code-block:: python
 
-    optimization_run_properties_per_multistart(
-        [result1, result2],
-        properties_to_plot=['time'],
-        colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
+        optimization_run_properties_per_multistart(
+            result1,
+            properties_to_plot=['time'],
+            colors=[.5, .9, .9, .3]
+        )
 
-    optimization_run_properties_per_multistart(
-        result1,
-        properties_to_plot=['time', 'n_grad'],
-        colors=[.5, .9, .9, .3])
+        optimization_run_properties_per_multistart(
+            [result1, result2],
+            properties_to_plot=['time'],
+            colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
+        )
 
-    optimization_run_properties_per_multistart(
-        [result1, result2], properties_to_plot=['time', 'n_fval'],
-        colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
+        optimization_run_properties_per_multistart(
+            result1,
+            properties_to_plot=['time', 'n_grad'],
+            colors=[.5, .9, .9, .3]
+        )
+
+        optimization_run_properties_per_multistart(
+            [result1, result2], properties_to_plot=['time', 'n_fval'],
+            colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
+        )
     """
     if properties_to_plot is None:
         properties_to_plot = [
