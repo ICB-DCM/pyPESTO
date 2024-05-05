@@ -3,7 +3,6 @@
 import os
 
 import numpy as np
-import petab
 import pytest
 import scipy.optimize as so
 from scipy.integrate import quad
@@ -11,10 +10,8 @@ from scipy.stats import ks_2samp, kstest, multivariate_normal, norm, uniform
 
 import pypesto
 import pypesto.optimize as optimize
-import pypesto.petab
 import pypesto.sample as sample
 from pypesto.C import OBJECTIVE_NEGLOGLIKE, OBJECTIVE_NEGLOGPOST
-from pypesto.sample.pymc import PymcSampler
 
 
 def gaussian_llh(x):
@@ -96,6 +93,10 @@ def rosenbrock_problem():
 
 
 def create_petab_problem():
+    import petab
+
+    import pypesto.petab
+
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.abspath(
         os.path.join(current_path, "..", "..", "doc", "example")
@@ -187,6 +188,8 @@ def sampler(request):
             n_chains=5,
         )
     elif request.param == "Pymc":
+        from pypesto.sample.pymc import PymcSampler
+
         return PymcSampler(tune=5, progressbar=False)
     elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
