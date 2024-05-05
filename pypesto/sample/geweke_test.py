@@ -46,7 +46,11 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
         n = nw
 
     # Number of windows
-    k = np.floor((n - n_overlap) / (nw - n_overlap)).astype(int)
+    k = (
+        np.floor((n - n_overlap) / (nw - n_overlap)).astype(int)
+        if nw != n_overlap
+        else 0
+    )
     index = np.arange(nw)
     # Normalizing scale factor
     kmu = k * np.linalg.norm(w) ** 2
