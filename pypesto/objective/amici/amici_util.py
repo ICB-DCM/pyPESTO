@@ -24,7 +24,7 @@ from ...logging import log_level_active
 if TYPE_CHECKING:
     try:
         import amici
-        from amici.parameter_mapping import (
+        from amici.petab.parameter_mapping import (
             ParameterMapping,
             ParameterMappingForCondition,
         )
@@ -124,23 +124,25 @@ def create_identity_parameter_mapping(
     both in preequilibration and simulation, are assumed to be provided
     correctly in model or edatas already.
     """
-    import amici.parameter_mapping
+    from amici.petab.parameter_mapping import (
+        ParameterMapping,
+        ParameterMappingForCondition,
+        amici_to_petab_scale,
+    )
 
     x_ids = list(amici_model.getParameterIds())
     x_scales = list(amici_model.getParameterScale())
-    parameter_mapping = amici.parameter_mapping.ParameterMapping()
+    parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
-            x_id: amici.parameter_mapping.amici_to_petab_scale(x_scale)
+            x_id: amici_to_petab_scale(x_scale)
             for x_id, x_scale in zip(x_ids, x_scales)
         }
         # assumes fixed parameters are filled in already
-        mapping_for_condition = (
-            amici.parameter_mapping.ParameterMappingForCondition(
-                map_sim_var=condition_map_sim_var,
-                scale_map_sim_var=condition_scale_map_sim_var,
-            )
+        mapping_for_condition = ParameterMappingForCondition(
+            map_sim_var=condition_map_sim_var,
+            scale_map_sim_var=condition_scale_map_sim_var,
         )
 
         parameter_mapping.append(mapping_for_condition)
