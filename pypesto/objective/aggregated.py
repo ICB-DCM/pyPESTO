@@ -5,7 +5,9 @@ from typing import Any
 import numpy as np
 
 from ..C import FVAL, GRAD, HESS, HESSP, RDATAS, RES, SRES, ModeType
+from .amici import AmiciObjective
 from .base import ObjectiveBase, ResultDict
+from ..history import HistoryOptions
 
 
 class AggregatedObjective(ObjectiveBase):
@@ -128,6 +130,17 @@ class AggregatedObjective(ObjectiveBase):
         for n_obj, obj in enumerate(self._objectives):
             info[f"objective_{n_obj}"] = obj.get_config()
         return info
+
+    def create_history(
+        self, id: str, x_names: Sequence[str], options: HistoryOptions
+    ):
+        amici_objectives = [obj for obj in self.objective._objectives if
+                            isinstance(obj, AmiciObjective)]
+        if len(amici_objectives) == 1:
+            # aggregate objective because of parameter priors
+            # with main objective of AmiciObjective type
+            return amici_objectives[0].create_history(id, x_names, options)
+        return super().create_history(id, x_names, options)
 
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
