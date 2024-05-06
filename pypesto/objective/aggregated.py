@@ -134,7 +134,7 @@ class AggregatedObjective(ObjectiveBase):
     def create_history(
         self, id: str, x_names: Sequence[str], options: HistoryOptions
     ):
-        amici_objectives = [obj for obj in self.objective._objectives if
+        amici_objectives = [obj for obj in self._objectives if
                             isinstance(obj, AmiciObjective)]
         if len(amici_objectives) == 1:
             # aggregate objective because of parameter priors
