@@ -48,7 +48,7 @@ from ..objective.amici.amici_util import (
 try:
     import amici
     import petab
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     petab = None
     ParameterMapping = None
@@ -325,7 +325,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        import amici.parameter_mapping
+        from amici.petab.conditions import fill_in_parameters
 
         if mode == MODE_RES and any(
             data_type in self.data_types
@@ -403,7 +403,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.necessary_par_dummy_values)
         # fill in parameters
-        amici.parameter_mapping.fill_in_parameters(
+        fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
             scaled_parameters=True,

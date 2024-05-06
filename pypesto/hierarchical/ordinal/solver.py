@@ -37,7 +37,7 @@ from .parameter import OrdinalParameter
 from .problem import OrdinalProblem
 
 try:
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
