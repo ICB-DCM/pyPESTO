@@ -1,4 +1,4 @@
-"""Interface to Julia via pyjulia."""
+"""Interface to Julia via juliacall."""
 
 from typing import Callable, Union
 
@@ -40,40 +40,10 @@ class JuliaObjective(Objective):
     It expects the corresponding Julia objects to be defined in a
     `source_file` within a `module`.
 
-    We use the PyJulia package to access Julia from inside Python.
-    It can be installed via `pip install pypesto[julia]`, however requires
-    additional Julia dependencies to be installed via:
-
-    >>> python -c "import julia; julia.install()"
-
+    We use the juliacall package to access Julia from inside Python.
+    It can be installed via `pip install pypesto[julia]`.
     For further information, see
-    https://pyjulia.readthedocs.io/en/latest/installation.html.
-
-    There are some known problems, e.g. with statically linked Python
-    interpreters, see
-    https://pyjulia.readthedocs.io/en/latest/troubleshooting.html
-    for details.
-    Possible solutions are to pass ``compiled_modules=False`` to the Julia
-    constructor early in your code:
-
-    >>> from juliacall.api import Julia
-    >>> jl = Julia(compiled_modules=False)
-
-    This however slows down loading and using Julia packages, especially for
-    large ones.
-    An alternative is to use the ``python-jl`` command shipped with PyJulia:
-
-    >>> python-jl MY_SCRIPT.py
-
-    This basically launches a Python interpreter inside Julia.
-    When using Jupyter notebooks, this wrapper can be installed as an
-    additional kernel via:
-
-    >>> python -m ipykernel install --name python-jl [--prefix=/path/to/python/env]
-
-    And changing the first argument in
-    ``/path/to/python/env/share/jupyter/kernels/python-jl/kernel.json``
-    to ``python-jl``.
+    https://juliapy.github.io/PythonCall.jl/stable/juliacall/.
 
     Model simulations are eagerly converted to Python objects
     (specifically, `numpy.ndarray` and `pandas.DataFrame`).
@@ -106,7 +76,7 @@ class JuliaObjective(Objective):
             from juliacall import Main  # noqa: F401
         except ImportError:
             raise ImportError(
-                "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
+                "Install juliacall, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
             ) from None
 
