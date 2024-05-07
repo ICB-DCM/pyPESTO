@@ -825,9 +825,11 @@ def test_thermodynamic_integration():
 
     # compute evidence
     evidence = quad(
-        lambda x: 1 / (problem.ub - problem.lb) * np.exp(gaussian_llh(x)),
-        a=problem.lb,
-        b=problem.ub,
+        lambda x: 1
+        / (problem.ub[0] - problem.lb[0])
+        * np.exp(gaussian_llh(x)),
+        a=problem.lb[0],
+        b=problem.ub[0],
     )
 
     # compare to known value
