@@ -25,6 +25,9 @@ pyPESTO features include:
 * Parameter estimation pipeline for systems biology problems specified in
   [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
   ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/petab_import.ipynb))
+* Parameter estimation with relative (scaled and offset) data as described in
+  [Schmiester et al. (2020)](https://doi.org/10.1093/bioinformatics/btz581).
+  ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/relative_data.ipynb))
 * Parameter estimation with ordinal data as described in
   [Schmiester et al. (2020)](https://doi.org/10.1007/s00285-020-01522-w) and
   [Schmiester et al. (2021)](https://doi.org/10.1093/bioinformatics/btab512).
