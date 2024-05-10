@@ -26,6 +26,19 @@ except ImportError:
         "`pip install jax jaxlib`."
     ) from None
 
+
+def base_objective_wrapper_fun(base_objective: ObjectiveBase, *args, **kwargs):
+    # wraps the base_objective function and ensures the output (value) is a JAX array
+    result = base_objective(*args, **kwargs)
+    return jnp.array(result)
+
+
+def base_objective_wrapper_fun_value_and_grad(base_objective: ObjectiveBase, *args, **kwargs):
+    # wraps the base_objective function and ensures the output (value, grad) is a tuple of JAX arrays
+    result = base_objective(*args, **kwargs)
+    return tuple(jnp.array(r) for r in result)
+
+
 # jax compatible (jit-able) objective function using external callback, see
 # https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
 
@@ -211,6 +224,10 @@ class JaxObjective(ObjectiveBase):
     def pre_post_processor(self):
         """Exposes the pre_post_processor of inner objective."""
         return self.base_objective.pre_post_processor
+
+    @pre_post_processor.setter
+    def pre_post_processor(self, new_pre_post_processor):
+        self.base_objective.pre_post_processor = new_pre_post_processor
 
     @property
     def x_names(self):
