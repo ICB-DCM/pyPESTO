@@ -337,7 +337,10 @@ class Problem:
         self.normalize()
 
     def get_full_vector(
-        self, x: Union[np.ndarray, None], x_fixed_vals: Iterable[float] = None
+        self,
+        x: Union[np.ndarray, None],
+        x_fixed_vals: Iterable[float] = None,
+        x_is_grad: bool = False,
     ) -> Union[np.ndarray, None]:
         """
         Map vector from dim to dim_full. Usually used for x, grad.
@@ -347,9 +350,9 @@ class Problem:
         x: array_like, shape=(dim,)
             The vector in dimension dim.
         x_fixed_vals: array_like, ndim=1, optional
-            The values to be used for the fixed indices. If None, then nans are
-            inserted. Usually, None will be used for grad and
-            problem.x_fixed_vals for x.
+            The values to be used for the fixed indices. If None and x_is_grad=False, problem.x_fixed_vals is used; for x_is_grad=True, nans are inserted.
+        x_is_grad: bool
+            If true, x is treated as gradients.
         """
         if x is None:
             return None
@@ -367,6 +370,9 @@ class Problem:
         x_full[..., self.x_free_indices] = x
         if x_fixed_vals is not None:
             x_full[..., self.x_fixed_indices] = x_fixed_vals
+            return x_full
+        if not x_is_grad:
+            x_full[..., self.x_fixed_indices] = self.x_fixed_vals
         return x_full
 
     def get_full_matrix(

@@ -236,9 +236,7 @@ class HistoryTest(unittest.TestCase):
 
     def check_history_consistency(self, start: pypesto.OptimizerResult):
         def xfull(x_trace):
-            return self.problem.get_full_vector(
-                x_trace, self.problem.x_fixed_vals
-            )
+            return self.problem.get_full_vector(x_trace)
 
         if isinstance(start.history, (CsvHistory, Hdf5History)):
             # get index of optimal parameter
