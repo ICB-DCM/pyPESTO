@@ -417,8 +417,8 @@ def handle_inputs(
         ub = result.problem.get_reduced_vector(ub, parameter_indices)
         x_labels = [x_labels[int(i)] for i in parameter_indices]
     else:
-        lb = result.problem.get_full_vector(lb)
-        ub = result.problem.get_full_vector(ub)
+        lb = result.problem.lb_full
+        ub = result.problem.ub_full
 
     if inner_xs is not None and plot_inner_parameters:
         lb = np.concatenate([lb, inner_lb])
