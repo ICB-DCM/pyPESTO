@@ -60,7 +60,7 @@ jobs:
         file: ./coverage.xml
 
   mac:
-    runs-on: macos-14  # TODO: change to macos-latest after the next release
+    runs-on: macos-13  # TODO: change to macos-latest after the next release
     strategy:
       matrix:
         python-version: ['3.12']
