@@ -1,6 +1,5 @@
 """Tests for `pypesto.sample` methods."""
 
-import numpy as np
 import pytest
 from scipy.stats import kstest
 
@@ -8,24 +7,10 @@ import pypesto.optimize as optimize
 from pypesto.variational import variational_fit
 
 from ..sample.test_sample import (
-    create_petab_problem,
     gaussian_mixture_problem,
     gaussian_problem,
     rosenbrock_problem,
 )
-
-
-def variational_petab_problem():
-    # create problem
-    problem = create_petab_problem()
-
-    result = variational_fit(
-        problem,
-        n_iterations=100,
-        method="advi",
-        x0=np.array([3, -4]),
-    )
-    return result
 
 
 @pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
