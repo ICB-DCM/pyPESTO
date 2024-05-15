@@ -2,8 +2,9 @@
 import copy
 import logging
 import os
+import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 import benchmark_models_petab as models
