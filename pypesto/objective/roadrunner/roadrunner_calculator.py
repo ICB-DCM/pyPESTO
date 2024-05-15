@@ -2,6 +2,7 @@
 
 Handles all RoadRunner.simulate calls, calculates likelihoods and residuals.
 """
+import logging
 import numbers
 from collections.abc import Sequence
 from typing import Optional
@@ -27,6 +28,8 @@ from .utils import (
     simulation_to_measurement_df,
     unscale_parameters,
 )
+
+logger = logging.getLogger(__name__)
 
 LLH_TYPES = {
     "lin_normal": lambda measurement, simulation, sigma: -0.5
@@ -211,6 +214,8 @@ class RoadRunnerCalculator:
             roadrunner_instance.conservedMoietyAnalysis = False
             # reset the model
             roadrunner_instance.reset()
+            logger.log(logging.DEBUG, f"Steady state: {state_ss}")
+
         # set parameters
         par_map = self.fill_in_parameters(
             x_dct, roadrunner_instance, parameter_mapping_per_condition
