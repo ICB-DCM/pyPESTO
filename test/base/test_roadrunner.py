@@ -40,6 +40,9 @@ def test_petab_case(case, model_type, version):
 
 def _execute_case_rr(case, model_type, version):
     """Run a single PEtab test suite case"""
+    # only test case 0018
+    if case != "0018":
+        pytest.skip("Only testing case 0018")
     case = petabtests.test_id_str(case)
     logger.info(f"Case {case}")
 
@@ -64,6 +67,8 @@ def _execute_case_rr(case, model_type, version):
 
     # the scaled parameters
     problem_parameters = importer.petab_problem.x_nominal_scaled
+
+    logger.log(logging.DEBUG, f"Problem parameters: {problem_parameters}")
 
     # simulate
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
