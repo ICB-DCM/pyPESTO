@@ -41,8 +41,7 @@ def test_optimize():
     # fixed values written into parameter vector
     assert optimizer_result.x[1] == 1
 
-    lb_full = problem.get_full_vector(problem.lb)
-    assert len(lb_full) == 5
+    assert len(problem.lb_full) == 5
 
 
 def create_problem():
