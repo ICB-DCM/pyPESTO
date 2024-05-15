@@ -8,7 +8,7 @@ combination of objective based methods and jax based autodiff.
 
 import copy
 from functools import partial
-from typing import Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -27,16 +27,15 @@ except ImportError:
     ) from None
 
 
-def base_objective_wrapper_fun(base_objective: ObjectiveBase, *args, **kwargs):
-    # wraps the base_objective function and ensures the output (value) is a JAX array
-    result = base_objective(*args, **kwargs)
-    return jnp.array(result)
+def _base_objective_as_jax_array_tuple(func: Callable):
+    def decorator(*args, **kwargs):
+        # make sure return is a tuple of jax arrays
+        results = func(*args, **kwargs)
+        if isinstance(results, tuple):
+            return tuple(jnp.array(r) for r in results)
+        return jnp.array(results)
 
-
-def base_objective_wrapper_fun_value_and_grad(base_objective: ObjectiveBase, *args, **kwargs):
-    # wraps the base_objective function and ensures the output (value, grad) is a tuple of JAX arrays
-    result = base_objective(*args, **kwargs)
-    return tuple(jnp.array(r) for r in result)
+    return decorator
 
 
 # jax compatible (jit-able) objective function using external callback, see
@@ -55,7 +54,9 @@ def _device_fun(base_objective: ObjectiveBase, x: jnp.array):
         jax computed input array.
     """
     return jax.pure_callback(
-        partial(base_objective, sensi_orders=(0,)),
+        _base_objective_as_jax_array_tuple(
+            partial(base_objective, sensi_orders=(0,))
+        ),
         jax.ShapeDtypeStruct((), x.dtype),
         x,
     )
@@ -78,12 +79,14 @@ def _device_fun_value_and_grad(base_objective: ObjectiveBase, x: jnp.array):
         jax computed input array.
     """
     return jax.pure_callback(
-        partial(
-            base_objective,
-            sensi_orders=(
-                0,
-                1,
-            ),
+        _base_objective_as_jax_array_tuple(
+            partial(
+                base_objective,
+                sensi_orders=(
+                    0,
+                    1,
+                ),
+            )
         ),
         (
             jax.ShapeDtypeStruct((), x.dtype),
@@ -217,19 +220,20 @@ class JaxObjective(ObjectiveBase):
 
     @property
     def history(self):
-        """Exposes the history of the inner objective."""
+        """Expose the history of the inner objective."""
         return self.base_objective.history
 
     @property
     def pre_post_processor(self):
-        """Exposes the pre_post_processor of inner objective."""
+        """Expose the pre_post_processor of inner objective."""
         return self.base_objective.pre_post_processor
 
     @pre_post_processor.setter
     def pre_post_processor(self, new_pre_post_processor):
+        """Set the pre_post_processor of inner objective."""
         self.base_objective.pre_post_processor = new_pre_post_processor
 
     @property
     def x_names(self):
-        """Exposes the x_names of inner objective."""
+        """Expose the x_names of inner objective."""
         return self.base_objective.x_names
