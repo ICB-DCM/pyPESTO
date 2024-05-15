@@ -256,6 +256,9 @@ def test_jax(max_sensi_order, integrated, enable_x64, fix_parameters):
     # evaluate for a couple of random points such that we can assess
     # compatibility with vmap
     xx = x_ref + np.random.randn(10, x_ref.shape[0])
+    if fix_parameters:
+        xx = xx[:, obj.pre_post_processor.x_free_indices]
+
     rvals_ref = [
         jax_op_out(
             prob["obj"](jax_op_in(xxi), sensi_orders=(max_sensi_order,))
