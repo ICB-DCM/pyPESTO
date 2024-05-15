@@ -3,15 +3,15 @@ import copy
 import logging
 import os
 
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 import benchmark_models_petab as models
 import petab
 import petabtests
 import pytest
 
 import pypesto.objective.roadrunner as objective_rr
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize(
