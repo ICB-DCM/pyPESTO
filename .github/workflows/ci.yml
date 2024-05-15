@@ -59,6 +59,42 @@ jobs:
 #        token: ${{ secrets.CODECOV_TOKEN }}
 #        file: ./coverage.xml
 
+  mac-old:
+    runs-on: macos-13
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v3
+
+    - name: Prepare python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pip
+          .tox/
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
+
+    - name: Install dependencies
+      run: .github/workflows/install_deps.sh amici
+
+    - name: Run tests
+      timeout-minutes: 30
+      run: ulimit -n 65536 65536 && tox -e base
+
+    - name: Coverage
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+
   mac:
     runs-on: macos-latest
     strategy:
