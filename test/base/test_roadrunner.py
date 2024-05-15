@@ -2,7 +2,6 @@
 import copy
 import logging
 import os
-import sys
 
 import benchmark_models_petab as models
 import petab
@@ -11,7 +10,7 @@ import pytest
 
 import pypesto.objective.roadrunner as objective_rr
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
