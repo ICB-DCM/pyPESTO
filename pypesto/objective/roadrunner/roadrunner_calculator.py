@@ -200,7 +200,8 @@ class RoadRunnerCalculator:
             roadrunner_instance.getSteadyStateSolver().setValue(
                 "allow_presimulation", True
             )
-            print(roadrunner_instance.getInfo())
+            # print all the species
+            print(roadrunner_instance.model.items())
             # steady state output = observables + state variables
             steady_state_selections = observables_ids + state_variables
             roadrunner_instance.steadyStateSelections = steady_state_selections
@@ -233,9 +234,10 @@ class RoadRunnerCalculator:
         sim_res = roadrunner_instance.simulate(
             times=timepoints, selections=[TIME] + observables_ids
         )
-        print(f"After resetting steady state, is it equal now? Simulation "
-              f"results:"
-              f" {sim_res}.")
+        print(
+            f"After resetting steady state, is it equal now? Simulation "
+            f"results: {sim_res}."
+        )
 
         llhs = calculate_llh(sim_res, edata, par_map, roadrunner_instance)
 
