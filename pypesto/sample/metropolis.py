@@ -129,6 +129,14 @@ class MetropolisSampler(InternalSampler):
         # compute log prior
         lprior_new = -self.neglogprior(x_new)
 
+        # if lpost_new is -inf, x_new will not be accepted
+        if lpost_new == -np.inf:
+            # update proposal
+            self._update_proposal(
+                x, lpost, -np.inf, len(self.trace_neglogpost) + 1
+            )
+            return x, lpost, lprior
+
         if not self.temper_lpost:
             # extract current log likelihood value
             llh = lpost - lprior
