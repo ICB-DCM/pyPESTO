@@ -68,7 +68,7 @@ def _execute_case_rr(case, model_type, version):
     # the scaled parameters
     problem_parameters = importer.petab_problem.x_nominal_scaled
 
-    logger.log(logging.DEBUG, f"Problem parameters: {problem_parameters}")
+    print(f"Problem parameters: {problem_parameters}")
 
     # simulate
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
