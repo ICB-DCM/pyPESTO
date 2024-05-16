@@ -61,8 +61,6 @@ jobs:
 
   mac-old:
     runs-on: macos-13
-    env:
-      ACTIONS_RUNNER_DEBUG: 1
     strategy:
       matrix:
         python-version: ['3.12']
@@ -99,8 +97,6 @@ jobs:
 
   mac:
     runs-on: macos-latest
-    env:
-      ACTIONS_RUNNER_DEBUG: 1
     strategy:
       matrix:
         python-version: ['3.12']
