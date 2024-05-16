@@ -200,6 +200,7 @@ class RoadRunnerCalculator:
             roadrunner_instance.getSteadyStateSolver().setValue(
                 "allow_presimulation", True
             )
+            print(roadrunner_instance.getInfo())
             # steady state output = observables + state variables
             steady_state_selections = observables_ids + state_variables
             roadrunner_instance.steadyStateSelections = steady_state_selections
@@ -211,7 +212,8 @@ class RoadRunnerCalculator:
             roadrunner_instance.conservedMoietyAnalysis = False
             # reset the model
             roadrunner_instance.reset()
-            print(f"Steady state: {state_ss}")
+            print(f"Steady state: {state_ss}. Overwriting to [4./3, 2./3]")
+            state_ss = [4.0 / 3.0, 2.0 / 3.0]
 
         # set parameters
         par_map = self.fill_in_parameters(
@@ -231,6 +233,9 @@ class RoadRunnerCalculator:
         sim_res = roadrunner_instance.simulate(
             times=timepoints, selections=[TIME] + observables_ids
         )
+        print(f"After resetting steady state, is it equal now? Simulation "
+              f"results:"
+              f" {sim_res}.")
 
         llhs = calculate_llh(sim_res, edata, par_map, roadrunner_instance)
 
