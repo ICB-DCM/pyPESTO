@@ -1,7 +1,6 @@
 import logging
 import math
 from collections.abc import Sequence
-from copy import deepcopy
 from typing import Callable, Union
 
 import numpy as np
@@ -67,11 +66,6 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         self.prior_list = prior_list
         super().__init__(x_names)
-
-    def __deepcopy__(self, memodict=None):
-        """Create deepcopy of object."""
-        other = NegLogParameterPriors(deepcopy(self.prior_list))
-        return other
 
     def call_unprocessed(
         self,
