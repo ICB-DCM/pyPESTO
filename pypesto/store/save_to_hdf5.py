@@ -316,3 +316,9 @@ def write_result(
     if sample:
         pypesto_sample_writer = SamplingResultHDF5Writer(filename)
         pypesto_sample_writer.write(result, overwrite=overwrite)
+
+    if hasattr(result, "variational_result"):
+        logger.warning(
+            "Results from variational inference are not saved in the hdf5 file. "
+            "You have to save them manually."
+        )

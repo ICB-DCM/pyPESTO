@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.10', '3.12']
 
     steps:
     - name: Check out repository
@@ -41,7 +41,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -60,10 +60,10 @@ jobs:
         file: ./coverage.xml
 
   mac:
-    runs-on: macos-latest
+    runs-on: macos-13  # TODO: change to macos-latest after the next release
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     steps:
     - name: Check out repository
@@ -80,14 +80,14 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
       timeout-minutes: 30
-      run: tox -e base
+      run: ulimit -n 65536 65536 && tox -e base
 
     - name: Coverage
       uses: codecov/codecov-action@v3
@@ -99,7 +99,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     steps:
     - name: Check out repository
@@ -116,7 +116,7 @@ jobs:
         path: |
           ~\AppData\Local\pip\Cache
           .tox
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: |
@@ -132,7 +132,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.10', '3.12']
 
     steps:
     - name: Check out repository
@@ -149,7 +149,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici pysb
@@ -171,7 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.10', '3.12']
 
     # needed to allow julia-actions/cache to delete old caches that it has created
     permissions:
@@ -193,7 +193,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install julia
       uses: julia-actions/setup-julia@v1
@@ -225,8 +225,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # ipopt does not work on 3.9 (https://github.com/mechmotum/cyipopt/issues/225)
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     steps:
     - name: Check out repository
@@ -243,7 +242,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh ipopt
@@ -262,7 +261,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.10', '3.12']
 
     steps:
     - name: Check out repository
@@ -279,7 +278,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -298,7 +297,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9', '3.11']
+        python-version: ['3.10', '3.12']
 
     steps:
     - name: Check out repository
@@ -315,7 +314,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -334,7 +333,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     steps:
     - name: Check out repository
@@ -351,7 +350,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: pip install tox pre-commit
@@ -383,7 +382,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
@@ -399,7 +398,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9']
+        python-version: ['3.10']
 
     steps:
     - name: Check out repository
@@ -416,7 +415,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici ipopt
@@ -429,7 +428,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9']
+        python-version: ['3.10']
 
     steps:
     - name: Check out repository
@@ -446,7 +445,7 @@ jobs:
         path: |
           ~/.cache/pip
           .tox/
-        key: ${{ runner.os }}-${{ matrix.python-version }}-ci-${{ github.job }}
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici

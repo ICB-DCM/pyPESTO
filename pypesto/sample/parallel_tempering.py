@@ -260,7 +260,6 @@ class ParallelTemperingSampler(Sampler):
                 # integrate from low to high temperature
                 y=mean_loglike_per_beta,
                 x=temps,
-                even="last",
             )
         else:
             raise ValueError(

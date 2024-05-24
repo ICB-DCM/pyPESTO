@@ -7,8 +7,8 @@ import numpy as np
 
 try:
     import amici
-    import amici.parameter_mapping
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.conditions import fill_in_parameters
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
@@ -296,7 +296,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
             amici_solver.setSensitivityOrder(sensi_order)
             x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
             # fill in parameters
-            amici.parameter_mapping.fill_in_parameters(
+            fill_in_parameters(
                 edatas=edatas,
                 problem_parameters=x_dct,
                 scaled_parameters=True,
