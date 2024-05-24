@@ -200,8 +200,6 @@ class RoadRunnerCalculator:
             roadrunner_instance.getSteadyStateSolver().setValue(
                 "allow_presimulation", True
             )
-            # print all the species
-            print(roadrunner_instance.model.items())
             # steady state output = observables + state variables
             steady_state_selections = observables_ids + state_variables
             roadrunner_instance.steadyStateSelections = steady_state_selections
