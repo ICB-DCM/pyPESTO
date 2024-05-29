@@ -276,6 +276,9 @@ def test_jax(max_sensi_order, integrated, enable_x64, fix_parameters):
     def _fun(y, pypesto_fun, jax_fun_in, jax_fun_out):
         return jax_fun_out(pypesto_fun(jax_fun_in(y)))
 
+    assert obj.check_sensi_orders((max_sensi_order,), pypesto.C.MODE_FUN)
+    assert not obj.check_sensi_orders((max_sensi_order,), pypesto.C.MODE_RES)
+
     for _obj in (obj, copy.deepcopy(obj)):
         fun = partial(
             _fun,
@@ -286,6 +289,7 @@ def test_jax(max_sensi_order, integrated, enable_x64, fix_parameters):
 
         if max_sensi_order == 1:
             fun = jax.grad(fun)
+
         # check compatibility with vmap and jit
         vmapped_fun = jax.vmap(fun)
         rvals_jax = vmapped_fun(xx)

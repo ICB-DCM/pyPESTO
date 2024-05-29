@@ -173,7 +173,7 @@ class JaxObjective(ObjectiveBase):
         else:
             return (
                 self.base_objective.check_sensi_orders(sensi_orders, mode)
-                and max(sensi_orders) == 0
+                and max(sensi_orders) <= 1
             )
 
     def __call__(
