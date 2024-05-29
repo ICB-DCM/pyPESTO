@@ -8,7 +8,7 @@ combination of objective based methods and jax based autodiff.
 
 import copy
 from functools import partial
-from typing import Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -26,12 +26,24 @@ except ImportError:
         "`pip install jax jaxlib`."
     ) from None
 
+
+def _base_objective_as_jax_array_tuple(func: Callable):
+    def decorator(*args, **kwargs):
+        # make sure return is a tuple of jax arrays
+        results = func(*args, **kwargs)
+        if isinstance(results, tuple):
+            return tuple(jnp.array(r) for r in results)
+        return jnp.array(results)
+
+    return decorator
+
+
 # jax compatible (jit-able) objective function using external callback, see
 # https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun(base_objective: ObjectiveBase, x: jnp.array):
+def _device_fun(base_objective: ObjectiveBase, x: jnp.array) -> jnp.array:
     """Jax compatible objective function execution using external callback.
 
     Parameters
@@ -40,15 +52,24 @@ def _device_fun(base_objective: ObjectiveBase, x: jnp.array):
         The wrapped jax objective.
     x:
         jax computed input array.
+
+    Returns
+    -------
+    fval : jnp.array
+        The function value as 0-dimensional jax array.
     """
     return jax.pure_callback(
-        partial(base_objective, sensi_orders=(0,)),
+        _base_objective_as_jax_array_tuple(
+            partial(base_objective, sensi_orders=(0,))
+        ),
         jax.ShapeDtypeStruct((), x.dtype),
         x,
     )
 
 
-def _device_fun_value_and_grad(base_objective: ObjectiveBase, x: jnp.array):
+def _device_fun_value_and_grad(
+    base_objective: ObjectiveBase, x: jnp.array
+) -> tuple[jnp.array, jnp.array]:
     """Jax compatible objective gradient execution using external callback.
 
     This function will be called when computing the gradient of the
@@ -63,14 +84,23 @@ def _device_fun_value_and_grad(base_objective: ObjectiveBase, x: jnp.array):
         The wrapped jax objective.
     x:
         jax computed input array.
+
+    Returns
+    -------
+    fval : jnp.array
+        The function value as 0-dimensional jax array.
+    grad : jnp.array
+        The gradient as jax array.
     """
     return jax.pure_callback(
-        partial(
-            base_objective,
-            sensi_orders=(
-                0,
-                1,
-            ),
+        _base_objective_as_jax_array_tuple(
+            partial(
+                base_objective,
+                sensi_orders=(
+                    0,
+                    1,
+                ),
+            )
         ),
         (
             jax.ShapeDtypeStruct((), x.dtype),
@@ -112,7 +142,7 @@ class JaxObjective(ObjectiveBase):
 
     Note
     ----
-    Currently only implements MODE_FUN and sensi_orders=(0,). Support for
+    Currently only implements MODE_FUN and sensi_orders<=1. Support for
     MODE_RES should be straightforward to add.
     """
 
@@ -143,7 +173,7 @@ class JaxObjective(ObjectiveBase):
         else:
             return (
                 self.base_objective.check_sensi_orders(sensi_orders, mode)
-                and max(sensi_orders) == 0
+                and max(sensi_orders) <= 1
             )
 
     def __call__(
@@ -204,15 +234,20 @@ class JaxObjective(ObjectiveBase):
 
     @property
     def history(self):
-        """Exposes the history of the inner objective."""
+        """Expose the history of the inner objective."""
         return self.base_objective.history
 
     @property
     def pre_post_processor(self):
-        """Exposes the pre_post_processor of inner objective."""
+        """Expose the pre_post_processor of inner objective."""
         return self.base_objective.pre_post_processor
+
+    @pre_post_processor.setter
+    def pre_post_processor(self, new_pre_post_processor):
+        """Set the pre_post_processor of inner objective."""
+        self.base_objective.pre_post_processor = new_pre_post_processor
 
     @property
     def x_names(self):
-        """Exposes the x_names of inner objective."""
+        """Expose the x_names of inner objective."""
         return self.base_objective.x_names
