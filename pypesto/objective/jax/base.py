@@ -43,7 +43,7 @@ def _base_objective_as_jax_array_tuple(func: Callable):
 
 
 @partial(custom_jvp, nondiff_argnums=(0,))
-def _device_fun(base_objective: ObjectiveBase, x: jnp.array):
+def _device_fun(base_objective: ObjectiveBase, x: jnp.array) -> jnp.array:
     """Jax compatible objective function execution using external callback.
 
     Parameters
@@ -52,6 +52,11 @@ def _device_fun(base_objective: ObjectiveBase, x: jnp.array):
         The wrapped jax objective.
     x:
         jax computed input array.
+
+    Returns
+    -------
+    fval : jnp.array
+        The function value as 0-dimensional jax array.
     """
     return jax.pure_callback(
         _base_objective_as_jax_array_tuple(
@@ -62,7 +67,9 @@ def _device_fun(base_objective: ObjectiveBase, x: jnp.array):
     )
 
 
-def _device_fun_value_and_grad(base_objective: ObjectiveBase, x: jnp.array):
+def _device_fun_value_and_grad(
+    base_objective: ObjectiveBase, x: jnp.array
+) -> tuple[jnp.array, jnp.array]:
     """Jax compatible objective gradient execution using external callback.
 
     This function will be called when computing the gradient of the
@@ -77,6 +84,13 @@ def _device_fun_value_and_grad(base_objective: ObjectiveBase, x: jnp.array):
         The wrapped jax objective.
     x:
         jax computed input array.
+
+    Returns
+    -------
+    fval : jnp.array
+        The function value as 0-dimensional jax array.
+    grad : jnp.array
+        The gradient as jax array.
     """
     return jax.pure_callback(
         _base_objective_as_jax_array_tuple(
@@ -128,7 +142,7 @@ class JaxObjective(ObjectiveBase):
 
     Note
     ----
-    Currently only implements MODE_FUN and sensi_orders=(0,). Support for
+    Currently only implements MODE_FUN and sensi_orders<=1. Support for
     MODE_RES should be straightforward to add.
     """
 
