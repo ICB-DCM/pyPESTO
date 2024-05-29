@@ -2,6 +2,7 @@
 
 import copy
 import numbers
+import sys
 from functools import partial
 
 import numpy as np
@@ -11,6 +12,11 @@ import sympy as sp
 import pypesto
 
 from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
+
+pytest_skip_aesara = pytest.mark.skipif(
+    sys.version_info >= (3, 12),
+    reason="Skipped Aesara tests on Python 3.12 or higher",
+)
 
 
 @pytest.fixture(params=[True, False])
@@ -178,6 +184,7 @@ def test_finite_difference_checks():
     )
 
 
+@pytest_skip_aesara
 def test_aesara(max_sensi_order, integrated):
     """Test function composition and gradient computation via aesara"""
     import aesara.tensor as aet

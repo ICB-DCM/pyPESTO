@@ -191,10 +191,10 @@ class OptimizerResult(dict):
             problem which contains info about how to convert to full vectors
             or matrices
         """
-        self.x = problem.get_full_vector(self.x, problem.x_fixed_vals)
-        self.grad = problem.get_full_vector(self.grad)
+        self.x = problem.get_full_vector(self.x)
+        self.grad = problem.get_full_vector(self.grad, x_is_grad=True)
         self.hess = problem.get_full_matrix(self.hess)
-        self.x0 = problem.get_full_vector(self.x0, problem.x_fixed_vals)
+        self.x0 = problem.get_full_vector(self.x0)
         self.free_indices = np.array(problem.x_free_indices)
 
 
