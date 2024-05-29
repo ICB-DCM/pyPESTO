@@ -18,6 +18,7 @@ Release notes
     * Save pypesto and python version to the problem. (#1382)
 * Objective
     * Fix calling priors in sampling with fixed parameters (#1378)
+    * Fix JaxObjective (#1400)
 * Optimize
     * ESS optimizers: suppress divide-by-zero warnings; report n_eval (#1380)
     * SacessOptimizer: collect worker stats (#1381)
