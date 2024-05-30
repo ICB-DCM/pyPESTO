@@ -1,9 +1,6 @@
 """Test the roadrunner interface."""
-import copy
 import logging
-import os
 
-import benchmark_models_petab as models
 import petab
 import petabtests
 import pytest

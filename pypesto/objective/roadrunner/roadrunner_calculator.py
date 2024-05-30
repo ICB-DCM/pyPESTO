@@ -203,7 +203,7 @@ class RoadRunnerCalculator:
             # steady state output = observables + state variables
             steady_state_selections = observables_ids + state_variables
             roadrunner_instance.steadyStateSelections = steady_state_selections
-            print(roadrunner_instance.getAntimonyString())
+            print(roadrunner_instance.getCurrentSBML())
             steady_state = roadrunner_instance.getSteadyStateValuesNamedArray()
             # we split the steady state into observables and state variables
             # obs_ss = steady_state[:, : len(observables_ids)].flatten()
