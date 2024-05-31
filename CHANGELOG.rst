@@ -13,7 +13,7 @@ Release notes
 * PEtab
     * Import of petab independent of amici (#1355)
 * Problem
-    * Added option to sample startpoints of a problem, from the problem directly. (#1364)
+    * Added option to sample startpoints for a problem, from the problem directly. (#1364)
     * More detailed defaults for problem.get_full_vector (#1393)
     * Save pypesto and python version to the problem. (#1382)
 * Objective
