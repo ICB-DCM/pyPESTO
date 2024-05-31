@@ -1179,3 +1179,15 @@ def test_sacess_history():
     )
     sacess.minimize(problem)
     sacess_history(sacess.histories)
+
+
+@pytest.mark.parametrize(
+    "result_creation",
+    [create_optimization_result, create_optimization_result_nan_inf],
+)
+@close_fig
+def test_parameters_correlation_matrix(result_creation):
+    """Test pypesto.visualize.parameters_correlation_matrix"""
+    result = result_creation()
+
+    visualize.parameters_correlation_matrix(result)

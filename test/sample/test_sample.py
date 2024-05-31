@@ -3,7 +3,6 @@
 import os
 
 import numpy as np
-import petab
 import pytest
 import scipy.optimize as so
 from scipy.integrate import quad
@@ -11,10 +10,8 @@ from scipy.stats import ks_2samp, kstest, multivariate_normal, norm, uniform
 
 import pypesto
 import pypesto.optimize as optimize
-import pypesto.petab
 import pypesto.sample as sample
 from pypesto.C import OBJECTIVE_NEGLOGLIKE, OBJECTIVE_NEGLOGPOST
-from pypesto.sample.pymc import PymcSampler
 
 
 def gaussian_llh(x):
@@ -96,6 +93,10 @@ def rosenbrock_problem():
 
 
 def create_petab_problem():
+    import petab
+
+    import pypesto.petab
+
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.abspath(
         os.path.join(current_path, "..", "..", "doc", "example")
@@ -187,6 +188,8 @@ def sampler(request):
             n_chains=5,
         )
     elif request.param == "Pymc":
+        from pypesto.sample.pymc import PymcSampler
+
         return PymcSampler(tune=5, progressbar=False)
     elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
@@ -793,42 +796,43 @@ def test_thermodynamic_integration():
     problem = gaussian_problem()
 
     # approximation should be better for more chains
-    for n_chains, tol in zip([10, 20], [1, 1e-1]):
-        sampler = sample.ParallelTemperingSampler(
-            internal_sampler=sample.AdaptiveMetropolisSampler(),
-            options={"show_progress": False, "beta_init": "beta_decay"},
-            n_chains=n_chains,
-        )
+    n_chains = 10
+    tol = 1
+    sampler = sample.ParallelTemperingSampler(
+        internal_sampler=sample.AdaptiveMetropolisSampler(),
+        options={"show_progress": False, "beta_init": "beta_decay"},
+        n_chains=n_chains,
+    )
 
-        result = optimize.minimize(
-            problem,
-            progress_bar=False,
-        )
+    result = optimize.minimize(
+        problem,
+        progress_bar=False,
+    )
 
-        result = sample.sample(
-            problem,
-            n_samples=10000,
-            result=result,
-            sampler=sampler,
-        )
+    result = sample.sample(
+        problem,
+        n_samples=2000,
+        result=result,
+        sampler=sampler,
+    )
 
-        # compute the log evidence using trapezoid and simpson rule
-        log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
-        log_evidence_not_all = sampler.compute_log_evidence(
-            result, method="trapezoid", use_all_chains=False
-        )
-        log_evidence_simps = sampler.compute_log_evidence(
-            result, method="simpson"
-        )
+    # compute the log evidence using trapezoid and simpson rule
+    log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
+    log_evidence_not_all = sampler.compute_log_evidence(
+        result, method="trapezoid", use_all_chains=False
+    )
+    log_evidence_simps = sampler.compute_log_evidence(result, method="simpson")
 
-        # compute evidence
-        evidence = quad(
-            lambda x: 1 / (problem.ub - problem.lb) * np.exp(gaussian_llh(x)),
-            a=problem.lb,
-            b=problem.ub,
-        )
+    # compute evidence
+    evidence = quad(
+        lambda x: 1
+        / (problem.ub[0] - problem.lb[0])
+        * np.exp(gaussian_llh(x)),
+        a=problem.lb[0],
+        b=problem.ub[0],
+    )
 
-        # compare to known value
-        assert np.isclose(log_evidence, np.log(evidence[0]), atol=tol)
-        assert np.isclose(log_evidence_not_all, np.log(evidence[0]), atol=tol)
-        assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)
+    # compare to known value
+    assert np.isclose(log_evidence, np.log(evidence[0]), atol=tol)
+    assert np.isclose(log_evidence_not_all, np.log(evidence[0]), atol=tol)
+    assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)

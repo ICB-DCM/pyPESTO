@@ -417,8 +417,8 @@ def handle_inputs(
         ub = result.problem.get_reduced_vector(ub, parameter_indices)
         x_labels = [x_labels[int(i)] for i in parameter_indices]
     else:
-        lb = result.problem.get_full_vector(lb)
-        ub = result.problem.get_full_vector(ub)
+        lb = result.problem.lb_full
+        ub = result.problem.ub_full
 
     if inner_xs is not None and plot_inner_parameters:
         lb = np.concatenate([lb, inner_lb])
@@ -601,23 +601,10 @@ def optimization_scatter(
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
-    # remove all start indices that encounter an inf value at the start
-    # resulting in optimize_result[start]["x"] being None
-    start_indices_finite = start_indices[
-        [
-            result.optimize_result[i_start]["x"] is not None
-            for i_start in start_indices
-        ]
-    ]
-    # compare start_indices with start_indices_finite and log a warning
-    if len(start_indices) != len(start_indices_finite):
-        logger.warning(
-            "Some start indices were removed due to inf values at the start."
-        )
     # put all parameters into a dataframe, where columns are parameters
     parameters = [
         result.optimize_result[i_start]["x"][parameter_indices]
-        for i_start in start_indices_finite
+        for i_start in start_indices
     ]
     x_labels = [
         result.problem.x_names[parameter_index]

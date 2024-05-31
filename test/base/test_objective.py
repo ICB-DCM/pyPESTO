@@ -2,6 +2,7 @@
 
 import copy
 import numbers
+import sys
 from functools import partial
 
 import numpy as np
@@ -11,6 +12,11 @@ import sympy as sp
 import pypesto
 
 from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
+
+pytest_skip_aesara = pytest.mark.skipif(
+    sys.version_info >= (3, 12),
+    reason="Skipped Aesara tests on Python 3.12 or higher",
+)
 
 
 @pytest.fixture(params=[True, False])
@@ -178,6 +184,7 @@ def test_finite_difference_checks():
     )
 
 
+@pytest_skip_aesara
 def test_aesara(max_sensi_order, integrated):
     """Test function composition and gradient computation via aesara"""
     import aesara.tensor as aet
@@ -216,7 +223,8 @@ def test_aesara(max_sensi_order, integrated):
 
 
 @pytest.mark.parametrize("enable_x64", [True, False])
-def test_jax(max_sensi_order, integrated, enable_x64):
+@pytest.mark.parametrize("fix_parameters", [True, False])
+def test_jax(max_sensi_order, integrated, enable_x64, fix_parameters):
     """Test function composition and gradient computation via jax"""
     import jax
     import jax.numpy as jnp
@@ -227,6 +235,7 @@ def test_jax(max_sensi_order, integrated, enable_x64):
     jax.config.update("jax_enable_x64", enable_x64)
 
     from pypesto.objective.jax import JaxObjective
+    from pypesto.objective.pre_post_process import FixedParametersProcessor
 
     prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
 
@@ -243,9 +252,20 @@ def test_jax(max_sensi_order, integrated, enable_x64):
     # compose rosenbrock function with sinh transformation
     obj = JaxObjective(prob["obj"])
 
+    if fix_parameters:
+        obj.pre_post_processor = FixedParametersProcessor(
+            dim_full=2,
+            x_free_indices=[0],
+            x_fixed_indices=[1],
+            x_fixed_vals=[0.0],
+        )
+
     # evaluate for a couple of random points such that we can assess
     # compatibility with vmap
     xx = x_ref + np.random.randn(10, x_ref.shape[0])
+    if fix_parameters:
+        xx = xx[:, obj.pre_post_processor.x_free_indices]
+
     rvals_ref = [
         jax_op_out(
             prob["obj"](jax_op_in(xxi), sensi_orders=(max_sensi_order,))
@@ -255,6 +275,9 @@ def test_jax(max_sensi_order, integrated, enable_x64):
 
     def _fun(y, pypesto_fun, jax_fun_in, jax_fun_out):
         return jax_fun_out(pypesto_fun(jax_fun_in(y)))
+
+    assert obj.check_sensi_orders((max_sensi_order,), pypesto.C.MODE_FUN)
+    assert not obj.check_sensi_orders((max_sensi_order,), pypesto.C.MODE_RES)
 
     for _obj in (obj, copy.deepcopy(obj)):
         fun = partial(
@@ -266,6 +289,7 @@ def test_jax(max_sensi_order, integrated, enable_x64):
 
         if max_sensi_order == 1:
             fun = jax.grad(fun)
+
         # check compatibility with vmap and jit
         vmapped_fun = jax.vmap(fun)
         rvals_jax = vmapped_fun(xx)
@@ -274,8 +298,11 @@ def test_jax(max_sensi_order, integrated, enable_x64):
         # can't use rtol = 1e-8 for 32bit
         rtol = 1e-16 if enable_x64 else 1e-4
         for x, rref, rj in zip(xx, rvals_ref, rvals_jax):
+            assert isinstance(rj, jnp.ndarray)
             if max_sensi_order == 0:
-                np.testing.assert_allclose(rref, rj, atol=atol, rtol=rtol)
+                np.testing.assert_allclose(
+                    rref, float(rj), atol=atol, rtol=rtol
+                )
             if max_sensi_order == 1:
                 # g(x) = b(c(x)) => g'(x) = b'(c(x))) * c'(x)
                 # f(x) = a(g(x)) => f'(x) = a'(g(x)) * g'(x)
@@ -288,7 +315,9 @@ def test_jax(max_sensi_order, integrated, enable_x64):
                 ) @ jax.jacfwd(jax_op_in)(x)
                 # f'(x) = a'(g(x)) * g'(x)
                 f_prime = jax.jacfwd(jax_op_out)(g) * g_prime
-                np.testing.assert_allclose(f_prime, rj, atol=atol, rtol=rtol)
+                np.testing.assert_allclose(
+                    f_prime, np.asarray(rj), atol=atol, rtol=rtol
+                )
 
 
 @pytest.fixture(
