@@ -48,6 +48,7 @@ Algorithms and features
    example/sampler_study.ipynb
    example/sampling_diagnostics.ipynb
    example/store.ipynb
+   example/history_usage.ipynb
    example/model_selection.ipynb
    example/julia.ipynb
    example/relative_data.ipynb
