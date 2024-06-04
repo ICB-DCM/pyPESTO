@@ -14,11 +14,13 @@ from ..C import (
     CURRENT_SIMULATION,
     DATAPOINTS,
     EXPDATA_MASK,
+    INNER_PARAMETERS,
     REGULARIZE_SPLINE,
     SCIPY_X,
     SPLINE_KNOTS,
+    InnerParameterType,
 )
-from ..problem import Problem
+from ..problem import HierarchicalProblem, Problem
 from ..result import Result
 
 try:
@@ -26,6 +28,8 @@ try:
     from amici.petab.conditions import fill_in_parameters
 
     from ..hierarchical import InnerCalculatorCollector
+    from ..hierarchical.relative.calculator import RelativeAmiciCalculator
+    from ..hierarchical.relative.problem import RelativeInnerProblem
     from ..hierarchical.semiquantitative.calculator import SemiquantCalculator
     from ..hierarchical.semiquantitative.solver import (
         SemiquantInnerSolver,
@@ -37,10 +41,346 @@ except ImportError:
     pass
 
 
+def visualize_estimated_observable_mapping(
+    pypesto_result: Result,
+    pypesto_problem: HierarchicalProblem,
+    start_index: int = 0,
+    axes: Optional[plt.Axes] = None,
+    **kwargs,
+):
+    """Visualize the estimated observable mapping for relative and semi-quantitative observables.
+
+    Visualizes the estimated linear mapping for relative observables and the non-linear
+    spline approximation for semi-quantitative observables.
+
+    Parameters
+    ----------
+    pypesto_result:
+        The pyPESTO result object from optimization.
+    pypesto_problem:
+        The pyPESTO problem.
+    start_index:
+        The index of the optimization run in `result.optimize_result.list`
+        for which to visualize the estimated observable mapping.
+    axes:
+        The axes to plot the estimated observable mapping on.
+    kwargs:
+        Additional arguments to passed to `matplotlib.pyplot.subplots`
+        (e.g. `figsize= ...`).
+
+    Returns
+    -------
+    axes:
+        The matplotlib axes.
+    """
+
+    # Check if the pyPESTO problem is hierarchical.
+    if not isinstance(pypesto_problem, HierarchicalProblem):
+        raise ValueError(
+            "Only hierarchical problems contain estimated observable mappings. Please provide a hierarchical problem."
+        )
+
+    amici_model = pypesto_problem.objective.amici_model
+
+    # Get the number of relative and semi-quantitative observables.
+    relative_obs_ids = pypesto_problem.relative_observable_ids or []
+    semiquant_obs_ids = pypesto_problem.semiquant_observable_ids or []
+    n_relative_observables = len(relative_obs_ids)
+    n_semiquant_observables = len(semiquant_obs_ids)
+
+    # Check if there are any relative or semi-quantitative observables.
+    if n_relative_observables == 0 and n_semiquant_observables == 0:
+        raise ValueError(
+            "The problem does not contain any relative or semi-quantitative observables."
+        )
+
+    # Get observable indices for both relative and semi-quantitative observables.
+    rel_and_semiquant_obs_indices = [
+        amici_model.getObservableIds().index(observable_id)
+        for observable_id in relative_obs_ids + semiquant_obs_ids
+    ]
+    rel_and_semiquant_obs_indices.sort()
+
+    # If axes are given, check if they are of the correct length.
+    if (
+        axes is not None
+        and len(axes) != n_relative_observables + n_semiquant_observables
+    ):
+        raise ValueError(
+            "The number of axes must be equal to the number of relative and semi-quantitative observables."
+        )
+
+    # If axes are not given, create them.
+    if axes is None:
+        n_axes = n_relative_observables + n_semiquant_observables
+        n_rows = int(np.ceil(np.sqrt(n_axes)))
+        n_cols = int(np.ceil(n_axes / n_rows))
+        _, axes = plt.subplots(n_rows, n_cols, **kwargs)
+        axes = axes.flatten()
+
+    # Plot the estimated observable mapping for relative observables.
+    if n_relative_observables > 0:
+        axes = plot_linear_observable_mappings_from_pypesto_result(
+            pypesto_result=pypesto_result,
+            pypesto_problem=pypesto_problem,
+            start_index=start_index,
+            axes=axes,
+            rel_and_semiquant_obs_indices=rel_and_semiquant_obs_indices,
+        )
+
+    # Plot the estimated spline approximations for semi-quantitative observables.
+    if n_semiquant_observables > 0:
+        axes = plot_splines_from_pypesto_result(
+            pypesto_result=pypesto_result,
+            start_index=start_index,
+            axes=axes,
+            rel_and_semiquant_obs_indices=rel_and_semiquant_obs_indices,
+        )
+
+    # Remove any axes that were not used.
+    for ax in axes[n_relative_observables + n_semiquant_observables :]:
+        ax.remove()
+
+    # Increase the distance between the subplots.
+    plt.tight_layout()
+
+    return axes
+
+
+def plot_linear_observable_mappings_from_pypesto_result(
+    pypesto_result: Result,
+    pypesto_problem: HierarchicalProblem,
+    start_index=0,
+    axes: Optional[plt.Axes] = None,
+    rel_and_semiquant_obs_indices: Optional[list[int]] = None,
+    **kwargs,
+):
+    """Plot the linear observable mappings from a pypesto result.
+
+    Parameters
+    ----------
+    pypesto_result:
+        The pyPESTO result object from optimization.
+    pypesto_problem:
+        The pyPESTO problem.
+    start_index:
+        The index of the `pypesto_result.optimize_result.list` to plot.
+    axes:
+        The axes to plot the linear observable mappings on.
+    rel_and_semiquant_obs_indices:
+        The indices of the relative and semi-quantitative observables in the
+        amici model. Important if both relative and semi-quantitative observables
+        will be plotted. If None, only the relative observables will be plotted.
+    kwargs:
+        Additional arguments to pass to the plotting function.
+
+    Returns
+    -------
+    axes:
+        The matplotlib axes.
+    """
+    # Check the calculator is the InnerCalculatorCollector.
+    if not isinstance(
+        pypesto_problem.objective.calculator, InnerCalculatorCollector
+    ):
+        raise ValueError(
+            "The calculator must be an instance of the InnerCalculatorCollector."
+        )
+
+    # Get the needed objects from the pypesto problem.
+    edatas = pypesto_problem.objective.edatas
+    parameter_mapping = pypesto_problem.objective.parameter_mapping
+    amici_model = pypesto_problem.objective.amici_model
+    amici_solver = pypesto_problem.objective.amici_solver
+    n_threads = pypesto_problem.objective.n_threads
+
+    # Get the relative calculator.
+    relative_calculator = [
+        inner_calculator
+        for inner_calculator in pypesto_problem.objective.calculator.inner_calculators
+        if isinstance(inner_calculator, RelativeAmiciCalculator)
+    ][0]
+
+    # Get the inner problem and solver from the relative calculator.
+    inner_problem: RelativeInnerProblem = relative_calculator.inner_problem
+
+    # Get the relative observable ids and indices.
+    relative_observable_ids = pypesto_problem.relative_observable_ids
+    relative_observable_indices = [
+        amici_model.getObservableIds().index(observable_id)
+        for observable_id in relative_observable_ids
+    ]
+
+    # Get the number of groups.
+    n_relative_observables = len(relative_observable_ids)
+
+    # Check if the axes are given.
+    if axes is not None and len(axes) <= max(relative_observable_indices):
+        raise ValueError(
+            "The number of axes must be larger than the largest observable index."
+        )
+    # If axes are not given, create them.
+    if axes is None:
+        if n_relative_observables == 1:
+            # Make figure with only one plot
+            _, ax = plt.subplots(1, 1, **kwargs)
+
+            axes = [ax]
+        else:
+            # Choose number of rows and columns to be used for the subplots
+            n_rows = int(np.ceil(np.sqrt(n_relative_observables)))
+            n_cols = int(np.ceil(n_relative_observables / n_rows))
+
+            # Make as many subplots as there are groups
+            _, axes = plt.subplots(n_rows, n_cols, **kwargs)
+
+            # Flatten the axes array
+            axes = axes.flatten()
+
+    #################################################################
+    # Simulate the model with the parameters from the pypesto result.
+    #################################################################
+
+    # Get the parameters from the pypesto result for the start_index.
+    x_dct = dict(
+        zip(
+            pypesto_problem.objective.x_ids,
+            pypesto_result.optimize_result.list[start_index]["x"],
+        )
+    )
+
+    x_dct.update(
+        pypesto_result.problem.objective.calculator.necessary_par_dummy_values
+    )
+
+    # Fill in the parameters.
+    fill_in_parameters(
+        edatas=edatas,
+        problem_parameters=x_dct,
+        scaled_parameters=True,
+        parameter_mapping=parameter_mapping,
+        amici_model=amici_model,
+    )
+
+    # Simulate the model with the parameters from the pypesto result.
+    inner_rdatas = amici.runAmiciSimulations(
+        amici_model,
+        amici_solver,
+        edatas,
+        num_threads=min(n_threads, len(edatas)),
+    )
+
+    # If any amici simulation failed, raise warning and return None.
+    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+        warnings.warn(
+            "Warning: Some AMICI simulations failed. Cannot plot inner "
+            "solutions.",
+            stacklevel=2,
+        )
+        return None
+
+    # Get the simulation.
+    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+
+    # Get the inner parameters from the pypesto result.
+    inner_parameter_values = dict(
+        zip(
+            pypesto_problem.inner_x_names,
+            pypesto_result.optimize_result.list[start_index][INNER_PARAMETERS],
+        )
+    )
+
+    ######################################
+    # Plot the linear observable mappings.
+    ######################################
+
+    # for each group, plot the linear observable mapping
+    for observable_index, observable_id in zip(
+        relative_observable_indices, relative_observable_ids
+    ):
+        # Get the ax for the current observable.
+        if rel_and_semiquant_obs_indices is not None:
+            ax_index = rel_and_semiquant_obs_indices.index(observable_index)
+        else:
+            ax_index = relative_observable_indices.index(observable_index)
+
+        ax = axes[ax_index]
+
+        # Get the inner parameters for the current observable.
+        inner_parameters = inner_problem.get_xs_for_group(observable_index + 1)
+
+        scaling_factor = None
+        offset = None
+
+        for inner_par in inner_parameters:
+            if inner_par.inner_parameter_type == InnerParameterType.SCALING:
+                scaling_factor = inner_par
+            elif inner_par.inner_parameter_type == InnerParameterType.OFFSET:
+                offset = inner_par
+
+        scaling_factor_value = (
+            inner_parameter_values[scaling_factor.inner_parameter_id]
+            if scaling_factor is not None
+            else 1
+        )
+        offset_value = (
+            inner_parameter_values[offset.inner_parameter_id]
+            if offset is not None
+            else 0
+        )
+
+        # Get the data mask for the current observable.
+        observable_data_mask = (
+            scaling_factor.ixs if scaling_factor is not None else offset.ixs
+        )
+
+        # Get the measurements for the current observable.
+        measurements = extract_expdata_using_mask(
+            expdata=inner_problem.data, mask=observable_data_mask
+        )
+
+        # Get the simulation for the current observable.
+        simulation = extract_expdata_using_mask(
+            expdata=sim, mask=observable_data_mask
+        )
+
+        # min_simulation = np.min(simulation)
+        # min_measurement = np.min(measurements)
+
+        # Plot the simulations on the x-axis and the measurements on the y-axis.
+        # ax.plot(simulation, np.full(len(simulation), min_measurement), "go", label="Model output")
+        # ax.plot(np.full(len(measurements), min_simulation), measurements, "bs", label="Measurements")
+
+        ax.plot(simulation, measurements, "bs", label="Measurements")
+
+        # Plot the linear mapping.
+        ax.plot(
+            np.sort(simulation),
+            scaling_factor_value * np.sort(simulation) + offset_value,
+            linestyle="-",
+            color="orange",
+            label="Linear mapping",
+        )
+
+        ax.legend()
+        ax.set_title(f"Observable {observable_id}")
+        ax.set_xlabel("Model output")
+        ax.set_ylabel("Measurements")
+
+        # Store the ax in the axes array.
+        axes[ax_index] = ax
+
+    if rel_and_semiquant_obs_indices is None:
+        for ax in axes[n_relative_observables:]:
+            ax.remove()
+
+    return axes
+
+
 def plot_splines_from_pypesto_result(
     pypesto_result: Result, start_index=0, **kwargs
 ):
-    """Plot the inner solutions from a pypesto result.
+    """Plot the estimated spline approximations from a pypesto result.
 
     Parameters
     ----------
@@ -53,17 +393,27 @@ def plot_splines_from_pypesto_result(
 
     Returns
     -------
-    fig:
-        The figure.
-    ax:
-        The axes.
+    axes:
+        The matplotlib axes.
     """
+    # Check that the problem contains an objective.
+    if pypesto_result.problem.objective is None:
+        raise ValueError(
+            "The problem must contain the corresponding objective that was used for estimation."
+        )
+
     # Check the calculator is the InnerCalculatorCollector.
     if not isinstance(
         pypesto_result.problem.objective.calculator, InnerCalculatorCollector
     ):
         raise ValueError(
             "The calculator must be an instance of the InnerCalculatorCollector."
+        )
+
+    # Check the result for start index contains the spline knots.
+    if SPLINE_KNOTS not in pypesto_result.optimize_result.list[start_index]:
+        raise ValueError(
+            "The result for the start index does not contain the spline knots."
         )
 
     # Get the spline knot values from the pypesto result
@@ -168,9 +518,11 @@ def plot_splines_from_inner_result(
     results: list[dict],
     sim: list[np.ndarray],
     observable_ids=None,
+    axes: Optional[plt.Axes] = None,
+    rel_and_semiquant_obs_indices: Optional[list[int]] = None,
     **kwargs,
 ):
-    """Plot the inner solutions.
+    """Plot the estimated spline approximations from inner results.
 
     Parameters
     ----------
@@ -184,15 +536,19 @@ def plot_splines_from_inner_result(
         The simulated model output.
     observable_ids:
         The ids of the observables.
+    axes:
+        The axes to plot the estimated spline approximations on.
+    rel_and_semiquant_obs_indices:
+        The indices of the relative and semi-quantitative observables in the
+        amici model. Important if both relative and semi-quantitative observables
+        will be plotted. If None, only the semi-quantitative observables will be plotted.
     kwargs:
         Additional arguments to pass to the plotting function.
 
     Returns
     -------
-    fig:
-        The figure.
-    ax:
-        The axes.
+    axes:
+        The matplotlib axes.
     """
 
     if len(results) != len(inner_problem.groups):
@@ -202,26 +558,37 @@ def plot_splines_from_inner_result(
 
     # Get the number of groups
     n_groups = len(inner_problem.groups)
+    semiquant_groups = list(inner_problem.groups.keys())
 
-    if n_groups == 1:
-        # Make figure with only one plot
-        fig, ax = plt.subplots(1, 1, **kwargs)
+    # Check if the axes are given
+    if axes is not None and len(axes) < max(semiquant_groups):
+        raise ValueError(
+            "The number of axes must be equal to or larger than the largest group index."
+        )
 
-        axs = [ax]
-    else:
-        # Choose number of rows and columns to be used for the subplots
-        n_rows = int(np.ceil(np.sqrt(n_groups)))
-        n_cols = int(np.ceil(n_groups / n_rows))
+    if axes is None:
+        if n_groups == 1:
+            # Make figure with only one plot
+            _, ax = plt.subplots(1, 1, **kwargs)
 
-        # Make as many subplots as there are groups
-        fig, axs = plt.subplots(n_rows, n_cols, **kwargs)
+            axes = [ax]
+        else:
+            # Choose number of rows and columns to be used for the subplots
+            n_rows = int(np.ceil(np.sqrt(n_groups)))
+            n_cols = int(np.ceil(n_groups / n_rows))
 
-        # Flatten the axes array
-        axs = axs.flatten()
+            # Make as many subplots as there are groups
+            _, axes = plt.subplots(n_rows, n_cols, **kwargs)
+
+            # Flatten the axes array
+            axes = axes.flatten()
 
     # for each result and group, plot the inner solution
     for result, group in zip(results, inner_problem.groups):
-        group_idx = list(inner_problem.groups.keys()).index(group)
+        if rel_and_semiquant_obs_indices is not None:
+            ax_index = rel_and_semiquant_obs_indices.index(group - 1)
+        else:
+            ax_index = semiquant_groups.index(group)
 
         # For each group get the inner parameters and simulation
         s = result[SCIPY_X]
@@ -245,17 +612,14 @@ def plot_splines_from_inner_result(
             N=len(spline_knots),
             K=len(simulation),
         )
-        mapped_simulations = get_spline_mapped_simulations(
-            s, simulation, len(spline_knots), delta_c, spline_bases, n
-        )
 
-        axs[group_idx].plot(
+        axes[ax_index].plot(
             simulation, measurements, "bs", label="Measurements"
         )
-        axs[group_idx].plot(
+        axes[ax_index].plot(
             spline_bases, spline_knots, "g.", label="Spline knots"
         )
-        axs[group_idx].plot(
+        axes[ax_index].plot(
             spline_bases,
             spline_knots,
             linestyle="-",
@@ -268,7 +632,7 @@ def plot_splines_from_inner_result(
                 N=len(spline_knots),
                 c=spline_bases,
             )
-            axs[group_idx].plot(
+            axes[ax_index].plot(
                 spline_bases,
                 alpha_opt * spline_bases + beta_opt,
                 linestyle="--",
@@ -276,22 +640,20 @@ def plot_splines_from_inner_result(
                 label="Regularization line",
             )
 
-        axs[group_idx].plot(
-            simulation, mapped_simulations, "r^", label="Mapped simulation"
-        )
-        axs[group_idx].legend()
+        axes[ax_index].legend()
         if observable_ids is not None:
-            axs[group_idx].set_title(f"{observable_ids[group-1]}")
+            axes[ax_index].set_title(f"Observable {observable_ids[group-1]}")
         else:
-            axs[group_idx].set_title(f"Group {group}")
+            axes[ax_index].set_title(f"Group {group}")
 
-        axs[group_idx].set_xlabel("Model output")
-        axs[group_idx].set_ylabel("Measurements")
+        axes[ax_index].set_xlabel("Model output")
+        axes[ax_index].set_ylabel("Measurements")
 
-    for ax in axs[len(results) :]:
-        ax.remove()
+    if rel_and_semiquant_obs_indices is None:
+        for ax in axes[len(results) :]:
+            ax.remove()
 
-    return fig, axs
+    return axes
 
 
 def _calculate_optimal_regularization(

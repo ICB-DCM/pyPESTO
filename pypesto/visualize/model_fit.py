@@ -22,8 +22,8 @@ from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
+from .observable_mapping import _add_spline_mapped_simulations_to_model_fit
 from .ordinal_categories import plot_categories_from_pypesto_result
-from .spline_approximation import _add_spline_mapped_simulations_to_model_fit
 
 AmiciModel = Union["amici.Model", "amici.ModelPtr"]
 

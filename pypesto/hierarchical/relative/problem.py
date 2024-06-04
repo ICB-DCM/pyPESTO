@@ -2,7 +2,6 @@
 
 import logging
 
-import numpy as np
 import pandas as pd
 
 from ...C import (
@@ -11,12 +10,12 @@ from ...C import (
     SEMIQUANTITATIVE,
     InnerParameterType,
 )
-from ..base_parameter import InnerParameter
 from ..base_problem import (
     AmiciInnerProblem,
     _get_timepoints_with_replicates,
     ix_matrices_from_arrays,
 )
+from .parameter import RelativeInnerParameter
 
 try:
     import amici
@@ -66,43 +65,35 @@ class RelativeInnerProblem(AmiciInnerProblem):
             petab_problem, amici_model, edatas
         )
 
-    def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
-        """Check for consistency in data.
+    def get_relative_observable_ids(self) -> list[str]:
+        """Get unique list of IDs of all relative observables with scaling and/or offset."""
+        return list(
+            {
+                x.observable_id
+                for x in self.xs.values()
+                if x.inner_parameter_type
+                in [
+                    InnerParameterType.SCALING,
+                    InnerParameterType.OFFSET,
+                ]
+            }
+        )
 
-        Currently only checks for the actual data values. e.g., timepoints are
-        not compared.
+    def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
+        """Get unique list of ``RelativeParameter.group`` values."""
+        groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
+        return list(set(groups))
 
-        Parameters
-        ----------
-        edatas:
-            A data set. Will be checked against the data set provided to the
-            constructor.
-
-        Returns
-        -------
-        Whether the data sets are consistent.
-        """
-        # TODO replace but edata1==edata2 once this makes it into amici
-        #  https://github.com/AMICI-dev/AMICI/issues/1880
-        data = [
-            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
-        ]
-
-        if len(self.data) != len(data):
-            return False
-
-        for data0, data1 in zip(self.data, data):
-            if not np.array_equal(data0, data1, equal_nan=True):
-                return False
-
-        return True
+    def get_xs_for_group(self, group: int) -> list[RelativeInnerParameter]:
+        r"""Get ``RelativeParameter``\s that belong to the given group."""
+        return [x for x in self.xs.values() if x.group == group]
 
 
 def inner_problem_from_petab_problem(
     petab_problem: "petab.Problem",
     amici_model: "amici.Model",
     edatas: list["amici.ExpData"],
-) -> AmiciInnerProblem:
+) -> RelativeInnerProblem:
     """
     Create inner problem from PEtab problem.
 
@@ -128,9 +119,11 @@ def inner_problem_from_petab_problem(
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
 
-    # assign matrices
+    # assign matrices, group and observable id to inner parameters
     for par in inner_parameters:
         par.ixs = ix_matrices[par.inner_parameter_id]
+        par.group = ixs[par.inner_parameter_id][0][2] + 1
+        par.observable_id = amici_model.getObservableIds()[par.group - 1]
 
     par_group_types = {
         tuple(obs_pars.split(";")): (
@@ -177,13 +170,13 @@ def inner_problem_from_petab_problem(
                 par.coupled = id_to_par[coupled_parameter_id]
                 break
 
-    return AmiciInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
+    return RelativeInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
 
 
 def inner_parameters_from_parameter_df(
     par_df: pd.DataFrame,
     meas_df: pd.DataFrame,
-) -> list[InnerParameter]:
+) -> list[RelativeInnerParameter]:
     """
     Create list of inner free parameters from PEtab parameter table.
 
@@ -219,12 +212,14 @@ def inner_parameters_from_parameter_df(
                     continue
 
         parameters.append(
-            InnerParameter(
+            RelativeInnerParameter(
                 inner_parameter_id=row[PARAMETER_ID],
                 inner_parameter_type=row[PARAMETER_TYPE],
                 scale=row[PARAMETER_SCALE],
                 lb=row[LOWER_BOUND],
                 ub=row[UPPER_BOUND],
+                observable_id=None,
+                group=None,
             )
         )
 

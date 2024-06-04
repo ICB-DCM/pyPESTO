@@ -193,6 +193,11 @@ class AmiciInnerProblem(InnerProblem):
             amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
         ]
 
+        # Mask the data using the inner problem mask. This is necessary
+        # because the inner problem is aware of only the data it uses.
+        for i in range(len(data)):
+            data[i][~self.data_mask[i]] = np.nan
+
         if len(self.data) != len(data):
             return False
 

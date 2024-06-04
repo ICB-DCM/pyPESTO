@@ -147,6 +147,16 @@ class SemiquantProblem(AmiciInnerProblem):
             if x.inner_parameter_type == InnerParameterType.SIGMA
         ]
 
+    def get_semiquant_observable_ids(self) -> list[str]:
+        """Get the ids of semiquantitative observables."""
+        return list(
+            {
+                x.observable_id
+                for x in self.xs.values()
+                if x.inner_parameter_type == InnerParameterType.SPLINE
+            }
+        )
+
     def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
         """Get unique list of ``SplineParameter.group`` values."""
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
