@@ -19,6 +19,7 @@ nbs_1=(
   'amici.ipynb'
   'conversion_reaction.ipynb'
   'fixed_parameters.ipynb'
+  'history_usage.ipynb'
   'petab_import.ipynb'
   'prior_definition.ipynb'
   'custom_objective_function.ipynb'
