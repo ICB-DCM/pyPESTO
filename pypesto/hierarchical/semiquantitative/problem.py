@@ -148,7 +148,7 @@ class SemiquantProblem(AmiciInnerProblem):
         ]
 
     def get_semiquant_observable_ids(self) -> list[str]:
-        """Get the ids of semiquantitative observables."""
+        """Get the IDs of semiquantitative observables."""
         return list(
             {
                 x.observable_id

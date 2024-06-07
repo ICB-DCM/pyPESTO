@@ -11,17 +11,18 @@ class RelativeInnerParameter(InnerParameter):
 
     Attributes
     ----------
-    observable_id:
-        The id of the observable the relative inner parameter is connected to.
-    group:
-        Group index. Corresponds to `amici_model.index(observable_id)` + 1.
+    observable_ids:
+        A list of IDs of the observables that the relative inner parameter is connected to.
+        Can be a single or multiple observables.
+    observable_indices:
+        A list of indices of the observables that the relative inner parameter is connected to.
     """
 
     def __init__(
         self,
         *args,
-        observable_id: str = None,
-        group: int = None,
+        observable_ids: list[str] = None,
+        observable_indices: list[int] = None,
         **kwargs,
     ):
         """Construct.
@@ -40,5 +41,5 @@ class RelativeInnerParameter(InnerParameter):
                 "For the RelativeParameter class, the parameter type has to be scaling, offset or sigma."
             )
 
-        self.observable_id = observable_id
-        self.group = group
+        self.observable_ids = observable_ids
+        self.observable_indices = observable_indices

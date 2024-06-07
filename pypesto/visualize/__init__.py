@@ -21,6 +21,7 @@ from .ensemble import ensemble_identifiability
 from .misc import process_offset_y, process_result_list, process_y_limits
 from .observable_mapping import (
     _add_spline_mapped_simulations_to_model_fit,
+    plot_linear_observable_mappings_from_pypesto_result,
     plot_splines_from_inner_result,
     plot_splines_from_pypesto_result,
     visualize_estimated_observable_mapping,

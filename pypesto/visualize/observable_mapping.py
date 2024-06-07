@@ -60,12 +60,11 @@ def visualize_estimated_observable_mapping(
     pypesto_problem:
         The pyPESTO problem.
     start_index:
-        The index of the optimization run in `result.optimize_result.list`
-        for which to visualize the estimated observable mapping.
+        The observable mapping from this start's optimized vector will be plotted.
     axes:
         The axes to plot the estimated observable mapping on.
     kwargs:
-        Additional arguments to passed to `matplotlib.pyplot.subplots`
+        Additional arguments to passed to ``matplotlib.pyplot.subplots``
         (e.g. `figsize= ...`).
 
     Returns
@@ -155,7 +154,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     rel_and_semiquant_obs_indices: Optional[list[int]] = None,
     **kwargs,
 ):
-    """Plot the linear observable mappings from a pypesto result.
+    """Plot the linear observable mappings from a pyPESTO result.
 
     Parameters
     ----------
@@ -164,15 +163,15 @@ def plot_linear_observable_mappings_from_pypesto_result(
     pypesto_problem:
         The pyPESTO problem.
     start_index:
-        The index of the `pypesto_result.optimize_result.list` to plot.
+        The observable mapping from this start's optimized vector will be plotted.
     axes:
         The axes to plot the linear observable mappings on.
     rel_and_semiquant_obs_indices:
         The indices of the relative and semi-quantitative observables in the
         amici model. Important if both relative and semi-quantitative observables
-        will be plotted. If None, only the relative observables will be plotted.
-    kwargs:
-        Additional arguments to pass to the plotting function.
+        will be plotted on the same axes.
+    **kwargs:
+        Additional arguments to pass to the ``matplotlib.pyplot.subplots`` function.
 
     Returns
     -------
@@ -211,7 +210,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         for observable_id in relative_observable_ids
     ]
 
-    # Get the number of groups.
+    # Get the number of relative observables.
     n_relative_observables = len(relative_observable_ids)
 
     # Check if the axes are given.
@@ -231,7 +230,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
             n_rows = int(np.ceil(np.sqrt(n_relative_observables)))
             n_cols = int(np.ceil(n_relative_observables / n_rows))
 
-            # Make as many subplots as there are groups
+            # Make as many subplots as there are relative observables
             _, axes = plt.subplots(n_rows, n_cols, **kwargs)
 
             # Flatten the axes array
@@ -272,12 +271,10 @@ def plot_linear_observable_mappings_from_pypesto_result(
 
     # If any amici simulation failed, raise warning and return None.
     if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
-        warnings.warn(
+        raise ValueError(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
-            "solutions.",
-            stacklevel=2,
+            "solutions."
         )
-        return None
 
     # Get the simulation.
     sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
@@ -294,7 +291,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     # Plot the linear observable mappings.
     ######################################
 
-    # for each group, plot the linear observable mapping
+    # plot the linear observable mapping for each relative_observable_id
     for observable_index, observable_id in zip(
         relative_observable_indices, relative_observable_ids
     ):
@@ -307,7 +304,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         ax = axes[ax_index]
 
         # Get the inner parameters for the current observable.
-        inner_parameters = inner_problem.get_xs_for_group(observable_index + 1)
+        inner_parameters = inner_problem.get_xs_for_obs_idx(observable_index)
 
         scaling_factor = None
         offset = None
@@ -330,9 +327,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         )
 
         # Get the data mask for the current observable.
-        observable_data_mask = (
-            scaling_factor.ixs if scaling_factor is not None else offset.ixs
-        )
+        observable_data_mask = scaling_factor.ixs or offset.ixs
 
         # Get the measurements for the current observable.
         measurements = extract_expdata_using_mask(
@@ -343,13 +338,6 @@ def plot_linear_observable_mappings_from_pypesto_result(
         simulation = extract_expdata_using_mask(
             expdata=sim, mask=observable_data_mask
         )
-
-        # min_simulation = np.min(simulation)
-        # min_measurement = np.min(measurements)
-
-        # Plot the simulations on the x-axis and the measurements on the y-axis.
-        # ax.plot(simulation, np.full(len(simulation), min_measurement), "go", label="Model output")
-        # ax.plot(np.full(len(measurements), min_simulation), measurements, "bs", label="Measurements")
 
         ax.plot(simulation, measurements, "bs", label="Measurements")
 
@@ -366,9 +354,6 @@ def plot_linear_observable_mappings_from_pypesto_result(
         ax.set_title(f"Observable {observable_id}")
         ax.set_xlabel("Model output")
         ax.set_ylabel("Measurements")
-
-        # Store the ax in the axes array.
-        axes[ax_index] = ax
 
     if rel_and_semiquant_obs_indices is None:
         for ax in axes[n_relative_observables:]:
@@ -387,7 +372,7 @@ def plot_splines_from_pypesto_result(
     pypesto_result:
         The pypesto result.
     start_index:
-        The index of the pypesto_result.optimize_result.list to plot.
+        The observable mapping from this start's optimized vector will be plotted.
     kwargs:
         Additional arguments to pass to the plotting function.
 
@@ -413,7 +398,7 @@ def plot_splines_from_pypesto_result(
     # Check the result for start index contains the spline knots.
     if SPLINE_KNOTS not in pypesto_result.optimize_result.list[start_index]:
         raise ValueError(
-            "The result for the start index does not contain the spline knots."
+            f"The result with index {start_index} does not contain the spline knots."
         )
 
     # Get the spline knot values from the pypesto result
@@ -541,7 +526,7 @@ def plot_splines_from_inner_result(
     rel_and_semiquant_obs_indices:
         The indices of the relative and semi-quantitative observables in the
         amici model. Important if both relative and semi-quantitative observables
-        will be plotted. If None, only the semi-quantitative observables will be plotted.
+        will be plotted on the same axes.
     kwargs:
         Additional arguments to pass to the plotting function.
 

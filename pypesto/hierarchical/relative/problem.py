@@ -66,27 +66,36 @@ class RelativeInnerProblem(AmiciInnerProblem):
         )
 
     def get_relative_observable_ids(self) -> list[str]:
-        """Get unique list of IDs of all relative observables with scaling and/or offset."""
+        """Get IDs of all unique relative observables with scaling and/or offset."""
         return list(
             {
-                x.observable_id
+                observable_id
                 for x in self.xs.values()
                 if x.inner_parameter_type
                 in [
                     InnerParameterType.SCALING,
                     InnerParameterType.OFFSET,
                 ]
+                for observable_id in x.observable_ids
             }
         )
 
-    def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
-        """Get unique list of ``RelativeParameter.group`` values."""
-        groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
-        return list(set(groups))
+    def get_observable_indices_for_xs(
+        self, inner_parameter_type: str
+    ) -> list[int]:
+        """Get unique list of ``RelativeParameter.observable_indices`` values."""
+        return list(
+            {
+                obs_idx
+                for x in self.xs.values()
+                if x.inner_parameter_type == inner_parameter_type
+                for obs_idx in x.observable_indices
+            }
+        )
 
-    def get_xs_for_group(self, group: int) -> list[RelativeInnerParameter]:
-        r"""Get ``RelativeParameter``\s that belong to the given group."""
-        return [x for x in self.xs.values() if x.group == group]
+    def get_xs_for_obs_idx(self, obs_idx: int) -> list[RelativeInnerParameter]:
+        """Get ``RelativeParameter``s that belong to the observable with index `obs_idx`."""
+        return [x for x in self.xs.values() if obs_idx in x.observable_indices]
 
 
 def inner_problem_from_petab_problem(
@@ -119,11 +128,16 @@ def inner_problem_from_petab_problem(
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
 
-    # assign matrices, group and observable id to inner parameters
+    # assign matrices, observable indices and ids to inner parameters
     for par in inner_parameters:
         par.ixs = ix_matrices[par.inner_parameter_id]
-        par.group = ixs[par.inner_parameter_id][0][2] + 1
-        par.observable_id = amici_model.getObservableIds()[par.group - 1]
+        par.observable_indices = [
+            meas_indices[2] for meas_indices in ixs[par.inner_parameter_id]
+        ]
+        par.observable_ids = [
+            amici_model.getObservableIds()[obs_idx]
+            for obs_idx in par.observable_indices
+        ]
 
     par_group_types = {
         tuple(obs_pars.split(";")): (
@@ -218,8 +232,8 @@ def inner_parameters_from_parameter_df(
                 scale=row[PARAMETER_SCALE],
                 lb=row[LOWER_BOUND],
                 ub=row[UPPER_BOUND],
-                observable_id=None,
-                group=None,
+                observable_ids=None,
+                observable_indices=None,
             )
         )
 
