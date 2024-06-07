@@ -55,6 +55,8 @@ class AggregatedObjective(ObjectiveBase):
         if not objectives:
             raise ValueError("Length of objectives must be at least one")
 
+        self._objectives = objectives
+
         # make amici model available if there is one, assuming there is only one
         for objective in objectives:
             if hasattr(objective, AMICI_MODEL):
