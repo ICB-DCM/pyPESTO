@@ -18,7 +18,7 @@ from amici.petab.conditions import fill_in_parameters
 from amici.petab.simulations import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
-from ..C import CENSORED, ORDINAL, SEMIQUANTITATIVE
+from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
@@ -99,7 +99,7 @@ def visualize_optimized_model_fit(
             )
 
     simulation_df = rdatas_to_simulation_df(
-        objective_result,
+        objective_result[RDATAS],
         amici_model,
         petab_problem.measurement_df,
     )
