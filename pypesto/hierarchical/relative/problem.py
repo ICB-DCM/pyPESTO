@@ -94,7 +94,7 @@ class RelativeInnerProblem(AmiciInnerProblem):
         )
 
     def get_xs_for_obs_idx(self, obs_idx: int) -> list[RelativeInnerParameter]:
-        """Get ``RelativeParameter``s that belong to the observable with index `obs_idx`."""
+        r"""Get ``RelativeParameter``\s that belong to the observable with index `obs_idx`."""
         return [x for x in self.xs.values() if obs_idx in x.observable_indices]
 
 
