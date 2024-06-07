@@ -57,12 +57,6 @@ class AggregatedObjective(ObjectiveBase):
 
         self._objectives = objectives
 
-        # make amici model available if there is one, assuming there is only one
-        for objective in objectives:
-            if hasattr(objective, AMICI_MODEL):
-                self.amici_model = objective.amici_model
-                break
-
         super().__init__(x_names=x_names)
 
     def __deepcopy__(self, memodict=None):
@@ -144,6 +138,14 @@ class AggregatedObjective(ObjectiveBase):
         for n_obj, obj in enumerate(self._objectives):
             info[f"objective_{n_obj}"] = obj.get_config()
         return info
+
+    @property
+    def amici_model(self):
+        """Return the AMICI model. Assuming there is only one."""
+        for objective in self._objectives:
+            if hasattr(objective, AMICI_MODEL):
+                return objective.amici_model
+        raise ValueError("No AMICI model found in any of the objectives.")
 
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:

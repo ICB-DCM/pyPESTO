@@ -18,7 +18,7 @@ from amici.petab.conditions import fill_in_parameters
 from amici.petab.simulations import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
-from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
+from ..C import AMICI_MODEL, CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
@@ -79,7 +79,7 @@ def visualize_optimized_model_fit(
     objective_result = pypesto_problem.objective(x, return_dict=True)
 
     # get amici model
-    if not hasattr(pypesto_problem.objective, "amici_model"):
+    if not hasattr(pypesto_problem.objective, AMICI_MODEL):
         raise ValueError(
             "'visualize_optimized_model_fit' only works with an amici model. Could not find the model."
         )
