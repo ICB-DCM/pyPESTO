@@ -4,7 +4,17 @@ from typing import Any
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, HESSP, RDATAS, RES, SRES, ModeType
+from ..C import (
+    AMICI_MODEL,
+    FVAL,
+    GRAD,
+    HESS,
+    HESSP,
+    RDATAS,
+    RES,
+    SRES,
+    ModeType,
+)
 from .base import ObjectiveBase, ResultDict
 
 
@@ -45,7 +55,11 @@ class AggregatedObjective(ObjectiveBase):
         if not objectives:
             raise ValueError("Length of objectives must be at least one")
 
-        self._objectives = objectives
+        # make amici model available if there is one, assuming there is only one
+        for objective in objectives:
+            if hasattr(objective, AMICI_MODEL):
+                self.amici_model = objective.amici_model
+                break
 
         super().__init__(x_names=x_names)
 

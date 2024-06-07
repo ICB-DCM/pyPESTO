@@ -76,31 +76,17 @@ def visualize_optimized_model_fit(
         pypesto_problem.x_free_indices
     ]
 
+    objective_result = pypesto_problem.objective(x, return_dict=True)
+
     # get amici model
-    if hasattr(pypesto_problem.objective, "amici_model"):
-        amici_model = pypesto_problem.objective.amici_model
-        objective_result = pypesto_problem.objective(x, return_dict=True)
-    else:
-        # assuming the objective is an aggregated objective
-        amici_model, objective_result = None, None
-        for objective in pypesto_problem.objective._objectives:
-            if hasattr(objective, "amici_model"):
-                amici_model = objective.amici_model
-                objective_result = objective(
-                    pypesto_problem.get_full_vector(
-                        x=x, x_fixed_vals=pypesto_problem.x_fixed_vals
-                    ),
-                    return_dict=True,
-                )
-                break
-        if amici_model is None:
-            raise ValueError(
-                "'visualize_optimized_model_fit' only works with an amici model. Could not find the model."
-            )
+    if not hasattr(pypesto_problem.objective, "amici_model"):
+        raise ValueError(
+            "'visualize_optimized_model_fit' only works with an amici model. Could not find the model."
+        )
 
     simulation_df = rdatas_to_simulation_df(
         objective_result[RDATAS],
-        amici_model,
+        pypesto_problem.objective.amici_model,
         petab_problem.measurement_df,
     )
 

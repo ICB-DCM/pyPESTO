@@ -72,6 +72,7 @@ SRES = "sres"  # residual sensitivities
 RDATAS = "rdatas"  # returned simulated data sets
 OBJECTIVE_NEGLOGPOST = "neglogpost"  # objective is negative log-posterior
 OBJECTIVE_NEGLOGLIKE = "negloglike"  # objective is negative log-likelihood
+AMICI_MODEL = "amici_model"  # AMICI model
 
 TIME = "time"  # time
 N_FVAL = "n_fval"  # number of function evaluations
