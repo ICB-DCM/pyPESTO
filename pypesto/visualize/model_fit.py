@@ -89,7 +89,8 @@ def visualize_optimized_model_fit(
                 objective_result = objective(
                     pypesto_problem.get_full_vector(
                         x=x, x_fixed_vals=pypesto_problem.x_fixed_vals
-                    )
+                    ),
+                    return_dict=True,
                 )
                 break
         if amici_model is None:
