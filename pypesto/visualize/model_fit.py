@@ -18,7 +18,7 @@ from amici.petab.conditions import fill_in_parameters
 from amici.petab.simulations import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
-from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
+from ..C import CENSORED, ORDINAL, SEMIQUANTITATIVE
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
@@ -38,7 +38,7 @@ def visualize_optimized_model_fit(
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
-) -> Union[matplotlib.axes.Axes, None]:
+) -> Union[matplotlib.axes.Axes, dict]:
     """
     Visualize the optimized model fit of a PEtab problem.
 
@@ -75,17 +75,22 @@ def visualize_optimized_model_fit(
     x = result.optimize_result.list[start_index]["x"][
         pypesto_problem.x_free_indices
     ]
-    objective_result = pypesto_problem.objective(x, return_dict=True)
 
     # get amici model
     if hasattr(pypesto_problem.objective, "amici_model"):
         amici_model = pypesto_problem.objective.amici_model
+        objective_result = pypesto_problem.objective(x, return_dict=True)
     else:
         # assuming the objective is an aggregated objective
-        amici_model = None
+        amici_model, objective_result = None, None
         for objective in pypesto_problem.objective._objectives:
             if hasattr(objective, "amici_model"):
                 amici_model = objective.amici_model
+                objective_result = objective(
+                    pypesto_problem.get_full_vector(
+                        x=x, x_fixed_vals=pypesto_problem.x_fixed_vals
+                    )
+                )
                 break
         if amici_model is None:
             raise ValueError(
@@ -93,7 +98,7 @@ def visualize_optimized_model_fit(
             )
 
     simulation_df = rdatas_to_simulation_df(
-        objective_result[RDATAS],
+        objective_result,
         amici_model,
         petab_problem.measurement_df,
     )
