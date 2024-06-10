@@ -86,7 +86,7 @@ def visualize_optimized_model_fit(
         )
         amici_models.append(pypesto_problem.objective.amici_model)
     elif hasattr(pypesto_problem.objective, "_objectives"):
-        # iterate over objectives to find the amici model in the AggregatedObjective
+        # iterate over objectives to find the amici models in the AggregatedObjective
         x = result.optimize_result.list[start_index]["x"]
 
         for objective in pypesto_problem.objective._objectives:
@@ -110,7 +110,7 @@ def visualize_optimized_model_fit(
         simulation_df = rdatas_to_simulation_df(
             objective_result[RDATAS],
             amici_model,
-            petab_problem.measurement_df,
+            petab_problem.measurement_df,  # todo: potentially needs to be changed to work with multiple models
         )
 
         # handle flattened PEtab problems
