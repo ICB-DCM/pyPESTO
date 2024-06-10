@@ -5,7 +5,6 @@ from typing import Any
 import numpy as np
 
 from ..C import (
-    AMICI_MODEL,
     FVAL,
     GRAD,
     HESS,
@@ -138,14 +137,6 @@ class AggregatedObjective(ObjectiveBase):
         for n_obj, obj in enumerate(self._objectives):
             info[f"objective_{n_obj}"] = obj.get_config()
         return info
-
-    @property
-    def amici_model(self):
-        """Return the AMICI model. Assuming there is only one."""
-        for objective in self._objectives:
-            if hasattr(objective, AMICI_MODEL):
-                return objective.amici_model
-        raise ValueError("No AMICI model found in any of the objectives.")
 
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
