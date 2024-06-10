@@ -685,7 +685,9 @@ class PetabImporter(AmiciObjectBuilder):
                     )
 
         if len(prior_list):
-            return NegLogParameterPriors(prior_list)
+            return NegLogParameterPriors(
+                prior_list, x_fixed_indices=self.petab_problem.x_fixed_indices
+            )
         else:
             return None
 

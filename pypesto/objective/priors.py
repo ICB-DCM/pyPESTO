@@ -1,7 +1,7 @@
 import logging
 import math
 from collections.abc import Sequence
-from typing import Callable, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 
@@ -51,7 +51,8 @@ class NegLogParameterPriors(ObjectiveBase):
     def __init__(
         self,
         prior_list: list[dict],
-        x_names: Sequence[str] = None,
+        x_fixed_indices: Optional[Sequence[int]] = None,
+        x_names: Optional[Sequence[str]] = None,
     ):
         """
         Initialize.
@@ -61,11 +62,33 @@ class NegLogParameterPriors(ObjectiveBase):
         prior_list:
             List of dicts containing the individual parameter priors.
             Format see above.
+        x_fixed_indices:
+            Indices of fixed parameters. Fixed parameters are not contributing to the objective.
         x_names:
             Sequence of parameter names (optional).
         """
-        self.prior_list = prior_list
+        self._prior_list = prior_list
+        self.x_fixed_indices = (
+            x_fixed_indices if x_fixed_indices is not None else []
+        )
+
+        self.fixed_mask = np.zeros(len(self._prior_list), dtype=bool)
+        for prior in self._prior_list:
+            if prior["index"] in self.x_fixed_indices:
+                self.fixed_mask[prior["index"]] = True
+            else:
+                self.fixed_mask[prior["index"]] = False
+
         super().__init__(x_names)
+
+    @property
+    def prior_list(self) -> list[dict]:
+        """Return the list of priors for fixed parameters."""
+        return [
+            self._prior_list[i]
+            for i in range(len(self._prior_list))
+            if self.fixed_mask[i]
+        ]
 
     def call_unprocessed(
         self,
