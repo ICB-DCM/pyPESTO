@@ -38,7 +38,7 @@ def visualize_optimized_model_fit(
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
-) -> Union[matplotlib.axes.Axes, dict]:
+) -> Union[matplotlib.axes.Axes, dict, list[matplotlib.axes.Axes], list[dict]]:
     """
     Visualize the optimized model fit of a PEtab problem.
 
@@ -72,69 +72,106 @@ def visualize_optimized_model_fit(
     axes: `matplotlib.axes.Axes` object of the created plot.
     None: In case subplots are saved to file
     """
-    x = result.optimize_result.list[start_index]["x"][
-        pypesto_problem.x_free_indices
-    ]
 
-    objective_result = pypesto_problem.objective(x, return_dict=True)
+    amici_models, objective_results = [], []
 
     # get amici model
-    if not hasattr(pypesto_problem.objective, AMICI_MODEL):
+    if hasattr(pypesto_problem.objective, AMICI_MODEL):
+        x = result.optimize_result.list[start_index]["x"][
+            pypesto_problem.x_free_indices
+        ]
+
+        objective_results.append(
+            pypesto_problem.objective(x, return_dict=True)
+        )
+        amici_models.append(pypesto_problem.objective.amici_model)
+    elif hasattr(pypesto_problem.objective, "_objectives"):
+        # iterate over objectives to find the amici model in the AggregatedObjective
+        x = result.optimize_result.list[start_index]["x"]
+
+        for objective in pypesto_problem.objective._objectives:
+            if hasattr(objective, AMICI_MODEL):
+                amici_models.append(objective.amici_model)
+                # objective expects full vector here
+                objective_results.append(objective(x, return_dict=True))
+
+        if len(amici_models) == 0:
+            raise ValueError(
+                "'visualize_optimized_model_fit' only works with amici models. None were found."
+            )
+    else:
         raise ValueError(
-            "'visualize_optimized_model_fit' only works with an amici model. Could not find the model."
+            "'visualize_optimized_model_fit' only works with an amici model. None were found."
         )
 
-    simulation_df = rdatas_to_simulation_df(
-        objective_result[RDATAS],
-        pypesto_problem.objective.amici_model,
-        petab_problem.measurement_df,
-    )
-
-    # handle flattened PEtab problems
-    petab_problem_to_plot = petab_problem
-    if unflattened_petab_problem:
-        simulation_df = petab.core.unflatten_simulation_df(
-            simulation_df=simulation_df,
-            petab_problem=unflattened_petab_problem,
+    axes_list, simulation_df_list = [], []
+    for amici_model, objective_result in zip(amici_models, objective_results):
+        # get simulation results
+        simulation_df = rdatas_to_simulation_df(
+            objective_result[RDATAS],
+            amici_model,
+            petab_problem.measurement_df,
         )
-        petab_problem_to_plot = unflattened_petab_problem
 
-    # plot
-    axes = plot_problem(
-        petab_problem=petab_problem_to_plot,
-        simulations_df=simulation_df,
-        **kwargs,
-    )
-
-    non_quantitative_data_types = get_petab_non_quantitative_data_types(
-        petab_problem
-    )
-
-    if non_quantitative_data_types is not None:
-        if (
-            ORDINAL in non_quantitative_data_types
-            or CENSORED in non_quantitative_data_types
-        ):
-            axes = plot_categories_from_pypesto_result(
-                result,
-                start_index=start_index,
-                axes=axes,
+        # handle flattened PEtab problems
+        petab_problem_to_plot = petab_problem
+        if unflattened_petab_problem:
+            simulation_df = petab.core.unflatten_simulation_df(
+                simulation_df=simulation_df,
+                petab_problem=unflattened_petab_problem,
             )
-        if SEMIQUANTITATIVE in non_quantitative_data_types:
-            axes = _add_spline_mapped_simulations_to_model_fit(
-                result=result,
-                pypesto_problem=pypesto_problem,
-                start_index=start_index,
-                axes=axes,
-            )
+            petab_problem_to_plot = unflattened_petab_problem
+
+        # plot
+        axes = plot_problem(
+            petab_problem=petab_problem_to_plot,
+            simulations_df=simulation_df,
+            **kwargs,
+        )
+
+        non_quantitative_data_types = get_petab_non_quantitative_data_types(
+            petab_problem
+        )
+
+        if non_quantitative_data_types is not None:
+            if (
+                ORDINAL in non_quantitative_data_types
+                or CENSORED in non_quantitative_data_types
+            ):
+                axes = plot_categories_from_pypesto_result(
+                    result,
+                    start_index=start_index,
+                    axes=axes,
+                )
+            if SEMIQUANTITATIVE in non_quantitative_data_types:
+                axes = _add_spline_mapped_simulations_to_model_fit(
+                    result=result,
+                    pypesto_problem=pypesto_problem,
+                    start_index=start_index,
+                    axes=axes,
+                )
+
+        axes_list.append(axes)
+        simulation_df_list.append(simulation_df)
 
     if return_dict:
-        return {
-            "axes": axes,
-            "objective_result": objective_result,
-            "simulation_df": simulation_df,
-        }
-    return axes
+        dict_list = []
+        for axes, simulation_df, objective_result in zip(
+            axes_list, simulation_df_list, objective_results
+        ):
+            dict_list.append(
+                {
+                    "axes": axes,
+                    "objective_result": objective_result,
+                    "simulation_df": simulation_df,
+                }
+            )
+        if len(dict_list) == 1:
+            return dict_list[0]
+        return dict_list
+    if len(axes_list) == 1:
+        return axes_list[0]
+    return axes_list
 
 
 def time_trajectory_model(
