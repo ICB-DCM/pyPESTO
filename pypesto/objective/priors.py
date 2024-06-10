@@ -9,6 +9,7 @@ from .. import C
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
+from .pre_post_process import FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -68,27 +69,11 @@ class NegLogParameterPriors(ObjectiveBase):
             Sequence of parameter names (optional).
         """
         self._prior_list = prior_list
-        self.x_fixed_indices = (
+        x_fixed_indices = (
             x_fixed_indices if x_fixed_indices is not None else []
         )
-
-        self.fixed_mask = np.zeros(len(self._prior_list), dtype=bool)
-        for prior in self._prior_list:
-            if prior["index"] in self.x_fixed_indices:
-                self.fixed_mask[prior["index"]] = True
-            else:
-                self.fixed_mask[prior["index"]] = False
-
+        self._create_fixed_mask(x_fixed_indices)
         super().__init__(x_names)
-
-    @property
-    def prior_list(self) -> list[dict]:
-        """Return the list of priors for fixed parameters."""
-        return [
-            self._prior_list[i]
-            for i in range(len(self._prior_list))
-            if self.fixed_mask[i]
-        ]
 
     def call_unprocessed(
         self,
@@ -177,6 +162,69 @@ class NegLogParameterPriors(ObjectiveBase):
                 f"Invalid input: Expected mode {C.MODE_FUN} or "
                 f"{C.MODE_RES}, received {mode} instead."
             )
+
+    def _create_fixed_mask(self, x_fixed_indices: Sequence[int]):
+        """Create a mask for fixed parameters."""
+        self.fixed_mask = np.zeros(len(self._prior_list), dtype=bool)
+        for prior in self._prior_list:
+            if prior["index"] in x_fixed_indices:
+                self.fixed_mask[prior["index"]] = False
+            else:
+                self.fixed_mask[prior["index"]] = True
+        return
+
+    @property
+    def prior_list(self) -> list[dict]:
+        """Return the list of priors for fixed parameters."""
+        return [
+            self._prior_list[i]
+            for i in range(len(self._prior_list))
+            if self.fixed_mask[i]
+        ]
+
+    def update_from_problem(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ):
+        """
+        Handle fixed parameters.
+
+        Later, the objective will be given parameter vectors x of dimension
+        dim, which have to be filled up with fixed parameter values to form
+        a vector of dimension dim_full >= dim. This vector is then used to
+        compute function value and derivatives. The derivatives must later
+        be reduced again to dimension dim.
+
+        This is so as to make the fixing of parameters transparent to the
+        caller.
+
+        The methods preprocess, postprocess are overwritten for the above
+        functionality, respectively.
+
+        Parameters
+        ----------
+        dim_full:
+            Dimension of the full vector including fixed parameters.
+        x_free_indices:
+            Vector containing the indices (zero-based) of free parameters
+            (complimentary to x_fixed_indices).
+        x_fixed_indices:
+            Vector containing the indices (zero-based) of parameter components
+            that are not to be optimized.
+        x_fixed_vals:
+            Vector of the same length as x_fixed_indices, containing the values
+            of the fixed parameters.
+        """
+        self.pre_post_processor = FixedParametersProcessor(
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals,
+        )
+        self._create_fixed_mask(x_fixed_indices)
 
     def neg_log_density(self, x):
         """Evaluate the negative log-density at x."""
