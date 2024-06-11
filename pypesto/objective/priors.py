@@ -160,23 +160,12 @@ class NegLogParameterPriors(ObjectiveBase):
                 f"{C.MODE_RES}, received {mode} instead."
             )
 
-    def _create_fixed_mask(self, x_fixed_indices: Sequence[int]):
-        """Create a mask for fixed parameters."""
-        self.fixed_mask = np.zeros(len(self._prior_list), dtype=bool)
-        for prior in self._prior_list:
-            if prior["index"] in x_fixed_indices:
-                self.fixed_mask[prior["index"]] = False
-            else:
-                self.fixed_mask[prior["index"]] = True
-        return
-
-    @property
-    def prior_list(self) -> list[dict]:
-        """Return the list of priors for fixed parameters."""
-        return [
-            self._prior_list[i]
-            for i in range(len(self._prior_list))
-            if self.fixed_mask[i]
+    def _reset_priors(self, excluded_indices: Sequence[int] | None = None):
+        """Reset the list of priors."""
+        self.prior_list = [
+            prior
+            for prior_index, prior in enumerate(self._prior_list_full)
+            if prior_index not in (excluded_indices or [])
         ]
 
     def update_from_problem(
