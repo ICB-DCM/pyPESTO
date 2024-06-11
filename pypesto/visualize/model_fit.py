@@ -5,6 +5,7 @@ Currently only for PEtab problems.
 """
 
 import copy
+import logging
 from collections.abc import Sequence
 from typing import Union
 
@@ -18,7 +19,8 @@ from amici.petab.conditions import fill_in_parameters
 from amici.petab.simulations import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
-from ..C import AMICI_MODEL, CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
+from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
+from ..objective import AggregatedObjective, AmiciObjective, NegLogPriors
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
@@ -28,6 +30,8 @@ from .spline_approximation import _add_spline_mapped_simulations_to_model_fit
 AmiciModel = Union["amici.Model", "amici.ModelPtr"]
 
 __all__ = ["visualize_optimized_model_fit", "time_trajectory_model"]
+
+logger = logging.getLogger(__name__)
 
 
 def visualize_optimized_model_fit(
@@ -76,7 +80,7 @@ def visualize_optimized_model_fit(
     amici_models, objective_results = [], []
 
     # get amici model
-    if hasattr(pypesto_problem.objective, AMICI_MODEL):
+    if isinstance(pypesto_problem.objective, AmiciObjective):
         x = result.optimize_result.list[start_index]["x"][
             pypesto_problem.x_free_indices
         ]
@@ -85,15 +89,22 @@ def visualize_optimized_model_fit(
             pypesto_problem.objective(x, return_dict=True)
         )
         amici_models.append(pypesto_problem.objective.amici_model)
-    elif hasattr(pypesto_problem.objective, "_objectives"):
+    elif isinstance(pypesto_problem.objective, AggregatedObjective):
         # iterate over objectives to find the amici models in the AggregatedObjective
         x = result.optimize_result.list[start_index]["x"]
 
         for objective in pypesto_problem.objective._objectives:
-            if hasattr(objective, AMICI_MODEL):
+            if isinstance(objective, AmiciObjective):
                 amici_models.append(objective.amici_model)
                 # objective expects full vector here
                 objective_results.append(objective(x, return_dict=True))
+            elif isinstance(objective, NegLogPriors):
+                # NegLogPriors are not used for simulation
+                pass
+            else:
+                logger.warning(
+                    f"Objective {objective} is not an 'AmiciObjective' or a 'NegLogPriors' and hence will be ignored."
+                )
 
         if len(amici_models) == 0:
             raise ValueError(
@@ -101,7 +112,8 @@ def visualize_optimized_model_fit(
             )
     else:
         raise ValueError(
-            "'visualize_optimized_model_fit' only works with an amici model. None were found."
+            "'visualize_optimized_model_fit' only works with an 'AmiciObjective' or"
+            " an 'AggregatedObjective' containing an 'AmiciObjective'."
         )
 
     axes_list, simulation_df_list = [], []
