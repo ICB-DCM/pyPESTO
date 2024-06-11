@@ -68,11 +68,8 @@ class NegLogParameterPriors(ObjectiveBase):
         x_names:
             Sequence of parameter names (optional).
         """
-        self._prior_list = prior_list
-        x_fixed_indices = (
-            x_fixed_indices if x_fixed_indices is not None else []
-        )
-        self._create_fixed_mask(x_fixed_indices)
+        self._prior_list_full = prior_list
+        self._reset_priors(excluded_indices=x_fixed_indices)
         super().__init__(x_names)
 
     def call_unprocessed(
