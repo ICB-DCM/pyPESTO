@@ -210,7 +210,7 @@ class NegLogParameterPriors(ObjectiveBase):
             x_fixed_indices=x_fixed_indices,
             x_fixed_vals=x_fixed_vals,
         )
-        self._create_fixed_mask(x_fixed_indices)
+        self._reset_priors(excluded_indices=x_fixed_indices)
 
     def neg_log_density(self, x):
         """Evaluate the negative log-density at x."""
