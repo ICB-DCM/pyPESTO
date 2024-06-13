@@ -20,7 +20,12 @@ from amici.petab.simulations import rdatas_to_simulation_df
 from petab.visualize import plot_problem
 
 from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
-from ..objective import AggregatedObjective, AmiciObjective, NegLogPriors
+from ..objective import (
+    AggregatedObjective,
+    AmiciObjective,
+    NegLogParameterPriors,
+    NegLogPriors,
+)
 from ..petab.importer import get_petab_non_quantitative_data_types
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
@@ -98,12 +103,15 @@ def visualize_optimized_model_fit(
                 amici_models.append(objective.amici_model)
                 # objective expects full vector here
                 objective_results.append(objective(x, return_dict=True))
-            elif isinstance(objective, NegLogPriors):
-                # NegLogPriors are not used for simulation
+            elif isinstance(
+                objective, Union[NegLogParameterPriors, NegLogPriors]
+            ):
+                # priors are not used for simulation
                 pass
             else:
                 logger.warning(
-                    f"Objective {objective} is not an 'AmiciObjective' or a 'NegLogPriors' and hence will be ignored."
+                    f"Objective {objective} is not an 'AmiciObjective' "
+                    f"or a 'NegLogParameterPriors'/'NegLogPriors' and hence will be ignored."
                 )
 
         if len(amici_models) == 0:
