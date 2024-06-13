@@ -295,9 +295,7 @@ class PetabImporterRR:
                         i, prior_type_entry, prior_params, scale
                     )
                 )
-        return NegLogParameterPriors(
-            prior_list, x_fixed_indices=self.petab_problem.x_fixed_indices
-        )
+        return NegLogParameterPriors(prior_list)
 
     def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
