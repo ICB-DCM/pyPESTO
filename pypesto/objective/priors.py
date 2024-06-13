@@ -164,8 +164,8 @@ class NegLogParameterPriors(ObjectiveBase):
         """Reset the list of priors."""
         self.prior_list = [
             prior
-            for prior in self._prior_list_full
-            if prior["index"] not in (excluded_indices or [])
+            for prior_index, prior in enumerate(self._prior_list_full)
+            if prior_index not in (excluded_indices or [])
         ]
 
     def update_from_problem(
