@@ -6,6 +6,7 @@ depends on the noise model specified in the provided PEtab problem.
 """
 from __future__ import annotations
 
+import logging
 import numbers
 import re
 from collections.abc import Iterable
@@ -31,6 +32,8 @@ from ..priors import NegLogParameterPriors, get_parameter_prior_dict
 from .road_runner import RoadRunnerObjective
 from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData
+
+logger = logging.getLogger(__name__)
 
 
 class PetabImporterRR:
@@ -279,6 +282,13 @@ class PetabImporterRR:
                 isinstance(prior_type_entry, str)
                 and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
             ):
+                # check if parameter for which prior is defined is a fixed parameter
+                if x_id in self.petab_problem.x_fixed_ids:
+                    logger.warning(
+                        f"Parameter {x_id} is marked as fixed but has a "
+                        f"prior defined. This might be unintended."
+                    )
+
                 prior_params = [
                     float(param)
                     for param in self.petab_problem.parameter_df.loc[

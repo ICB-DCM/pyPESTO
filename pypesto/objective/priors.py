@@ -1,7 +1,7 @@
 import logging
 import math
 from collections.abc import Sequence
-from typing import Callable, Optional, Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -51,7 +51,7 @@ class NegLogParameterPriors(ObjectiveBase):
     def __init__(
         self,
         prior_list: list[dict],
-        x_names: Optional[Sequence[str]] = None,
+        x_names: Sequence[str] = None,
     ):
         """
         Initialize.
