@@ -9,7 +9,6 @@ from .. import C
 from .aggregated import AggregatedObjective
 from .base import ResultDict
 from .function import ObjectiveBase
-from .pre_post_process import FixedParametersProcessor
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +51,6 @@ class NegLogParameterPriors(ObjectiveBase):
     def __init__(
         self,
         prior_list: list[dict],
-        x_fixed_indices: Optional[Sequence[int]] = None,
         x_names: Optional[Sequence[str]] = None,
     ):
         """
@@ -63,13 +61,10 @@ class NegLogParameterPriors(ObjectiveBase):
         prior_list:
             List of dicts containing the individual parameter priors.
             Format see above.
-        x_fixed_indices:
-            Indices of fixed parameters. Fixed parameters are not contributing to the objective.
         x_names:
             Sequence of parameter names (optional).
         """
-        self._prior_list_full = prior_list
-        self._reset_priors(excluded_indices=x_fixed_indices)
+        self.prior_list = prior_list
         super().__init__(x_names)
 
     def call_unprocessed(
@@ -159,58 +154,6 @@ class NegLogParameterPriors(ObjectiveBase):
                 f"Invalid input: Expected mode {C.MODE_FUN} or "
                 f"{C.MODE_RES}, received {mode} instead."
             )
-
-    def _reset_priors(self, excluded_indices: Sequence[int] | None = None):
-        """Reset the list of priors."""
-        self.prior_list = [
-            prior
-            for prior_index, prior in enumerate(self._prior_list_full)
-            if prior_index not in (excluded_indices or [])
-        ]
-
-    def update_from_problem(
-        self,
-        dim_full: int,
-        x_free_indices: Sequence[int],
-        x_fixed_indices: Sequence[int],
-        x_fixed_vals: Sequence[float],
-    ):
-        """
-        Handle fixed parameters.
-
-        Later, the objective will be given parameter vectors x of dimension
-        dim, which have to be filled up with fixed parameter values to form
-        a vector of dimension dim_full >= dim. This vector is then used to
-        compute function value and derivatives. The derivatives must later
-        be reduced again to dimension dim.
-
-        This is so as to make the fixing of parameters transparent to the
-        caller.
-
-        The methods preprocess, postprocess are overwritten for the above
-        functionality, respectively.
-
-        Parameters
-        ----------
-        dim_full:
-            Dimension of the full vector including fixed parameters.
-        x_free_indices:
-            Vector containing the indices (zero-based) of free parameters
-            (complimentary to x_fixed_indices).
-        x_fixed_indices:
-            Vector containing the indices (zero-based) of parameter components
-            that are not to be optimized.
-        x_fixed_vals:
-            Vector of the same length as x_fixed_indices, containing the values
-            of the fixed parameters.
-        """
-        self.pre_post_processor = FixedParametersProcessor(
-            dim_full=dim_full,
-            x_free_indices=x_free_indices,
-            x_fixed_indices=x_fixed_indices,
-            x_fixed_vals=x_fixed_vals,
-        )
-        self._reset_priors(excluded_indices=x_fixed_indices)
 
     def neg_log_density(self, x):
         """Evaluate the negative log-density at x."""
