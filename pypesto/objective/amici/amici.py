@@ -175,21 +175,6 @@ class AmiciObjective(ObjectiveBase):
             )
         self.parameter_mapping = parameter_mapping
 
-        # Check that we can compute the max_sensi_order sensitivities
-        #  based on the supplied model. If not, raise an error.
-        # If max_sensi_order is not set, set it if necessary
-        if (self.max_sensi_order is None or self.max_sensi_order > 0) and (
-            missing_sensitivities := self._get_missing_sensitivities()
-        ):
-            if self.max_sensi_order is not None:
-                raise ValueError(
-                    f"`max_sensi_order` is {self.max_sensi_order}`, but "
-                    "the provided model does not support computing "
-                    "sensitivities w.r.t. the following parameters: "
-                    f"{missing_sensitivities}."
-                )
-            self.max_sensi_order = 0
-
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
         if (
@@ -256,7 +241,7 @@ class AmiciObjective(ObjectiveBase):
         but aren't available missing.
         """
         required_sensitivities = set()
-        objective_parameters = set(self.x_ids)
+        objective_parameters = set(self.x_names)
         # resolve parameter mapping: collect all model parameters that depend
         #  on the optimization parameters
         for condition_mapping in self.parameter_mapping:
@@ -498,6 +483,18 @@ class AmiciObjective(ObjectiveBase):
             A dict containing the results.
         """
         import amici
+
+        # Check that we can compute the requested sensitivities
+        #  based on the supplied model. If not, raise an error.
+        #  This has to be done on every call, since the preprocessor may
+        #  change the parameters w.r.t. which sensitivities are required.
+        if max(sensi_orders) > 0 and (
+            missing_sensitivities := self._get_missing_sensitivities()
+        ):
+            raise ValueError(
+                f"Requested sensitivities w.r.t. parameters that can't "
+                f"be computed by the current model: {missing_sensitivities}."
+            )
 
         x_dct = self.par_arr_to_dct(x)
 
