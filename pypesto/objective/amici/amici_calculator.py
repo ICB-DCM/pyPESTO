@@ -92,7 +92,7 @@ class AmiciCalculator:
         # set order in solver
         sensi_order = 0
         if sensi_orders:
-            sensi_order = max(sensi_orders)
+            sensi_order = max(0, *sensi_orders)
 
         if sensi_order == 2 and fim_for_hess:
             # we use the FIM
