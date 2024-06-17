@@ -477,7 +477,7 @@ class PetabImporter(AmiciObjectBuilder):
             )
         )
 
-        par_ids = self.petab_problem.x_ids
+        par_ids = self.petab_problem.x_free_ids
 
         # fill in dummy parameters (this is needed since some objective
         #  initialization e.g. checks for preeq parameters)
