@@ -447,6 +447,9 @@ class PetabImporter(AmiciObjectBuilder):
         Returns
         -------
         A :class:`pypesto.objective.AmiciObjective` for the model and the data.
+        This object is expected to be passed to
+        :class:`PetabImporter.create_problem` to correctly handle fixed
+        parameters.
         """
         # get simulation conditions
         simulation_conditions = petab.get_simulation_conditions(
