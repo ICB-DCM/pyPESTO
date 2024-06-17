@@ -488,7 +488,7 @@ class AmiciObjective(ObjectiveBase):
         #  based on the supplied model. If not, raise an error.
         #  This has to be done on every call, since the preprocessor may
         #  change the parameters w.r.t. which sensitivities are required.
-        if max(sensi_orders) > 0 and (
+        if max(0, *sensi_orders) > 0 and (
             missing_sensitivities := self._get_missing_sensitivities()
         ):
             raise ValueError(
