@@ -4,6 +4,7 @@ import os
 import tempfile
 from collections import OrderedDict
 from collections.abc import Sequence
+from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -174,6 +175,21 @@ class AmiciObjective(ObjectiveBase):
             )
         self.parameter_mapping = parameter_mapping
 
+        # Check that we can compute the max_sensi_order sensitivities
+        #  based on the supplied model. If not, raise an error.
+        # If max_sensi_order is not set, set it if necessary
+        if (self.max_sensi_order is None or self.max_sensi_order > 0) and (
+            missing_sensitivities := self._get_missing_sensitivities()
+        ):
+            if self.max_sensi_order is not None:
+                raise ValueError(
+                    f"`max_sensi_order` is {self.max_sensi_order}`, but "
+                    "the provided model does not support computing "
+                    "sensitivities w.r.t. the following parameters: "
+                    f"{missing_sensitivities}."
+                )
+            self.max_sensi_order = 0
+
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
         if (
@@ -232,6 +248,33 @@ class AmiciObjective(ObjectiveBase):
         # Custom (condition-specific) timepoints. See the
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
+
+    def _get_missing_sensitivities(self) -> set[str]:
+        """Get the model parameters for which sensitivities are missing.
+
+        Get the model parameters w.r.t. which sensitivities are required,
+        but aren't available missing.
+        """
+        required_sensitivities = set()
+        objective_parameters = set(self.x_ids)
+        # resolve parameter mapping: collect all model parameters that depend
+        #  on the optimization parameters
+        for condition_mapping in self.parameter_mapping:
+            required_sensitivities.update(
+                model_par
+                for model_par, opt_par in chain(
+                    condition_mapping.map_preeq_fix.items(),
+                    condition_mapping.map_sim_fix.items(),
+                    condition_mapping.map_sim_var.items(),
+                )
+                # we assume that the values in the parameter mapping are
+                #  either numeric values or parameter ID strings
+                if opt_par in objective_parameters
+            )
+
+        # All parameters w.r.t. which we can compute sensitivities are the
+        # non-fixed parameters
+        return required_sensitivities - set(self.amici_model.getParameterIds())
 
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
