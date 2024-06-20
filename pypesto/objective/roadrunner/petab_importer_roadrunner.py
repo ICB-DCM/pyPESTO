@@ -211,15 +211,41 @@ class PetabImporterRR:
                 preeq_id = condition.get(PREEQUILIBRATION_CONDITION_ID)
                 sim_id = condition.get(SIMULATION_CONDITION_ID)
                 if preeq_id:
-                    mapping_per_condition[0][
-                        override
-                    ] = self.petab_problem.condition_df.loc[preeq_id, override]
-                    mapping_per_condition[2][override] = "lin"
+                    parameter_id_or_value = (
+                        self.petab_problem.condition_df.loc[preeq_id, override]
+                    )
+                    mapping_per_condition[0][override] = parameter_id_or_value
+                    if isinstance(parameter_id_or_value, str):
+                        mapping_per_condition[2][
+                            override
+                        ] = self.petab_problem.parameter_df.loc[
+                            parameter_id_or_value, "parameterScale"
+                        ]
+                    elif isinstance(parameter_id_or_value, numbers.Number):
+                        mapping_per_condition[2][override] = "lin"
+                    else:
+                        raise ValueError(
+                            "The parameter value in the condition table "
+                            "is not a number or a parameter_id."
+                        )
                 if sim_id:
-                    mapping_per_condition[1][
-                        override
-                    ] = self.petab_problem.condition_df.loc[sim_id, override]
-                    mapping_per_condition[3][override] = "lin"
+                    parameter_id_or_value = (
+                        self.petab_problem.condition_df.loc[sim_id, override]
+                    )
+                    mapping_per_condition[1][override] = parameter_id_or_value
+                    if isinstance(parameter_id_or_value, str):
+                        mapping_per_condition[3][
+                            override
+                        ] = self.petab_problem.parameter_df.loc[
+                            parameter_id_or_value, "parameterScale"
+                        ]
+                    elif isinstance(parameter_id_or_value, numbers.Number):
+                        mapping_per_condition[3][override] = "lin"
+                    else:
+                        raise ValueError(
+                            "The parameter value in the condition table "
+                            "is not a number or a parameter_id."
+                        )
         return mapping
 
     def create_objective(
