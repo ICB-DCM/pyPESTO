@@ -65,7 +65,7 @@ class CsvHistory(CountHistoryBase):
             trace = pd.read_csv(self.file, header=[0, 1], index_col=0)
             # replace 'nan' in cols with np.NAN
             cols = pd.DataFrame(trace.columns.to_list())
-            cols[cols == "nan"] = np.NaN
+            cols[cols == "nan"] = np.nan
             trace.columns = pd.MultiIndex.from_tuples(
                 cols.to_records(index=False).tolist()
             )
@@ -78,11 +78,11 @@ class CsvHistory(CountHistoryBase):
             self._update_counts_from_trace()
 
     def _update_counts_from_trace(self) -> None:
-        self._n_fval = self._trace[(N_FVAL, np.NaN)].max()
-        self._n_grad = self._trace[(N_GRAD, np.NaN)].max()
-        self._n_hess = self._trace[(N_HESS, np.NaN)].max()
-        self._n_res = self._trace[(N_RES, np.NaN)].max()
-        self._n_sres = self._trace[(N_SRES, np.NaN)].max()
+        self._n_fval = self._trace[(N_FVAL, np.nan)].max()
+        self._n_grad = self._trace[(N_GRAD, np.nan)].max()
+        self._n_hess = self._trace[(N_HESS, np.nan)].max()
+        self._n_res = self._trace[(N_RES, np.nan)].max()
+        self._n_sres = self._trace[(N_SRES, np.nan)].max()
 
     def update(
         self,

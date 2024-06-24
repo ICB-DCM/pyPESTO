@@ -60,7 +60,7 @@ def optimizer_convergence(
                 2,
             )
             if grad is not None
-            else np.NaN
+            else np.nan
         )
         for grad in result.optimize_result.grad
     ]
