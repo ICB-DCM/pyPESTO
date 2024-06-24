@@ -58,7 +58,7 @@ def visualize_estimated_observable_mapping(
     pypesto_result:
         The pyPESTO result object from optimization.
     pypesto_problem:
-        The pyPESTO problem.
+        The pyPESTO problem. It should contain the objective object that was used for estimation.
     start_index:
         The observable mapping from this start's optimized vector will be plotted.
     axes:
@@ -77,6 +77,20 @@ def visualize_estimated_observable_mapping(
     if not isinstance(pypesto_problem, HierarchicalProblem):
         raise ValueError(
             "Only hierarchical problems contain estimated observable mappings. Please provide a hierarchical problem."
+        )
+
+    # Check if the pyPESTO problem contains an objective.
+    if pypesto_problem.objective is None:
+        raise ValueError(
+            "The problem must contain the corresponding objective that was used for estimation."
+        )
+
+    # Check the calculator is the InnerCalculatorCollector.
+    if not isinstance(
+        pypesto_problem.objective.calculator, InnerCalculatorCollector
+    ):
+        raise ValueError(
+            "The calculator must be an instance of the InnerCalculatorCollector."
         )
 
     amici_model = pypesto_problem.objective.amici_model
@@ -161,7 +175,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     pypesto_result:
         The pyPESTO result object from optimization.
     pypesto_problem:
-        The pyPESTO problem.
+        The pyPESTO problem. It should contain the objective object that was used for estimation.
     start_index:
         The observable mapping from this start's optimized vector will be plotted.
     axes:
