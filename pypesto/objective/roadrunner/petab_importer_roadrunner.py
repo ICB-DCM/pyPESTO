@@ -24,6 +24,8 @@ from petab.C import (
 from petab.models.sbml_model import SbmlModel
 from petab.parameter_mapping import ParMappingDictQuadruple
 
+import pypesto.C
+
 from ...petab.importer import PetabStartpoints
 from ...problem import Problem
 from ...startpoint import StartpointMethod
@@ -219,14 +221,14 @@ class PetabImporterRR:
                         mapping_per_condition[2][
                             override
                         ] = self.petab_problem.parameter_df.loc[
-                            parameter_id_or_value, "parameterScale"
+                            parameter_id_or_value, petab.PARAMETER_SCALE
                         ]
                     elif isinstance(parameter_id_or_value, numbers.Number):
-                        mapping_per_condition[2][override] = "lin"
+                        mapping_per_condition[2][override] = pypesto.C.LIN
                     else:
                         raise ValueError(
                             "The parameter value in the condition table "
-                            "is not a number or a parameter_id."
+                            "is not a number or a parameter ID."
                         )
                 if sim_id:
                     parameter_id_or_value = (
@@ -237,14 +239,14 @@ class PetabImporterRR:
                         mapping_per_condition[3][
                             override
                         ] = self.petab_problem.parameter_df.loc[
-                            parameter_id_or_value, "parameterScale"
+                            parameter_id_or_value, petab.PARAMETER_SCALE
                         ]
                     elif isinstance(parameter_id_or_value, numbers.Number):
-                        mapping_per_condition[3][override] = "lin"
+                        mapping_per_condition[3][override] = pypesto.C.LIN
                     else:
                         raise ValueError(
                             "The parameter value in the condition table "
-                            "is not a number or a parameter_id."
+                            "is not a number or a parameter ID."
                         )
         return mapping
 
