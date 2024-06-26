@@ -6,6 +6,7 @@ depends on the noise model specified in the provided PEtab problem.
 """
 from __future__ import annotations
 
+import logging
 import numbers
 import re
 from collections.abc import Iterable
@@ -23,6 +24,8 @@ from petab.C import (
 from petab.models.sbml_model import SbmlModel
 from petab.parameter_mapping import ParMappingDictQuadruple
 
+import pypesto.C
+
 from ...petab.importer import PetabStartpoints
 from ...problem import Problem
 from ...startpoint import StartpointMethod
@@ -31,6 +34,8 @@ from ..priors import NegLogParameterPriors, get_parameter_prior_dict
 from .road_runner import RoadRunnerObjective
 from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData
+
+logger = logging.getLogger(__name__)
 
 
 class PetabImporterRR:
@@ -208,15 +213,41 @@ class PetabImporterRR:
                 preeq_id = condition.get(PREEQUILIBRATION_CONDITION_ID)
                 sim_id = condition.get(SIMULATION_CONDITION_ID)
                 if preeq_id:
-                    mapping_per_condition[0][
-                        override
-                    ] = self.petab_problem.condition_df.loc[preeq_id, override]
-                    mapping_per_condition[2][override] = "lin"
+                    parameter_id_or_value = (
+                        self.petab_problem.condition_df.loc[preeq_id, override]
+                    )
+                    mapping_per_condition[0][override] = parameter_id_or_value
+                    if isinstance(parameter_id_or_value, str):
+                        mapping_per_condition[2][
+                            override
+                        ] = self.petab_problem.parameter_df.loc[
+                            parameter_id_or_value, petab.PARAMETER_SCALE
+                        ]
+                    elif isinstance(parameter_id_or_value, numbers.Number):
+                        mapping_per_condition[2][override] = pypesto.C.LIN
+                    else:
+                        raise ValueError(
+                            "The parameter value in the condition table "
+                            "is not a number or a parameter ID."
+                        )
                 if sim_id:
-                    mapping_per_condition[1][
-                        override
-                    ] = self.petab_problem.condition_df.loc[sim_id, override]
-                    mapping_per_condition[3][override] = "lin"
+                    parameter_id_or_value = (
+                        self.petab_problem.condition_df.loc[sim_id, override]
+                    )
+                    mapping_per_condition[1][override] = parameter_id_or_value
+                    if isinstance(parameter_id_or_value, str):
+                        mapping_per_condition[3][
+                            override
+                        ] = self.petab_problem.parameter_df.loc[
+                            parameter_id_or_value, petab.PARAMETER_SCALE
+                        ]
+                    elif isinstance(parameter_id_or_value, numbers.Number):
+                        mapping_per_condition[3][override] = pypesto.C.LIN
+                    else:
+                        raise ValueError(
+                            "The parameter value in the condition table "
+                            "is not a number or a parameter ID."
+                        )
         return mapping
 
     def create_objective(
@@ -279,6 +310,13 @@ class PetabImporterRR:
                 isinstance(prior_type_entry, str)
                 and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
             ):
+                # check if parameter for which prior is defined is a fixed parameter
+                if x_id in self.petab_problem.x_fixed_ids:
+                    logger.warning(
+                        f"Parameter {x_id} is marked as fixed but has a "
+                        f"prior defined. This might be unintended."
+                    )
+
                 prior_params = [
                     float(param)
                     for param in self.petab_problem.parameter_df.loc[

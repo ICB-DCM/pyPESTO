@@ -1139,6 +1139,55 @@ def test_visualize_optimized_model_fit():
 
 
 @close_fig
+def test_visualize_optimized_model_fit_aggregated():
+    """Test pypesto.visualize.visualize_optimized_model_fit with an AggregatedObjective"""
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(
+        os.path.join(current_path, "..", "..", "doc", "example")
+    )
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(
+            dir_path, "conversion_reaction", "conversion_reaction.yaml"
+        )
+    )
+
+    # add prior to the problem
+    petab_problem.parameter_df["objectivePriorType"] = "uniform"
+    objectivePriorParameters = [
+        f"{lb};{ub}"
+        for lb, ub in zip(
+            petab_problem.parameter_df.lowerBound,
+            petab_problem.parameter_df.upperBound,
+        )
+    ]
+    petab_problem.parameter_df[
+        "objectivePriorParameters"
+    ] = objectivePriorParameters
+
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+    # check if the objective is an AggregatedObjective
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        progress_bar=False,
+    )
+
+    # test call of visualize_optimized_model_fit
+    visualize_optimized_model_fit(
+        petab_problem=petab_problem,
+        result=result,
+        pypesto_problem=problem,
+    )
+
+
+@close_fig
 def test_time_trajectory_model():
     """Test pypesto.visualize.time_trajectory_model"""
     current_path = os.path.dirname(os.path.realpath(__file__))
