@@ -80,3 +80,6 @@ class HierarchicalProblem(Problem):
         self.semiquant_observable_ids = (
             self.objective.calculator.semiquant_observable_ids
         )
+        self.relative_observable_ids = (
+            self.objective.calculator.relative_observable_ids
+        )
