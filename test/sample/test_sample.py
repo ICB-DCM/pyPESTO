@@ -93,7 +93,7 @@ def rosenbrock_problem():
 
 
 def create_petab_problem():
-    import petab
+    import petab.v1 as petab
 
     import pypesto.petab
 

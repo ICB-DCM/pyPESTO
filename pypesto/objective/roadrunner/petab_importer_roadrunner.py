@@ -14,15 +14,15 @@ from pathlib import Path
 from typing import Any
 
 import libsbml
-import petab
+import petab.v1
 import roadrunner
-from petab.C import (
+from petab.v1.C import (
     OBSERVABLE_FORMULA,
     PREEQUILIBRATION_CONDITION_ID,
     SIMULATION_CONDITION_ID,
 )
-from petab.models.sbml_model import SbmlModel
-from petab.parameter_mapping import ParMappingDictQuadruple
+from petab.v1.models.sbml_model import SbmlModel
+from petab.v1.parameter_mapping import ParMappingDictQuadruple
 
 import pypesto.C
 

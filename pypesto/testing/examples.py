@@ -14,7 +14,7 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
     Creates a modified version of the Boehm_JProteomeRes2014 benchmark problem,
     suitable for hierarchical optimization.
     """
-    import petab
+    import petab.v1 as petab
     from benchmark_models_petab import get_problem
 
     from pypesto.C import PARAMETER_TYPE

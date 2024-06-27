@@ -19,15 +19,15 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-import petab
-from petab.C import (
+import petab.v1 as petab
+from petab.v1.C import (
     ESTIMATE,
     NOISE_PARAMETERS,
     OBSERVABLE_ID,
     PREEQUILIBRATION_CONDITION_ID,
     SIMULATION_CONDITION_ID,
 )
-from petab.models import MODEL_TYPE_SBML
+from petab.v1.models import MODEL_TYPE_SBML
 
 from ..C import (
     CENSORED,
