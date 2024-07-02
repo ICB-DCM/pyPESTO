@@ -20,6 +20,8 @@ from .base import ObjectiveBase, ResultDict
 class AggregatedObjective(ObjectiveBase):
     """Aggregates multiple objectives into one objective."""
 
+    share_return_dict = True
+
     def __init__(
         self,
         objectives: Sequence[ObjectiveBase],
@@ -92,6 +94,7 @@ class AggregatedObjective(ObjectiveBase):
         sensi_orders: tuple[int, ...],
         mode: ModeType,
         kwargs_list: Sequence[dict[str, Any]] = None,
+        return_dict: bool = False,
         **kwargs,
     ) -> ResultDict:
         """
@@ -113,6 +116,9 @@ class AggregatedObjective(ObjectiveBase):
                 "The length of `kwargs_list` must match the number of "
                 "objectives you are aggregating."
             )
+        for objective_, objective_kwargs in zip(self._objectives, kwargs_list):
+            if objective_.share_return_dict:
+                objective_kwargs["return_dict"] = return_dict
         return aggregate_results(
             [
                 objective.call_unprocessed(

@@ -45,7 +45,12 @@ class ObjectiveBase(ABC):
     pre_post_processor:
         Preprocess input values to and postprocess output values from
         __call__. Configured in `update_from_problem()`.
+    share_return_dict:
+        Whether the objective uses `return_dict` in its `call_unprocessed`
+        method.
     """
+
+    share_return_dict: bool = False
 
     def __init__(
         self,
@@ -178,6 +183,8 @@ class ObjectiveBase(ABC):
         x_full = self.pre_post_processor.preprocess(x=x)
 
         # compute result
+        if self.share_return_dict:
+            kwargs["return_dict"] = return_dict
         result = self.call_unprocessed(
             x=x_full, sensi_orders=sensi_orders, mode=mode, **kwargs
         )

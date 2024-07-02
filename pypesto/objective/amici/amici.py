@@ -26,7 +26,7 @@ from ...history import (
     HistoryTypeError,
     MemoryHistory,
 )
-from ..base import ObjectiveBase, ResultDict
+from ..base import ObjectiveBase
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
     create_identity_parameter_mapping,
@@ -67,6 +67,8 @@ class AmiciObjectBuilder(abc.ABC):
 
 class AmiciObjective(ObjectiveBase):
     """Allows to create an objective directly from an amici model."""
+
+    share_return_dict = True
 
     def __init__(
         self,
@@ -415,28 +417,6 @@ class AmiciObjective(ObjectiveBase):
         """See `ObjectiveBase` documentation."""
         return mode in [MODE_FUN, MODE_RES]
 
-    def __call__(
-        self,
-        x: np.ndarray,
-        sensi_orders: tuple[int, ...] = (0,),
-        mode: ModeType = MODE_FUN,
-        return_dict: bool = False,
-        **kwargs,
-    ) -> Union[float, np.ndarray, tuple, ResultDict]:
-        """See `ObjectiveBase` documentation."""
-        import amici
-
-        # Use AMICI full reporting if amici.ReturnDatas are returned and no
-        #  other reporting mode was set
-        if (
-            return_dict
-            and self.amici_reporting is None
-            and "amici_reporting" not in kwargs
-        ):
-            kwargs["amici_reporting"] = amici.RDataReporting.full
-
-        return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
-
     def call_unprocessed(
         self,
         x: np.ndarray,
@@ -445,6 +425,7 @@ class AmiciObjective(ObjectiveBase):
         edatas: Sequence["amici.ExpData"] = None,
         parameter_mapping: "ParameterMapping" = None,
         amici_reporting: Optional["amici.RDataReporting"] = None,
+        return_dict: bool = False,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -458,18 +439,23 @@ class AmiciObjective(ObjectiveBase):
 
         x_dct = self.par_arr_to_dct(x)
 
-        # only ask amici to compute required quantities
         amici_reporting = (
             self.amici_reporting
             if amici_reporting is None
             else amici_reporting
         )
         if amici_reporting is None:
-            amici_reporting = (
-                amici.RDataReporting.likelihood
-                if mode == MODE_FUN
-                else amici.RDataReporting.residuals
-            )
+            if return_dict:
+                # Use AMICI full reporting if amici.ReturnDatas are returned
+                # and no other reporting mode was set
+                amici_reporting = amici.RDataReporting.full
+            else:
+                # Else, only ask amici to compute required quantities
+                amici_reporting = (
+                    amici.RDataReporting.likelihood
+                    if mode == MODE_FUN
+                    else amici.RDataReporting.residuals
+                )
         self.amici_solver.setReturnDataReportingMode(amici_reporting)
 
         # update steady state
