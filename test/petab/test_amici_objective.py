@@ -7,7 +7,7 @@ import os
 import amici
 import benchmark_models_petab as models
 import numpy as np
-import petab
+import petab.v1 as petab
 import pytest
 
 import pypesto

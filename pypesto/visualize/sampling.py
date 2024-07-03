@@ -816,7 +816,7 @@ def sampling_prediction_trajectories(
     # Handle data
     grouped_measurements = {}
     if measurement_df is not None:
-        import petab
+        import petab.v1 as petab
 
         for condition_id in condition_ids:
             if petab.PARAMETER_SEPARATOR in condition_id:

@@ -6,7 +6,7 @@ import time
 import amici
 import numpy as np
 import pandas as pd
-import petab
+import petab.v1 as petab
 
 import pypesto
 from pypesto.C import (
