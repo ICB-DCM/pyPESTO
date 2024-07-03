@@ -83,7 +83,9 @@ class AmiciObjective(ObjectiveBase):
         n_threads: Optional[int] = 1,
         fim_for_hess: Optional[bool] = True,
         amici_object_builder: Optional[AmiciObjectBuilder] = None,
-        calculator: Optional[AmiciCalculator] = None,
+        calculator: Optional[
+            Union[AmiciCalculator, "InnerCalculatorCollector"]  # noqa: F821
+        ] = None,
         amici_reporting: Optional["amici.RDataReporting"] = None,
     ):
         """
