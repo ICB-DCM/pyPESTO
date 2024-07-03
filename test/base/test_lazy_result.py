@@ -81,3 +81,4 @@ class TestLazyOptimizerResult(unittest.TestCase):
         # Check if the optimize results are instances of OptimizerResult
         for opt_result in result.optimize_result:
             self.assertIsInstance(opt_result, OptimizerResult)
+            self.assertNotIsInstance(opt_result, LazyOptimizerResult)            
