@@ -43,8 +43,8 @@ from .parameter import OrdinalParameter
 
 try:
     import amici
-    import petab
-    from petab.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
+    import petab.v1 as petab
+    from petab.v1.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
 except ImportError:
     pass
 
