@@ -5,7 +5,7 @@ import os
 
 import benchmark_models_petab as models
 import numpy as np
-import petab
+import petab.v1 as petab
 import petabtests
 import pytest
 

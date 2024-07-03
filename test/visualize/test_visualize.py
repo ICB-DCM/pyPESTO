@@ -6,7 +6,7 @@ from functools import wraps
 
 import matplotlib.pyplot as plt
 import numpy as np
-import petab
+import petab.v1 as petab
 import pytest
 import scipy.optimize as so
 

@@ -8,8 +8,8 @@ from typing import Optional, Union
 
 import numpy as np
 import roadrunner
-from petab import Problem as PetabProblem
-from petab.parameter_mapping import ParMappingDictQuadruple
+from petab.v1 import Problem as PetabProblem
+from petab.v1.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import MODE_FUN, MODE_RES, ROADRUNNER_INSTANCE, X_NAMES, ModeType
 from ..base import ObjectiveBase
@@ -96,6 +96,7 @@ class RoadRunnerObjective(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool,
         edatas: Optional[Sequence[ExpData]] = None,
         parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
     ) -> dict:
