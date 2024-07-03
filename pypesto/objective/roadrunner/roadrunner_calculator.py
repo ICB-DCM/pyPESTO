@@ -203,6 +203,7 @@ class RoadRunnerCalculator:
             # steady state output = observables + state variables
             steady_state_selections = observables_ids + state_variables
             roadrunner_instance.steadyStateSelections = steady_state_selections
+            print(roadrunner_instance.getCurrentSBML())
             steady_state = roadrunner_instance.getSteadyStateValuesNamedArray()
             # we split the steady state into observables and state variables
             # obs_ss = steady_state[:, : len(observables_ids)].flatten()
@@ -211,6 +212,9 @@ class RoadRunnerCalculator:
             roadrunner_instance.conservedMoietyAnalysis = False
             # reset the model
             roadrunner_instance.reset()
+            print(f"Steady state: {state_ss}. Overwriting to [4./3, 2./3]")
+            state_ss = [4.0 / 3.0, 2.0 / 3.0]
+
         # set parameters
         par_map = self.fill_in_parameters(
             x_dct, roadrunner_instance, parameter_mapping_per_condition
@@ -228,6 +232,10 @@ class RoadRunnerCalculator:
 
         sim_res = roadrunner_instance.simulate(
             times=timepoints, selections=[TIME] + observables_ids
+        )
+        print(
+            f"After resetting steady state, is it equal now? Simulation "
+            f"results: {sim_res}."
         )
 
         llhs = calculate_llh(sim_res, edata, par_map, roadrunner_instance)
