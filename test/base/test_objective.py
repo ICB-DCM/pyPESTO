@@ -447,3 +447,26 @@ def test_fds(fd_method, fd_delta):
         assert obj_fd.delta_fun.updates == 0
     else:
         assert obj_fd.delta_fun.updates > 1
+
+
+def test_shared_return_dict():
+    class Objective0(pypesto.objective.ObjectiveBase):
+        def call_unprocessed(self, *args, **kwargs):
+            return {"fval": 0, "return_dict": "return_dict" in kwargs}
+
+        def check_sensi_orders(self, *args, **kwargs):
+            return True
+
+    class Objective1(Objective0):
+        share_return_dict = True
+
+    objective0 = Objective0()
+    objective1 = Objective1()
+
+    result0 = objective0([0], return_dict=True)
+    result1 = objective1([0], return_dict=True)
+
+    # `return_dict` is not shared with `call_unprocessed` by default,
+    assert not result0["return_dict"]
+    # but `ObjectiveBase.shared_return_dict = True` changes that.
+    assert result1["return_dict"]
