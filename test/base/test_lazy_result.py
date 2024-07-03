@@ -41,7 +41,6 @@ class TestLazyOptimizerResult(unittest.TestCase):
         for lazy_result in self.lazy_results:
             self.assertEqual(lazy_result.filename, self.filename)
             self.assertEqual(lazy_result._data, {})
-            _ = lazy_result.id
             self.assertEqual(
                 lazy_result.group_name,
                 f"optimization/results/{lazy_result.id}",
