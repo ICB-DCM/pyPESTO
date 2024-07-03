@@ -92,7 +92,7 @@ class ProblemHDF5Writer:
                     value = np.asarray(value)
                     if value.size:
                         write_array(problem_grp, problem_attr, value)
-                elif isinstance(value, Integral):
+                elif isinstance(value, (Integral, str)):
                     problem_grp.attrs[problem_attr] = value
 
 

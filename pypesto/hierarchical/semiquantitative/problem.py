@@ -30,8 +30,8 @@ from .parameter import SplineInnerParameter
 
 try:
     import amici
-    import petab
-    from petab.C import (
+    import petab.v1 as petab
+    from petab.v1.C import (
         ESTIMATE,
         LOWER_BOUND,
         NOISE_PARAMETERS,
@@ -146,6 +146,16 @@ class SemiquantProblem(AmiciInnerProblem):
             for x in self.xs.values()
             if x.inner_parameter_type == InnerParameterType.SIGMA
         ]
+
+    def get_semiquant_observable_ids(self) -> list[str]:
+        """Get the IDs of semiquantitative observables."""
+        return list(
+            {
+                x.observable_id
+                for x in self.xs.values()
+                if x.inner_parameter_type == InnerParameterType.SPLINE
+            }
+        )
 
     def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
         """Get unique list of ``SplineParameter.group`` values."""

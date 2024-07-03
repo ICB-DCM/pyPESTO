@@ -19,15 +19,15 @@ from typing import (
 
 import numpy as np
 import pandas as pd
-import petab
-from petab.C import (
+import petab.v1 as petab
+from petab.v1.C import (
     ESTIMATE,
     NOISE_PARAMETERS,
     OBSERVABLE_ID,
     PREEQUILIBRATION_CONDITION_ID,
     SIMULATION_CONDITION_ID,
 )
-from petab.models import MODEL_TYPE_SBML
+from petab.v1.models import MODEL_TYPE_SBML
 
 from ..C import (
     CENSORED,
@@ -667,6 +667,13 @@ class PetabImporter(AmiciObjectBuilder):
                     isinstance(prior_type_entry, str)
                     and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
                 ):
+                    # check if parameter for which prior is defined is a fixed parameter
+                    if x_id in self.petab_problem.x_fixed_ids:
+                        logger.warning(
+                            f"Parameter {x_id} is marked as fixed but has a "
+                            f"prior defined. This might be unintended."
+                        )
+
                     prior_params = [
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[

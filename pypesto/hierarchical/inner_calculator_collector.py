@@ -35,7 +35,6 @@ from ..C import (
     SPLINE_KNOTS,
     SPLINE_RATIO,
     SRES,
-    InnerParameterType,
     ModeType,
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
@@ -47,7 +46,7 @@ from ..objective.amici.amici_util import (
 
 try:
     import amici
-    import petab
+    import petab.v1 as petab
     from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     petab = None
@@ -102,6 +101,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.inner_calculators: list[
             AmiciCalculator
         ] = []  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
+
+        self.semiquant_observable_ids = None
+        self.relative_observable_ids = None
+
         self.construct_inner_calculators(
             petab_problem, model, edatas, inner_options
         )
@@ -109,7 +112,6 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
 
         self._known_least_squares_safe = False
-        self.semiquant_observable_ids = None
 
     def initialize(self):
         """Initialize."""
@@ -137,6 +139,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                 inner_problem=relative_inner_problem
             )
             self.inner_calculators.append(relative_inner_solver)
+            self.relative_observable_ids = (
+                relative_inner_problem.get_relative_observable_ids()
+            )
 
         if ORDINAL in self.data_types or CENSORED in self.data_types:
             optimal_scaling_inner_options = {
@@ -178,12 +183,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                 semiquant_problem.get_noise_dummy_values(scaled=True)
             )
             self.inner_calculators.append(semiquant_calculator)
-            self.semiquant_observable_ids = [
-                model.getObservableIds()[group - 1]
-                for group in semiquant_problem.get_groups_for_xs(
-                    InnerParameterType.SPLINE
-                )
-            ]
+            self.semiquant_observable_ids = (
+                semiquant_problem.get_semiquant_observable_ids()
+            )
 
         if self.data_types - {
             RELATIVE,

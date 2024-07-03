@@ -4,7 +4,16 @@ from typing import Any
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, HESSP, RDATAS, RES, SRES, ModeType
+from ..C import (
+    FVAL,
+    GRAD,
+    HESS,
+    HESSP,
+    RDATAS,
+    RES,
+    SRES,
+    ModeType,
+)
 from .base import ObjectiveBase, ResultDict
 
 

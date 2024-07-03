@@ -4,9 +4,9 @@ import logging
 from collections.abc import Iterable
 
 import pandas as pd
-import petab
+import petab.v1 as petab
 import petab_select.ui
-from petab.C import ESTIMATE, NOMINAL_VALUE
+from petab.v1.C import ESTIMATE, NOMINAL_VALUE
 from petab_select import Model, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
 

@@ -19,6 +19,12 @@ from .dimension_reduction import (
 )
 from .ensemble import ensemble_identifiability
 from .misc import process_offset_y, process_result_list, process_y_limits
+from .observable_mapping import (
+    plot_linear_observable_mappings_from_pypesto_result,
+    plot_splines_from_inner_result,
+    plot_splines_from_pypesto_result,
+    visualize_estimated_observable_mapping,
+)
 from .optimization_stats import (
     optimization_run_properties_one_plot,
     optimization_run_properties_per_multistart,
@@ -47,10 +53,5 @@ from .sampling import (
     sampling_parameter_traces,
     sampling_prediction_trajectories,
     sampling_scatter,
-)
-from .spline_approximation import (
-    _add_spline_mapped_simulations_to_model_fit,
-    plot_splines_from_inner_result,
-    plot_splines_from_pypesto_result,
 )
 from .waterfall import waterfall, waterfall_lowlevel

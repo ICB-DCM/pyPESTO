@@ -1,7 +1,7 @@
 """Test the roadrunner interface."""
 import logging
 
-import petab
+import petab.v1 as petab
 import petabtests
 import pytest
 
