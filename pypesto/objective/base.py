@@ -233,6 +233,10 @@ class ObjectiveBase(ABC):
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
         mode:
             Whether to compute function values or residuals.
+        return_dict:
+            Whether the user requested additional information. Objectives can
+            use this to determine whether to e.g. return "full" or "minimal"
+            information.
 
         Returns
         -------

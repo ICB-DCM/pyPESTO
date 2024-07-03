@@ -373,6 +373,7 @@ class FD(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """

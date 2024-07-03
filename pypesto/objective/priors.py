@@ -72,6 +72,7 @@ class NegLogParameterPriors(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: C.ModeType,
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """

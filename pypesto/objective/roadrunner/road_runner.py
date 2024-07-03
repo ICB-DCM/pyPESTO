@@ -96,6 +96,7 @@ class RoadRunnerObjective(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool,
         edatas: Optional[Sequence[ExpData]] = None,
         parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
     ) -> dict:
