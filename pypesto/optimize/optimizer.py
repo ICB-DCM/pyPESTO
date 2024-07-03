@@ -61,7 +61,9 @@ def hierarchical_decorator(minimize):
             optimize_options=optimize_options,
         )
 
-        if isinstance(problem, HierarchicalProblem):
+        failed_start = result.n_fval == 1
+
+        if isinstance(problem, HierarchicalProblem) and not failed_start:
             # Call the objective to obtain inner parameters of
             # the optimal outer optimization parameters
             return_dict = problem.objective(
