@@ -449,7 +449,7 @@ def test_fds(fd_method, fd_delta):
         assert obj_fd.delta_fun.updates > 1
 
 
-def test_shared_return_dict():
+def test_call_unprocessed_return_dict():
     class Objective0(pypesto.objective.ObjectiveBase):
         def call_unprocessed(self, *args, **kwargs):
             return {"fval": 0, "return_dict": "return_dict" in kwargs}
@@ -458,15 +458,18 @@ def test_shared_return_dict():
             return True
 
     class Objective1(Objective0):
-        share_return_dict = True
+        def call_unprocessed(self, *args, return_dict: bool, **kwargs):
+            return {"fval": 0, "return_dict": return_dict}
 
     objective0 = Objective0()
     objective1 = Objective1()
 
-    result0 = objective0([0], return_dict=True)
+    with pytest.warns(DeprecationWarning, match="Please add `return_dict`"):
+        result0 = objective0([0], return_dict=True)
+
     result1 = objective1([0], return_dict=True)
 
     # `return_dict` is not shared with `call_unprocessed` by default,
     assert not result0["return_dict"]
-    # but `ObjectiveBase.shared_return_dict = True` changes that.
+    # but is shared if the `call_unprocessed` signature supports it.
     assert result1["return_dict"]

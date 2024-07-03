@@ -1,3 +1,5 @@
+import inspect
+import warnings
 from collections.abc import Sequence
 from copy import deepcopy
 from typing import Any
@@ -19,8 +21,6 @@ from .base import ObjectiveBase, ResultDict
 
 class AggregatedObjective(ObjectiveBase):
     """Aggregates multiple objectives into one objective."""
-
-    share_return_dict = True
 
     def __init__(
         self,
@@ -117,10 +117,18 @@ class AggregatedObjective(ObjectiveBase):
                 "objectives you are aggregating."
             )
         for objective_, objective_kwargs in zip(self._objectives, kwargs_list):
-            if objective_.share_return_dict:
-                objective_kwargs["return_dict"] = objective_kwargs.get(
-                    "return_dict",
-                    return_dict,
+            if (
+                "return_dict"
+                in inspect.signature(objective_.call_unprocessed).parameters
+            ):
+                objective_kwargs["return_dict"] = return_dict
+            else:
+                warnings.warn(
+                    "Please add `return_dict` to the argument list of your "
+                    "objective's `call_unprocessed` method. "
+                    f"Current objective: `{type(objective_)}`.",
+                    DeprecationWarning,
+                    stacklevel=1,
                 )
         return aggregate_results(
             [

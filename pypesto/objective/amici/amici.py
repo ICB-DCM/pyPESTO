@@ -422,10 +422,10 @@ class AmiciObjective(ObjectiveBase):
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool = False,
         edatas: Sequence["amici.ExpData"] = None,
         parameter_mapping: "ParameterMapping" = None,
         amici_reporting: Optional["amici.RDataReporting"] = None,
-        return_dict: bool = False,
     ):
         """
         Call objective function without pre- or post-processing and formatting.

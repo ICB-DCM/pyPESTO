@@ -1,5 +1,7 @@
 import copy
+import inspect
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from typing import Optional, Union
@@ -45,12 +47,7 @@ class ObjectiveBase(ABC):
     pre_post_processor:
         Preprocess input values to and postprocess output values from
         __call__. Configured in `update_from_problem()`.
-    share_return_dict:
-        Whether the objective uses `return_dict` in its `call_unprocessed`
-        method.
     """
-
-    share_return_dict: bool = False
 
     def __init__(
         self,
@@ -183,8 +180,19 @@ class ObjectiveBase(ABC):
         x_full = self.pre_post_processor.preprocess(x=x)
 
         # compute result
-        if self.share_return_dict:
+        if (
+            "return_dict"
+            in inspect.signature(self.call_unprocessed).parameters
+        ):
             kwargs["return_dict"] = return_dict
+        else:
+            warnings.warn(
+                "Please add `return_dict` to the argument list of your "
+                "objective's `call_unprocessed` method.",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+
         result = self.call_unprocessed(
             x=x_full, sensi_orders=sensi_orders, mode=mode, **kwargs
         )
@@ -211,6 +219,7 @@ class ObjectiveBase(ABC):
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """
