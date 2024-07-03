@@ -46,7 +46,7 @@ from ..objective.amici.amici_util import (
 
 try:
     import amici
-    import petab
+    import petab.v1 as petab
     from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     petab = None
