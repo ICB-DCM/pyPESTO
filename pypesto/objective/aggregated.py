@@ -118,7 +118,10 @@ class AggregatedObjective(ObjectiveBase):
             )
         for objective_, objective_kwargs in zip(self._objectives, kwargs_list):
             if objective_.share_return_dict:
-                objective_kwargs["return_dict"] = return_dict
+                objective_kwargs["return_dict"] = objective_kwargs.get(
+                    "return_dict",
+                    return_dict,
+                )
         return aggregate_results(
             [
                 objective.call_unprocessed(
