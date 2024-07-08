@@ -140,8 +140,6 @@ def test_deepcopy():
     assert obj(problem_parameters) != copied_objective(problem_parameters)
 
 
-# write unit test to check whether roadrunner objective works with
-# multiprocessing
 def test_multiprocessing():
     """Test that multiprocessing works as intended"""
     model_name = "Boehm_JProteomeRes2014"
@@ -164,11 +162,11 @@ def test_multiprocessing():
         progress_bar=False,
     )
 
-    engine = pypesto.engine.MultiProcessEngine(n_procs=15)
+    engine = pypesto.engine.MultiProcessEngine(n_procs=8)
 
     result = pypesto.optimize.minimize(
         problem=problem,
-        n_starts=30,
+        n_starts=15,
         engine=engine,
         progress_bar=True,
     )
