@@ -1,3 +1,5 @@
+import inspect
+import warnings
 from collections.abc import Sequence
 from copy import deepcopy
 from typing import Any
@@ -92,6 +94,7 @@ class AggregatedObjective(ObjectiveBase):
         sensi_orders: tuple[int, ...],
         mode: ModeType,
         kwargs_list: Sequence[dict[str, Any]] = None,
+        return_dict: bool = False,
         **kwargs,
     ) -> ResultDict:
         """
@@ -113,6 +116,20 @@ class AggregatedObjective(ObjectiveBase):
                 "The length of `kwargs_list` must match the number of "
                 "objectives you are aggregating."
             )
+        for objective_, objective_kwargs in zip(self._objectives, kwargs_list):
+            if (
+                "return_dict"
+                in inspect.signature(objective_.call_unprocessed).parameters
+            ):
+                objective_kwargs["return_dict"] = return_dict
+            else:
+                warnings.warn(
+                    "Please add `return_dict` to the argument list of your "
+                    "objective's `call_unprocessed` method. "
+                    f"Current objective: `{type(objective_)}`.",
+                    DeprecationWarning,
+                    stacklevel=1,
+                )
         return aggregate_results(
             [
                 objective.call_unprocessed(
