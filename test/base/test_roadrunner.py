@@ -4,10 +4,12 @@ import logging
 import os
 
 import benchmark_models_petab as models
+import numpy as np
 import petab.v1 as petab
 import petabtests
 import pytest
 
+import pypesto
 import pypesto.objective.roadrunner as objective_rr
 
 logging.basicConfig(level=logging.INFO)
@@ -136,3 +138,41 @@ def test_deepcopy():
     )
 
     assert obj(problem_parameters) != copied_objective(problem_parameters)
+
+
+def test_multiprocessing():
+    """Test that multiprocessing works as intended"""
+    model_name = "Boehm_JProteomeRes2014"
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+    )
+    petab_problem.model_name = model_name
+    importer = objective_rr.PetabImporterRR(petab_problem)
+
+    problem = importer.create_problem()
+    # start 30 times from the same point
+    start_points = [problem.get_full_vector(problem.get_startpoints(1))] * 30
+    problem.set_x_guesses(np.vstack(start_points))
+
+    # for later comparisons, do one optimization run with single core
+    result_single = pypesto.optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        engine=pypesto.engine.SingleCoreEngine(),
+        progress_bar=False,
+    )
+
+    engine = pypesto.engine.MultiProcessEngine(n_procs=8)
+
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        n_starts=15,
+        engine=engine,
+        progress_bar=True,
+    )
+    assert np.all(
+        [
+            fval == result_single.optimize_result.fval[0]
+            for fval in result.optimize_result.fval
+        ]
+    )
