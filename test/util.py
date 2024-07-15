@@ -202,6 +202,8 @@ class CRProblem:
                         [-p0 + p0 * e, -p0 - p1 * e],
                     ]
                 )
+                if p0 + p1 != 0
+                else np.nan
             )
             y = anp.einsum("mnr,n->mr", x, self.x0)
             return y
