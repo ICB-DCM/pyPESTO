@@ -35,7 +35,7 @@ try:
     from amici.petab.conditions import fill_in_parameters
     from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
-    pass
+    ParameterMapping = None
 
 
 class SemiquantCalculator(AmiciCalculator):

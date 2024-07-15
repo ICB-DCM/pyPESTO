@@ -29,7 +29,7 @@ try:
     import amici
     from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
-    pass
+    ParameterMapping = None
 
 
 class RelativeInnerSolver(InnerSolver):
@@ -208,7 +208,7 @@ class RelativeInnerSolver(InnerSolver):
     def apply_inner_parameters_to_rdatas(
         self,
         problem: InnerProblem,
-        rdatas: list[amici.ReturnData],
+        rdatas: list["amici.ReturnData"],
         inner_parameters: dict[str, float],
     ):
         """Apply the inner parameters to the rdatas.

@@ -168,10 +168,10 @@ class AmiciInnerProblem(InnerProblem):
         AMICI ``ExpDataView``s for each simulation condition.
     """
 
-    def __init__(self, edatas: list[amici.ExpData], **kwargs):
+    def __init__(self, edatas: list["amici.ExpData"], **kwargs):
         super().__init__(**kwargs)
 
-    def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
+    def check_edatas(self, edatas: list["amici.ExpData"]) -> bool:
         """Check for consistency in data.
 
         Currently only checks for the actual data values. e.g., timepoints are

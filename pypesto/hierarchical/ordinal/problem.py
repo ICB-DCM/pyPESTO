@@ -171,7 +171,7 @@ class OrdinalProblem(AmiciInnerProblem):
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: petab.Problem,
+        petab_problem: "petab.Problem",
         amici_model: "amici.Model",
         edatas: list["amici.ExpData"],
         method: str = None,
@@ -474,7 +474,7 @@ class OrdinalProblem(AmiciInnerProblem):
 
 
 def optimal_scaling_inner_problem_from_petab_problem(
-    petab_problem: petab.Problem,
+    petab_problem: "petab.Problem",
     amici_model: "amici.Model",
     edatas: list["amici.ExpData"],
     method: str,
