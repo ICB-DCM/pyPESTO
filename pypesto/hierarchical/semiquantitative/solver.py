@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
@@ -29,7 +31,7 @@ from .problem import SemiquantProblem
 try:
     from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
-    ParameterMapping = None
+    pass
 
 
 class SemiquantInnerSolver(InnerSolver):

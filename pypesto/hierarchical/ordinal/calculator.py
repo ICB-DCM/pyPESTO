@@ -1,5 +1,7 @@
 """Definition of an optimal scaling calculator class."""
 
+from __future__ import annotations
+
 import copy
 from collections.abc import Sequence
 
@@ -35,7 +37,7 @@ try:
     from amici.petab.conditions import fill_in_parameters
     from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
-    ParameterMapping = None
+    pass
 
 
 class OrdinalCalculator(AmiciCalculator):
@@ -86,12 +88,12 @@ class OrdinalCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list["amici.ReturnData"] = None,
+        rdatas: list[amici.ReturnData] = None,
     ):
         """Perform the actual AMICI call.
 

@@ -1,8 +1,9 @@
 """Inner optimization problem in hierarchical optimization."""
 
+from __future__ import annotations
+
 import copy
 import logging
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -60,10 +61,10 @@ class InnerProblem:
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: "petab.Problem",
-        amici_model: "amici.Model",
-        edatas: list["amici.ExpData"],
-    ) -> "InnerProblem":
+        petab_problem: petab.Problem,
+        amici_model: amici.Model,
+        edatas: list[amici.ExpData],
+    ) -> InnerProblem:
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
     def get_x_ids(self) -> list[str]:
@@ -168,10 +169,10 @@ class AmiciInnerProblem(InnerProblem):
         AMICI ``ExpDataView``s for each simulation condition.
     """
 
-    def __init__(self, edatas: list["amici.ExpData"], **kwargs):
+    def __init__(self, edatas: list[amici.ExpData], **kwargs):
         super().__init__(**kwargs)
 
-    def check_edatas(self, edatas: list["amici.ExpData"]) -> bool:
+    def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
         """Check for consistency in data.
 
         Currently only checks for the actual data values. e.g., timepoints are
@@ -219,9 +220,7 @@ def scale_value_dict(
     return scaled_dct
 
 
-def scale_value(
-    val: Union[float, np.array], scale: str
-) -> Union[float, np.array]:
+def scale_value(val: float | np.array, scale: str) -> float | np.array:
     """Scale a single value."""
     if scale == "lin":
         return val
