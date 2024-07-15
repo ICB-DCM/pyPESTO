@@ -192,19 +192,22 @@ class CRProblem:
 
         def fy(p):
             p0, p1 = p
-            e = anp.exp(-(p0 + p1) * self.ts)
-            x = (
-                1
-                / (-p0 - p1)
-                * anp.array(
-                    [
-                        [-p1 - p0 * e, -p1 + p1 * e],
-                        [-p0 + p0 * e, -p0 - p1 * e],
-                    ]
+            if p0 + p1 == 0:
+                # Return NaNs with the same shape as `x` would have
+                x_shape = (2, 2, len(self.ts))
+                x = anp.full(x_shape, anp.nan)
+            else:
+                e = anp.exp(-(p0 + p1) * self.ts)
+                x = (
+                    1
+                    / (-p0 - p1)
+                    * anp.array(
+                        [
+                            [-p1 - p0 * e, -p1 + p1 * e],
+                            [-p0 + p0 * e, -p0 - p1 * e],
+                        ]
+                    )
                 )
-                if p0 + p1 != 0
-                else np.nan
-            )
             y = anp.einsum("mnr,n->mr", x, self.x0)
             return y
 
