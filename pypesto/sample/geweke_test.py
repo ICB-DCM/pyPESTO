@@ -62,12 +62,15 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
         Xx = np.absolute(np.fft.fft(xw, n=nfft, axis=0)) ** 2
         spectral_density += Xx
 
-    # Normalize
-    spectral_density = spectral_density * (1 / kmu)
-
     n2 = np.floor(nfft / 2).astype(int)
 
     spectral_density = spectral_density[0:n2]
+
+    # Normalize
+    if kmu != 0:
+        spectral_density = spectral_density * (1 / kmu)
+    else:
+        spectral_density = np.full(spectral_density.shape, np.nan)
 
     return spectral_density
 
