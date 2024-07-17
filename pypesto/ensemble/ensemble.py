@@ -555,6 +555,7 @@ class Ensemble:
     def from_sample(
         result: Result,
         remove_burn_in: bool = True,
+        rel_cutoff: float = None,
         chain_slice: slice = None,
         x_names: Sequence[str] = None,
         lower_bound: np.ndarray = None,
@@ -571,6 +572,11 @@ class Ensemble:
         remove_burn_in:
             Exclude parameter vectors from the ensemble if they are in the
             "burn-in".
+        rel_cutoff:
+            Relative cutoff. Exclude parameter vectors, for which the
+            (non-normalized) posterior value difference to the best vector is greater than
+            cutoff, i.e. include all vectors such that
+            `neglogpost(vector) <= neglogpost(max * rel-cutoff)`.
         chain_slice:
             Subset the chain with a slice. Any "burn-in" removal occurs first.
         x_names:
@@ -599,9 +605,19 @@ class Ensemble:
                 geweke_test(result)
             burn_in = result.sample_result.burn_in
             x_vectors = x_vectors[burn_in:]
+        else:
+            burn_in = 0
+
+        # added cutoff
+        if rel_cutoff is None:
+            pass
+        else:
+            x_vectors = calculate_hpd(result=result, burn_in=burn_in, ci_level=rel_cutoff)
+
         if chain_slice is not None:
             x_vectors = x_vectors[chain_slice]
         x_vectors = x_vectors.T
+
         return Ensemble(
             x_vectors=x_vectors,
             x_names=x_names,
@@ -1253,3 +1269,66 @@ def calculate_cutoff(
 
     range = chi2.ppf(q=percentile / 100, df=df)
     return fval_opt + range
+
+
+def calculate_hpd(
+    result: Result,
+    burn_in: int,
+    ci_level: float = 95,
+):
+    """
+    Calculate Highest Posterior Density (HPD) samples of pypesto sampling result.
+
+    The HPD is calculated for a user-defined credibility level (alpha). The HPD includes all
+    parameter vectors with a (non-normalized) posterior probability that is higher than the lowest 1-alpha %
+    posterior probability values.
+
+    Parameters
+    ----------
+    result:
+        The optimization result from which to create the ensemble.
+    burn_in:
+        Burn in index that is cut off before HPD is calculated.
+    ci_level:
+        Credibility level of the resulting HPD. 0.95 corresponds to the 95% CI.
+
+    Returns
+    -------
+    The HPD parameter vector.
+    """
+    # get names of chain parameters
+    param_names = result.problem.get_reduced_vector(result.problem.x_names)
+
+    # Get converged parameter samples as numpy arrays
+    chain = np.asarray(result.sample_result.trace_x[0, burn_in:, :])
+    neglogpost = result.sample_result.trace_neglogpost[0, burn_in:]
+    indices = np.arange(burn_in, len(result.sample_result.trace_neglogpost[0, :]))
+
+    # create df first, as we need to match neglogpost to the according parameter values
+    pd_params = pd.DataFrame(chain, columns=param_names)
+    pd_fval = pd.DataFrame(neglogpost, columns=['neglogPosterior'])
+    pd_iter = pd.DataFrame(indices, columns=['iteration'])
+
+    params_df = pd.concat(
+        [pd_params, pd_fval, pd_iter], axis=1, ignore_index=False
+    )
+
+    # get lower neglogpost bound for HPD
+    # sort neglogpost values of MCMC chain without burn in
+    neglogpost_sort = np.sort(neglogpost)
+
+    # Get converged chain length
+    chain_length = len(neglogpost)
+
+    # most negative ci percentage samples of the posterior are kept to get the according HPD
+    neglogpost_lower_bound = neglogpost_sort[int(chain_length*(ci_level))]
+
+    # cut posterior to hpd
+    hpd_params_df = params_df[params_df['neglogPosterior'] <= neglogpost_lower_bound]
+
+    # convert df to ensemble vector
+    hpd_params_df_vals_only = hpd_params_df.drop(columns=['iteration', 'neglogPosterior'])
+    hpd_ensemble_vector = hpd_params_df_vals_only.to_numpy()
+    print(hpd_ensemble_vector)
+
+    return hpd_ensemble_vector
