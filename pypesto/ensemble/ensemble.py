@@ -1329,6 +1329,5 @@ def calculate_hpd(
     # convert df to ensemble vector
     hpd_params_df_vals_only = hpd_params_df.drop(columns=['iteration', 'neglogPosterior'])
     hpd_ensemble_vector = hpd_params_df_vals_only.to_numpy()
-    print(hpd_ensemble_vector)
 
     return hpd_ensemble_vector
