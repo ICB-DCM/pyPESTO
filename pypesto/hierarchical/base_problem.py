@@ -1,8 +1,9 @@
 """Inner optimization problem in hierarchical optimization."""
 
+from __future__ import annotations
+
 import copy
 import logging
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -60,10 +61,10 @@ class InnerProblem:
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: "petab.Problem",
-        amici_model: "amici.Model",
-        edatas: list["amici.ExpData"],
-    ) -> "InnerProblem":
+        petab_problem: petab.Problem,
+        amici_model: amici.Model,
+        edatas: list[amici.ExpData],
+    ) -> InnerProblem:
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
     def get_x_ids(self) -> list[str]:
@@ -219,9 +220,7 @@ def scale_value_dict(
     return scaled_dct
 
 
-def scale_value(
-    val: Union[float, np.array], scale: str
-) -> Union[float, np.array]:
+def scale_value(val: float | np.array, scale: str) -> float | np.array:
     """Scale a single value."""
     if scale == "lin":
         return val
