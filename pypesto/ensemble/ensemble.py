@@ -1273,7 +1273,7 @@ def calculate_cutoff(
 
 def calculate_hpd(
     result: Result,
-    burn_in: int,
+    burn_in: int = 0,
     ci_level: float = 95,
 ):
     """
