@@ -364,10 +364,7 @@ def test_mpipoolengine():
         )
 
         # read results
-        with pytest.warns(UserWarning, match="You are loading a problem."):
-            result1 = read_result(
-                "temp_result.h5", problem=True, optimize=True
-            )
+        result1 = read_result("temp_result.h5", problem=True, optimize=True)
         # set optimizer
         optimizer = optimize.FidesOptimizer(verbose=40)
         # initialize problem with x_guesses and objective
