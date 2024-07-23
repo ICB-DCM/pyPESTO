@@ -1274,7 +1274,7 @@ def calculate_cutoff(
 def calculate_hpd(
     result: Result,
     burn_in: int = 0,
-    ci_level: float = 95,
+    ci_level: float = .95,
 ):
     """
     Calculate Highest Posterior Density (HPD) samples of pypesto sampling result.
