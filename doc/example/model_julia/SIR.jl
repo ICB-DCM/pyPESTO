@@ -4,14 +4,15 @@ module SIR
 
 # Install dependencies
 import Pkg
-Pkg.add(["Catalyst", "OrdinaryDiffEq", "Zygote", "SciMLSensitivity"])
+Pkg.add(["Catalyst", "OrdinaryDiffEq", "ForwardDiff", "SciMLSensitivity"])
+Pkg.precompile()
 
 # Define reaction network
 using Catalyst: @reaction_network
 sir_model = @reaction_network begin
     r1, S + I --> 2I
     r2, I --> R
-end r1 r2
+end
 
 # Ground truth parameter
 p_true = [0.0001, 0.01]
@@ -31,7 +32,7 @@ sol_true = solve(prob, Tsit5(), saveat=25)
 using Random: randn, MersenneTwister
 sigma = 40.0
 rng = MersenneTwister(1234)
-data = sol_true + sigma * randn(rng, size(sol_true))
+data = sol_true .+ sigma * randn(rng, size(sol_true))
 
 using SciMLSensitivity: remake
 
@@ -47,14 +48,14 @@ function fun(p)
 end
 
 # Define gradient and Hessian
-using Zygote: gradient, hessian
+using ForwardDiff: gradient, hessian
 
 function grad(p)
-    gradient(fun, p)[1]
+    gradient(fun, p)
 end
 
 function hess(p)
-    hessian(fun, p)[1]
+    hessian(fun, p)
 end
 
 end  # module
