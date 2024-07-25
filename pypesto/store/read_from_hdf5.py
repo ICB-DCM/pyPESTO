@@ -2,7 +2,6 @@
 
 import ast
 import logging
-import warnings
 from pathlib import Path
 from typing import Union
 
@@ -125,10 +124,9 @@ class ProblemHDF5Reader:
         if objective is None:
             objective = Objective()
             # raise warning that objective is not loaded.
-            warnings.warn(
+            logger.debug(
                 "You are loading a problem. This problem is not to be used "
-                "without a separately created objective.",
-                stacklevel=2,
+                "without a separately created objective."
             )
         problem = Problem(objective, [], [])
 

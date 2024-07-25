@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import libsbml
-import petab.v1
+import petab.v1 as petab
 import roadrunner
 from petab.v1.C import (
     OBSERVABLE_FORMULA,
