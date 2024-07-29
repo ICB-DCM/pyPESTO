@@ -49,9 +49,7 @@ def read_hdf5_profile(
 
 
 def read_hdf5_optimization(
-    f: h5py.File,
-    file_name: Union[Path, str],
-    opt_id: str,
+    f: h5py.File, file_name: Union[Path, str], opt_id: str, lazy: bool = False
 ) -> "OptimizerResult":
     """Read HDF5 results per start.
 
@@ -63,9 +61,15 @@ def read_hdf5_optimization(
         The name of the HDF5 file, needed to create HDF5History
     opt_id:
         Specifies the start that is read from the HDF5 file
+    lazy:
+        Whether to use lazy loading for optimizer results
     """
-    result = OptimizerResult()
+    if lazy:
+        from ..result import LazyOptimizerResult
 
+        return LazyOptimizerResult(file_name, f"optimization/results/{opt_id}")
+
+    result = OptimizerResult()
     for optimization_key in result.keys():
         if optimization_key == "history":
             if optimization_key in f:
@@ -152,9 +156,11 @@ class OptimizationResultHDF5Reader:
     ----------
     storage_filename:
         HDF5 result file name
+    lazy:
+        Whether to use lazy loading for optimizer results
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: Union[str, Path], lazy: bool = False):
         """
         Initialize reader.
 
@@ -162,16 +168,19 @@ class OptimizationResultHDF5Reader:
         ----------
         storage_filename:
             HDF5 result file name
+        lazy:
+            Whether to use lazy loading for optimizer results
         """
         self.storage_filename = storage_filename
         self.results = Result()
+        self.lazy = lazy
 
     def read(self) -> Result:
         """Read HDF5 result file and return pyPESTO result object."""
         with h5py.File(self.storage_filename, "r") as f:
             for opt_id in f["/optimization/results"]:
                 result = read_hdf5_optimization(
-                    f, self.storage_filename, opt_id
+                    f, self.storage_filename, opt_id, lazy=self.lazy
                 )
                 self.results.optimize_result.append(result)
             self.results.optimize_result.sort()
@@ -267,6 +276,7 @@ def read_result(
     optimize: bool = False,
     profile: bool = False,
     sample: bool = False,
+    lazy: bool = False,
 ) -> Result:
     """Save the whole pypesto.Result object in an HDF5 file.
 
@@ -285,6 +295,8 @@ def read_result(
         Read the profile result.
     sample:
         Read the sample result.
+    lazy:
+        Whether to use lazy loading for optimizer results
 
     Returns
     -------
@@ -302,7 +314,7 @@ def read_result(
         result.problem = pypesto_problem_reader.read()
 
     if optimize:
-        pypesto_opt_reader = OptimizationResultHDF5Reader(filename)
+        pypesto_opt_reader = OptimizationResultHDF5Reader(filename, lazy=lazy)
         try:
             temp_result = pypesto_opt_reader.read()
             result.optimize_result = temp_result.optimize_result
