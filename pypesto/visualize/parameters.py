@@ -385,7 +385,13 @@ def handle_inputs(
     xs = result.optimize_result.x
 
     # retrieve inner parameters in case of hierarchical optimization
-    inner_xs, inner_xs_names, inner_lb, inner_ub = _handle_inner_inputs(result)
+    (
+        inner_xs,
+        inner_xs_names,
+        inner_xs_scales,
+        inner_lb,
+        inner_ub,
+    ) = _handle_inner_inputs(result)
 
     # parse indices which should be plotted
     if start_indices is not None:
@@ -409,8 +415,13 @@ def handle_inputs(
     if ub is None:
         ub = result.problem.ub_full
 
-    # get labels
-    x_labels = result.problem.x_names
+    # get labels as x_names and scales
+    x_labels = [
+        f"{x_name} ({x_scale})"
+        for x_name, x_scale in zip(
+            result.problem.x_names, result.problem.x_scales
+        )
+    ]
 
     # handle fixed and free indices
     if len(parameter_indices) < result.problem.dim_full:
@@ -428,7 +439,11 @@ def handle_inputs(
     if inner_xs is not None and plot_inner_parameters:
         lb = np.concatenate([lb, inner_lb])
         ub = np.concatenate([ub, inner_ub])
-        x_labels = x_labels + inner_xs_names
+        inner_xs_labels = [
+            f"{x_name} ({x_scale})"
+            for x_name, x_scale in zip(inner_xs_names, inner_xs_scales)
+        ]
+        x_labels = x_labels + inner_xs_labels
         xs_out = [
             np.concatenate([x, inner_x]) if x is not None else None
             for x, inner_x in zip(xs_out, inner_xs_out)
@@ -440,8 +455,8 @@ def handle_inputs(
 def _handle_inner_inputs(
     result: Result,
 ) -> Union[
-    tuple[None, None, None, None],
-    tuple[list[np.ndarray], list[str], np.ndarray, np.ndarray],
+    tuple[None, None, None, None, None],
+    tuple[list[np.ndarray], list[str], list[str], np.ndarray, np.ndarray],
 ]:
     """Handle inner parameters from hierarchical optimization, if available.
 
@@ -456,6 +471,8 @@ def _handle_inner_inputs(
         Inner parameter values which will be appended to xs.
     inner_xs_names:
         Inner parameter names.
+    inner_xs_scales:
+        Inner parameter scales.
     inner_lb:
         Inner parameter lower bounds.
     inner_ub:
@@ -465,6 +482,7 @@ def _handle_inner_inputs(
         res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
     ]
     inner_xs_names = None
+    inner_xs_scales = None
     inner_lb = None
     inner_ub = None
 
@@ -488,8 +506,8 @@ def _handle_inner_inputs(
         inner_ub = result.problem.inner_ub
 
         # Scale inner parameter bounds according to their parameters scales
-        inner_scales = result.problem.inner_scales
-        for inner_x_idx, inner_scale in enumerate(inner_scales):
+        inner_xs_scales = result.problem.inner_scales
+        for inner_x_idx, inner_scale in enumerate(inner_xs_scales):
             inner_lb[inner_x_idx] = scale_value(
                 inner_lb[inner_x_idx], inner_scale
             )
@@ -500,7 +518,7 @@ def _handle_inner_inputs(
     if inner_xs_names is None:
         inner_xs = None
 
-    return inner_xs, inner_xs_names, inner_lb, inner_ub
+    return inner_xs, inner_xs_names, inner_xs_scales, inner_lb, inner_ub
 
 
 def parameters_correlation_matrix(
