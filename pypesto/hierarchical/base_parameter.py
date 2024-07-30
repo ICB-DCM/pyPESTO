@@ -68,6 +68,23 @@ class InnerParameter:
 
         if scale not in {LIN, LOG, LOG10}:
             raise ValueError(f"Scale not recognized: {scale}.")
+
+        if (
+            scale in [LOG, LOG10]
+            and inner_parameter_type == InnerParameterType.SIGMA
+        ):
+            raise ValueError(
+                f"Inner parameter type `{inner_parameter_type}` "
+                f"cannot be log-scaled."
+            )
+
+        if scale in [LOG, LOG10] and lb <= 0:
+            raise ValueError(
+                f"Lower bound of inner parameter `{inner_parameter_id}` "
+                f"cannot be non-positive for log-scaled parameters."
+                f"Provide a positive lower bound."
+            )
+
         self.scale = scale
 
         if inner_parameter_type not in (

@@ -21,6 +21,11 @@ from .misc import (
 )
 from .reference_points import ReferencePoint, create_references
 
+try:
+    from ..hierarchical.base_problem import scale_value
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
 
@@ -481,6 +486,16 @@ def _handle_inner_inputs(
         # set bounds for inner parameters
         inner_lb = result.problem.inner_lb
         inner_ub = result.problem.inner_ub
+
+        # Scale inner parameter bounds according to their parameters scales
+        inner_scales = result.problem.inner_scales
+        for inner_x_idx, inner_scale in enumerate(inner_scales):
+            inner_lb[inner_x_idx] = scale_value(
+                inner_lb[inner_x_idx], inner_scale
+            )
+            inner_ub[inner_x_idx] = scale_value(
+                inner_ub[inner_x_idx], inner_scale
+            )
 
     if inner_xs_names is None:
         inner_xs = None
