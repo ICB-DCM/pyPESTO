@@ -6,6 +6,30 @@ Release notes
 ..........
 
 
+0.5.3 (2024-08-01)
+-------------------
+
+* General
+	* Notebook on history usage and comparison of multiple results. (#1389)
+	* GHA/test improvements (#1423, #1408, #1430)
+	* Numpy 2.0 compatibility (#1420, #1433)
+* PEtab
+	* Issue a warning if a fixed parameter has a prior defined (#1413)
+	* Update to libpetab 0.4.0 (#1422)
+* Optimize
+    * Added a Result object with lazy hdf5 loading (#1421)
+* RoadRunner
+	* Roadrunner handling of petab issue 0019 (#1419)
+	* Disentangle amici and roadrunner (#1429)
+* Amici
+	* Require `return_dict` in `ObjectiveBase.call_unprocessed` (fixes AMICI posterior RData) (#1424)
+* Hierarchical
+	* Visualize: visualization of estimated observable mapping (#1409)
+	* Hierarchical: avoid recomputing inner parameters if simulation failed (#1426)
+* Visualization
+	* Fixing Aggregated Objective Visualisations (#1411)
+
+
 0.5.2 (2024-05-27)
 -------------------
 
