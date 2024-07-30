@@ -24,9 +24,4 @@ except ImportError:
 try:
     import amici
 except ImportError:
-    warnings.warn(
-        "PEtab import requires an installation of amici "
-        "(https://github.com/AMICI-dev/AMICI). "
-        "Install via `pip3 install amici`.",
-        stacklevel=1,
-    )
+    amici = None

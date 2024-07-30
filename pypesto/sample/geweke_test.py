@@ -62,12 +62,15 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
         Xx = np.absolute(np.fft.fft(xw, n=nfft, axis=0)) ** 2
         spectral_density += Xx
 
-    # Normalize
-    spectral_density = spectral_density * (1 / kmu)
-
     n2 = np.floor(nfft / 2).astype(int)
 
     spectral_density = spectral_density[0:n2]
+
+    # Normalize
+    if kmu != 0:
+        spectral_density = spectral_density * (1 / kmu)
+    else:
+        spectral_density = np.full(spectral_density.shape, np.nan)
 
     return spectral_density
 
@@ -149,16 +152,18 @@ def calculate_zscore(
         # Mean of Second fraction
         mean_b = np.mean(chain[index_b:, :], axis=0)
 
-    # Spectral estimates for variance
-    spectrum_a = spectrum0(chain[0:index_a, :])
-    spectrum_b = spectrum0(chain[index_b:, :])
+        # Spectral estimates for variance
+        spectrum_a = spectrum0(chain[0:index_a, :])
+        spectrum_b = spectrum0(chain[index_b:, :])
 
-    # Calculate z-score
-    z_score = (mean_a - mean_b) / (
-        np.sqrt(spectrum_a / index_a + spectrum_b / (nsamples - index_b + 1))
-    )
-    # Calculate significance (p value)
-    p = 2 * (1 - norm.cdf(np.absolute(z_score)))
+        # Calculate z-score
+        z_score = (mean_a - mean_b) / (
+            np.sqrt(
+                spectrum_a / index_a + spectrum_b / (nsamples - index_b + 1)
+            )
+        )
+        # Calculate significance (p value)
+        p = 2 * (1 - norm.cdf(np.absolute(z_score)))
 
     return z_score, p
 

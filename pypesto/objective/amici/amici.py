@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import copy
 import os
@@ -5,7 +7,7 @@ import tempfile
 from collections import OrderedDict
 from collections.abc import Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
@@ -26,7 +28,7 @@ from ...history import (
     HistoryTypeError,
     MemoryHistory,
 )
-from ..base import ObjectiveBase, ResultDict
+from ..base import ObjectiveBase
 from .amici_calculator import AmiciCalculator
 from .amici_util import (
     create_identity_parameter_mapping,
@@ -34,6 +36,8 @@ from .amici_util import (
 )
 
 if TYPE_CHECKING:
+    from ...hierarchical import InnerCalculatorCollector
+
     try:
         import amici
         from amici.petab.parameter_mapping import ParameterMapping
@@ -61,28 +65,30 @@ class AmiciObjectBuilder(abc.ABC):
         """Create an AMICI solver."""
 
     @abc.abstractmethod
-    def create_edatas(self, model: AmiciModel) -> Sequence["amici.ExpData"]:
+    def create_edatas(self, model: AmiciModel) -> Sequence[amici.ExpData]:
         """Create AMICI experimental data."""
 
 
 class AmiciObjective(ObjectiveBase):
     """Allows to create an objective directly from an amici model."""
 
+    share_return_dict = True
+
     def __init__(
         self,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: Union[Sequence["amici.ExpData"], "amici.ExpData"],
-        max_sensi_order: Optional[int] = None,
-        x_ids: Optional[Sequence[str]] = None,
-        x_names: Optional[Sequence[str]] = None,
-        parameter_mapping: Optional["ParameterMapping"] = None,
-        guess_steadystate: Optional[Optional[bool]] = None,
-        n_threads: Optional[int] = 1,
-        fim_for_hess: Optional[bool] = True,
-        amici_object_builder: Optional[AmiciObjectBuilder] = None,
-        calculator: Optional[AmiciCalculator] = None,
-        amici_reporting: Optional["amici.RDataReporting"] = None,
+        edatas: Sequence[amici.ExpData] | amici.ExpData,
+        max_sensi_order: int | None = None,
+        x_ids: Sequence[str] | None = None,
+        x_names: Sequence[str] | None = None,
+        parameter_mapping: ParameterMapping | None = None,
+        guess_steadystate: bool | None = None,
+        n_threads: int | None = 1,
+        fim_for_hess: bool | None = True,
+        amici_object_builder: AmiciObjectBuilder | None = None,
+        calculator: AmiciCalculator | InnerCalculatorCollector | None = None,
+        amici_reporting: amici.RDataReporting | None = None,
     ):
         """
         Initialize objective.
@@ -276,7 +282,7 @@ class AmiciObjective(ObjectiveBase):
         self.reset_steadystate_guesses()
         self.calculator.initialize()
 
-    def __deepcopy__(self, memodict: dict = None) -> "AmiciObjective":
+    def __deepcopy__(self, memodict: dict = None) -> AmiciObjective:
         import amici
 
         other = self.__class__.__new__(self.__class__)
@@ -415,36 +421,15 @@ class AmiciObjective(ObjectiveBase):
         """See `ObjectiveBase` documentation."""
         return mode in [MODE_FUN, MODE_RES]
 
-    def __call__(
-        self,
-        x: np.ndarray,
-        sensi_orders: tuple[int, ...] = (0,),
-        mode: ModeType = MODE_FUN,
-        return_dict: bool = False,
-        **kwargs,
-    ) -> Union[float, np.ndarray, tuple, ResultDict]:
-        """See `ObjectiveBase` documentation."""
-        import amici
-
-        # Use AMICI full reporting if amici.ReturnDatas are returned and no
-        #  other reporting mode was set
-        if (
-            return_dict
-            and self.amici_reporting is None
-            and "amici_reporting" not in kwargs
-        ):
-            kwargs["amici_reporting"] = amici.RDataReporting.full
-
-        return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
-
     def call_unprocessed(
         self,
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: ModeType,
-        edatas: Sequence["amici.ExpData"] = None,
-        parameter_mapping: "ParameterMapping" = None,
-        amici_reporting: Optional["amici.RDataReporting"] = None,
+        return_dict: bool = False,
+        edatas: Sequence[amici.ExpData] = None,
+        parameter_mapping: ParameterMapping = None,
+        amici_reporting: amici.RDataReporting | None = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -458,18 +443,23 @@ class AmiciObjective(ObjectiveBase):
 
         x_dct = self.par_arr_to_dct(x)
 
-        # only ask amici to compute required quantities
         amici_reporting = (
             self.amici_reporting
             if amici_reporting is None
             else amici_reporting
         )
         if amici_reporting is None:
-            amici_reporting = (
-                amici.RDataReporting.likelihood
-                if mode == MODE_FUN
-                else amici.RDataReporting.residuals
-            )
+            if return_dict:
+                # Use AMICI full reporting if amici.ReturnDatas are returned
+                # and no other reporting mode was set
+                amici_reporting = amici.RDataReporting.full
+            else:
+                # Else, only ask amici to compute required quantities
+                amici_reporting = (
+                    amici.RDataReporting.likelihood
+                    if mode == MODE_FUN
+                    else amici.RDataReporting.residuals
+                )
         self.amici_solver.setReturnDataReportingMode(amici_reporting)
 
         # update steady state
@@ -553,7 +543,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         condition_ix: int,
         x_dct: dict,
-        rdata: "amici.ReturnData",
+        rdata: amici.ReturnData,
     ) -> None:
         """
         Store condition parameter, steadystate and steadystate sensitivity.
@@ -598,9 +588,9 @@ class AmiciObjective(ObjectiveBase):
 
     def set_custom_timepoints(
         self,
-        timepoints: Sequence[Sequence[Union[float, int]]] = None,
-        timepoints_global: Sequence[Union[float, int]] = None,
-    ) -> "AmiciObjective":
+        timepoints: Sequence[Sequence[float | int]] = None,
+        timepoints_global: Sequence[float | int] = None,
+    ) -> AmiciObjective:
         """
         Create a copy of this objective that is evaluated at custom timepoints.
 

@@ -3,11 +3,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import petab
+import petab.v1 as petab
 import petab_select
 import pytest
 from more_itertools import one
-from petab.C import NOMINAL_VALUE
+from petab.v1.C import NOMINAL_VALUE
 from petab_select import (
     ESTIMATE,
     PETAB_PROBLEM,

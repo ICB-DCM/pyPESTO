@@ -1,8 +1,9 @@
 """Inner optimization problem in hierarchical optimization."""
 
+from __future__ import annotations
+
 import copy
 import logging
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -11,8 +12,8 @@ from .base_parameter import InnerParameter
 
 try:
     import amici
-    import petab
-    from petab.C import OBSERVABLE_ID, TIME
+    import petab.v1 as petab
+    from petab.v1.C import OBSERVABLE_ID, TIME
 except ImportError:
     pass
 
@@ -60,10 +61,10 @@ class InnerProblem:
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: "petab.Problem",
-        amici_model: "amici.Model",
-        edatas: list["amici.ExpData"],
-    ) -> "InnerProblem":
+        petab_problem: petab.Problem,
+        amici_model: amici.Model,
+        edatas: list[amici.ExpData],
+    ) -> InnerProblem:
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
     def get_x_ids(self) -> list[str]:
@@ -193,6 +194,11 @@ class AmiciInnerProblem(InnerProblem):
             amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
         ]
 
+        # Mask the data using the inner problem mask. This is necessary
+        # because the inner problem is aware of only the data it uses.
+        for i in range(len(data)):
+            data[i][~self.data_mask[i]] = np.nan
+
         if len(self.data) != len(data):
             return False
 
@@ -214,9 +220,7 @@ def scale_value_dict(
     return scaled_dct
 
 
-def scale_value(
-    val: Union[float, np.array], scale: str
-) -> Union[float, np.array]:
+def scale_value(val: float | np.array, scale: str) -> float | np.array:
     """Scale a single value."""
     if scale == "lin":
         return val
