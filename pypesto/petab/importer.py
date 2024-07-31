@@ -6,7 +6,6 @@ import logging
 import os
 import tempfile
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
 from functools import partial
 from importlib.metadata import version
 from typing import (
@@ -177,6 +176,36 @@ class PetabImporter:
         for key in self.inner_options:
             if key not in ORDINAL_OPTIONS + SPLINE_APPROXIMATION_OPTIONS:
                 raise ValueError(f"Unknown inner option {key}.")
+
+    def check_gradients(
+        self,
+        *args,
+        rtol: float = 1e-2,
+        atol: float = 1e-3,
+        mode: str | list[str] = None,
+        multi_eps=None,
+        **kwargs,
+    ) -> bool:
+        """
+        Check if gradients match finite differences (FDs).
+
+        Parameters
+        ----------
+        rtol: relative error tolerance
+        atol: absolute error tolerance
+        mode: function values or residuals
+        objAbsoluteTolerance: absolute tolerance in sensitivity calculation
+        objRelativeTolerance: relative tolerance in sensitivity calculation
+        multi_eps: multiple test step width for FDs
+
+        Returns
+        -------
+        match: Whether gradients match FDs (True) or not (False)
+        """
+        raise NotImplementedError(
+            "This function has been removed. "
+            "Please use `objective.check_gradients_match_finite_differences`."
+        )
 
     def create_prior(self) -> NegLogParameterPriors | None:
         """
@@ -372,14 +401,8 @@ class PetabImporter:
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
         """
-        # create model
-        if model is None:
-            model = self.create_model(verbose=verbose)
-
-        measurement_df = self.petab_problem.measurement_df
-
-        return amici.petab.simulations.rdatas_to_measurement_df(
-            rdatas, model, measurement_df
+        raise NotImplementedError(
+            "This function has been moved to `AmiciFactory`."
         )
 
     def rdatas_to_simulation_df(
@@ -393,8 +416,8 @@ class PetabImporter:
         Except a petab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
         """
-        return self.rdatas_to_measurement_df(rdatas, model).rename(
-            columns={petab.MEASUREMENT: petab.SIMULATION}
+        raise NotImplementedError(
+            "This function has been moved to `AmiciFactory`."
         )
 
     def prediction_to_petab_measurement_df(
@@ -420,24 +443,9 @@ class PetabImporter:
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
         """
-
-        # create rdata-like dicts from the prediction result
-        @dataclass
-        class FakeRData:
-            ts: np.ndarray
-            y: np.ndarray
-
-        rdatas = [
-            FakeRData(ts=condition.timepoints, y=condition.output)
-            for condition in prediction.conditions
-        ]
-
-        # add an AMICI model, if possible
-        model = None
-        if predictor is not None:
-            model = predictor.amici_objective.amici_model
-
-        return self.rdatas_to_measurement_df(rdatas, model)
+        raise NotImplementedError(
+            "This function has been moved to `AmiciFactory`."
+        )
 
     def prediction_to_petab_simulation_df(
         self,
@@ -450,9 +458,9 @@ class PetabImporter:
         Except a PEtab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
         """
-        return self.prediction_to_petab_measurement_df(
-            prediction, predictor
-        ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+        raise NotImplementedError(
+            "This function has been moved to `AmiciFactory`."
+        )
 
 
 def _find_output_folder_name(

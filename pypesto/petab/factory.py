@@ -8,11 +8,14 @@ import shutil
 import sys
 import warnings
 from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
 from typing import (
     Any,
     Callable,
 )
 
+import numpy as np
+import pandas as pd
 import petab.v1 as petab
 from petab.v1.C import (
     PREEQUILIBRATION_CONDITION_ID,
@@ -30,6 +33,7 @@ from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
 from ..objective import AmiciObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..predict import AmiciPredictor
+from ..result import PredictionResult
 
 try:
     import amici
@@ -453,3 +457,110 @@ class AmiciFactory(AmiciObjectBuilder):
         )
 
         return predictor
+
+    def rdatas_to_measurement_df(
+        self,
+        rdatas: Sequence[amici.ReturnData],
+        model: amici.Model = None,
+        verbose: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Create a measurement dataframe in the petab format.
+
+        Parameters
+        ----------
+        rdatas:
+            A list of rdatas as produced by
+            ``pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas']``.
+        model:
+            The amici model.
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
+
+        Returns
+        -------
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
+        """
+        # create model
+        if model is None:
+            model = self.create_model(verbose=verbose)
+
+        measurement_df = self.petab_problem.measurement_df
+
+        return amici.petab.simulations.rdatas_to_measurement_df(
+            rdatas, model, measurement_df
+        )
+
+    def rdatas_to_simulation_df(
+        self,
+        rdatas: Sequence[amici.ReturnData],
+        model: amici.Model = None,
+    ) -> pd.DataFrame:
+        """
+        See :meth:`rdatas_to_measurement_df`.
+
+        Except a petab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        return self.rdatas_to_measurement_df(rdatas, model).rename(
+            columns={petab.MEASUREMENT: petab.SIMULATION}
+        )
+
+    def prediction_to_petab_measurement_df(
+        self,
+        prediction: PredictionResult,
+        predictor: AmiciPredictor = None,
+    ) -> pd.DataFrame:
+        """
+        Cast prediction into a dataframe.
+
+        If a PEtab problem is simulated without post-processing, then the
+        result can be cast into a PEtab measurement or simulation dataframe
+
+        Parameters
+        ----------
+        prediction:
+            A prediction result as produced by an :class:`pypesto.predict.AmiciPredictor`.
+        predictor:
+            The :class:`pypesto.predict.AmiciPredictor` instance.
+
+        Returns
+        -------
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
+        """
+
+        # create rdata-like dicts from the prediction result
+        @dataclass
+        class FakeRData:
+            ts: np.ndarray
+            y: np.ndarray
+
+        rdatas = [
+            FakeRData(ts=condition.timepoints, y=condition.output)
+            for condition in prediction.conditions
+        ]
+
+        # add an AMICI model, if possible
+        model = None
+        if predictor is not None:
+            model = predictor.amici_objective.amici_model
+
+        return self.rdatas_to_measurement_df(rdatas, model)
+
+    def prediction_to_petab_simulation_df(
+        self,
+        prediction: PredictionResult,
+        predictor: AmiciPredictor = None,
+    ) -> pd.DataFrame:
+        """
+        See :meth:`prediction_to_petab_measurement_df`.
+
+        Except a PEtab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        return self.prediction_to_petab_measurement_df(
+            prediction, predictor
+        ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
