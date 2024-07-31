@@ -26,8 +26,6 @@ from ..C import (
     CENSORED,
     CENSORING_TYPES,
     MEASUREMENT_TYPE,
-    MODE_FUN,
-    MODE_RES,
     ORDINAL,
     ORDINAL_OPTIONS,
     PARAMETER_TYPE,
@@ -179,73 +177,6 @@ class PetabImporter:
         for key in self.inner_options:
             if key not in ORDINAL_OPTIONS + SPLINE_APPROXIMATION_OPTIONS:
                 raise ValueError(f"Unknown inner option {key}.")
-
-    def check_gradients(
-        self,
-        *args,
-        rtol: float = 1e-2,
-        atol: float = 1e-3,
-        mode: str | list[str] = None,
-        multi_eps=None,
-        **kwargs,
-    ) -> bool:
-        """
-        Check if gradients match finite differences (FDs).
-
-        Parameters
-        ----------
-        rtol: relative error tolerance
-        atol: absolute error tolerance
-        mode: function values or residuals
-        objAbsoluteTolerance: absolute tolerance in sensitivity calculation
-        objRelativeTolerance: relative tolerance in sensitivity calculation
-        multi_eps: multiple test step width for FDs
-
-        Returns
-        -------
-        match: Whether gradients match FDs (True) or not (False)
-        """
-        par = np.asarray(self.petab_problem.x_nominal_scaled)
-        problem = self.create_problem()
-        objective = problem.objective
-        free_indices = par[problem.x_free_indices]
-        dfs = []
-
-        if mode is None:
-            modes = [MODE_FUN, MODE_RES]
-        else:
-            modes = [mode]
-
-        if multi_eps is None:
-            multi_eps = np.array([10 ** (-i) for i in range(3, 9)])
-
-        for mode in modes:
-            try:
-                dfs.append(
-                    objective.check_grad_multi_eps(
-                        free_indices,
-                        *args,
-                        **kwargs,
-                        mode=mode,
-                        multi_eps=multi_eps,
-                    )
-                )
-            except (RuntimeError, ValueError):
-                # Might happen in case PEtab problem not well defined or
-                # fails for specified tolerances in forward sensitivities
-                return False
-
-        return all(
-            any(
-                [
-                    np.all(
-                        (mode_df.rel_err.values < rtol)
-                        | (mode_df.abs_err.values < atol)
-                    ),
-                ]
-            )
-            for mode_df in dfs
-        )
 
     def create_prior(self) -> NegLogParameterPriors | None:
         """
