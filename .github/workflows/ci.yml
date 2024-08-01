@@ -201,7 +201,7 @@ jobs:
         version: 1.9
 
     - name: Cache Julia
-      uses: julia-actions/cache@v1
+      uses: julia-actions/cache@v2
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
