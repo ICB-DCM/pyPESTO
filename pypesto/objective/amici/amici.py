@@ -6,6 +6,7 @@ import os
 import tempfile
 from collections import OrderedDict
 from collections.abc import Sequence
+from itertools import chain
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
@@ -239,6 +240,33 @@ class AmiciObjective(ObjectiveBase):
         # `set_custom_timepoints` method for more information.
         self.custom_timepoints = None
 
+    def _get_missing_sensitivities(self) -> set[str]:
+        """Get the model parameters for which sensitivities are missing.
+
+        Get the model parameters w.r.t. which sensitivities are required,
+        but aren't available missing.
+        """
+        required_sensitivities = set()
+        objective_parameters = set(self.x_names)
+        # resolve parameter mapping: collect all model parameters that depend
+        #  on the optimization parameters
+        for condition_mapping in self.parameter_mapping:
+            required_sensitivities.update(
+                model_par
+                for model_par, opt_par in chain(
+                    condition_mapping.map_preeq_fix.items(),
+                    condition_mapping.map_sim_fix.items(),
+                    condition_mapping.map_sim_var.items(),
+                )
+                # we assume that the values in the parameter mapping are
+                #  either numeric values or parameter ID strings
+                if opt_par in objective_parameters
+            )
+
+        # All parameters w.r.t. which we can compute sensitivities are the
+        # non-fixed parameters
+        return required_sensitivities - set(self.amici_model.getParameterIds())
+
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
         info = super().get_config()
@@ -440,6 +468,19 @@ class AmiciObjective(ObjectiveBase):
             A dict containing the results.
         """
         import amici
+
+        # Check that we can compute the requested sensitivities
+        #  based on the supplied model. If not, raise an error.
+        #  This has to be done on every call, since the preprocessor may
+        #  change the parameters w.r.t. which sensitivities are required.
+        # max(0, 0) to work with empty sensi_orders
+        if max(0, 0, *sensi_orders) > 0 and (
+            missing_sensitivities := self._get_missing_sensitivities()
+        ):
+            raise ValueError(
+                f"Requested sensitivities w.r.t. parameters that can't "
+                f"be computed by the current model: {missing_sensitivities}."
+            )
 
         x_dct = self.par_arr_to_dct(x)
 
