@@ -81,7 +81,7 @@ class InnerParameter:
         if scale in [LOG, LOG10] and lb <= 0:
             raise ValueError(
                 f"Lower bound of inner parameter `{inner_parameter_id}` "
-                f"cannot be non-positive for log-scaled parameters."
+                f"cannot be non-positive for log-scaled parameters. "
                 f"Provide a positive lower bound."
             )
 

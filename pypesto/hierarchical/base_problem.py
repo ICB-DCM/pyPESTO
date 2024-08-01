@@ -8,6 +8,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from ..C import LIN, LOG, LOG10
 from .base_parameter import InnerParameter
 
 try:
@@ -228,11 +229,11 @@ def scale_value_dict(
 
 def scale_value(val: float | np.array, scale: str) -> float | np.array:
     """Scale a single value."""
-    if scale == "lin":
+    if scale == LIN:
         return val
-    if scale == "log":
+    if scale == LOG:
         return np.log(val)
-    if scale == "log10":
+    if scale == LOG10:
         return np.log10(val)
     raise ValueError(f"Scale {scale} not recognized.")
 
@@ -250,11 +251,11 @@ def scale_back_value_dict(
 
 def scale_back_value(val: float | np.array, scale: str) -> float | np.array:
     """Scale back a single value."""
-    if scale == "lin":
+    if scale == LIN:
         return val
-    if scale == "log":
+    if scale == LOG:
         return np.exp(val)
-    if scale == "log10":
+    if scale == LOG10:
         return 10**val
     raise ValueError(f"Scale {scale} not recognized.")
 
