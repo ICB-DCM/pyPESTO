@@ -2,9 +2,10 @@
 
 Handles all RoadRunner.simulate calls, calculates likelihoods and residuals.
 """
+from __future__ import annotations
+
 import numbers
 from collections.abc import Sequence
-from typing import Optional
 
 import numpy as np
 import petab.v1 as petab
@@ -73,7 +74,7 @@ class RoadRunnerCalculator:
         x_ids: Sequence[str],
         parameter_mapping: list[ParMappingDictQuadruple],
         petab_problem: petab.Problem,
-        solver_options: Optional[SolverOptions],
+        solver_options: SolverOptions | None = None,
     ):
         """Perform the RoadRunner call and obtain objective function values.
 
@@ -244,10 +245,10 @@ class RoadRunnerCalculator:
     def fill_in_parameters(
         self,
         problem_parameters: dict,
-        roadrunner_instance: Optional[roadrunner.RoadRunner] = None,
-        parameter_mapping: Optional[ParMappingDictQuadruple] = None,
+        roadrunner_instance: roadrunner.RoadRunner | None = None,
+        parameter_mapping: ParMappingDictQuadruple | None = None,
         preeq: bool = False,
-        filling_mode: Optional[str] = None,
+        filling_mode: str | None = None,
     ) -> dict:
         """Fill in parameters into the roadrunner instance.
 

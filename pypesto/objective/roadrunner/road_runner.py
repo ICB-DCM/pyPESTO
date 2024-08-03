@@ -2,9 +2,10 @@
 
 Currently does not support sensitivities.
 """
+from __future__ import annotations
+
 from collections import OrderedDict
 from collections.abc import Sequence
-from typing import Optional, Union
 
 import numpy as np
 from petab.v1 import Problem as PetabProblem
@@ -30,12 +31,12 @@ class RoadRunnerObjective(ObjectiveBase):
     def __init__(
         self,
         rr: roadrunner.RoadRunner,
-        edatas: Union[Sequence[ExpData], ExpData],
+        edatas: Sequence[ExpData] | ExpData,
         parameter_mapping: list[ParMappingDictQuadruple],
         petab_problem: PetabProblem,
-        calculator: Optional[RoadRunnerCalculator] = None,
-        x_names: Optional[Sequence[str]] = None,
-        solver_options: Optional[SolverOptions] = None,
+        calculator: RoadRunnerCalculator | None = None,
+        x_names: Sequence[str] | None = None,
+        solver_options: SolverOptions | None = None,
     ):
         """Initialize the RoadRunner objective function.
 
@@ -91,7 +92,7 @@ class RoadRunnerObjective(ObjectiveBase):
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
-    ) -> Union[float, np.ndarray, dict]:
+    ) -> float | np.ndarray | dict:
         """See :class:`ObjectiveBase` documentation."""
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
@@ -101,8 +102,8 @@ class RoadRunnerObjective(ObjectiveBase):
         sensi_orders: tuple[int, ...],
         mode: ModeType,
         return_dict: bool,
-        edatas: Optional[Sequence[ExpData]] = None,
-        parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
+        edatas: Sequence[ExpData] | None = None,
+        parameter_mapping: list[ParMappingDictQuadruple] | None = None,
     ) -> dict:
         """
         Call objective function without pre- or post-processing and formatting.
