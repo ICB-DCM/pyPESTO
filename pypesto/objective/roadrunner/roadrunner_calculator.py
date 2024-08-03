@@ -8,7 +8,6 @@ from typing import Optional
 
 import numpy as np
 import petab.v1 as petab
-import roadrunner
 from petab.v1.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import (
@@ -27,6 +26,11 @@ from .utils import (
     simulation_to_measurement_df,
     unscale_parameters,
 )
+
+try:
+    import roadrunner
+except ImportError:
+    roadrunner = None
 
 LLH_TYPES = {
     "lin_normal": lambda measurement, simulation, sigma: -0.5

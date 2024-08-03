@@ -5,42 +5,38 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
-from collections.abc import Iterable, Sequence
-from functools import partial
+import warnings
+from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import version
 from typing import (
     Any,
 )
 
-import numpy as np
 import pandas as pd
 import petab.v1 as petab
-from petab.v1.C import (
-    ESTIMATE,
-    NOISE_PARAMETERS,
-    OBSERVABLE_ID,
-)
+import roadrunner
 
 from ..C import (
     CENSORED,
-    CENSORING_TYPES,
-    MEASUREMENT_TYPE,
     ORDINAL,
     ORDINAL_OPTIONS,
-    PARAMETER_TYPE,
-    RELATIVE,
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
-    InnerParameterType,
 )
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
-from ..objective import AggregatedObjective, AmiciObjective
+from ..objective import AggregatedObjective, AmiciObjective, ObjectiveBase
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
 from ..problem import HierarchicalProblem, Problem
 from ..result import PredictionResult
-from ..startpoint import CheckedStartpoints, StartpointMethod
-from .factory import AmiciFactory
+from ..startpoint import StartpointMethod
+from .factory import (
+    AmiciFactory,
+    Factory,
+    PetabSimulatorFactory,
+    RoadRunnerFactory,
+)
+from .util import PetabStartpoints, get_petab_non_quantitative_data_types
 
 try:
     import amici
@@ -68,12 +64,15 @@ class PetabImporter:
     def __init__(
         self,
         petab_problem: petab.Problem,
-        output_folder: str = None,
-        model_name: str = None,
+        output_folder: str | None = None,
+        model_name: str | None = None,
         validate_petab: bool = True,
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
-        inner_options: dict = None,
+        inner_options: dict | None = None,
+        simulator_type: str = "amici",
+        simulator: petab.Simulator | None = None,
+        rr: roadrunner.RoadRunner | None = None,
     ):
         """Initialize importer.
 
@@ -100,6 +99,11 @@ class PetabImporter:
         inner_options:
             Options for the inner problems and solvers.
             If not provided, default options will be used.
+        simulator_type:
+            The type of simulator to use. Depending on this different kinds
+            of objectives will be created.
+        simulator:
+            In case of a petab simulator, the simulator object can be provided.
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
@@ -156,11 +160,21 @@ class PetabImporter:
             model_name = _find_model_name(self.output_folder)
         self.model_name = model_name
 
+        self.simulator_type = simulator_type
+        self.simulator = simulator
+        if simulator_type == "petab" and simulator is None:
+            raise ValueError(
+                "A petab simulator object must be provided if the simulator "
+                "type is 'petab'."
+            )
+        self.roadrunner_instance = rr
+
     @staticmethod
     def from_yaml(
         yaml_config: dict | str,
         output_folder: str = None,
         model_name: str = None,
+        simulator_type: str = "amici",
     ) -> PetabImporter:
         """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
@@ -169,6 +183,7 @@ class PetabImporter:
             petab_problem=petab_problem,
             output_folder=output_folder,
             model_name=model_name,
+            simulator_type=simulator_type,
         )
 
     def validate_inner_options(self):
@@ -265,9 +280,30 @@ class PetabImporter:
         """
         return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
+    def create_factory(self) -> Factory:
+        """Choose factory depending on the simulator type."""
+        if self.simulator_type == "amici":
+            return AmiciFactory(
+                petab_problem=self.petab_problem,
+                output_folder=self.output_folder,
+                model_name=self.model_name,
+                hierarchical=self._hierarchical,
+                inner_options=self.inner_options,
+                non_quantitative_data_types=self._non_quantitative_data_types,
+                validate_petab=self.validate_petab,
+            )
+        elif self.simulator_type == "petab":
+            return PetabSimulatorFactory(
+                petab_problem=self.petab_problem, simulator=self.simulator
+            )
+        elif self.simulator_type == "roadrunner":
+            return RoadRunnerFactory(
+                petab_problem=self.petab_problem, rr=self.roadrunner_instance
+            )
+
     def create_problem(
         self,
-        objective: AmiciObjective = None,
+        objective: ObjectiveBase = None,
         x_guesses: Iterable[float] | None = None,
         problem_kwargs: dict[str, Any] = None,
         startpoint_kwargs: dict[str, Any] = None,
@@ -297,16 +333,8 @@ class PetabImporter:
         A :class:`pypesto.problem.Problem` for the objective.
         """
         if objective is None:
-            factory = AmiciFactory(
-                petab_problem=self.petab_problem,
-                output_folder=self.output_folder,
-                model_name=self.model_name,
-                hierarchical=self._hierarchical,
-                inner_options=self.inner_options,
-                non_quantitative_data_types=self._non_quantitative_data_types,
-                validate_petab=self.validate_petab,
-            )
-            objective = factory.create_objective(**kwargs)
+            self.factory = self.create_factory()
+            objective = self.factory.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
         x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
@@ -376,31 +404,72 @@ class PetabImporter:
 
         return problem
 
+    def create_objective(
+        self,
+        model: amici.Model = None,
+        solver: amici.Solver = None,
+        edatas: Sequence[amici.ExpData] = None,
+        force_compile: bool = False,
+        verbose: bool = True,
+        **kwargs,
+    ) -> ObjectiveBase:
+        """See :meth:`AmiciFactory.create_objective`."""
+        warnings.warn(
+            "This function has been moved to `AmiciFactory`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        factory = self.create_factory()
+        return factory.create_objective(
+            model=model,
+            solver=solver,
+            edatas=edatas,
+            force_compile=force_compile,
+            verbose=verbose,
+            **kwargs,
+        )
+
+    def create_predictor(
+        self,
+        objective: AmiciObjective = None,
+        amici_output_fields: Sequence[str] = None,
+        post_processor: Callable | None = None,
+        post_processor_sensi: Callable | None = None,
+        post_processor_time: Callable | None = None,
+        max_chunk_size: int | None = None,
+        output_ids: Sequence[str] = None,
+        condition_ids: Sequence[str] = None,
+    ) -> AmiciPredictor:
+        """See :meth:`AmiciFactory.create_predictor`."""
+        if self.simulator_type != "amici":
+            raise ValueError(
+                "Predictor can only be created for amici models and is "
+                "supposed to be created from the AmiciFactory."
+            )
+        warnings.warn(
+            "This function has been moved to `AmiciFactory`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        factory = self.create_factory()
+        return factory.create_predictor(
+            objective=objective,
+            amici_output_fields=amici_output_fields,
+            post_processor=post_processor,
+            post_processor_sensi=post_processor_sensi,
+            post_processor_time=post_processor_time,
+            max_chunk_size=max_chunk_size,
+            output_ids=output_ids,
+            condition_ids=condition_ids,
+        )
+
     def rdatas_to_measurement_df(
         self,
         rdatas: Sequence[amici.ReturnData],
         model: amici.Model = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
-        """
-        Create a measurement dataframe in the petab format.
-
-        Parameters
-        ----------
-        rdatas:
-            A list of rdatas as produced by
-            ``pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas']``.
-        model:
-            The amici model.
-        verbose:
-            Passed to AMICI's model compilation. If True, the compilation
-            progress is printed.
-
-        Returns
-        -------
-        A dataframe built from the rdatas in the format as in
-        ``self.petab_problem.measurement_df``.
-        """
+        """See :meth:`AmiciFactory.rdatas_to_measurement_df`."""
         raise NotImplementedError(
             "This function has been moved to `AmiciFactory`."
         )
@@ -508,148 +577,3 @@ def _find_output_folder_name(
 def _find_model_name(output_folder: str) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
-
-
-def get_petab_non_quantitative_data_types(
-    petab_problem: petab.Problem,
-) -> set[str]:
-    """
-    Get the data types from the PEtab problem.
-
-    Parameters
-    ----------
-    petab_problem:
-        The PEtab problem.
-
-    Returns
-    -------
-    data_types:
-        A list of the data types.
-    """
-    non_quantitative_data_types = set()
-    caught_observables = set()
-    # For ordinal, censored and semiquantitative data, search
-    # for the corresponding data types in the measurement table
-    meas_df = petab_problem.measurement_df
-    if MEASUREMENT_TYPE in meas_df.columns:
-        petab_data_types = meas_df[MEASUREMENT_TYPE].unique()
-        for data_type in [ORDINAL, SEMIQUANTITATIVE] + CENSORING_TYPES:
-            if data_type in petab_data_types:
-                non_quantitative_data_types.add(
-                    CENSORED if data_type in CENSORING_TYPES else data_type
-                )
-                caught_observables.update(
-                    set(
-                        meas_df[meas_df[MEASUREMENT_TYPE] == data_type][
-                            OBSERVABLE_ID
-                        ]
-                    )
-                )
-
-    # For relative data, search for parameters to estimate with
-    # a scaling/offset/sigma parameter type
-    if PARAMETER_TYPE in petab_problem.parameter_df.columns:
-        # get the df with non-nan parameter types
-        par_df = petab_problem.parameter_df[
-            petab_problem.parameter_df[PARAMETER_TYPE].notna()
-        ]
-        for par_id, row in par_df.iterrows():
-            if not row[ESTIMATE]:
-                continue
-            if row[PARAMETER_TYPE] in [
-                InnerParameterType.SCALING,
-                InnerParameterType.OFFSET,
-            ]:
-                non_quantitative_data_types.add(RELATIVE)
-
-            # For sigma parameters, we need to check if they belong
-            # to an observable with a non-quantitative data type
-            elif row[PARAMETER_TYPE] == InnerParameterType.SIGMA:
-                corresponding_observables = set(
-                    meas_df[meas_df[NOISE_PARAMETERS] == par_id][OBSERVABLE_ID]
-                )
-                if not (corresponding_observables & caught_observables):
-                    non_quantitative_data_types.add(RELATIVE)
-
-    # TODO this can be made much shorter if the relative measurements
-    # are also specified in the measurement table, but that would require
-    # changing the PEtab format of a lot of benchmark models.
-
-    if len(non_quantitative_data_types) == 0:
-        return None
-    return non_quantitative_data_types
-
-
-class PetabStartpoints(CheckedStartpoints):
-    """Startpoint method for PEtab problems.
-
-    Samples optimization startpoints from the distributions defined in the
-    provided PEtab problem. The PEtab-problem is copied.
-    """
-
-    def __init__(self, petab_problem: petab.Problem, **kwargs):
-        super().__init__(**kwargs)
-        self._parameter_df = petab_problem.parameter_df.copy()
-        self._priors: list[tuple] | None = None
-        self._free_ids: list[str] | None = None
-
-    def _setup(
-        self,
-        pypesto_problem: Problem,
-    ):
-        """Update priors if necessary.
-
-        Check if ``problem.x_free_indices`` changed since last call, and if so,
-        get the corresponding priors from PEtab.
-        """
-        current_free_ids = np.asarray(pypesto_problem.x_names)[
-            pypesto_problem.x_free_indices
-        ]
-
-        if (
-            self._priors is not None
-            and len(current_free_ids) == len(self._free_ids)
-            and np.all(current_free_ids == self._free_ids)
-        ):
-            # no need to update
-            return
-
-        # update priors
-        self._free_ids = current_free_ids
-        id_to_prior = dict(
-            zip(
-                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
-                petab.parameters.get_priors_from_df(
-                    self._parameter_df, mode=petab.INITIALIZATION
-                ),
-            )
-        )
-
-        self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
-
-    def __call__(
-        self,
-        n_starts: int,
-        problem: Problem,
-    ) -> np.ndarray:
-        """Call the startpoint method."""
-        # Update the list of priors if needed
-        self._setup(pypesto_problem=problem)
-
-        return super().__call__(n_starts, problem)
-
-    def sample(
-        self,
-        n_starts: int,
-        lb: np.ndarray,
-        ub: np.ndarray,
-    ) -> np.ndarray:
-        """Actual startpoint sampling.
-
-        Must only be called through `self.__call__` to ensure that the list of priors
-        matches the currently free parameters in the :class:`pypesto.Problem`.
-        """
-        sampler = partial(petab.sample_from_prior, n_starts=n_starts)
-        startpoints = list(map(sampler, self._priors))
-
-        return np.array(startpoints).T

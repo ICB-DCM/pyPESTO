@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import logging
+import numbers
 import os
+import re
 import shutil
 import sys
 import warnings
+from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import (
@@ -18,20 +21,24 @@ import numpy as np
 import pandas as pd
 import petab.v1 as petab
 from petab.v1.C import (
+    OBSERVABLE_FORMULA,
     PREEQUILIBRATION_CONDITION_ID,
     SIMULATION_CONDITION_ID,
 )
 from petab.v1.models import MODEL_TYPE_SBML
+from petab.v1.models.sbml_model import SbmlModel
+from petab.v1.parameter_mapping import ParMappingDictQuadruple
+from petab.v1.simulate import Simulator
 
-from ..C import (
-    CENSORED,
-    CONDITION_SEP,
-    ORDINAL,
-    SEMIQUANTITATIVE,
-)
+from ..C import CENSORED, CONDITION_SEP, LIN, ORDINAL, SEMIQUANTITATIVE
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
-from ..objective import AmiciObjective
+from ..objective import AmiciObjective, ObjectiveBase, PetabSimulatorObjective
 from ..objective.amici import AmiciObjectBuilder
+from ..objective.roadrunner import (
+    ExpData,
+    RoadRunnerCalculator,
+    RoadRunnerObjective,
+)
 from ..predict import AmiciPredictor
 from ..result import PredictionResult
 
@@ -54,7 +61,17 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class AmiciFactory(AmiciObjectBuilder):
+# abstract factory class, that has create_objective as necessary function
+class Factory(ABC):
+    """Abstract factory for creating an objective function."""
+
+    @abstractmethod
+    def create_objective(self, **kwargs) -> ObjectiveBase:
+        """Create an objective function."""
+        pass
+
+
+class AmiciFactory(Factory, AmiciObjectBuilder):
     """Factory for creating an amici objective function."""
 
     def __init__(
@@ -67,6 +84,26 @@ class AmiciFactory(AmiciObjectBuilder):
         model_name: str | None = None,
         validate_petab: bool = True,
     ):
+        """
+        Initialize the factory.
+
+        Parameters
+        ----------
+        petab_problem:
+            The PEtab problem.
+        hierarchical:
+            Whether to use hierarchical optimization.
+        non_quantitative_data_types:
+            The non-quantitative data types to consider.
+        inner_options:
+            Options for the inner optimization.
+        output_folder:
+            The output folder for the compiled model.
+        model_name:
+            The name of the model.
+        validate_petab:
+            Whether to check the PEtab problem for errors.
+        """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
         self._non_quantitative_data_types = non_quantitative_data_types
@@ -564,3 +601,253 @@ class AmiciFactory(AmiciObjectBuilder):
         return self.prediction_to_petab_measurement_df(
             prediction, predictor
         ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+
+
+class PetabSimulatorFactory(Factory):
+    """Factory for creating an objective for a PEtabSimulator."""
+
+    def __init__(
+        self,
+        petab_problem: petab.Problem,
+        simulator: Simulator,
+    ):
+        self.petab_problem = petab_problem
+        self.simulator = simulator
+
+    def create_objective(self, **kwargs):
+        """Create a PEtabSimulatorObjective."""
+        return PetabSimulatorObjective(self.simulator)
+
+
+class RoadRunnerFactory(Factory):
+    """Factory for creating an objective for a RoadRunner model."""
+
+    def __init__(
+        self,
+        petab_problem: petab.Problem,
+        rr: roadrunner.RoadRunner | None = None,
+    ):
+        self.petab_problem = petab_problem
+        if rr is None:
+            if roadrunner is None:
+                raise ImportError(
+                    "The `roadrunner` package is required for this objective "
+                    "function."
+                )
+            rr = roadrunner.RoadRunner()
+        self.rr = rr
+
+    def _check_noise_formulae(
+        self,
+        edatas: list[ExpData] | None = None,
+        parameter_mapping: list[ParMappingDictQuadruple] | None = None,
+    ):
+        """Check if the noise formulae are valid.
+
+        Currently, only static values or singular parameters are supported.
+        Complex formulae are not supported.
+        """
+        # check that parameter mapping is available
+        if parameter_mapping is None:
+            parameter_mapping = self.create_parameter_mapping()
+        # check that edatas are available
+        if edatas is None:
+            edatas = self.create_edatas()
+        # save formulae that need to be changed
+        to_change = []
+        # check that noise formulae are valid
+        for i_edata, (edata, par_map) in enumerate(
+            zip(edatas, parameter_mapping)
+        ):
+            for j_formula, noise_formula in enumerate(edata.noise_formulae):
+                # constant values are allowed
+                if isinstance(noise_formula, numbers.Number):
+                    continue
+                # single parameters are allowed
+                if noise_formula in par_map[1].keys():
+                    continue
+                # extract the observable name via regex pattern
+                pattern = r"noiseParameter1_(.*?)($|\s)"
+                observable_name = re.search(pattern, noise_formula).group(1)
+                to_change.append((i_edata, j_formula, observable_name))
+        # change formulae
+        formulae_changed = []
+        for i_edata, j_formula, obs_name in to_change:
+            # assign new parameter, formula in RR and parameter into mapping
+            original_formula = edatas[i_edata].noise_formulae[j_formula]
+            edatas[i_edata].noise_formulae[
+                j_formula
+            ] = f"noiseFormula_{obs_name}"
+            # different conditions will have the same noise formula
+            if (obs_name, original_formula) not in formulae_changed:
+                self.rr.addParameter(f"noiseFormula_{obs_name}", 0.0, False)
+                self.rr.addAssignmentRule(
+                    f"noiseFormula_{obs_name}",
+                    original_formula,
+                    forceRegenerate=False,
+                )
+                self.rr.regenerateModel()
+                formulae_changed.append((obs_name, original_formula))
+
+    def _write_observables_to_model(self):
+        """Write observables of petab problem to the model."""
+        # add all observables as species
+        for obs_id in self.petab_problem.observable_df.index:
+            self.rr.addParameter(obs_id, 0.0, False)
+        # extract all parameters from observable formulas
+        parameters = petab.get_output_parameters(
+            self.petab_problem.observable_df,
+            self.petab_problem.model,
+            noise=True,
+            observables=True,
+        )
+        # add all parameters to the model
+        for param_id in parameters:
+            self.rr.addParameter(param_id, 0.0, False)
+        formulae = self.petab_problem.observable_df[
+            OBSERVABLE_FORMULA
+        ].to_dict()
+
+        # add all observable formulas as assignment rules
+        for obs_id, formula in formulae.items():
+            self.rr.addAssignmentRule(obs_id, formula, forceRegenerate=False)
+
+        # regenerate model to apply changes
+        self.rr.regenerateModel()
+
+    def create_edatas(self) -> list[ExpData]:
+        """Create a List of :class:`ExpData` objects from the PEtab problem."""
+        # Create Dataframes per condition
+        return ExpData.from_petab_problem(self.petab_problem)
+
+    def fill_model(self):
+        """Fill the RoadRunner model inplace from the PEtab problem.
+
+        Parameters
+        ----------
+        return_model:
+            Flag indicating if the model should be returned.
+        """
+        if not isinstance(self.petab_problem.model, SbmlModel):
+            raise ValueError(
+                "The model is not an SBML model. Using "
+                "RoadRunner as simulator requires an SBML model."
+            )  # TODO: add Pysb support
+        if self.petab_problem.model.sbml_document:
+            sbml_document = self.petab_problem.model.sbml_document
+        elif self.petab_problem.model.sbml_model:
+            sbml_document = (
+                self.petab_problem.model.sbml_model.getSBMLDocument()
+            )
+        else:
+            raise ValueError("No SBML model found.")
+        sbml_writer = libsbml.SBMLWriter()
+        sbml_string = sbml_writer.writeSBMLToString(sbml_document)
+        self.rr.load(sbml_string)
+        self._write_observables_to_model()
+
+    def create_parameter_mapping(self):
+        """Create a parameter mapping from the PEtab problem."""
+        simulation_conditions = (
+            self.petab_problem.get_simulation_conditions_from_measurement_df()
+        )
+        mapping = petab.get_optimization_to_simulation_parameter_mapping(
+            condition_df=self.petab_problem.condition_df,
+            measurement_df=self.petab_problem.measurement_df,
+            parameter_df=self.petab_problem.parameter_df,
+            observable_df=self.petab_problem.observable_df,
+            model=self.petab_problem.model,
+        )
+        # check whether any species in the condition table are assigned
+        species = self.rr.model.getFloatingSpeciesIds()
+        # overrides in parameter table are handled already
+        overrides = [
+            specie
+            for specie in species
+            if specie in self.petab_problem.condition_df.columns
+        ]
+        if not overrides:
+            return mapping
+        for (_, condition), mapping_per_condition in zip(
+            simulation_conditions.iterrows(), mapping
+        ):
+            for override in overrides:
+                preeq_id = condition.get(PREEQUILIBRATION_CONDITION_ID)
+                sim_id = condition.get(SIMULATION_CONDITION_ID)
+                if preeq_id:
+                    parameter_id_or_value = (
+                        self.petab_problem.condition_df.loc[preeq_id, override]
+                    )
+                    mapping_per_condition[0][override] = parameter_id_or_value
+                    if isinstance(parameter_id_or_value, str):
+                        mapping_per_condition[2][
+                            override
+                        ] = self.petab_problem.parameter_df.loc[
+                            parameter_id_or_value, petab.PARAMETER_SCALE
+                        ]
+                    elif isinstance(parameter_id_or_value, numbers.Number):
+                        mapping_per_condition[2][override] = LIN
+                    else:
+                        raise ValueError(
+                            "The parameter value in the condition table "
+                            "is not a number or a parameter ID."
+                        )
+                if sim_id:
+                    parameter_id_or_value = (
+                        self.petab_problem.condition_df.loc[sim_id, override]
+                    )
+                    mapping_per_condition[1][override] = parameter_id_or_value
+                    if isinstance(parameter_id_or_value, str):
+                        mapping_per_condition[3][
+                            override
+                        ] = self.petab_problem.parameter_df.loc[
+                            parameter_id_or_value, petab.PARAMETER_SCALE
+                        ]
+                    elif isinstance(parameter_id_or_value, numbers.Number):
+                        mapping_per_condition[3][override] = LIN
+                    else:
+                        raise ValueError(
+                            "The parameter value in the condition table "
+                            "is not a number or a parameter ID."
+                        )
+        return mapping
+
+    def create_objective(
+        self,
+        rr: roadrunner.RoadRunner | None = None,
+        edatas: ExpData | None = None,
+    ) -> RoadRunnerObjective:
+        """Create a :class:`pypesto.objective.RoadRunnerObjective`.
+
+        Parameters
+        ----------
+        rr:
+            RoadRunner instance.
+        edatas:
+            ExpData object.
+        """
+        roadrunner_instance = rr
+        if roadrunner_instance is None:
+            roadrunner_instance = self.rr
+            self.fill_model()
+        if edatas is None:
+            edatas = self.create_edatas()
+
+        parameter_mapping = self.create_parameter_mapping()
+
+        # get x_names
+        x_names = self.petab_problem.get_x_ids()
+
+        calculator = RoadRunnerCalculator()
+
+        # run the check for noise formulae
+        self._check_noise_formulae(edatas, parameter_mapping)
+
+        return RoadRunnerObjective(
+            rr=roadrunner_instance,
+            edatas=edatas,
+            parameter_mapping=parameter_mapping,
+            petab_problem=self.petab_problem,
+            calculator=calculator,
+            x_names=x_names,
+        )

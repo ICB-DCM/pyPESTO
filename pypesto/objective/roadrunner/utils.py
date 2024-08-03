@@ -12,7 +12,6 @@ from collections.abc import Sequence
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
-import roadrunner
 from petab.v1.C import (
     LIN,
     MEASUREMENT,
@@ -25,6 +24,11 @@ from petab.v1.C import (
     SIMULATION_CONDITION_ID,
     TIME,
 )
+
+try:
+    import roadrunner
+except ImportError:
+    roadrunner = None
 
 
 class ExpData:

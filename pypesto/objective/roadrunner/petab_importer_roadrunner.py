@@ -9,13 +9,12 @@ from __future__ import annotations
 import logging
 import numbers
 import re
+import warnings
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-import libsbml
 import petab.v1 as petab
-import roadrunner
 from petab.v1.C import (
     OBSERVABLE_FORMULA,
     PREEQUILIBRATION_CONDITION_ID,
@@ -26,7 +25,6 @@ from petab.v1.parameter_mapping import ParMappingDictQuadruple
 
 import pypesto.C
 
-from ...petab.importer import PetabStartpoints
 from ...problem import Problem
 from ...startpoint import StartpointMethod
 from ..aggregated import AggregatedObjective
@@ -34,6 +32,13 @@ from ..priors import NegLogParameterPriors, get_parameter_prior_dict
 from .road_runner import RoadRunnerObjective
 from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData
+
+try:
+    import libsbml
+    import roadrunner
+except ImportError:
+    roadrunner = None
+    libsbml = None
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +67,14 @@ class PetabImporterRR:
         validate_petab:
             Flag indicating if the PEtab problem shall be validated.
         """
+        warnings.warn(
+            "The RoadRunner importer is deprecated and will be removed in "
+            "future versions. Please use the generic PetabImporter instead "
+            "with `simulator_type='roadrunner'`. Everything else will stay "
+            "same.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.petab_problem = petab_problem
         if validate_petab:
             if petab.lint_problem(petab_problem):
@@ -344,6 +357,8 @@ class PetabImporterRR:
             Additional keyword arguments passed on to
             :meth:`pypesto.startpoint.FunctionStartpoints.__init__`.
         """
+        from ...petab.util import PetabStartpoints
+
         return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
     def create_problem(
