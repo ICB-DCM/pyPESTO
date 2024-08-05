@@ -11,19 +11,23 @@ from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
-import petab.v1 as petab
-from petab.v1.C import (
-    LIN,
-    MEASUREMENT,
-    NOISE_DISTRIBUTION,
-    NOISE_FORMULA,
-    NORMAL,
-    OBSERVABLE_ID,
-    OBSERVABLE_TRANSFORMATION,
-    SIMULATION,
-    SIMULATION_CONDITION_ID,
-    TIME,
-)
+
+try:
+    import petab.v1 as petab
+    from petab.v1.C import (
+        LIN,
+        MEASUREMENT,
+        NOISE_DISTRIBUTION,
+        NOISE_FORMULA,
+        NORMAL,
+        OBSERVABLE_ID,
+        OBSERVABLE_TRANSFORMATION,
+        SIMULATION,
+        SIMULATION_CONDITION_ID,
+        TIME,
+    )
+except ImportError:
+    petab = None
 
 try:
     import roadrunner

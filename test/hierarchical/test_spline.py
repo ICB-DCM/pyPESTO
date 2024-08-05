@@ -96,7 +96,7 @@ def _create_problem(
         hierarchical=True,
     )
     factory = importer.create_factory()
-    importer.create_model()
+    factory.create_model()
 
     objective = factory.create_objective(
         inner_options=option,
