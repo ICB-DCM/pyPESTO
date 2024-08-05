@@ -14,7 +14,11 @@ from typing import (
 
 import pandas as pd
 import petab.v1 as petab
-import roadrunner
+
+try:
+    import roadrunner
+except ImportError:
+    roadrunner = None
 
 from ..C import (
     CENSORED,

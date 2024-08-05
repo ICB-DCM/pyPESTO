@@ -14,14 +14,17 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-import petab.v1 as petab
-from petab.v1.C import (
-    OBSERVABLE_FORMULA,
-    PREEQUILIBRATION_CONDITION_ID,
-    SIMULATION_CONDITION_ID,
-)
-from petab.v1.models.sbml_model import SbmlModel
-from petab.v1.parameter_mapping import ParMappingDictQuadruple
+try:
+    import petab.v1 as petab
+    from petab.v1.C import (
+        OBSERVABLE_FORMULA,
+        PREEQUILIBRATION_CONDITION_ID,
+        SIMULATION_CONDITION_ID,
+    )
+    from petab.v1.models.sbml_model import SbmlModel
+    from petab.v1.parameter_mapping import ParMappingDictQuadruple
+except ImportError:
+    petab = None
 
 import pypesto.C
 
