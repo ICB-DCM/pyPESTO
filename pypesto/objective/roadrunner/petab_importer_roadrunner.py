@@ -304,6 +304,7 @@ class PetabImporterRR:
             petab_problem=self.petab_problem,
             calculator=calculator,
             x_names=x_names,
+            x_ids=x_names,
         )
 
     def create_prior(self) -> NegLogParameterPriors | None:
