@@ -365,7 +365,8 @@ def test_petab_prediction():
     petab_problem.model_name = f"{model_name}_petab"
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create prediction via PEtab
-    predictor = importer.create_predictor()
+    factory = importer.create_factory()
+    predictor = factory.create_predictor()
 
     # ===== run test for prediction ===========================================
     p = predictor(
@@ -373,8 +374,8 @@ def test_petab_prediction():
     )
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
     # check outputs for simulation and measurement dataframes
-    importer.prediction_to_petab_measurement_df(p, predictor)
-    importer.prediction_to_petab_simulation_df(p, predictor)
+    factory.prediction_to_petab_measurement_df(p, predictor)
+    factory.prediction_to_petab_simulation_df(p, predictor)
 
     # ===== run test for ensemble prediction ==================================
     # read a set of ensemble vectors from the csv

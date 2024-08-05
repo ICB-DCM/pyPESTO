@@ -58,8 +58,7 @@ def test_hierarchical_optimization_pipeline():
     problems = {}
     for flag in flags:
         importer = PetabImporter(petab_problems[flag], hierarchical=flag)
-        objective = importer.create_objective()
-        problem = importer.create_problem(objective)
+        problem = importer.create_problem()
         problem.objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_adjoint
         )

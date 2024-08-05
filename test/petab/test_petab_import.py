@@ -51,7 +51,7 @@ class PetabImportTest(unittest.TestCase):
             self.petab_importers.append(importer)
 
             # check model
-            model = importer.create_model(force_compile=False)
+            model = importer.create_factory().create_model(force_compile=False)
 
             # observable ids
             model_obs_ids = list(model.getObservableIds())
@@ -62,12 +62,13 @@ class PetabImportTest(unittest.TestCase):
 
     def test_2_simulate(self):
         for petab_importer in self.petab_importers:
-            obj = petab_importer.create_objective()
-            edatas = petab_importer.create_edatas()
+            factory = petab_importer.create_factory()
+            obj = factory.create_objective()
+            edatas = factory.create_edatas()
             self.obj_edatas.append((obj, edatas))
 
             # run function
-            x_nominal = petab_importer.petab_problem.x_nominal_scaled
+            x_nominal = factory.petab_problem.x_nominal_scaled
             ret = obj(x_nominal)
 
             self.assertTrue(np.isfinite(ret))
