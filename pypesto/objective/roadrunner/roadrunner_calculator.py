@@ -8,7 +8,6 @@ import numbers
 from collections.abc import Sequence
 
 import numpy as np
-from petab.v1.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import (
     FVAL,
@@ -29,6 +28,7 @@ from .utils import (
 
 try:
     import petab.v1 as petab
+    from petab.v1.parameter_mapping import ParMappingDictQuadruple
 except ImportError:
     petab = None
 try:
