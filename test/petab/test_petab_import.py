@@ -115,12 +115,12 @@ class PetabImportTest(unittest.TestCase):
     def test_check_gradients(self):
         """Test objective FD-gradient check function."""
         # Check gradients of simple model (should always be a true positive)
-        model_name = "Bachmann_MSB2011"
+        model_name = "Boehm_JProteomeRes2014"
         importer = pypesto.petab.PetabImporter.from_yaml(
             os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
         )
 
-        objective = importer.create_factory().create_objective()
+        objective = importer.create_problem().objective
         objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_forward
         )
