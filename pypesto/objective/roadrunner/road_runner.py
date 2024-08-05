@@ -35,6 +35,7 @@ class RoadRunnerObjective(ObjectiveBase):
         parameter_mapping: list[ParMappingDictQuadruple],
         petab_problem: PetabProblem,
         calculator: RoadRunnerCalculator | None = None,
+        x_ids: Sequence[str] | None = None,
         x_names: Sequence[str] | None = None,
         solver_options: SolverOptions | None = None,
     ):
@@ -57,6 +58,8 @@ class RoadRunnerObjective(ObjectiveBase):
             Might be removed later.
         calculator:
             The calculator to use. If None, a new instance is created.
+        x_ids:
+            IDs of Roadrunner parameters. Includes fixed parameters as well.
         x_names:
             Names of optimization parameters.
         """
@@ -73,6 +76,11 @@ class RoadRunnerObjective(ObjectiveBase):
         if solver_options is None:
             solver_options = SolverOptions()
         self.solver_options = solver_options
+        if x_ids is None:
+            x_ids = list(rr.model.getGlobalParameterIds())
+        self.x_ids = x_ids
+        if x_names is None:
+            x_names = x_ids
         super().__init__(x_names=x_names)
 
     def get_config(self) -> dict:
@@ -119,7 +127,7 @@ class RoadRunnerObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         # convert x to dictionary
-        x = OrderedDict(zip(self.x_names, x))
+        x = OrderedDict(zip(self.x_ids, x))
         ret = self.calculator(
             x_dct=x,
             mode=mode,
