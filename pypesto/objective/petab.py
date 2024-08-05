@@ -1,3 +1,6 @@
+"""Objective function for PEtab models using the PEtab simulator."""
+from __future__ import annotations
+
 try:
     import petab.v1 as petab
     from petab.v1.simulate import Simulator as PetabSimulator
