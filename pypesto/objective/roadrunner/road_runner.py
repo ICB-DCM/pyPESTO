@@ -8,14 +8,17 @@ from collections import OrderedDict
 from collections.abc import Sequence
 
 import numpy as np
-from petab.v1 import Problem as PetabProblem
-from petab.v1.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import MODE_FUN, MODE_RES, ROADRUNNER_INSTANCE, X_NAMES, ModeType
 from ..base import ObjectiveBase
 from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData, SolverOptions
 
+try:
+    from petab.v1 import Problem as PetabProblem
+    from petab.v1.parameter_mapping import ParMappingDictQuadruple
+except ImportError:
+    petab = None
 try:
     import roadrunner
 except ImportError:

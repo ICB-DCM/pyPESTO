@@ -1,12 +1,16 @@
 from functools import partial
 
 import numpy as np
-import petab.v1 as petab
-from petab.v1.C import (
-    ESTIMATE,
-    NOISE_PARAMETERS,
-    OBSERVABLE_ID,
-)
+
+try:
+    import petab.v1 as petab
+    from petab.v1.C import (
+        ESTIMATE,
+        NOISE_PARAMETERS,
+        OBSERVABLE_ID,
+    )
+except ImportError:
+    petab = None
 
 from ..C import (
     CENSORED,
