@@ -24,7 +24,10 @@ from pypesto.optimize.ess import (
     SacessOptimizer,
     get_default_ess_options,
 )
-from pypesto.optimize.util import assign_ids
+from pypesto.optimize.util import (
+    assign_ids,
+    laplace_approximation_log_evidence,
+)
 from pypesto.store import read_result
 
 from ..base.test_x_fixed import create_problem
@@ -675,3 +678,22 @@ def test_assign_ids():
 
     ids = assign_ids(n_starts=n_starts, ids=None, result=result)
     assert ids == [str(i) for i in range(n_starts, n_starts * 2)]
+
+
+def test_laplace_approximation_log_evidence():
+    prob = pypesto.Problem(
+        objective=rosen_for_sensi(max_sensi_order=2)["obj"],
+        lb=0 * np.ones((1, 2)),
+        ub=1 * np.ones((1, 2)),
+    )
+
+    # hess
+    result = optimize.minimize(
+        problem=prob,
+        n_starts=1,
+        progress_bar=False,
+    )
+    log_evidence = laplace_approximation_log_evidence(
+        prob, result.optimize_result.x[0]
+    )
+    assert isinstance(log_evidence, float)
