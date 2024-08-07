@@ -184,14 +184,15 @@ class ParallelTemperingSampler(Sampler):
         method: str = "trapezoid",
         use_all_chains: bool = True,
     ) -> Union[float, None]:
-        """Perform thermodynamic integration to estimate the log evidence.
+        """Perform thermodynamic integration or steppingstone samping to estimate the log evidence.
 
         Parameters
         ----------
         result:
             Result object containing the samples.
         method:
-            Integration method, either 'trapezoid' or 'simpson' (uses scipy for integration).
+            Integration method, either 'trapezoid' or 'simpson' to perform thermodynamic integration
+            (uses scipy for integration) or 'steppingstone' to perform steppingstone sampling.
         use_all_chains:
             If True, calculate burn-in for each chain and use the maximal burn-in for all chains for the integration.
             This will fail if not all chains have converged yet.

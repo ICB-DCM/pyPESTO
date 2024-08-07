@@ -823,6 +823,11 @@ def test_thermodynamic_integration():
     )
     log_evidence_simps = sampler.compute_log_evidence(result, method="simpson")
 
+    # use steppingstone sampling
+    log_evidence_steppingstone = sampler.compute_log_evidence(
+        result, method="steppingstone"
+    )
+
     # compute evidence
     evidence = quad(
         lambda x: 1
@@ -836,3 +841,53 @@ def test_thermodynamic_integration():
     assert np.isclose(log_evidence, np.log(evidence[0]), atol=tol)
     assert np.isclose(log_evidence_not_all, np.log(evidence[0]), atol=tol)
     assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)
+    assert np.isclose(
+        log_evidence_steppingstone, np.log(evidence[0]), atol=tol
+    )
+
+
+def test_harmonic_mean_log_evidence():
+    tol = 1
+    # define problem
+    problem = gaussian_problem()
+
+    # run optimization and MCMC
+    result = optimize.minimize(
+        problem,
+        progress_bar=False,
+    )
+    result = sample.sample(
+        problem,
+        n_samples=2000,
+        result=result,
+    )
+    burn_in = sample.diagnostics.geweke_test(result)
+
+    # compute the log evidence using harmonic mean
+    harmonic_evidence = sample.util.harmonic_mean_log_evidence(
+        trace_neglogpost=result.sample_result.trace_neglogpost[0, burn_in:],
+        trace_neglogprior=result.sample_result.trace_neglogprior[0, burn_in:],
+    )
+    # compute the log evidence using stabilized harmonic mean
+    prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
+    harmonic_stabilized_evidence = sample.util.harmonic_mean_log_evidence(
+        trace_neglogpost=result.sample_result.trace_neglogpost[0, burn_in:],
+        trace_neglogprior=result.sample_result.trace_neglogprior[0, burn_in:],
+        prior_samples=prior_samples,
+        neg_log_likelihood_fun=problem.objective,
+    )
+
+    # compute real evidence
+    evidence = quad(
+        lambda x: 1
+        / (problem.ub[0] - problem.lb[0])
+        * np.exp(gaussian_llh(x)),
+        a=problem.lb[0],
+        b=problem.ub[0],
+    )
+
+    # compare to known value
+    assert np.isclose(harmonic_evidence, np.log(evidence[0]), atol=tol)
+    assert np.isclose(
+        harmonic_stabilized_evidence, np.log(evidence[0]), atol=tol
+    )
