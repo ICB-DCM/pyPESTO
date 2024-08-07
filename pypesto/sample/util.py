@@ -2,6 +2,7 @@
 
 import logging
 import os
+from typing import Optional
 
 import numpy as np
 
@@ -124,3 +125,80 @@ def bound_n_samples_from_env(n_samples: int):
     )
 
     return n_samples_new
+
+
+def harmonic_mean_log_evidence(
+    trace_neglogpost: np.ndarray,
+    trace_neglogprior: np.ndarray,
+    prior_samples: Optional[np.ndarray] = None,
+    neg_log_likelihood_fun: Optional[callable] = None,
+) -> float:
+    """
+    Compute the log evidence using the harmonic mean estimator. If samples from the prior are provided, the stabilized harmonic mean is computed (recommended).
+
+    Parameters
+    ----------
+    trace_neglogpost: np.ndarray
+        Negative log posterior samples.
+    trace_neglogprior: np.ndarray
+        Negative log prior samples.
+    prior_samples: np.ndarray (n_samples, n_parameters)
+        Samples from the prior distribution.
+    neg_log_likelihood_fun: callable
+        Function to evaluate the negative log likelihood.
+    """
+    from scipy.optimize import minimize_scalar
+    from scipy.special import logsumexp
+
+    # compute negative log likelihoods from traces
+    neg_log_likelihoods_posterior = trace_neglogpost - trace_neglogprior
+
+    if prior_samples is None:
+        # compute harmonic mean from samples
+        return -logsumexp(neg_log_likelihoods_posterior) + np.log(
+            neg_log_likelihoods_posterior.size
+        )
+
+    # compute stabilized harmonic mean
+    if prior_samples is not None and neg_log_likelihood_fun is None:
+        raise ValueError(
+            "you need to provide a likelihood function to evaluate prior samples"
+        )
+
+    # compute delta (ratio of prior to posterior samples)
+    n_samples_prior = len(prior_samples)
+    n_samples_posterior = len(trace_neglogpost)
+    delta = n_samples_prior / (n_samples_prior + n_samples_posterior)
+    neg_log_likelihoods_prior = np.array(
+        [neg_log_likelihood_fun(x) for x in prior_samples]
+    )
+    log_likelihoods_stack = -np.concatenate(
+        [neg_log_likelihoods_prior, neg_log_likelihoods_posterior]
+    )
+
+    def _log_evidence_objective(log_p: float):
+        # Helper function to compute the log evidence with stabilized harmonic mean
+        log_w_i = logsumexp(
+            np.stack(
+                (
+                    log_p * np.ones_like(log_likelihoods_stack),
+                    log_likelihoods_stack,
+                ),
+                axis=1,
+            ),
+            b=np.array([delta, 1 - delta]),
+            axis=1,
+        )
+        res, sign = logsumexp(
+            [
+                log_p,
+                logsumexp(log_likelihoods_stack - log_w_i)
+                - logsumexp(-log_w_i),
+            ],
+            b=[1, -1],
+            return_sign=True,
+        )
+        return sign * res
+
+    sol = minimize_scalar(_log_evidence_objective)
+    return sol.x

@@ -198,6 +198,7 @@ class ParallelTemperingSampler(Sampler):
             Otherwise, use only the converged chains for the integration (might increase the integration error).
         """
         from scipy.integrate import simpson, trapezoid
+        from scipy.special import logsumexp
 
         if self.options["beta_init"] == EXPONENTIAL_DECAY:
             logger.warning(
@@ -233,6 +234,7 @@ class ParallelTemperingSampler(Sampler):
         else:
             # estimate mean of log likelihood for each beta if chain has converged
             mean_loglike_per_beta = []
+            trace_loglike = []
             temps = []
             for i_chain in reversed(range(len(self.betas))):
                 if burn_ins[i_chain] < result.sample_result.trace_x.shape[1]:
@@ -247,6 +249,7 @@ class ParallelTemperingSampler(Sampler):
                             i_chain, burn_ins[i_chain] :
                         ]
                     )
+                    trace_loglike.append(trace_loglike_i)
                     mean_loglike_per_beta.append(np.mean(trace_loglike_i))
 
         if method == "trapezoid":
@@ -261,9 +264,17 @@ class ParallelTemperingSampler(Sampler):
                 y=mean_loglike_per_beta,
                 x=temps,
             )
+        elif method == "steppingstone":
+            ss_log_evidences = np.zeros(len(temps) - 1)
+            for t_i in range(1, len(temps)):
+                ss_log_evidences[t_i - 1] = logsumexp(
+                    trace_loglike[t_i - 1] * (temps[t_i] - temps[t_i - 1])
+                ) - np.log(trace_loglike[t_i - 1].size)
+            log_evidence = np.sum(ss_log_evidences)
         else:
             raise ValueError(
-                f"Unknown method {method}. Choose 'trapezoid' or 'simpson'."
+                f"Unknown method {method}. Choose 'trapezoid', 'simpson' for thermodynamic integration or ",
+                "'steppingstone' for steppingstone sampling.",
             )
 
         return log_evidence

@@ -11,6 +11,7 @@ import numpy as np
 from .. import C
 from ..engine import Engine, SingleCoreEngine
 from ..history import CsvHistoryTemplateError, HistoryOptions, HistoryTypeError
+from ..problem import Problem
 from ..result import Result
 from .optimizer import OptimizerResult
 
@@ -188,3 +189,36 @@ def check_finite_bounds(lb, ub):
             "Selected optimizer cannot work with unconstrained "
             "optimization problems."
         )
+
+
+def laplace_approximation_log_evidence(
+    problem: Problem, x: np.ndarray
+) -> float:
+    """
+    Compute the log evidence using the Laplace approximation.
+
+    Expects the problem to have a Hessian method implemented and the objective to be negative log posterior.
+
+    Parameters
+    ----------
+    problem:
+        The problem to compute the log evidence for.
+    x: np.ndarray
+        The maximum a posteriori estimate at which to compute the log evidence.
+
+    Returns
+    -------
+    log_evidence: float
+        The log
+    """
+    hessian = problem.objective(
+        problem.get_reduced_vector(x), sensi_orders=(2,)
+    )
+    _, log_det = np.linalg.slogdet(hessian)
+    log_prop_posterior = -problem.objective(problem.get_reduced_vector(x))
+    log_evidence = (
+        0.5 * np.log(2 * np.pi) * len(problem.x_free_indices)
+        - 0.5 * log_det
+        + log_prop_posterior
+    )
+    return log_evidence
