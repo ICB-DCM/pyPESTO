@@ -128,8 +128,7 @@ def bound_n_samples_from_env(n_samples: int):
 
 
 def harmonic_mean_log_evidence(
-    trace_neglogpost: np.ndarray,
-    trace_neglogprior: np.ndarray,
+    result: Result,
     prior_samples: Optional[np.ndarray] = None,
     neg_log_likelihood_fun: Optional[callable] = None,
 ) -> float:
@@ -138,10 +137,7 @@ def harmonic_mean_log_evidence(
 
     Parameters
     ----------
-    trace_neglogpost: np.ndarray
-        Negative log posterior samples.
-    trace_neglogprior: np.ndarray
-        Negative log prior samples.
+    result: Result
     prior_samples: np.ndarray (n_samples, n_parameters)
         Samples from the prior distribution.
     neg_log_likelihood_fun: callable
@@ -150,7 +146,10 @@ def harmonic_mean_log_evidence(
     from scipy.optimize import minimize_scalar
     from scipy.special import logsumexp
 
-    # compute negative log likelihoods from traces
+    # compute negative log likelihood from traces
+    burn_in = geweke_test(result)
+    trace_neglogpost = result.sample_result.trace_neglogpost[0, burn_in:]
+    trace_neglogprior = result.sample_result.trace_neglogprior[0, burn_in:]
     neg_log_likelihoods_posterior = trace_neglogpost - trace_neglogprior
 
     if prior_samples is None:

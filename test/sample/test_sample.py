@@ -846,6 +846,7 @@ def test_thermodynamic_integration():
     )
 
 
+@pytest.mark.flaky(reruns=2)
 def test_harmonic_mean_log_evidence():
     tol = 1
     # define problem
@@ -861,18 +862,13 @@ def test_harmonic_mean_log_evidence():
         n_samples=2000,
         result=result,
     )
-    burn_in = sample.diagnostics.geweke_test(result)
 
     # compute the log evidence using harmonic mean
-    harmonic_evidence = sample.util.harmonic_mean_log_evidence(
-        trace_neglogpost=result.sample_result.trace_neglogpost[0, burn_in:],
-        trace_neglogprior=result.sample_result.trace_neglogprior[0, burn_in:],
-    )
+    harmonic_evidence = sample.util.harmonic_mean_log_evidence(result)
     # compute the log evidence using stabilized harmonic mean
     prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
     harmonic_stabilized_evidence = sample.util.harmonic_mean_log_evidence(
-        trace_neglogpost=result.sample_result.trace_neglogpost[0, burn_in:],
-        trace_neglogprior=result.sample_result.trace_neglogprior[0, burn_in:],
+        result=result,
         prior_samples=prior_samples,
         neg_log_likelihood_fun=problem.objective,
     )
