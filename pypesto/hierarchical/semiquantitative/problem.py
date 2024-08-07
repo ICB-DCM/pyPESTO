@@ -39,6 +39,7 @@ try:
         NOISE_PARAMETERS,
         OBSERVABLE_ID,
         PARAMETER_ID,
+        PARAMETER_SCALE,
         UPPER_BOUND,
     )
 except ImportError:
@@ -145,6 +146,18 @@ class SemiquantProblem(AmiciInnerProblem):
         """
         return [
             x.inner_parameter_id
+            for x in self.xs.values()
+            if x.inner_parameter_type == InnerParameterType.SIGMA
+        ]
+
+    def get_interpretable_x_scales(self) -> list[str]:
+        """Get scales of interpretable inner parameters.
+
+        The interpretable inner parameters of the semiquantitative
+        problem are the noise parameters.
+        """
+        return [
+            x.scale
             for x in self.xs.values()
             if x.inner_parameter_type == InnerParameterType.SIGMA
         ]
@@ -420,7 +433,7 @@ def noise_inner_parameters_from_parameter_df(
             SplineInnerParameter(
                 inner_parameter_id=row[PARAMETER_ID],
                 inner_parameter_type=InnerParameterType.SIGMA,
-                scale=LIN,
+                scale=row[PARAMETER_SCALE],
                 lb=row[LOWER_BOUND],
                 ub=row[UPPER_BOUND],
                 observable_id=observable_id,
