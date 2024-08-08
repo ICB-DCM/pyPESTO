@@ -193,6 +193,7 @@ def adaptive_step(
         delta_x_dir,
         reg_par,
         delta_obj_value,
+        last_delta_fval,
     ) = handle_profile_history(
         x,
         par_index,
@@ -254,15 +255,32 @@ def adaptive_step(
 
     # next start point has to be searched
     # compute the next objective value which we aim for
-    next_obj_target = (
+    high_next_obj_target = (
         -np.log(1.0 - options.delta_ratio_max)
-        + options.magic_factor_obj_value * delta_obj_value
+        + 1.5 * last_delta_fval
         + current_profile.fval_path[-1]
     )
+    low_next_obj_target = (
+        +np.log(1.0 - options.delta_ratio_max)
+        - 1.5 * last_delta_fval
+        + current_profile.fval_path[-1]
+    )
+
+    # Clip both by 0.5 * delta_obj_value to avoid overshooting
+    if delta_obj_value != 0:
+        high_next_obj_target = min(
+            high_next_obj_target,
+            current_profile.fval_path[-1] + 0.5 * delta_obj_value,
+        )
+        low_next_obj_target = max(
+            low_next_obj_target,
+            current_profile.fval_path[-1] - 0.5 * delta_obj_value,
+        )
 
     # compute objective at the guessed point
     problem.fix_parameters(par_index, next_x[par_index])
     next_obj = problem.objective(problem.get_reduced_vector(next_x))
+    current_obj = current_profile.fval_path[-1]
 
     # iterate until good step size is found
     return do_line_search(
@@ -270,7 +288,9 @@ def adaptive_step(
         step_size_guess,
         par_extrapol,
         next_obj,
-        next_obj_target,
+        current_obj,
+        high_next_obj_target,
+        low_next_obj_target,
         clip_to_minmax,
         clip_to_bounds,
         par_index,
@@ -304,6 +324,8 @@ def handle_profile_history(
         The regression polynomial for profile extrapolation.
     delta_obj_value:
         The difference of the objective function value between the last point and `global_opt`.
+    last_delta_fval:
+        The difference of the objective function value between the last two points.
     """
     n_profile_points = len(current_profile.fval_path)
 
@@ -317,28 +339,43 @@ def handle_profile_history(
         # try to use the default step size
         step_size_guess = options.default_step_size
         delta_obj_value = 0.0
+        last_delta_fval = 0.0
 
     else:
         # try to reuse the previous step size
-        step_size_guess = np.abs(
+        last_delta_x_par_index = np.abs(
             current_profile.x_path[par_index, -1]
             - current_profile.x_path[par_index, -2]
         )
+        # Bound the step size by default values
+        step_size_guess = min(
+            last_delta_x_par_index, options.default_step_size
+        )
+
         delta_obj_value = current_profile.fval_path[-1] - global_opt
+        last_delta_fval = (
+            current_profile.fval_path[-1] - current_profile.fval_path[-2]
+        )
 
         if order == 1 or (np.isnan(order) and n_profile_points < 3):
             # set the update direction (extrapolate with order 1)
             last_delta_x = (
                 current_profile.x_path[:, -1] - current_profile.x_path[:, -2]
             )
-            delta_x_dir = last_delta_x / step_size_guess
+            delta_x_dir = last_delta_x / last_delta_x_par_index
         elif np.isnan(order):
             # compute the regression polynomial for parameter extrapolation
             reg_par = get_reg_polynomial(
                 par_index, current_profile, problem, options
             )
 
-    return step_size_guess, delta_x_dir, reg_par, delta_obj_value
+    return (
+        step_size_guess,
+        delta_x_dir,
+        reg_par,
+        delta_obj_value,
+        last_delta_fval,
+    )
 
 
 def get_reg_polynomial(
@@ -395,7 +432,9 @@ def do_line_search(
     step_size_guess: float,
     par_extrapol: Callable,
     next_obj: float,
-    next_obj_target: float,
+    current_obj: float,
+    high_next_obj_target: float,
+    low_next_obj_target: float,
     clip_to_minmax: Callable,
     clip_to_bounds: Callable,
     par_index: int,
@@ -435,8 +474,28 @@ def do_line_search(
     Parameter vector that is expected to yield the objective function value
     closest to `next_obj_target`.
     """
-    # Was the initial step too big or too small?
-    direction = "decrease" if next_obj_target < next_obj else "increase"
+    going_to_low_target = False
+    going_to_high_target = False
+
+    # Determine the direction of the step
+    if next_obj >= current_obj:
+        next_obj_target = high_next_obj_target
+        going_to_high_target = True
+
+        if next_obj >= high_next_obj_target:
+            direction = "decrease"
+        else:
+            direction = "increase"
+
+    elif next_obj < current_obj:
+        next_obj_target = low_next_obj_target
+        going_to_low_target = True
+
+        if next_obj <= low_next_obj_target:
+            direction = "decrease"
+        else:
+            direction = "increase"
+
     if direction == "increase":
         adapt_factor = options.step_size_factor
     else:
@@ -467,8 +526,27 @@ def do_line_search(
         next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
         # check for root crossing and compute correct step size in case
-        if (direction == "decrease" and next_obj_target >= next_obj) or (
-            direction == "increase" and next_obj_target <= next_obj
+        if (
+            (
+                direction == "increase"
+                and next_obj > high_next_obj_target
+                and going_to_high_target
+            )
+            or (
+                direction == "decrease"
+                and next_obj < high_next_obj_target
+                and going_to_high_target
+            )
+            or (
+                direction == "increase"
+                and next_obj < low_next_obj_target
+                and going_to_low_target
+            )
+            or (
+                direction == "decrease"
+                and next_obj > low_next_obj_target
+                and going_to_low_target
+            )
         ):
             return next_x_interpolate(
                 next_obj, last_obj, next_x, last_x, next_obj_target
