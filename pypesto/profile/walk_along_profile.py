@@ -78,26 +78,159 @@ def walk_along_profile(
         ):
             break
 
-        # compute the new start point for optimization
-        x_next = create_next_guess(
-            x_now,
-            i_par,
-            par_direction,
-            options,
-            current_profile,
-            problem,
-            global_opt,
-        )
+        optimization_successful = False
+        max_step_reduce_factor = 1.0
 
-        # fix current profiling parameter to current value and set start point
-        problem.fix_parameters(i_par, x_next[i_par])
-        startpoint = x_next[problem.x_free_indices]
+        while not optimization_successful:
+            # Check max_step_size is not reduced below min_step_size
+            if (
+                options.max_step_size * max_step_reduce_factor
+                < options.min_step_size
+            ):
+                logger.warning(
+                    "Max step size reduced below min step size. "
+                    "Setting a lower min step size can help avoid this issue."
+                )
+                break
 
-        # run optimization
-        if startpoint.size > 0:
-            # number of optimization attempts for the given value of i_par in case
-            #  no finite solution is found
+            # compute the new start point for optimization
+            x_next = create_next_guess(
+                x_now,
+                i_par,
+                par_direction,
+                options,
+                current_profile,
+                problem,
+                global_opt,
+                1.0,
+                max_step_reduce_factor,
+            )
+
+            # fix current profiling parameter to current value and set start point
+            problem.fix_parameters(i_par, x_next[i_par])
+            startpoint = x_next[problem.x_free_indices]
+
+            if startpoint.size > 0:
+                optimizer_result = optimizer.minimize(
+                    problem=problem,
+                    x0=startpoint,
+                    id=str(0),
+                    optimize_options=OptimizeOptions(
+                        allow_failed_starts=False
+                    ),
+                )
+
+                if np.isfinite(optimizer_result.fval):
+                    optimization_successful = True
+                else:
+                    max_step_reduce_factor *= 0.5
+                    logger.warning(
+                        f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed. "
+                        f"Reducing max_step_size to {options.max_step_size * max_step_reduce_factor}."
+                    )
+            else:
+                # if too many parameters are fixed, there is nothing to do ...
+                fval = problem.objective(np.array([]))
+                optimizer_result = OptimizerResult(
+                    id="0",
+                    x=np.array([]),
+                    fval=fval,
+                    n_fval=0,
+                    n_grad=0,
+                    n_res=0,
+                    n_hess=0,
+                    n_sres=0,
+                    x0=np.array([]),
+                    fval0=fval,
+                    time=0,
+                )
+                optimizer_result.update_to_full(problem=problem)
+                optimization_successful = True
+
+        if not optimization_successful:
+            # Cannot optimize successfully by reducing max_step_size
+            # Let's try to optimize by increasing min_step_size
+            logger.warning(
+                f"Failing to optimize at {problem.x_names[i_par]}={x_next[i_par]} after reducing max_step_size."
+                f"Trying to increase min_step_size."
+            )
+
+            min_step_increase_factor = 1.25
+
+            while not optimization_successful:
+                # Check min_step_size is not increased above max_step_size
+                if (
+                    options.min_step_size * min_step_increase_factor
+                    > options.max_step_size
+                ):
+                    logger.warning(
+                        "Min step size increased above max step size. "
+                        "Setting a higher max step size can help avoid this issue."
+                    )
+                    break
+
+                # compute the new start point for optimization
+                x_next = create_next_guess(
+                    x_now,
+                    i_par,
+                    par_direction,
+                    options,
+                    current_profile,
+                    problem,
+                    global_opt,
+                    min_step_increase_factor,
+                    1.0,
+                )
+
+                # fix current profiling parameter to current value and set start point
+                problem.fix_parameters(i_par, x_next[i_par])
+                startpoint = x_next[problem.x_free_indices]
+
+                optimizer_result = optimizer.minimize(
+                    problem=problem,
+                    x0=startpoint,
+                    id=str(0),
+                    optimize_options=OptimizeOptions(
+                        allow_failed_starts=False
+                    ),
+                )
+
+                if np.isfinite(optimizer_result.fval):
+                    optimization_successful = True
+                else:
+                    min_step_increase_factor *= 1.25
+                    logger.warning(
+                        f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed. "
+                        f"Increasing min_step_size to {options.min_step_size * min_step_increase_factor}."
+                    )
+
+        if not optimization_successful:
+            # Cannot optimize successfully by reducing max_step_size or increasing min_step_size
+            # sample a new starting point for another attempt for max_tries times
+            logger.warning(
+                f"Failing to optimize at {problem.x_names[i_par]}={x_next[i_par]} after reducing max_step_size."
+                f"Trying to sample {max_tries} new starting points."
+            )
+
+            x_next = create_next_guess(
+                x_now,
+                i_par,
+                par_direction,
+                options,
+                current_profile,
+                problem,
+                global_opt,
+                1.0,
+                1.0,
+            )
+
+            problem.fix_parameters(i_par, x_next[i_par])
+
             for i_optimize_attempt in range(max_tries):
+                startpoint = problem.startpoint_method(
+                    n_starts=1, problem=problem
+                )[0]
+
                 optimizer_result = optimizer.minimize(
                     problem=problem,
                     x0=startpoint,
@@ -112,34 +245,10 @@ def walk_along_profile(
                 logger.warning(
                     f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed."
                 )
-                # sample a new starting point for another attempt
-                #  might be preferable to stay close to the previous point, at least initially,
-                #  but for now, we just sample from anywhere within the parameter bounds
-                # alternatively, run multi-start optimization
-                startpoint = problem.startpoint_method(
-                    n_starts=1, problem=problem
-                )[0]
             else:
                 raise RuntimeError(
                     f"Computing profile point failed. Could not find a finite solution after {max_tries} attempts."
                 )
-        else:
-            # if too many parameters are fixed, there is nothing to do ...
-            fval = problem.objective(np.array([]))
-            optimizer_result = OptimizerResult(
-                id="0",
-                x=np.array([]),
-                fval=fval,
-                n_fval=0,
-                n_grad=0,
-                n_res=0,
-                n_hess=0,
-                n_sres=0,
-                x0=np.array([]),
-                fval0=fval,
-                time=0,
-            )
-            optimizer_result.update_to_full(problem=problem)
 
         if optimizer_result[GRAD] is not None:
             gradnorm = np.linalg.norm(

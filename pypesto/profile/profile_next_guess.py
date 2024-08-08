@@ -23,6 +23,8 @@ def next_guess(
     current_profile: ProfilerResult,
     problem: Problem,
     global_opt: float,
+    min_step_increase_factor: float = 1.0,
+    max_step_reduce_factor: float = 1.0,
 ) -> np.ndarray:
     """
     Create the next initial guess for the optimizer.
@@ -53,6 +55,12 @@ def next_guess(
         The problem to be solved.
     global_opt:
         Log-posterior value of the global optimum.
+    min_step_increase_factor:
+        Factor to increase the minimal step size bound. Used only in
+        :func:`adaptive_step`.
+    max_step_reduce_factor:
+        Factor to reduce the maximal step size bound. Used only in
+        :func:`adaptive_step`.
 
     Returns
     -------
@@ -83,6 +91,8 @@ def next_guess(
         problem,
         global_opt,
         order,
+        min_step_increase_factor,
+        max_step_reduce_factor,
     )
 
 
@@ -138,6 +148,8 @@ def adaptive_step(
     problem: Problem,
     global_opt: float,
     order: int = 1,
+    min_step_increase_factor: float = 1.0,
+    max_step_reduce_factor: float = 1.0,
 ) -> np.ndarray:
     """Group of more complex methods for point proposal.
 
@@ -168,6 +180,10 @@ def adaptive_step(
         * ``1``: the last two points are used to extrapolate all parameters
         * ``np.nan``: indicates that a more complex regression should be used
           as determined by :attr:`pypesto.profile.ProfileOptions.reg_order`.
+    min_step_increase_factor:
+        Factor to increase the minimal step size bound.
+    max_step_reduce_factor:
+        Factor to reduce the maximal step size bound.
 
 
     Returns
@@ -177,9 +193,9 @@ def adaptive_step(
 
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
-        return np.clip(
-            step_size_proposal, options.min_step_size, options.max_step_size
-        )
+        min_step_size = options.min_step_size * min_step_increase_factor
+        max_step_size = options.max_step_size * max_step_reduce_factor
+        return np.clip(step_size_proposal, min_step_size, max_step_size)
 
     # restrict step proposal to bounds
     def clip_to_bounds(step_proposal):
@@ -207,7 +223,10 @@ def adaptive_step(
 
     # check whether we must make a minimum step anyway, since we're close to
     # the next bound
-    min_delta_x = x[par_index] + par_direction * options.min_step_size
+    min_delta_x = (
+        x[par_index]
+        + par_direction * options.min_step_size * min_step_increase_factor
+    )
 
     if par_direction == -1 and (min_delta_x < problem.lb_full[par_index]):
         step_length = problem.lb_full[par_index] - x[par_index]
@@ -298,6 +317,8 @@ def adaptive_step(
         par_index,
         problem,
         options,
+        min_step_increase_factor,
+        max_step_reduce_factor,
     )
 
 
@@ -442,6 +463,8 @@ def do_line_search(
     par_index: int,
     problem: Problem,
     options: ProfileOptions,
+    min_step_increase_factor: float,
+    max_step_reduce_factor: float,
 ) -> np.ndarray:
     """Perform the line search.
 
@@ -470,6 +493,10 @@ def do_line_search(
         The parameter estimation problem.
     options:
         Profile likelihood options.
+    min_step_increase_factor:
+        Factor to increase the minimal step size bound.
+    max_step_reduce_factor:
+        Factor to reduce the maximal step size bound.
 
     Returns
     -------
@@ -505,6 +532,7 @@ def do_line_search(
 
     # Loop until correct step size was found
     while True:
+        # print(f"Doing line search with step size {step_size_guess} at {next_x[par_index]}")
         # Adapt step size of guess
         last_x = next_x
         step_size_guess = clip_to_minmax(step_size_guess * adapt_factor)
@@ -513,12 +541,14 @@ def do_line_search(
         # Check if we hit the bounds
         if (
             direction == "decrease"
-            and step_size_guess == options.min_step_size
+            and step_size_guess
+            == options.min_step_size * min_step_increase_factor
         ):
             return next_x
         if (
             direction == "increase"
-            and step_size_guess == options.max_step_size
+            and step_size_guess
+            == options.max_step_size * max_step_reduce_factor
         ):
             return next_x
 

@@ -104,6 +104,8 @@ def parameter_profile(
             current_profile_,
             problem_,
             global_opt_,
+            min_step_increase_factor_,
+            max_step_reduce_factor_,
         ):
             return next_guess(
                 x,
@@ -114,6 +116,8 @@ def parameter_profile(
                 current_profile_,
                 problem_,
                 global_opt_,
+                min_step_increase_factor_,
+                max_step_reduce_factor_,
             )
 
     elif callable(next_guess_method):
