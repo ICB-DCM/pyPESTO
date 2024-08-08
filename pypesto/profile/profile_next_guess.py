@@ -265,6 +265,8 @@ def adaptive_step(
         - 1.5 * last_delta_fval
         + current_profile.fval_path[-1]
     )
+    # TODO: Change 1.5 to magic factor
+    # TODO: change default max min step sizes
 
     # Clip both by 0.5 * delta_obj_value to avoid overshooting
     if delta_obj_value != 0:
