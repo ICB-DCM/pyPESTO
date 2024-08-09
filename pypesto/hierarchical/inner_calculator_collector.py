@@ -7,6 +7,7 @@ to collect hierarchical inner calculators for each data type and merge their res
 from __future__ import annotations
 
 import copy
+import warnings
 from collections.abc import Sequence
 from typing import Union
 
@@ -404,14 +405,20 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.necessary_par_dummy_values)
-        # fill in parameters
-        fill_in_parameters(
-            edatas=edatas,
-            problem_parameters=x_dct,
-            scaled_parameters=True,
-            parameter_mapping=parameter_mapping,
-            amici_model=amici_model,
-        )
+        # fill in parameters, we expect here a RunTimeWarning to occur
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The following problem parameters were not used:.*",
+                category=RuntimeWarning,
+            )
+            fill_in_parameters(
+                edatas=edatas,
+                problem_parameters=x_dct,
+                scaled_parameters=True,
+                parameter_mapping=parameter_mapping,
+                amici_model=amici_model,
+            )
 
         # run amici simulation
         rdatas = amici.runAmiciSimulations(
