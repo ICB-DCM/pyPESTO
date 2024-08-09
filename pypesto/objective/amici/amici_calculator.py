@@ -6,6 +6,15 @@ from typing import TYPE_CHECKING, Union
 import numpy as np
 
 from ...C import (
+    AMICI_CHI2,
+    AMICI_FIM,
+    AMICI_LLH,
+    AMICI_RES,
+    AMICI_SCHI2,
+    AMICI_SLLH,
+    AMICI_SRES,
+    AMICI_SSIGMAY,
+    AMICI_SSIGMAZ,
     FVAL,
     GRAD,
     HESS,
@@ -46,6 +55,38 @@ class AmiciCalculator:
     def initialize(self):
         """Initialize the calculator. Default: Do nothing."""
 
+    def check_least_squares_safe(
+        self, amici_model, rdatas, sensi_orders, mode, mse_for_fval
+    ):
+        """Check if the least squares solver is safe to use."""
+        if self._known_least_squares_safe:
+            return  # already checked
+
+        if 1 not in sensi_orders or not (mode == MODE_RES or mse_for_fval):
+            return  # no need to check
+
+        if not amici_model.getAddSigmaResiduals() and any(
+            (
+                (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
+                or (r[AMICI_SSIGMAZ] is not None and np.any(r[AMICI_SSIGMAZ]))
+            )
+            for r in rdatas
+        ):
+            if mode == MODE_RES:
+                raise RuntimeError(
+                    "Cannot use least squares solver with parameter "
+                    "dependent sigma! Support can be enabled via "
+                    "amici_model.setAddSigmaResiduals()."
+                )
+            if mse_for_fval:
+                raise RuntimeError(
+                    "Cannot use mean squared error for function value "
+                    "with parameter dependent sigma! Support can be "
+                    "enabled via amici_model.setAddSigmaResiduals()"
+                )
+
+        self._known_least_squares_safe = True  # don't check this again
+
     def __call__(
         self,
         x_dct: dict,
@@ -58,6 +99,7 @@ class AmiciCalculator:
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
+        mse_for_fval: bool,
     ):
         """Perform the actual AMICI call.
 
@@ -86,6 +128,8 @@ class AmiciCalculator:
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
+        mse_for_fval:
+            Whether to use (negative!) mean squared error for the function value.
         """
         import amici.petab.conditions
 
@@ -116,25 +160,9 @@ class AmiciCalculator:
             edatas,
             num_threads=min(n_threads, len(edatas)),
         )
-        if (
-            not self._known_least_squares_safe
-            and mode == MODE_RES
-            and 1 in sensi_orders
-        ):
-            if not amici_model.getAddSigmaResiduals() and any(
-                (
-                    (r["ssigmay"] is not None and np.any(r["ssigmay"]))
-                    or (r["ssigmaz"] is not None and np.any(r["ssigmaz"]))
-                )
-                for r in rdatas
-            ):
-                raise RuntimeError(
-                    "Cannot use least squares solver with"
-                    "parameter dependent sigma! Support can be "
-                    "enabled via "
-                    "amici_model.setAddSigmaResiduals()."
-                )
-            self._known_least_squares_safe = True  # don't check this again
+        self.check_least_squares_safe(
+            amici_model, rdatas, sensi_orders, mode, mse_for_fval
+        )
 
         return calculate_function_values(
             rdatas=rdatas,
@@ -146,6 +174,7 @@ class AmiciCalculator:
             x_ids=x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=fim_for_hess,
+            mse_for_fval=mse_for_fval,
         )
 
 
@@ -159,6 +188,7 @@ def calculate_function_values(
     x_ids: Sequence[str],
     parameter_mapping: ParameterMapping,
     fim_for_hess: bool,
+    mse_for_fval: bool,
 ):
     """Calculate the function values from rdatas and return as dict."""
     import amici
@@ -172,40 +202,45 @@ def calculate_function_values(
             amici_model, edatas, rdatas, sensi_orders, mode, dim
         )
 
-    nllh, snllh, s2nllh, res, sres = init_return_values(
-        sensi_orders, mode, dim
-    )
+    fval, grad, hess, res, sres = init_return_values(sensi_orders, mode, dim)
 
     par_sim_ids = list(amici_model.getParameterIds())
     sensi_method = amici_solver.getSensitivityMethod()
 
+    ndata = sum(
+        np.sum(np.isfinite(edata.getObservedData())) for edata in edatas
+    )
     # iterate over return data
     for data_ix, rdata in enumerate(rdatas):
         log_simulation(data_ix, rdata)
 
         condition_map_sim_var = parameter_mapping[data_ix].map_sim_var
 
-        # add objective value
-        nllh -= rdata["llh"]
+        # add objective value]
+
+        fval_field = AMICI_CHI2 if mse_for_fval else AMICI_LLH
+        fval -= rdata[fval_field]
 
         if mode == MODE_FUN:
-            if not np.isfinite(nllh):
+            if not np.isfinite(fval):
                 return get_error_output(
                     amici_model, edatas, rdatas, sensi_orders, mode, dim
                 )
 
             if 1 in sensi_orders:
                 # add gradient
+
+                grad_field = AMICI_SCHI2 if mse_for_fval else AMICI_SLLH
                 add_sim_grad_to_opt_grad(
                     x_ids,
                     par_sim_ids,
                     condition_map_sim_var,
-                    rdata["sllh"],
-                    snllh,
+                    rdata[grad_field],
+                    grad,
                     coefficient=-1.0,
                 )
 
-                if not np.isfinite(snllh).all():
+                if not np.isfinite(grad).all():
                     return get_error_output(
                         amici_model, edatas, rdatas, sensi_orders, mode, dim
                     )
@@ -222,11 +257,11 @@ def calculate_function_values(
                     x_ids,
                     par_sim_ids,
                     condition_map_sim_var,
-                    rdata["FIM"],
-                    s2nllh,
+                    rdata[AMICI_FIM],
+                    hess,
                     coefficient=+1.0,
                 )
-                if not np.isfinite(s2nllh).all():
+                if not np.isfinite(hess).all():
                     return get_error_output(
                         amici_model, edatas, rdatas, sensi_orders, mode, dim
                     )
@@ -234,24 +269,30 @@ def calculate_function_values(
         elif mode == MODE_RES:
             if 0 in sensi_orders:
                 res = (
-                    np.hstack([res, rdata["res"]])
+                    np.hstack([res, rdata[AMICI_RES]])
                     if res.size
-                    else rdata["res"]
+                    else rdata[AMICI_RES]
                 )
             if 1 in sensi_orders:
                 opt_sres = sim_sres_to_opt_sres(
                     x_ids,
                     par_sim_ids,
                     condition_map_sim_var,
-                    rdata["sres"],
+                    rdata[AMICI_SRES],
                     coefficient=1.0,
                 )
                 sres = np.vstack([sres, opt_sres]) if sres.size else opt_sres
 
+    if mse_for_fval:
+        # normalize with number of data points to convert SSE to MSE
+        fval /= ndata
+        grad /= ndata
+        hess /= ndata
+
     ret = {
-        FVAL: nllh,
-        GRAD: snllh,
-        HESS: s2nllh,
+        FVAL: fval,
+        GRAD: grad,
+        HESS: hess,
         RES: res,
         SRES: sres,
         RDATAS: rdatas,

@@ -86,6 +86,7 @@ class AmiciObjective(ObjectiveBase):
         guess_steadystate: bool | None = None,
         n_threads: int | None = 1,
         fim_for_hess: bool | None = True,
+        mse_for_fval: bool | None = False,
         amici_object_builder: AmiciObjectBuilder | None = None,
         calculator: AmiciCalculator | InnerCalculatorCollector | None = None,
         amici_reporting: amici.RDataReporting | None = None,
@@ -131,6 +132,11 @@ class AmiciObjective(ObjectiveBase):
             With adjoint sensitivities, the true Hessian will be used,
             if available.
             FIM or Hessian will only be exposed if `max_sensi_order>1`.
+        mse_for_fval:
+            Whether to use the (negative!) mean squared error instead of the
+            negative log-likelihood as objective function value. Only works for
+            models that are least-squares safe. Gradient and Hessian/FIM will be
+            automatically normalized by the number of data points.
         amici_object_builder:
             AMICI object builder. Allows recreating the objective for
             pickling, required in some parallelization schemes.
@@ -227,6 +233,7 @@ class AmiciObjective(ObjectiveBase):
 
         self.n_threads = n_threads
         self.fim_for_hess = fim_for_hess
+        self.mse_for_fval = mse_for_fval
         self.amici_object_builder = amici_object_builder
         self.amici_reporting = amici_reporting
 
@@ -457,7 +464,7 @@ class AmiciObjective(ObjectiveBase):
                 # Else, only ask amici to compute required quantities
                 amici_reporting = (
                     amici.RDataReporting.likelihood
-                    if mode == MODE_FUN
+                    if mode == MODE_FUN and not self.mse_for_fval
                     else amici.RDataReporting.residuals
                 )
         self.amici_solver.setReturnDataReportingMode(amici_reporting)
@@ -485,6 +492,7 @@ class AmiciObjective(ObjectiveBase):
             x_ids=self.x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=self.fim_for_hess,
+            mse_for_fval=self.mse_for_fval,
         )
 
         nllh = ret[FVAL]

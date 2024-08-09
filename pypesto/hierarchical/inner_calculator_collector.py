@@ -16,7 +16,6 @@ import numpy as np
 from ..C import (
     AMICI_SIGMAY,
     AMICI_SSIGMAY,
-    AMICI_SSIGMAZ,
     AMICI_SY,
     AMICI_Y,
     CENSORED,
@@ -298,6 +297,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
+        mse_for_fval: bool,
     ):
         """Perform the actual AMICI call.
 
@@ -327,8 +327,16 @@ class InnerCalculatorCollector(AmiciCalculator):
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
+        mse_for_fval:
+            Whether to use the mean squared error instead of the negative
+            log-likelihood for the function value.
         """
         from amici.petab.conditions import fill_in_parameters
+
+        if mse_for_fval:
+            raise NotImplementedError(
+                "Mean squared error is not implemented for hierarchical problems."
+            )
 
         if mode == MODE_RES and any(
             data_type in self.data_types
@@ -448,28 +456,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                 ret[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
             return filter_return_dict(ret)
 
-        if (
-            not self._known_least_squares_safe
-            and mode == MODE_RES
-            and 1 in sensi_orders
-        ):
-            if not amici_model.getAddSigmaResiduals() and any(
-                (
-                    (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
-                    or (
-                        r[AMICI_SSIGMAZ] is not None
-                        and np.any(r[AMICI_SSIGMAZ])
-                    )
-                )
-                for r in rdatas
-            ):
-                raise RuntimeError(
-                    "Cannot use least squares solver with"
-                    "parameter dependent sigma! Support can be "
-                    "enabled via "
-                    "amici_model.setAddSigmaResiduals()."
-                )
-            self._known_least_squares_safe = True  # don't check this again
+        self.check_least_squares_safe(
+            amici_model, rdatas, sensi_orders, mode, mse_for_fval
+        )
 
         # call inner calculators and collect results
         for calculator in self.inner_calculators:
@@ -484,6 +473,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 x_ids=x_ids,
                 parameter_mapping=parameter_mapping,
                 fim_for_hess=fim_for_hess,
+                mse_for_fval=mse_for_fval,
                 rdatas=rdatas,
             )
             nllh += inner_result[FVAL]
