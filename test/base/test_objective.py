@@ -342,12 +342,20 @@ def fd_delta(request):
     return request.param
 
 
-def test_fds(fd_method, fd_delta):
+# add a fixture for fixed and unfixed parameters
+@pytest.mark.parametrize("fixed", [True, False])
+def test_fds(fd_method, fd_delta, fixed):
     """Test finite differences."""
     problem = CRProblem()
 
-    # reference objective
-    obj = problem.get_objective()
+    if fixed:
+        fixed_problem = problem.get_problem()
+        fixed_problem.fix_parameters([1], problem.p_true[1])
+        obj = fixed_problem.objective
+        p = problem.p_true[0]
+    else:
+        obj = problem.get_objective()
+        p = problem.p_true
 
     # FDs for everything
     obj_fd = pypesto.FD(
@@ -394,7 +402,6 @@ def test_fds(fd_method, fd_delta):
         delta_grad=fd_delta,
         delta_res=fd_delta,
     )
-    p = problem.p_true
 
     # check that function values coincide (call delegated)
     for attr in ["fval", "res"]:

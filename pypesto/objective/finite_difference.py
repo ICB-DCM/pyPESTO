@@ -327,6 +327,7 @@ class FD(ObjectiveBase):
         self.delta_grad: FDDelta = to_delta(delta_grad)
         self.delta_res: FDDelta = to_delta(delta_res)
         self.method: str = method
+        self.pre_post_processor = obj.pre_post_processor
 
         if method not in FD.METHODS:
             raise ValueError(

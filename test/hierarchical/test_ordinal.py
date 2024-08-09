@@ -175,7 +175,7 @@ def test_ordinal_calculator_and_objective():
         problem.objective,
     )
     finite_differences_results = finite_differences(
-        petab_problem.x_nominal_scaled,
+        petab_problem.x_nominal_free_scaled,
         (
             0,
             1,
