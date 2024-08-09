@@ -256,7 +256,7 @@ def test_hpd_calculation():
     )
 
     hpd_ensemble = Ensemble.from_sample(
-        result=result, remove_burn_in=True, rel_cutoff=0.95
+        result=result, remove_burn_in=True, f_quantile=0.95
     )
 
     expected_length = (
