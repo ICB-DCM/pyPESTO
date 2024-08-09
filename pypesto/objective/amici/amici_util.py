@@ -426,17 +426,15 @@ def init_return_values(
         if 2 in sensi_orders:
             s2nllh = sval * np.ones([dim, dim])
 
-    chi2 = None
     res = None
     sres = None
     if mode == MODE_RES:
         if 0 in sensi_orders:
-            chi2 = fval
             res = np.zeros([0])
         if 1 in sensi_orders:
             sres = np.zeros([0, dim])
 
-    return nllh, snllh, s2nllh, chi2, res, sres
+    return nllh, snllh, s2nllh, res, sres
 
 
 def filter_return_dict(ret) -> dict:

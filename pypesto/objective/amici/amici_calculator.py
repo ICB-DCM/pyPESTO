@@ -172,7 +172,7 @@ def calculate_function_values(
             amici_model, edatas, rdatas, sensi_orders, mode, dim
         )
 
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+    nllh, snllh, s2nllh, res, sres = init_return_values(
         sensi_orders, mode, dim
     )
 
@@ -233,7 +233,6 @@ def calculate_function_values(
 
         elif mode == MODE_RES:
             if 0 in sensi_orders:
-                chi2 += rdata["chi2"]
                 res = (
                     np.hstack([res, rdata["res"]])
                     if res.size
