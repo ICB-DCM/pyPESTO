@@ -6,6 +6,7 @@ import scipy.optimize as so
 
 import pypesto
 import pypesto.optimize as optimize
+import pypesto.sample as sample
 from pypesto.C import AMICI_STATUS, AMICI_T, AMICI_Y, MEAN, WEIGHTED_SIGMA
 from pypesto.engine import MultiProcessEngine
 from pypesto.ensemble import (
@@ -224,3 +225,49 @@ def get_ensemble_prediction(
         progress_bar=False,
     )
     return ensemble_prediction
+
+
+def test_hpd_calculation():
+    """Test the calculation of Highest Posterior Density (HPD)."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=100,
+        result=result,
+    )
+
+    # Manually set up sample (only for testing)
+    burn_in = 1
+    result.sample_result.burn_in = burn_in
+    result.sample_result.trace_neglogpost[0][1:] = np.random.permutation(
+        np.arange(len(result.sample_result.trace_neglogpost[0][1:]))
+    )
+
+    hpd_ensemble = Ensemble.from_sample(
+        result=result, remove_burn_in=True, rel_cutoff=0.95
+    )
+
+    expected_length = (
+        int((result.sample_result.trace_x[0][burn_in:].shape[0]) * 0.95) + 1
+    )
+    # Check that the HPD parameters have the expected shape
+    assert hpd_ensemble.x_vectors.shape == (problem.dim, expected_length)
+    x_indices = np.where(result.sample_result.trace_neglogpost[0][1:] <= 95)[0]
+    assert np.all(
+        [
+            np.any(np.all(x[:, None] == hpd_ensemble.x_vectors, axis=0))
+            for x in result.sample_result.trace_x[0][burn_in:][x_indices]
+        ]
+    )
