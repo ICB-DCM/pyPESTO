@@ -503,25 +503,23 @@ def do_line_search(
     Parameter vector that is expected to yield the objective function value
     closest to `next_obj_target`.
     """
-    going_to_low_target = False
-    going_to_high_target = False
+    decreasing_to_low_target = False
+    decreasing_to_high_target = False
 
     # Determine the direction of the step
     if next_obj >= current_obj:
         next_obj_target = high_next_obj_target
-        going_to_high_target = True
-
         if next_obj >= high_next_obj_target:
             direction = "decrease"
+            decreasing_to_high_target = True
         else:
             direction = "increase"
 
     elif next_obj < current_obj:
         next_obj_target = low_next_obj_target
-        going_to_low_target = True
-
         if next_obj <= low_next_obj_target:
             direction = "decrease"
+            decreasing_to_low_target = True
         else:
             direction = "increase"
 
@@ -532,7 +530,6 @@ def do_line_search(
 
     # Loop until correct step size was found
     while True:
-        # print(f"Doing line search with step size {step_size_guess} at {next_x[par_index]}")
         # Adapt step size of guess
         last_x = next_x
         step_size_guess = clip_to_minmax(step_size_guess * adapt_factor)
@@ -559,25 +556,17 @@ def do_line_search(
 
         # check for root crossing and compute correct step size in case
         if (
-            (
-                direction == "increase"
-                and next_obj > high_next_obj_target
-                and going_to_high_target
-            )
+            (direction == "increase" and next_obj > high_next_obj_target)
+            or (direction == "increase" and next_obj < low_next_obj_target)
             or (
                 direction == "decrease"
                 and next_obj < high_next_obj_target
-                and going_to_high_target
-            )
-            or (
-                direction == "increase"
-                and next_obj < low_next_obj_target
-                and going_to_low_target
+                and decreasing_to_high_target
             )
             or (
                 direction == "decrease"
                 and next_obj > low_next_obj_target
-                and going_to_low_target
+                and decreasing_to_low_target
             )
         ):
             return next_x_interpolate(
