@@ -390,7 +390,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         dim = len(x_ids)
 
         # initialize return values
-        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+        nllh, snllh, s2nllh, res, sres = init_return_values(
             sensi_orders, mode, dim
         )
         spline_knots = None
@@ -544,7 +544,7 @@ def calculate_quantitative_result(
     par_sim_ids: list[str],
 ):
     """Calculate the function values from rdatas and return as dict."""
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+    nllh, snllh, s2nllh, res, sres = init_return_values(
         sensi_orders, mode, dim
     )
 

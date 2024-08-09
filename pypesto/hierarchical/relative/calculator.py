@@ -282,7 +282,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_dct = copy.deepcopy(x_dct)
 
         # initialize return values
-        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+        nllh, snllh, s2nllh, res, sres = init_return_values(
             sensi_orders, mode, dim
         )
 

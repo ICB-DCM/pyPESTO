@@ -385,7 +385,7 @@ def get_error_output(
     if amici_model.getAddSigmaResiduals():
         n_res *= 2
 
-    nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+    nllh, snllh, s2nllh, res, sres = init_return_values(
         sensi_orders, mode, dim, True
     )
     if res is not None:

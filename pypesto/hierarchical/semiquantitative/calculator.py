@@ -138,7 +138,7 @@ class SemiquantCalculator(AmiciCalculator):
         dim = len(x_ids)
 
         # initialize return values
-        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+        nllh, snllh, s2nllh, res, sres = init_return_values(
             sensi_orders, mode, dim
         )
         # set order in solver
