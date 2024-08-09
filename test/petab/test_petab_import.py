@@ -51,7 +51,9 @@ class PetabImportTest(unittest.TestCase):
             self.petab_importers.append(importer)
 
             # check model
-            model = importer.create_factory().create_model(force_compile=False)
+            model = importer.create_objective_creator().create_model(
+                force_compile=False
+            )
 
             # observable ids
             model_obs_ids = list(model.getObservableIds())
@@ -62,7 +64,7 @@ class PetabImportTest(unittest.TestCase):
 
     def test_2_simulate(self):
         for petab_importer in self.petab_importers:
-            factory = petab_importer.create_factory()
+            factory = petab_importer.create_objective_creator()
             obj = factory.create_objective()
             edatas = factory.create_edatas()
             self.obj_edatas.append((obj, edatas))
@@ -179,7 +181,7 @@ def test_max_sensi_order():
     npar = len(par)
 
     # auto-computed max_sensi_order and fim_for_hess
-    objective = importer.create_factory().create_objective()
+    objective = importer.create_objective_creator().create_objective()
     hess = objective(par, sensi_orders=(2,))
     assert hess.shape == (npar, npar)
     assert (hess != 0).any()
@@ -193,18 +195,24 @@ def test_max_sensi_order():
     )
 
     # fix max_sensi_order to 1
-    objective = importer.create_factory().create_objective(max_sensi_order=1)
+    objective = importer.create_objective_creator().create_objective(
+        max_sensi_order=1
+    )
     objective(par, sensi_orders=(1,))
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # do not use FIM
-    objective = importer.create_factory().create_objective(fim_for_hess=False)
+    objective = importer.create_objective_creator().create_objective(
+        fim_for_hess=False
+    )
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # only allow computing function values
-    objective = importer.create_factory().create_objective(max_sensi_order=0)
+    objective = importer.create_objective_creator().create_objective(
+        max_sensi_order=0
+    )
     objective(par)
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(1,))

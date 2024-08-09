@@ -1,4 +1,4 @@
-"""Contains the PetabImporter class."""
+"""Contains the ObjectiveCreator class."""
 
 from __future__ import annotations
 
@@ -61,8 +61,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-# abstract factory class, that has create_objective as necessary function
-class Factory(ABC):
+class ObjectiveCreator(ABC):
     """Abstract factory for creating an objective function."""
 
     @abstractmethod
@@ -71,8 +70,8 @@ class Factory(ABC):
         pass
 
 
-class AmiciFactory(Factory, AmiciObjectBuilder):
-    """Factory for creating an amici objective function."""
+class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
+    """ObjectiveCreator for creating an amici objective function."""
 
     def __init__(
         self,
@@ -603,8 +602,8 @@ class AmiciFactory(Factory, AmiciObjectBuilder):
         ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
 
 
-class PetabSimulatorFactory(Factory):
-    """Factory for creating an objective for a PEtabSimulator."""
+class PetabSimulatorObjectiveCreator(ObjectiveCreator):
+    """ObjectiveCreator for creating an objective based on a PEtabSimulator."""
 
     def __init__(
         self,
@@ -619,8 +618,8 @@ class PetabSimulatorFactory(Factory):
         return PetabSimulatorObjective(self.simulator)
 
 
-class RoadRunnerFactory(Factory):
-    """Factory for creating an objective for a RoadRunner model."""
+class RoadRunnerObjectiveCreator(ObjectiveCreator):
+    """ObjectiveCreator for creating an objective for a RoadRunner model."""
 
     def __init__(
         self,

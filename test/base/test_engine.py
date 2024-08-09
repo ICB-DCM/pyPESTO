@@ -85,7 +85,7 @@ def test_deepcopy_objective():
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    factory = petab_importer.create_factory()
+    factory = petab_importer.create_objective_creator()
     objective = factory.create_objective()
 
     objective.amici_solver.setSensitivityMethod(
@@ -123,7 +123,7 @@ def test_pickle_objective():
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    factory = petab_importer.create_factory()
+    factory = petab_importer.create_objective_creator()
     objective = factory.create_objective()
 
     objective.amici_solver.setSensitivityMethod(

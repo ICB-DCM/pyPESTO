@@ -35,10 +35,10 @@ from ..problem import HierarchicalProblem, Problem
 from ..result import PredictionResult
 from ..startpoint import StartpointMethod
 from .factory import (
-    AmiciFactory,
-    Factory,
-    PetabSimulatorFactory,
-    RoadRunnerFactory,
+    AmiciObjectiveCreator,
+    ObjectiveCreator,
+    PetabSimulatorObjectiveCreator,
+    RoadRunnerObjectiveCreator,
 )
 from .util import PetabStartpoints, get_petab_non_quantitative_data_types
 
@@ -105,9 +105,11 @@ class PetabImporter:
             If not provided, default options will be used.
         simulator_type:
             The type of simulator to use. Depending on this different kinds
-            of objectives will be created.
+            of objectives will be created. Allowed types are 'amici', 'petab',
+            and 'roadrunner'.
         simulator:
-            In case of a petab simulator, the simulator object can be provided.
+            In case of a ``simulator_type == 'petab'``, the simulator object
+            has to be provided. Otherwise, the argument is not used.
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
@@ -284,10 +286,10 @@ class PetabImporter:
         """
         return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
-    def create_factory(self) -> Factory:
+    def create_objective_creator(self) -> ObjectiveCreator:
         """Choose factory depending on the simulator type."""
         if self.simulator_type == "amici":
-            return AmiciFactory(
+            return AmiciObjectiveCreator(
                 petab_problem=self.petab_problem,
                 output_folder=self.output_folder,
                 model_name=self.model_name,
@@ -297,11 +299,11 @@ class PetabImporter:
                 validate_petab=self.validate_petab,
             )
         elif self.simulator_type == "petab":
-            return PetabSimulatorFactory(
+            return PetabSimulatorObjectiveCreator(
                 petab_problem=self.petab_problem, simulator=self.simulator
             )
         elif self.simulator_type == "roadrunner":
-            return RoadRunnerFactory(
+            return RoadRunnerObjectiveCreator(
                 petab_problem=self.petab_problem, rr=self.roadrunner_instance
             )
 
@@ -337,7 +339,7 @@ class PetabImporter:
         A :class:`pypesto.problem.Problem` for the objective.
         """
         if objective is None:
-            self.factory = self.create_factory()
+            self.factory = self.create_objective_creator()
             objective = self.factory.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
@@ -417,13 +419,13 @@ class PetabImporter:
         verbose: bool = True,
         **kwargs,
     ) -> ObjectiveBase:
-        """See :meth:`AmiciFactory.create_objective`."""
+        """See :meth:`AmiciObjectiveCreator.create_objective`."""
         warnings.warn(
-            "This function has been moved to `AmiciFactory`.",
+            "This function has been moved to `AmiciObjectiveCreator`.",
             DeprecationWarning,
             stacklevel=2,
         )
-        factory = self.create_factory()
+        factory = self.create_objective_creator()
         return factory.create_objective(
             model=model,
             solver=solver,
@@ -444,18 +446,18 @@ class PetabImporter:
         output_ids: Sequence[str] = None,
         condition_ids: Sequence[str] = None,
     ) -> AmiciPredictor:
-        """See :meth:`AmiciFactory.create_predictor`."""
+        """See :meth:`AmiciObjectiveCreator.create_predictor`."""
         if self.simulator_type != "amici":
             raise ValueError(
                 "Predictor can only be created for amici models and is "
-                "supposed to be created from the AmiciFactory."
+                "supposed to be created from the AmiciObjectiveCreator."
             )
         warnings.warn(
-            "This function has been moved to `AmiciFactory`.",
+            "This function has been moved to `AmiciObjectiveCreator`.",
             DeprecationWarning,
             stacklevel=2,
         )
-        factory = self.create_factory()
+        factory = self.create_objective_creator()
         return factory.create_predictor(
             objective=objective,
             amici_output_fields=amici_output_fields,
@@ -473,9 +475,9 @@ class PetabImporter:
         model: amici.Model = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
-        """See :meth:`AmiciFactory.rdatas_to_measurement_df`."""
+        """See :meth:`AmiciObjectiveCreator.rdatas_to_measurement_df`."""
         raise NotImplementedError(
-            "This function has been moved to `AmiciFactory`."
+            "This function has been moved to `AmiciObjectiveCreator`."
         )
 
     def rdatas_to_simulation_df(
@@ -490,7 +492,7 @@ class PetabImporter:
         column label is adjusted.
         """
         raise NotImplementedError(
-            "This function has been moved to `AmiciFactory`."
+            "This function has been moved to `AmiciObjectiveCreator`."
         )
 
     def prediction_to_petab_measurement_df(
@@ -517,7 +519,7 @@ class PetabImporter:
         ``self.petab_problem.measurement_df``.
         """
         raise NotImplementedError(
-            "This function has been moved to `AmiciFactory`."
+            "This function has been moved to `AmiciObjectiveCreator`."
         )
 
     def prediction_to_petab_simulation_df(
@@ -532,7 +534,7 @@ class PetabImporter:
         column label is adjusted.
         """
         raise NotImplementedError(
-            "This function has been moved to `AmiciFactory`."
+            "This function has been moved to `AmiciObjectiveCreator`."
         )
 
 

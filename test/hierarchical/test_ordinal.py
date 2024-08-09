@@ -102,7 +102,7 @@ def _create_problem(
 ) -> pypesto.Problem:
     """Creates the ordinal pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    factory = importer.create_factory()
+    factory = importer.create_objective_creator()
     factory.create_model()
 
     objective = factory.create_objective(
@@ -128,7 +128,7 @@ def test_ordinal_calculator_and_objective():
         importer = pypesto.petab.PetabImporter(
             petab_problem, hierarchical=True
         )
-        factory = importer.create_factory()
+        factory = importer.create_objective_creator()
         objective = factory.create_objective(
             inner_options=options,
         )

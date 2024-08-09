@@ -95,7 +95,7 @@ def _create_problem(
         petab_problem,
         hierarchical=True,
     )
-    factory = importer.create_factory()
+    factory = importer.create_objective_creator()
     factory.create_model()
 
     objective = factory.create_objective(
@@ -126,7 +126,7 @@ def test_spline_calculator_and_objective():
             petab_problem,
             hierarchical=True,
         )
-        factory = importer.create_factory()
+        factory = importer.create_objective_creator()
         objective = factory.create_objective(
             inner_options=option,
         )

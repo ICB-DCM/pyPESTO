@@ -62,7 +62,7 @@ def model_to_pypesto_problem(
         hierarchical=hierarchical,
     )
     if objective is None:
-        factory = importer.create_factory()
+        factory = importer.create_objective_creator()
         amici_model = factory.create_model(
             non_estimated_parameters_as_constants=False,
         )

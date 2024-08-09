@@ -82,7 +82,7 @@ def _execute_case(case, model_type, version):
             yaml_file, output_folder=output_folder
         )
         petab_problem = importer.petab_problem
-    factory = importer.create_factory()
+    factory = importer.create_objective_creator()
     model = factory.create_model(generate_sensitivity_code=False)
     obj = factory.create_objective(model=model)
 
