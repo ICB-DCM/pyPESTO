@@ -12,10 +12,25 @@ import pypesto
 import pypesto.optimize as optimize
 import pypesto.sample as sample
 from pypesto.C import OBJECTIVE_NEGLOGLIKE, OBJECTIVE_NEGLOGPOST
+from pypesto.objective import (
+    AggregatedObjective,
+    NegLogParameterPriors,
+    Objective,
+)
 
 
 def gaussian_llh(x):
     return float(norm.logpdf(x).item())
+
+
+def gaussian_nllh_grad(x):
+    mu, sigma = 0, 1
+    return np.array([((x - mu) / (sigma**2))])
+
+
+def gaussian_nllh_hess(x):
+    sigma = 1
+    return np.array([(1 / (sigma**2))])
 
 
 def gaussian_problem():
@@ -887,3 +902,46 @@ def test_harmonic_mean_log_evidence():
     assert np.isclose(
         harmonic_stabilized_evidence, np.log(evidence[0]), atol=tol
     )
+
+
+@pytest.mark.flaky(reruns=2)
+def test_bridge_sampling():
+    # define problem
+    objective = Objective(
+        fun=lambda x: -gaussian_llh(x),
+        grad=gaussian_nllh_grad,
+        hess=gaussian_nllh_hess,
+    )
+    prior_true = NegLogParameterPriors(
+        [
+            {
+                "index": 0,
+                "density_fun": lambda x: (1 / (10 + 10)),
+                "density_dx": lambda x: 0,
+                "density_ddx": lambda x: 0,
+            },
+        ]
+    )
+    problem = pypesto.Problem(
+        objective=AggregatedObjective([objective, prior_true]),
+        lb=[-10],
+        ub=[10],
+        x_names=["x"],
+    )
+
+    # run optimization and MCMC
+    result = optimize.minimize(
+        problem,
+        progress_bar=False,
+    )
+    result = sample.sample(
+        problem,
+        n_samples=1000,
+        result=result,
+    )
+
+    # compute the log evidence using harmonic mean
+    bridge_log_evidence = sample.util.bridge_sampling(result)
+
+    # compare to known value
+    assert isinstance(bridge_log_evidence, float)

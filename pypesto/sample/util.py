@@ -7,6 +7,8 @@ from typing import Optional
 import numpy as np
 
 from ..C import PYPESTO_MAX_N_SAMPLES
+from ..objective import AggregatedObjective
+from ..optimize.util import laplace_approximation_log_evidence
 from ..result import Result
 from .diagnostics import geweke_test
 
@@ -133,13 +135,17 @@ def harmonic_mean_log_evidence(
     neg_log_likelihood_fun: Optional[callable] = None,
 ) -> float:
     """
-    Compute the log evidence using the harmonic mean estimator. If samples from the prior are provided, the stabilized harmonic mean is computed (recommended).
+    Compute the log evidence using the harmonic mean estimator.
+
+    Stabilized harmonic mean estimator is used if prior samples are provided.
+    Newton and Raftery (1994): https://doi.org/10.1111/j.2517-6161.1994.tb01956.x
 
     Parameters
     ----------
     result: Result
     prior_samples: np.ndarray (n_samples, n_parameters)
-        Samples from the prior distribution.
+        Samples from the prior distribution. If samples from the prior are provided,
+        the stabilized harmonic mean is computed (recommended). Then, the likelihood function must be provided as well.
     neg_log_likelihood_fun: callable
         Function to evaluate the negative log likelihood.
     """
@@ -201,3 +207,172 @@ def harmonic_mean_log_evidence(
 
     sol = minimize_scalar(_log_evidence_objective)
     return sol.x
+
+
+def bridge_sampling(
+    result: Result,
+    n_posterior_samples_init: Optional[int] = None,
+    initial_guess_log_evidence: Optional[np.ndarray] = None,
+    max_iter: int = 1000,
+    tol: float = 1e-6,
+) -> float:
+    """
+    Compute the log evidence using bridge sampling.
+
+    Based on "A Tutorial on Bridge Sampling" by Gronau et al. (2017): https://api.semanticscholar.org/CorpusID:5447695.
+    Using the optimal bridge function by Meng and Wong (1996) which minimises the relative mean-squared error.
+    Proposal function is calibrated using posterior samples, which are not used for the final bridge estimate
+    (as this may result in an underestimation of the marginal likelihood, see Overstall and Forster (2010)).
+
+    Parameters
+    ----------
+    result: Result
+        The pyPESTO result object with filled sample result.
+    n_posterior_samples_init: int
+        Number of samples used to calibrate the proposal function. By default, half of the posterior samples are used.
+    initial_guess_log_evidence: np.ndarray
+        Initial guess for the log evidence. By default, the Laplace approximation is used to compute the initial guess.
+    max_iter: int
+        Maximum number of iterations. Default is 1000.
+    tol: float
+        Tolerance for convergence. Default is 1e-6.
+    """
+    from scipy import stats
+    from scipy.special import logsumexp
+
+    if result.sample_result is None:
+        raise ValueError("No samples available. Run sampling first.")
+    if not isinstance(result.problem.objective, AggregatedObjective):
+        raise ValueError("Objective must be an AggregatedObjective.")
+
+    # use Laplace approximation to get initial guess for p(y)
+    if initial_guess_log_evidence is None:
+        initial_guess_log_evidence = laplace_approximation_log_evidence(
+            problem=result.problem, x=result.optimize_result.x[0]
+        )
+    # extract posterior samples
+    burn_in = geweke_test(result)
+    posterior_samples = result.sample_result.trace_x[0, burn_in:]
+
+    # build proposal function from posterior samples
+    if n_posterior_samples_init is None:
+        n_posterior_samples_init = int(posterior_samples.shape[0] * 0.5)
+    # randomly select samples for calibration
+    calibration_index = np.random.choice(
+        np.arange(posterior_samples.shape[0]),
+        n_posterior_samples_init,
+        replace=False,
+    )
+    samples_calibration = posterior_samples[calibration_index]
+    # remove calibration samples from posterior samples
+    posterior_samples = posterior_samples[
+        [
+            j
+            for j in range(posterior_samples.shape[0])
+            if j not in calibration_index
+        ]
+    ]
+    # generate proposal samples and define proposal function
+    n_proposal_samples = posterior_samples.shape[0]
+    posterior_mean = np.mean(samples_calibration, axis=0)
+    posterior_cov = np.cov(samples_calibration.T)
+    if posterior_cov.size == 1:
+        # univariate case
+        proposal_samples = np.random.normal(
+            loc=posterior_mean,
+            scale=np.sqrt(posterior_cov),
+            size=n_proposal_samples,
+        )
+        proposal_samples = proposal_samples.reshape(-1, 1)
+    else:
+        # multivariate case
+        proposal_samples = np.random.multivariate_normal(
+            mean=posterior_mean, cov=posterior_cov, size=n_proposal_samples
+        )
+    log_proposal_fun = stats.multivariate_normal(
+        mean=posterior_mean, cov=posterior_cov
+    ).logpdf
+
+    # Compute the weights for the bridge sampling estimate
+    log_s1 = np.log(
+        posterior_samples.shape[0]
+        / (posterior_samples.shape[0] + n_proposal_samples)
+    )
+    log_s2 = np.log(
+        n_proposal_samples / (posterior_samples.shape[0] + n_proposal_samples)
+    )
+
+    # Start with the initial guess for p(y)
+    log_p_y = initial_guess_log_evidence
+
+    # Compute the log-likelihood, log-prior, and log-proposal for the posterior and proposal samples
+    # assumes that the objective function is the negative log-likelihood + negative log-prior
+    def log_likelihood_fun(x_array):
+        return np.array(
+            [
+                -result.problem.objective._objectives[0](
+                    result.problem.get_full_vector(
+                        x=x, x_fixed_vals=result.problem.x_fixed_vals
+                    )
+                )
+                for x in x_array
+            ]
+        )
+
+    def log_prior_fun(x_array):
+        return np.array(
+            [
+                -result.problem.objective._objectives[1](
+                    result.problem.get_full_vector(
+                        x=x, x_fixed_vals=result.problem.x_fixed_vals
+                    )
+                )
+                for x in x_array
+            ]
+        )
+
+    log_likelihood_posterior = log_likelihood_fun(posterior_samples)
+    log_prior_posterior = log_prior_fun(posterior_samples)
+    log_proposal_posterior = log_proposal_fun(posterior_samples)
+
+    log_likelihood_proposal = log_likelihood_fun(proposal_samples)
+    log_prior_proposal = log_prior_fun(proposal_samples)
+    log_proposal_proposal = log_proposal_fun(proposal_samples)
+
+    i = 0
+    log_h_posterior_1 = log_s1 + log_likelihood_posterior + log_prior_posterior
+    log_h_proposal_1 = log_s1 + log_likelihood_proposal + log_prior_proposal
+    for i in range(max_iter):
+        # Compute h(θ) for posterior samples
+        log_h_posterior_2 = log_s2 + log_p_y + log_proposal_posterior
+        log_h_posterior = logsumexp([log_h_posterior_1, log_h_posterior_2])
+
+        # Compute h(θ) for proposal samples
+        log_h_proposal_2 = log_s2 + log_p_y + log_proposal_proposal
+        log_h_proposal = logsumexp([log_h_proposal_1, log_h_proposal_2])
+
+        # Calculate the numerator and denominator for the bridge sampling estimate
+        temp = log_likelihood_proposal + log_prior_proposal + log_h_proposal
+        log_numerator = logsumexp(temp) - np.log(
+            temp.size
+        )  # compute mean in log space
+        temp = log_proposal_posterior + log_h_posterior
+        log_denominator = logsumexp(temp) - np.log(
+            temp.size
+        )  # compute mean in log space
+
+        # Update p(y)
+        log_p_y_new = log_numerator - log_denominator
+
+        # Check for convergence
+        if abs(log_p_y_new - log_p_y) < tol:
+            break
+
+        log_p_y = log_p_y_new
+
+        if i == max_iter - 1:
+            logger.warning(
+                "Bridge sampling did not converge in the given number of iterations."
+            )
+
+    return log_p_y
