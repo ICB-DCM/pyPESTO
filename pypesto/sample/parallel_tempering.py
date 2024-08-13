@@ -191,6 +191,7 @@ class ParallelTemperingSampler(Sampler):
         Steppingstone sampling is a form of importance sampling that uses the maximum likelihood of each temperature.
         It does not require an integration, but can be biased for a small number of temperatures.
         See Annis et al. (2019), https://doi.org/10.1016/j.jmp.2019.01.005, for more details.
+
         Parameters
         ----------
         result:
@@ -286,6 +287,7 @@ def steppingstone(temps: np.ndarray, trace_loglike: np.ndarray) -> float:
     """Perform steppingstone sampling to estimate the log evidence.
 
     Implementation based on  Annis et al. (2019): https://doi.org/10.1016/j.jmp.2019.01.005.
+
     Parameters
     ----------
     temps:
