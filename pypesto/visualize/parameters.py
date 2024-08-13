@@ -92,8 +92,8 @@ def parameters(
     plot_inner_parameters:
         Flag indicating whether to plot inner parameters (default: True).
     log10_scale_hier_sigma:
-        Flag indicating whether to scale inner parameters of type sigma to
-        log10 (default: True).
+        Flag indicating whether to scale inner parameters of type
+        ``InnerParameterType.SIGMA`` to log10 (default: True).
 
     Returns
     -------
@@ -385,8 +385,8 @@ def handle_inputs(
     plot_inner_parameters:
         Flag indicating whether inner parameters should be plotted.
     log10_scale_hier_sigma:
-        Flag indicating whether to scale inner parameters of type sigma to
-        log10.
+        Flag indicating whether to scale inner parameters of type
+        ``InnerParameterType.SIGMA`` to log10 (default: True).
 
     Returns
     -------
@@ -487,8 +487,8 @@ def _handle_inner_inputs(
     result:
         Optimization result obtained by 'optimize.py'.
     log10_scale_hier_sigma:
-        Flag indicating whether to scale inner parameters of type sigma to
-        log10.
+        Flag indicating whether to scale inner parameters of type
+        ``InnerParameterType.SIGMA`` to log10 (default: True).
 
     Returns
     -------
