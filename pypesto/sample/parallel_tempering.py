@@ -186,6 +186,11 @@ class ParallelTemperingSampler(Sampler):
     ) -> Union[float, None]:
         """Perform thermodynamic integration or steppingstone samping to estimate the log evidence.
 
+        Thermodynamic integration is performed by integrating the mean log likelihood over the temperatures.
+        Errors might come from the samples itself or the numerical integration.
+        Steppingstone sampling is a form of importance sampling that uses the maximum likelihood of each temperature.
+        It does not require an integration, but can be biased for a small number of temperatures.
+        See Annis et al. (2019), https://doi.org/10.1016/j.jmp.2019.01.005, for more details.
         Parameters
         ----------
         result:
@@ -199,7 +204,6 @@ class ParallelTemperingSampler(Sampler):
             Otherwise, use only the converged chains for the integration (might increase the integration error).
         """
         from scipy.integrate import simpson, trapezoid
-        from scipy.special import logsumexp
 
         if self.options["beta_init"] == EXPONENTIAL_DECAY:
             logger.warning(
@@ -266,12 +270,9 @@ class ParallelTemperingSampler(Sampler):
                 x=temps,
             )
         elif method == "steppingstone":
-            ss_log_evidences = np.zeros(len(temps) - 1)
-            for t_i in range(1, len(temps)):
-                ss_log_evidences[t_i - 1] = logsumexp(
-                    trace_loglike[t_i - 1] * (temps[t_i] - temps[t_i - 1])
-                ) - np.log(trace_loglike[t_i - 1].size)
-            log_evidence = np.sum(ss_log_evidences)
+            log_evidence = steppingstone(
+                temps=temps, trace_loglike=trace_loglike
+            )
         else:
             raise ValueError(
                 f"Unknown method {method}. Choose 'trapezoid', 'simpson' for thermodynamic integration or ",
@@ -279,6 +280,30 @@ class ParallelTemperingSampler(Sampler):
             )
 
         return log_evidence
+
+
+def steppingstone(temps: np.ndarray, trace_loglike: np.ndarray) -> float:
+    """Perform steppingstone sampling to estimate the log evidence.
+
+    Implementation based on  Annis et al. (2019): https://doi.org/10.1016/j.jmp.2019.01.005.
+    Parameters
+    ----------
+    temps:
+        Temperature values.
+    trace_loglike:
+        Log likelihood values for each temperature.
+    """
+    from scipy.special import logsumexp
+
+    ss_log_evidences = np.zeros(len(temps) - 1)
+    for t_i in range(1, len(temps)):
+        # we use the maximum likelihood times the temperature difference to stabilize the logsumexp
+        # original formulation uses only the maximum likelihood, this is equivalent
+        ss_log_evidences[t_i - 1] = logsumexp(
+            trace_loglike[t_i - 1] * (temps[t_i] - temps[t_i - 1])
+        ) - np.log(trace_loglike[t_i - 1].size)
+    log_evidence = np.sum(ss_log_evidences)
+    return log_evidence
 
 
 def beta_decay_betas(n_chains: int, alpha: float) -> np.ndarray:

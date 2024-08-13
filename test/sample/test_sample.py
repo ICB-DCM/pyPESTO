@@ -942,6 +942,4 @@ def test_bridge_sampling():
 
     # compute the log evidence using harmonic mean
     bridge_log_evidence = sample.util.bridge_sampling(result)
-
-    # compare to known value
     assert isinstance(bridge_log_evidence, float)
