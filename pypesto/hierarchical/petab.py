@@ -1,5 +1,6 @@
 """Helper methods for hierarchical optimization with PEtab."""
 
+import warnings
 from typing import Literal
 
 import pandas as pd
@@ -94,14 +95,35 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
         and not (
             inner_parameter_table[petab.PARAMETER_SCALE].isna()
             | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
+            | (
+                inner_parameter_table[PARAMETER_TYPE]
+                != InnerParameterType.SIGMA
+            )
         ).all()
     ):
         sub_df = inner_parameter_table.loc[
             :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
         ]
         raise NotImplementedError(
-            "Only parameterScale=lin supported for parameters of the inner "
-            f"subproblem.\n{sub_df}"
+            "LOG and LOG10 parameter scale of inner parameters is not supported "
+            "for sigma parameters. Inner parameter table:\n"
+            f"{sub_df}"
+        )
+    elif (
+        petab.PARAMETER_SCALE in inner_parameter_table
+        and not (
+            inner_parameter_table[petab.PARAMETER_SCALE].isna()
+            | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
+        ).all()
+    ):
+        sub_df = inner_parameter_table.loc[
+            :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
+        ]
+        warnings.warn(
+            f"LOG and LOG10 parameter scale of inner parameters is used only "
+            f"for their visualization, and does not affect their optimization. "
+            f"Inner parameter table:\n{sub_df}",
+            stacklevel=1,
         )
 
     inner_parameter_df = validate_measurement_formulae(
