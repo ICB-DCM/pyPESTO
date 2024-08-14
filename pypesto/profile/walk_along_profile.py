@@ -63,6 +63,7 @@ def walk_along_profile(
     while True:
         # get current position on the profile path
         x_now = current_profile.x_path[:, -1]
+        color_now = current_profile.color_path[-1]
 
         # check if the next profile point needs to be computed
         # ... check bounds
@@ -122,6 +123,10 @@ def walk_along_profile(
 
                 if np.isfinite(optimizer_result.fval):
                     optimization_successful = True
+                    if max_step_reduce_factor == 1.0:
+                        color_next = np.concatenate((color_now[:3], [0.3]))
+                    else:
+                        color_next = np.array([1, 0, 0, 1])
                 else:
                     max_step_reduce_factor *= 0.5
                     logger.warning(
@@ -146,6 +151,7 @@ def walk_along_profile(
                 )
                 optimizer_result.update_to_full(problem=problem)
                 optimization_successful = True
+                color_next = np.concatenate((color_now[:3], [0.3]))
 
         if not optimization_successful:
             # Cannot optimize successfully by reducing max_step_size
@@ -197,6 +203,7 @@ def walk_along_profile(
 
                 if np.isfinite(optimizer_result.fval):
                     optimization_successful = True
+                    color_next = np.array([0, 0, 1, 1])
                 else:
                     min_step_increase_factor *= 1.25
                     logger.warning(
@@ -240,6 +247,7 @@ def walk_along_profile(
                     ),
                 )
                 if np.isfinite(optimizer_result.fval):
+                    color_next = np.array([0, 1, 0, 1])
                     break
 
                 logger.warning(
@@ -250,6 +258,10 @@ def walk_along_profile(
                     f"Computing profile point failed. Could not find a finite solution after {max_tries} attempts."
                 )
 
+        logger.info(
+            f"Optimization successful for {problem.x_names[i_par]}={x_next[i_par]:.4f}. "
+            f"Start fval {problem.objective(x_next[problem.x_free_indices]):.6f}, end fval {optimizer_result.fval:.6f}."
+        )
         if optimizer_result[GRAD] is not None:
             gradnorm = np.linalg.norm(
                 optimizer_result[GRAD][problem.x_free_indices]
@@ -263,6 +275,7 @@ def walk_along_profile(
             ratio=np.exp(global_opt - optimizer_result.fval),
             gradnorm=gradnorm,
             time=optimizer_result.time,
+            color=color_next,
             exitflag=optimizer_result.exitflag,
             n_fval=optimizer_result.n_fval,
             n_grad=optimizer_result.n_grad,

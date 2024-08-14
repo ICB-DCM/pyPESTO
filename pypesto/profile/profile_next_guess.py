@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, Literal
 
 import numpy as np
@@ -5,6 +6,8 @@ import numpy as np
 from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["next_guess", "fixed_step", "adaptive_step"]
 
@@ -67,7 +70,7 @@ def next_guess(
     The next initial guess as base for the next profile point.
     """
     if update_type == "fixed_step":
-        return fixed_step(
+        next_initial_guess = fixed_step(
             x, par_index, par_direction, profile_options, problem
         )
 
@@ -81,19 +84,27 @@ def next_guess(
         raise ValueError(
             f"Unsupported `update_type` {update_type} for `next_guess`."
         )
+    if update_type != "fixed_step":
+        next_initial_guess = adaptive_step(
+            x,
+            par_index,
+            par_direction,
+            profile_options,
+            current_profile,
+            problem,
+            global_opt,
+            order,
+            min_step_increase_factor,
+            max_step_reduce_factor,
+        )
 
-    return adaptive_step(
-        x,
-        par_index,
-        par_direction,
-        profile_options,
-        current_profile,
-        problem,
-        global_opt,
-        order,
-        min_step_increase_factor,
-        max_step_reduce_factor,
+    logger.info(
+        f"Next guess for {problem.x_names[par_index]} in direction "
+        f"{par_direction} is {next_initial_guess[par_index]:.4f}. Step size: "
+        f"{next_initial_guess[par_index] - x[par_index]:.4f}."
     )
+
+    return next_initial_guess
 
 
 def fixed_step(
@@ -229,12 +240,12 @@ def adaptive_step(
     )
 
     if par_direction == -1 and (min_delta_x < problem.lb_full[par_index]):
-        step_length = problem.lb_full[par_index] - x[par_index]
-        return x + step_length * delta_x_dir
+        step_length = abs(problem.lb_full[par_index] - x[par_index])
+        return clip_to_bounds(x + step_length * delta_x_dir)
 
     if par_direction == 1 and (min_delta_x > problem.ub_full[par_index]):
-        step_length = problem.ub_full[par_index] - x[par_index]
-        return x + step_length * delta_x_dir
+        step_length = abs(problem.ub_full[par_index] - x[par_index])
+        return clip_to_bounds(x + step_length * delta_x_dir)
 
     # parameter extrapolation function
     n_profile_points = len(current_profile.fval_path)
@@ -261,13 +272,27 @@ def adaptive_step(
                             x[par_index] + step_length * par_direction
                         )
                     )
+            # Define a trust region for the step size in all directions
+            # to avoid overshooting TODO below
+            x_step = np.clip(
+                x_step, x - options.max_step_size, x + options.max_step_size
+            )
+
             return clip_to_bounds(x_step)
 
     else:
         # if not, we do simple extrapolation
         def par_extrapol(step_length):
-            x_step = x + step_length * delta_x_dir
-            return clip_to_bounds(x_step)
+            # Define a trust region for the step size in all directions
+            # to avoid overshooting TODO: just using max_step_size for now
+            # TODO: This is L1 norm trust region, maybe change to L2 norm?
+            step_in_x = np.clip(
+                step_length * delta_x_dir,
+                -options.max_step_size,
+                options.max_step_size,
+            )
+            x_stepped = x + step_in_x
+            return clip_to_bounds(x_stepped)
 
     # compute proposal
     next_x = par_extrapol(step_size_guess)
@@ -276,12 +301,12 @@ def adaptive_step(
     # compute the next objective value which we aim for
     high_next_obj_target = (
         -np.log(1.0 - options.delta_ratio_max)
-        + 1.5 * last_delta_fval
+        + 1.5 * abs(last_delta_fval)
         + current_profile.fval_path[-1]
     )
     low_next_obj_target = (
         +np.log(1.0 - options.delta_ratio_max)
-        - 1.5 * last_delta_fval
+        - 1.5 * abs(last_delta_fval)
         + current_profile.fval_path[-1]
     )
     # TODO: Change 1.5 to magic factor
@@ -363,6 +388,15 @@ def handle_profile_history(
         step_size_guess = options.default_step_size
         delta_obj_value = 0.0
         last_delta_fval = 0.0
+    elif np.isclose(
+        current_profile.x_path[par_index, -1],
+        current_profile.x_path[par_index, -2],
+    ):
+        # do the same if the last two points are the same
+        # to avoid division by zero or a very small number
+        step_size_guess = options.default_step_size
+        delta_obj_value = 0.0
+        last_delta_fval = 0.0
 
     else:
         # try to reuse the previous step size
@@ -374,6 +408,8 @@ def handle_profile_history(
         step_size_guess = min(
             last_delta_x_par_index, options.default_step_size
         )
+        # Step size cannot be smaller than the minimum step size
+        step_size_guess = max(step_size_guess, options.min_step_size)
 
         delta_obj_value = current_profile.fval_path[-1] - global_opt
         last_delta_fval = (
