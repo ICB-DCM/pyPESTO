@@ -317,6 +317,7 @@ def profile_lowlevel(
     if (
         color is None
         or isinstance(color, list)
+        or isinstance(color, tuple)
         or (isinstance(color, np.ndarray) and not len(color.shape) == 2)
     ):
         color = assign_colors([1.0], color)
