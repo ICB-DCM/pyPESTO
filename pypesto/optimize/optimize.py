@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, Iterable, Union
+from collections.abc import Iterable
+from typing import Callable, Union
 from warnings import warn
 
 from ..engine import Engine, SingleCoreEngine

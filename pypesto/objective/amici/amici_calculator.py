@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
@@ -28,7 +29,7 @@ from .amici_util import (
 if TYPE_CHECKING:
     try:
         import amici
-        from amici.parameter_mapping import ParameterMapping
+        from amici.petab.parameter_mapping import ParameterMapping
     except ImportError:
         ParameterMapping = None
 
@@ -47,12 +48,12 @@ class AmiciCalculator:
 
     def __call__(
         self,
-        x_dct: Dict,
-        sensi_orders: Tuple[int],
+        x_dct: dict,
+        sensi_orders: tuple[int],
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: List[amici.ExpData],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -86,7 +87,7 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        import amici.parameter_mapping
+        import amici.petab.conditions
 
         # set order in solver
         sensi_order = 0
@@ -100,7 +101,7 @@ class AmiciCalculator:
             amici_solver.setSensitivityOrder(sensi_order)
 
         # fill in parameters
-        amici.parameter_mapping.fill_in_parameters(
+        amici.petab.conditions.fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
             scaled_parameters=True,
@@ -150,11 +151,11 @@ class AmiciCalculator:
 
 def calculate_function_values(
     rdatas,
-    sensi_orders: Tuple[int, ...],
+    sensi_orders: tuple[int, ...],
     mode: ModeType,
     amici_model: AmiciModel,
     amici_solver: AmiciSolver,
-    edatas: List[amici.ExpData],
+    edatas: list[amici.ExpData],
     x_ids: Sequence[str],
     parameter_mapping: ParameterMapping,
     fim_for_hess: bool,

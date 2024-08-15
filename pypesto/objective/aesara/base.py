@@ -7,7 +7,8 @@ combination of objective based methods and aesara based backpropagation.
 """
 
 import copy
-from typing import Optional, Sequence, Tuple
+from collections.abc import Sequence
+from typing import Optional
 
 import numpy as np
 
@@ -107,8 +108,9 @@ class AesaraObjective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """
@@ -196,7 +198,7 @@ class AesaraObjectiveOp(Op):
         parameter values.
         """
         if self._log_prob_grad is None:
-            return super(AesaraObjectiveOp, self).grad(inputs, g)
+            return super().grad(inputs, g)
         (theta,) = inputs
         log_prob_grad = self._log_prob_grad(theta)
         return [g[0] * log_prob_grad]
@@ -244,7 +246,7 @@ class AesaraObjectiveGradOp(Op):
         parameter values.
         """
         if self._log_prob_hess is None:
-            return super(AesaraObjectiveGradOp, self).grad(inputs, g)
+            return super().grad(inputs, g)
         (theta,) = inputs
         log_prob_hess = self._log_prob_hess(theta)
         return [g[0].dot(log_prob_hess)]

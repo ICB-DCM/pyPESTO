@@ -2,7 +2,6 @@
 
 import logging
 import os
-from typing import Tuple
 
 import numpy as np
 
@@ -17,7 +16,7 @@ def calculate_ci_mcmc_sample(
     result: Result,
     ci_level: float = 0.95,
     exclude_burn_in: bool = True,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Calculate parameter credibility intervals based on MCMC samples.
 
     Parameters
@@ -51,7 +50,7 @@ def calculate_ci_mcmc_sample(
 def calculate_ci_mcmc_sample_prediction(
     simulated_values: np.ndarray,
     ci_level: float = 0.95,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Calculate prediction credibility intervals based on MCMC samples.
 
     Parameters
@@ -74,7 +73,7 @@ def calculate_ci(
     values: np.ndarray,
     ci_level: float,
     **kwargs,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Calculate confidence/credibility levels using percentiles.
 
     Parameters

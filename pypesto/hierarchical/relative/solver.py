@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import copy
 from typing import Any
 
@@ -9,7 +11,11 @@ from ...objective.amici.amici_util import add_sim_grad_to_opt_grad
 from ...optimize import minimize
 from ...problem import Problem
 from ..base_parameter import InnerParameter
-from ..base_problem import InnerProblem, scale_value_dict
+from ..base_problem import (
+    InnerProblem,
+    scale_back_value_dict,
+    scale_value_dict,
+)
 from ..base_solver import InnerSolver
 from .util import (
     apply_offset,
@@ -27,7 +33,7 @@ from .util import (
 
 try:
     import amici
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
@@ -60,6 +66,8 @@ class RelativeInnerSolver(InnerSolver):
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
         sigma = copy.deepcopy(sigma)
+        inner_parameters = copy.deepcopy(inner_parameters)
+        inner_parameters = scale_back_value_dict(inner_parameters, problem)
 
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
             apply_offset(
@@ -82,7 +90,7 @@ class RelativeInnerSolver(InnerSolver):
                 mask=x.ixs,
             )
 
-        return compute_nllh(relevant_data, sim, sigma)
+        return compute_nllh(relevant_data, sim, sigma, problem.data_mask)
 
     def calculate_gradients(
         self,
@@ -138,6 +146,8 @@ class RelativeInnerSolver(InnerSolver):
         relevant_data = copy.deepcopy(problem.data)
         sim = copy.deepcopy(sim)
         sigma = copy.deepcopy(sigma)
+        inner_parameters = copy.deepcopy(inner_parameters)
+        inner_parameters = scale_back_value_dict(inner_parameters, problem)
 
         # restructure sensitivities to have parameter index as second index
         ssim = [
@@ -502,7 +512,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
                         f"`{par.inner_parameter_type}`."
                     )
 
-            return compute_nllh(_data, _sim, _sigma)
+            return compute_nllh(_data, _sim, _sigma, problem.data_mask)
 
         # TODO gradient
         objective = Objective(fun)

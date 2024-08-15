@@ -1,12 +1,12 @@
 import functools
 import logging
 import os
+from collections.abc import Sequence
 from functools import wraps
-from typing import Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
-import petab
+import petab.v1 as petab
 import pytest
 import scipy.optimize as so
 
@@ -172,7 +172,6 @@ def create_optimization_history():
         problem=problem,
         optimizer=optimizer,
         n_starts=5,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
         progress_bar=False,
@@ -458,7 +457,6 @@ def test_parameters_hist():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
@@ -772,7 +770,6 @@ def test_optimizer_history_with_options():
         reference=ref3,
         trace_x="time",
         trace_y="gradnorm",
-        offset_y=10.0,
     )
 
 
@@ -814,7 +811,6 @@ def test_optimization_stats():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
@@ -822,7 +818,6 @@ def test_optimization_stats():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
@@ -1144,6 +1139,55 @@ def test_visualize_optimized_model_fit():
 
 
 @close_fig
+def test_visualize_optimized_model_fit_aggregated():
+    """Test pypesto.visualize.visualize_optimized_model_fit with an AggregatedObjective"""
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(
+        os.path.join(current_path, "..", "..", "doc", "example")
+    )
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(
+            dir_path, "conversion_reaction", "conversion_reaction.yaml"
+        )
+    )
+
+    # add prior to the problem
+    petab_problem.parameter_df["objectivePriorType"] = "uniform"
+    objectivePriorParameters = [
+        f"{lb};{ub}"
+        for lb, ub in zip(
+            petab_problem.parameter_df.lowerBound,
+            petab_problem.parameter_df.upperBound,
+        )
+    ]
+    petab_problem.parameter_df[
+        "objectivePriorParameters"
+    ] = objectivePriorParameters
+
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+    # check if the objective is an AggregatedObjective
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        progress_bar=False,
+    )
+
+    # test call of visualize_optimized_model_fit
+    visualize_optimized_model_fit(
+        petab_problem=petab_problem,
+        result=result,
+        pypesto_problem=problem,
+    )
+
+
+@close_fig
 def test_time_trajectory_model():
     """Test pypesto.visualize.time_trajectory_model"""
     current_path = os.path.dirname(os.path.realpath(__file__))
@@ -1184,3 +1228,15 @@ def test_sacess_history():
     )
     sacess.minimize(problem)
     sacess_history(sacess.histories)
+
+
+@pytest.mark.parametrize(
+    "result_creation",
+    [create_optimization_result, create_optimization_result_nan_inf],
+)
+@close_fig
+def test_parameters_correlation_matrix(result_creation):
+    """Test pypesto.visualize.parameters_correlation_matrix"""
+    result = result_creation()
+
+    visualize.parameters_correlation_matrix(result)

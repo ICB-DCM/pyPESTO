@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Union
 
 
 class OptimizeOptions(dict):
@@ -49,7 +49,7 @@ class OptimizeOptions(dict):
 
     @staticmethod
     def assert_instance(
-        maybe_options: Union["OptimizeOptions", Dict],
+        maybe_options: Union["OptimizeOptions", dict],
     ) -> "OptimizeOptions":
         """
         Return a valid options object.

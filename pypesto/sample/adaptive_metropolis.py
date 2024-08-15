@@ -1,5 +1,4 @@
 import numbers
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -57,7 +56,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
     * https://github.com/ICB-DCM/PESTO/blob/master/private/updateStatistics.m
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         super().__init__(options)
         self._cov = None
         self._mean_hist = None
@@ -146,7 +145,7 @@ def update_history_statistics(
     x_new: np.ndarray,
     n_cur_sample: int,
     decay_constant: float,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Update sampling mean and covariance matrix via weighted average.
 
     Update sampling mean and covariance matrix based on the previous

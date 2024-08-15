@@ -9,7 +9,8 @@ import numpy as np
 
 try:
     import amici
-    from petab.C import OBSERVABLE_ID
+    from amici.petab.conditions import fill_in_parameters
+    from petab.v1.C import OBSERVABLE_ID
 
     from ..hierarchical.ordinal.calculator import OrdinalCalculator
     from ..hierarchical.ordinal.parameter import OrdinalParameter
@@ -86,7 +87,7 @@ def plot_categories_from_pypesto_result(
     n_threads = pypesto_result.problem.objective.n_threads
 
     # Fill in the parameters.
-    amici.parameter_mapping.fill_in_parameters(
+    fill_in_parameters(
         edatas=edatas,
         problem_parameters=x_dct,
         scaled_parameters=True,

@@ -1,9 +1,21 @@
+import inspect
+import warnings
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import Any, Dict, Sequence, Tuple
+from typing import Any
 
 import numpy as np
 
-from ..C import FVAL, GRAD, HESS, HESSP, RDATAS, RES, SRES, ModeType
+from ..C import (
+    FVAL,
+    GRAD,
+    HESS,
+    HESSP,
+    RDATAS,
+    RES,
+    SRES,
+    ModeType,
+)
 from .base import ObjectiveBase, ResultDict
 
 
@@ -67,7 +79,7 @@ class AggregatedObjective(ObjectiveBase):
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
@@ -79,9 +91,10 @@ class AggregatedObjective(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
-        kwargs_list: Sequence[Dict[str, Any]] = None,
+        kwargs_list: Sequence[dict[str, Any]] = None,
+        return_dict: bool = False,
         **kwargs,
     ) -> ResultDict:
         """
@@ -103,6 +116,20 @@ class AggregatedObjective(ObjectiveBase):
                 "The length of `kwargs_list` must match the number of "
                 "objectives you are aggregating."
             )
+        for objective_, objective_kwargs in zip(self._objectives, kwargs_list):
+            if (
+                "return_dict"
+                in inspect.signature(objective_.call_unprocessed).parameters
+            ):
+                objective_kwargs["return_dict"] = return_dict
+            else:
+                warnings.warn(
+                    "Please add `return_dict` to the argument list of your "
+                    "objective's `call_unprocessed` method. "
+                    f"Current objective: `{type(objective_)}`.",
+                    DeprecationWarning,
+                    stacklevel=1,
+                )
         return aggregate_results(
             [
                 objective.call_unprocessed(

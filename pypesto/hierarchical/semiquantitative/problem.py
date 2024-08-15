@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 
@@ -30,13 +32,14 @@ from .parameter import SplineInnerParameter
 
 try:
     import amici
-    import petab
-    from petab.C import (
+    import petab.v1 as petab
+    from petab.v1.C import (
         ESTIMATE,
         LOWER_BOUND,
         NOISE_PARAMETERS,
         OBSERVABLE_ID,
         PARAMETER_ID,
+        PARAMETER_SCALE,
         UPPER_BOUND,
     )
 except ImportError:
@@ -124,10 +127,10 @@ class SemiquantProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: "amici.Model",
-        edatas: list["amici.ExpData"],
+        amici_model: amici.Model,
+        edatas: list[amici.ExpData],
         spline_ratio: float = None,
-    ) -> "SemiquantProblem":
+    ) -> SemiquantProblem:
         """Construct the inner problem from the `petab_problem`."""
         if spline_ratio is None:
             spline_ratio = get_default_options()
@@ -146,6 +149,28 @@ class SemiquantProblem(AmiciInnerProblem):
             for x in self.xs.values()
             if x.inner_parameter_type == InnerParameterType.SIGMA
         ]
+
+    def get_interpretable_x_scales(self) -> list[str]:
+        """Get scales of interpretable inner parameters.
+
+        The interpretable inner parameters of the semiquantitative
+        problem are the noise parameters.
+        """
+        return [
+            x.scale
+            for x in self.xs.values()
+            if x.inner_parameter_type == InnerParameterType.SIGMA
+        ]
+
+    def get_semiquant_observable_ids(self) -> list[str]:
+        """Get the IDs of semiquantitative observables."""
+        return list(
+            {
+                x.observable_id
+                for x in self.xs.values()
+                if x.inner_parameter_type == InnerParameterType.SPLINE
+            }
+        )
 
     def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
         """Get unique list of ``SplineParameter.group`` values."""
@@ -279,8 +304,8 @@ def get_default_options() -> dict:
 
 def spline_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
-    amici_model: "amici.Model",
-    edatas: list["amici.ExpData"],
+    amici_model: amici.Model,
+    edatas: list[amici.ExpData],
     spline_ratio: float = None,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -326,7 +351,7 @@ def spline_inner_problem_from_petab_problem(
 def spline_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     spline_ratio: float,
-    amici_model: "amici.Model",
+    amici_model: amici.Model,
 ) -> list[SplineInnerParameter]:
     """Create list of inner free spline parameters from PEtab measurement table."""
     df = df.reset_index()
@@ -372,8 +397,8 @@ def spline_inner_parameters_from_measurement_df(
 
 
 def noise_inner_parameters_from_parameter_df(
-    petab_problem: "petab.Problem",
-    amici_model: "amici.Model",
+    petab_problem: petab.Problem,
+    amici_model: amici.Model,
 ) -> list[SplineInnerParameter]:
     """Create list of inner free noise parameters from PEtab parameter table."""
     # Select the semiquantitative measurements.
@@ -408,7 +433,7 @@ def noise_inner_parameters_from_parameter_df(
             SplineInnerParameter(
                 inner_parameter_id=row[PARAMETER_ID],
                 inner_parameter_type=InnerParameterType.SIGMA,
-                scale=LIN,
+                scale=row[PARAMETER_SCALE],
                 lb=row[LOWER_BOUND],
                 ub=row[UPPER_BOUND],
                 observable_id=observable_id,
@@ -422,8 +447,8 @@ def noise_inner_parameters_from_parameter_df(
 
 
 def spline_ixs_for_measurement_specific_parameters(
-    petab_problem: "petab.Problem",
-    amici_model: "amici.Model",
+    petab_problem: petab.Problem,
+    amici_model: amici.Model,
     inner_parameters: list[SplineInnerParameter],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.

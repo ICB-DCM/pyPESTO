@@ -1,9 +1,9 @@
 import copy
 import logging
+import sys
+from collections.abc import Iterable
 from typing import (
     Callable,
-    Iterable,
-    List,
     Optional,
     SupportsFloat,
     SupportsInt,
@@ -16,6 +16,7 @@ import pandas as pd
 from ..objective import ObjectiveBase
 from ..objective.priors import NegLogParameterPriors
 from ..startpoint import StartpointMethod, to_startpoint_method, uniform
+from ..version import __version__
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
@@ -90,8 +91,8 @@ class Problem:
     def __init__(
         self,
         objective: ObjectiveBase,
-        lb: Union[np.ndarray, List[float]],
-        ub: Union[np.ndarray, List[float]],
+        lb: Union[np.ndarray, list[float]],
+        ub: Union[np.ndarray, list[float]],
         dim_full: Optional[int] = None,
         x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
         x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
@@ -99,8 +100,8 @@ class Problem:
         x_names: Optional[Iterable[str]] = None,
         x_scales: Optional[Iterable[str]] = None,
         x_priors_defs: Optional[NegLogParameterPriors] = None,
-        lb_init: Union[np.ndarray, List[float], None] = None,
-        ub_init: Union[np.ndarray, List[float], None] = None,
+        lb_init: Union[np.ndarray, list[float], None] = None,
+        ub_init: Union[np.ndarray, list[float], None] = None,
         copy_objective: bool = True,
         startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     ):
@@ -124,7 +125,7 @@ class Problem:
         if x_fixed_indices is None:
             x_fixed_indices = []
         x_fixed_indices = _make_iterable_if_value(x_fixed_indices, "int")
-        self.x_fixed_indices: List[int] = [
+        self.x_fixed_indices: list[int] = [
             _type_conversion_with_check(idx, ix, "fixed indices", "int")
             for idx, ix in enumerate(x_fixed_indices)
         ]
@@ -134,7 +135,7 @@ class Problem:
         if x_fixed_vals is None:
             x_fixed_vals = []
         x_fixed_vals = _make_iterable_if_value(x_fixed_vals, "float")
-        self.x_fixed_vals: List[float] = [
+        self.x_fixed_vals: list[float] = [
             _type_conversion_with_check(idx, x, "fixed values", "float")
             for idx, x in enumerate(x_fixed_vals)
         ]
@@ -149,7 +150,7 @@ class Problem:
             x_names = [f"x{j}" for j in range(0, self.dim_full)]
         if len(set(x_names)) != len(x_names):
             raise ValueError("Parameter names x_names must be unique")
-        self.x_names: List[str] = list(x_names)
+        self.x_names: list[str] = list(x_names)
 
         if x_scales is None:
             x_scales = ["lin"] * self.dim_full
@@ -165,6 +166,9 @@ class Problem:
             startpoint_method = uniform
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
+        # save python and pypesto version
+        self.python_version = ".".join(map(str, sys.version_info[:3]))
+        self.pypesto_version = __version__
 
     @property
     def lb(self) -> np.ndarray:
@@ -197,7 +201,7 @@ class Problem:
         return self.dim_full - len(self.x_fixed_indices)
 
     @property
-    def x_free_indices(self) -> List[int]:
+    def x_free_indices(self) -> list[int]:
         """Return non fixed parameters."""
         return sorted(set(range(0, self.dim_full)) - set(self.x_fixed_indices))
 
@@ -237,6 +241,15 @@ class Problem:
             x_fixed_indices=self.x_fixed_indices,
             x_fixed_vals=self.x_fixed_vals,
         )
+
+        # make prior aware of fixed parameters (for sampling etc.)
+        if self.x_priors is not None:
+            self.x_priors.update_from_problem(
+                dim_full=self.dim_full,
+                x_free_indices=self.x_free_indices,
+                x_fixed_indices=self.x_fixed_indices,
+                x_fixed_vals=self.x_fixed_vals,
+            )
 
         # sanity checks
         if len(self.x_scales) != self.dim_full:
@@ -333,7 +346,10 @@ class Problem:
         self.normalize()
 
     def get_full_vector(
-        self, x: Union[np.ndarray, None], x_fixed_vals: Iterable[float] = None
+        self,
+        x: Union[np.ndarray, None],
+        x_fixed_vals: Iterable[float] = None,
+        x_is_grad: bool = False,
     ) -> Union[np.ndarray, None]:
         """
         Map vector from dim to dim_full. Usually used for x, grad.
@@ -343,9 +359,9 @@ class Problem:
         x: array_like, shape=(dim,)
             The vector in dimension dim.
         x_fixed_vals: array_like, ndim=1, optional
-            The values to be used for the fixed indices. If None, then nans are
-            inserted. Usually, None will be used for grad and
-            problem.x_fixed_vals for x.
+            The values to be used for the fixed indices. If None and x_is_grad=False, problem.x_fixed_vals is used; for x_is_grad=True, nans are inserted.
+        x_is_grad: bool
+            If true, x is treated as gradients.
         """
         if x is None:
             return None
@@ -363,6 +379,9 @@ class Problem:
         x_full[..., self.x_free_indices] = x
         if x_fixed_vals is not None:
             x_full[..., self.x_fixed_indices] = x_fixed_vals
+            return x_full
+        if not x_is_grad:
+            x_full[..., self.x_fixed_indices] = self.x_fixed_vals
         return x_full
 
     def get_full_matrix(
@@ -394,7 +413,7 @@ class Problem:
     def get_reduced_vector(
         self,
         x_full: Union[np.ndarray, None],
-        x_indices: Optional[List[int]] = None,
+        x_indices: Optional[list[int]] = None,
     ) -> Union[np.ndarray, None]:
         """
         Keep only those elements, which indices are specified in x_indices.
@@ -479,6 +498,22 @@ class Problem:
                 },
             )
         )
+
+    def get_startpoints(self, n_starts: int) -> np.ndarray:
+        """
+        Sample startpoints from method.
+
+        Parameters
+        ----------
+        n_starts:
+            Number of start points.
+
+        Returns
+        -------
+        xs:
+            Start points, shape (n_starts, dim).
+        """
+        return self.startpoint_method(n_starts, self)
 
 
 _convtypes = {

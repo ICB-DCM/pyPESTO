@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pyPESTO documentation build configuration file, created by
 # sphinx-quickstart on Mon Jul 30 08:30:38 2018.

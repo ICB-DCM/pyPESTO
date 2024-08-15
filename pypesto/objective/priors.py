@@ -1,7 +1,7 @@
 import logging
 import math
-from copy import deepcopy
-from typing import Callable, Dict, List, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Callable, Union
 
 import numpy as np
 
@@ -50,7 +50,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def __init__(
         self,
-        prior_list: List[Dict],
+        prior_list: list[dict],
         x_names: Sequence[str] = None,
     ):
         """
@@ -67,16 +67,12 @@ class NegLogParameterPriors(ObjectiveBase):
         self.prior_list = prior_list
         super().__init__(x_names)
 
-    def __deepcopy__(self, memodict=None):
-        """Create deepcopy of object."""
-        other = NegLogParameterPriors(deepcopy(self.prior_list))
-        return other
-
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: C.ModeType,
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """
@@ -115,7 +111,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
     def check_sensi_orders(
         self,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: C.ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""

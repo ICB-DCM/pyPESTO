@@ -1,5 +1,6 @@
+from collections.abc import Iterable, Sequence
 from numbers import Real
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -14,11 +15,11 @@ from .misc import process_result_list, process_start_indices
 
 def optimization_run_properties_one_plot(
     results: Result,
-    properties_to_plot: Optional[List[str]] = None,
-    size: Tuple[float, float] = (18.5, 10.5),
+    properties_to_plot: Optional[list[str]] = None,
+    size: tuple[float, float] = (18.5, 10.5),
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    colors: Optional[Union[List[float], List[List[float]]]] = None,
-    legends: Optional[Union[str, List[str]]] = None,
+    colors: Optional[Union[list[float], list[list[float]]]] = None,
+    legends: Optional[Union[str, list[str]]] = None,
     plot_type: str = "line",
 ) -> matplotlib.axes.Axes:
     """
@@ -52,15 +53,19 @@ def optimization_run_properties_one_plot(
 
     Examples
     --------
-    optimization_properties_per_multistart(
-        result1,
-        properties_to_plot=['time'],
-        colors=[.5, .9, .9, .3])
+    .. code-block:: python
 
-    optimization_properties_per_multistart(
-        result1,
-        properties_to_plot=['time', 'n_grad'],
-        colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
+        optimization_run_properties_one_plot(
+            result1,
+            properties_to_plot=['time'],
+            colors=[.5, .9, .9, .3]
+        )
+
+        optimization_run_properties_one_plot(
+            result1,
+            properties_to_plot=['time', 'n_grad'],
+            colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
+        )
     """
     if properties_to_plot is None:
         properties_to_plot = [
@@ -117,13 +122,13 @@ def optimization_run_properties_one_plot(
 
 def optimization_run_properties_per_multistart(
     results: Union[Result, Sequence[Result]],
-    properties_to_plot: Optional[List[str]] = None,
-    size: Tuple[float, float] = (18.5, 10.5),
+    properties_to_plot: Optional[list[str]] = None,
+    size: tuple[float, float] = (18.5, 10.5),
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    colors: Optional[Union[List[float], List[List[float]]]] = None,
-    legends: Optional[Union[str, List[str]]] = None,
+    colors: Optional[Union[list[float], list[list[float]]]] = None,
+    legends: Optional[Union[str, list[str]]] = None,
     plot_type: str = "line",
-) -> Dict[str, plt.Subplot]:
+) -> dict[str, plt.Subplot]:
     """
     One plot per optimization property in properties_to_plot.
 
@@ -155,24 +160,30 @@ def optimization_run_properties_per_multistart(
 
     Examples
     --------
-    optimization_properties_per_multistart(
-        result1,
-        properties_to_plot=['time'],
-        colors=[.5, .9, .9, .3])
+    .. code-block:: python
 
-    optimization_properties_per_multistart(
-        [result1, result2],
-        properties_to_plot=['time'],
-        colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
+        optimization_run_properties_per_multistart(
+            result1,
+            properties_to_plot=['time'],
+            colors=[.5, .9, .9, .3]
+        )
 
-    optimization_properties_per_multistart(
-        result1,
-        properties_to_plot=['time', 'n_grad'],
-        colors=[.5, .9, .9, .3])
+        optimization_run_properties_per_multistart(
+            [result1, result2],
+            properties_to_plot=['time'],
+            colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
+        )
 
-    optimization_properties_per_multistart(
-        [result1, result2], properties_to_plot=['time', 'n_fval'],
-        colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]])
+        optimization_run_properties_per_multistart(
+            result1,
+            properties_to_plot=['time', 'n_grad'],
+            colors=[.5, .9, .9, .3]
+        )
+
+        optimization_run_properties_per_multistart(
+            [result1, result2], properties_to_plot=['time', 'n_fval'],
+            colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
+        )
     """
     if properties_to_plot is None:
         properties_to_plot = [
@@ -213,10 +224,10 @@ def optimization_run_property_per_multistart(
     results: Union[Result, Sequence[Result]],
     opt_run_property: str,
     axes: Optional[matplotlib.axes.Axes] = None,
-    size: Tuple[float, float] = (18.5, 10.5),
+    size: tuple[float, float] = (18.5, 10.5),
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    colors: Optional[Union[List[float], List[List[float]]]] = None,
-    legends: Optional[Union[str, List[str]]] = None,
+    colors: Optional[Union[list[float], list[list[float]]]] = None,
+    legends: Optional[Union[str, list[str]]] = None,
     plot_type: str = "line",
 ) -> matplotlib.axes.Axes:
     """
@@ -323,7 +334,7 @@ def optimization_run_property_per_multistart(
                 plot_type,
             )
 
-    if sum((legend is not None for legend in legends)) > 0:
+    if sum(legend is not None for legend in legends) > 0:
         if plot_type == "both":
             for ax in axes:
                 ax.legend()
@@ -339,7 +350,7 @@ def stats_lowlevel(
     axis_label: str,
     ax: matplotlib.axes.Axes,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    color: Union[str, List[float], List[List[float]]] = "C0",
+    color: Union[str, list[float], list[list[float]]] = "C0",
     legend: Optional[str] = None,
     plot_type: str = "line",
 ):
