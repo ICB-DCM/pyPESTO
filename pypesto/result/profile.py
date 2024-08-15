@@ -92,7 +92,7 @@ class ProfilerResult(dict):
 
         if color_path is None:
             self.color_path = np.full(
-                x_path.shape[1], np.array([1, 0, 0, 0.3])
+                (x_path.shape[1], 4), np.array([1, 0, 0, 0.3])
             )
         else:
             self.color_path = color_path.copy()

@@ -313,9 +313,12 @@ def profile_lowlevel(
     """
     # parse input
     fvals = np.asarray(fvals)
-
     # get colors
-    if isinstance(color, np.ndarray) and not len(color.shape) == 2:
+    if (
+        color is None
+        or isinstance(color, list)
+        or (isinstance(color, np.ndarray) and not len(color.shape) == 2)
+    ):
         color = assign_colors([1.0], color)
         single_color = True
     else:
