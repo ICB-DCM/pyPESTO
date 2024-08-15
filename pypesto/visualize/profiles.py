@@ -66,6 +66,8 @@ def profiles(
     ax:
         The plot axes.
     """
+    color_requested = colors is not None
+
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
         results, profile_list_ids, colors, legends
@@ -103,8 +105,13 @@ def profiles(
                 # multiple results per axes object
                 color_ind = i_result
             # If there is only one result and one profile_list_id,
-            # we use the colors provided by profiler_result.color_path
-            if len(results) == 1 and len(profile_list_ids) == 1:
+            # we use the colors provided by profiler_result.color_path.
+            # Do this only if no color was requested.
+            if (
+                len(results) == 1
+                and len(profile_list_ids) == 1
+                and not color_requested
+            ):
                 color = color_paths
             else:
                 color = colors[color_ind]
