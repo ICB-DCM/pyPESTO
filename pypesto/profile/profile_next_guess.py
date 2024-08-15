@@ -73,8 +73,7 @@ def next_guess(
         next_initial_guess = fixed_step(
             x, par_index, par_direction, profile_options, problem
         )
-
-    if update_type == "adaptive_step_order_0":
+    elif update_type == "adaptive_step_order_0":
         order = 0
     elif update_type == "adaptive_step_order_1":
         order = 1
