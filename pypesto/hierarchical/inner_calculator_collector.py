@@ -7,7 +7,9 @@ to collect hierarchical inner calculators for each data type and merge their res
 from __future__ import annotations
 
 import copy
-from typing import Sequence, Union
+import warnings
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 
@@ -34,7 +36,6 @@ from ..C import (
     SPLINE_KNOTS,
     SPLINE_RATIO,
     SRES,
-    InnerParameterType,
     ModeType,
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
@@ -46,8 +47,8 @@ from ..objective.amici.amici_util import (
 
 try:
     import amici
-    import petab
-    from amici.parameter_mapping import ParameterMapping
+    import petab.v1 as petab
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     petab = None
     ParameterMapping = None
@@ -89,9 +90,9 @@ class InnerCalculatorCollector(AmiciCalculator):
     def __init__(
         self,
         data_types: set[str],
-        petab_problem: "petab.Problem",
+        petab_problem: petab.Problem,
         model: AmiciModel,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
         inner_options: dict,
     ):
         super().__init__()
@@ -101,6 +102,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.inner_calculators: list[
             AmiciCalculator
         ] = []  # TODO make into a dictionary (future PR, together with .hierarchical of Problem)
+
+        self.semiquant_observable_ids = None
+        self.relative_observable_ids = None
+
         self.construct_inner_calculators(
             petab_problem, model, edatas, inner_options
         )
@@ -108,7 +113,6 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
 
         self._known_least_squares_safe = False
-        self.semiquant_observable_ids = None
 
     def initialize(self):
         """Initialize."""
@@ -117,9 +121,9 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def construct_inner_calculators(
         self,
-        petab_problem: "petab.Problem",
+        petab_problem: petab.Problem,
         model: AmiciModel,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
         inner_options: dict,
     ):
         """Construct inner calculators for each data type."""
@@ -136,6 +140,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                 inner_problem=relative_inner_problem
             )
             self.inner_calculators.append(relative_inner_solver)
+            self.relative_observable_ids = (
+                relative_inner_problem.get_relative_observable_ids()
+            )
 
         if ORDINAL in self.data_types or CENSORED in self.data_types:
             optimal_scaling_inner_options = {
@@ -177,12 +184,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                 semiquant_problem.get_noise_dummy_values(scaled=True)
             )
             self.inner_calculators.append(semiquant_calculator)
-            self.semiquant_observable_ids = [
-                model.getObservableIds()[group - 1]
-                for group in semiquant_problem.get_groups_for_xs(
-                    InnerParameterType.SPLINE
-                )
-            ]
+            self.semiquant_observable_ids = (
+                semiquant_problem.get_semiquant_observable_ids()
+            )
 
         if self.data_types - {
             RELATIVE,
@@ -217,7 +221,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def _get_quantitative_data_mask(
         self,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
     ) -> list[np.ndarray]:
         # transform experimental data
         edatas = [
@@ -282,6 +286,14 @@ class InnerCalculatorCollector(AmiciCalculator):
             ub.extend(ub_i)
         return np.asarray(lb), np.asarray(ub)
 
+    def get_interpretable_inner_par_scales(self) -> list[str]:
+        """Return the scales of interpretable inner parameters of all inner problems."""
+        return [
+            scale
+            for inner_calculator in self.inner_calculators
+            for scale in inner_calculator.inner_problem.get_interpretable_x_scales()
+        ]
+
     def __call__(
         self,
         x_dct: dict,
@@ -324,7 +336,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        import amici.parameter_mapping
+        from amici.petab.conditions import fill_in_parameters
 
         if mode == MODE_RES and any(
             data_type in self.data_types
@@ -401,14 +413,20 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.necessary_par_dummy_values)
-        # fill in parameters
-        amici.parameter_mapping.fill_in_parameters(
-            edatas=edatas,
-            problem_parameters=x_dct,
-            scaled_parameters=True,
-            parameter_mapping=parameter_mapping,
-            amici_model=amici_model,
-        )
+        # fill in parameters, we expect here a RunTimeWarning to occur
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The following problem parameters were not used:.*",
+                category=RuntimeWarning,
+            )
+            fill_in_parameters(
+                edatas=edatas,
+                problem_parameters=x_dct,
+                scaled_parameters=True,
+                parameter_mapping=parameter_mapping,
+                amici_model=amici_model,
+            )
 
         # run amici simulation
         rdatas = amici.runAmiciSimulations(

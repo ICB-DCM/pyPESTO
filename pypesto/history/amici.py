@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 import numpy as np
 
@@ -41,6 +42,18 @@ class Hdf5AmiciHistory(Hdf5History):
         options: Union[HistoryOptions, dict, None] = None,
     ):
         super().__init__(id, file, options=options)
+
+    @staticmethod
+    def load(
+        id: str,
+        file: Union[str, Path],
+        options: Union[HistoryOptions, dict] = None,
+    ) -> "Hdf5AmiciHistory":
+        """Load the History object from memory."""
+        history = Hdf5AmiciHistory(id=id, file=file, options=options)
+        if options is None:
+            history.recover_options(file)
+        return history
 
     @staticmethod
     def _simulation_to_values(x, result, used_time):

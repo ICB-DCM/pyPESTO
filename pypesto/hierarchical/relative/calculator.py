@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import copy
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
 try:
     import amici
-    import amici.parameter_mapping
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.conditions import fill_in_parameters
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
@@ -46,7 +46,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
     def __init__(
         self,
         inner_problem: AmiciInnerProblem,
-        inner_solver: Optional[InnerSolver] = None,
+        inner_solver: InnerSolver | None = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -83,7 +83,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list["amici.ReturnData"] = None,
+        rdatas: list[amici.ReturnData] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -269,7 +269,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list["amici.ReturnData"] = None,
+        rdatas: list[amici.ReturnData] = None,
     ):
         """Calculate directly via solver calculate methods.
 
@@ -296,7 +296,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
             amici_solver.setSensitivityOrder(sensi_order)
             x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
             # fill in parameters
-            amici.parameter_mapping.fill_in_parameters(
+            fill_in_parameters(
                 edatas=edatas,
                 problem_parameters=x_dct,
                 scaled_parameters=True,

@@ -6,11 +6,12 @@ import logging.handlers
 import multiprocessing
 import os
 import time
+from dataclasses import dataclass
 from math import ceil, sqrt
-from multiprocessing import Manager, Process
+from multiprocessing import get_context
 from multiprocessing.managers import SyncManager
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 from uuid import uuid1
 from warnings import warn
 
@@ -62,11 +63,12 @@ class SacessOptimizer:
     def __init__(
         self,
         num_workers: Optional[int] = None,
-        ess_init_args: Optional[List[Dict[str, Any]]] = None,
+        ess_init_args: Optional[list[dict[str, Any]]] = None,
         max_walltime_s: float = np.inf,
         sacess_loglevel: int = logging.INFO,
         ess_loglevel: int = logging.WARNING,
         tmpdir: Union[Path, str] = None,
+        mp_start_method: str = "spawn",
     ):
         """Construct.
 
@@ -105,6 +107,9 @@ class SacessOptimizer:
             current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
             parallel have a unique `tmpdir`.
+        mp_start_method:
+            The start method for the multiprocessing context.
+            See :mod:`multiprocessing` for details.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -124,6 +129,7 @@ class SacessOptimizer:
         self.exit_flag = ESSExitFlag.DID_NOT_RUN
         self.ess_loglevel = ess_loglevel
         self.sacess_loglevel = sacess_loglevel
+        self.worker_results: list[SacessWorkerResult] = []
         logger.setLevel(self.sacess_loglevel)
 
         self._tmpdir = tmpdir
@@ -135,6 +141,7 @@ class SacessOptimizer:
         self.histories: Optional[
             list["pypesto.history.memory.MemoryHistory"]
         ] = None
+        self.mp_ctx = get_context(mp_start_method)
 
     def minimize(
         self,
@@ -195,12 +202,12 @@ class SacessOptimizer:
             )
         )
         logging_thread = logging.handlers.QueueListener(
-            multiprocessing.Queue(-1), logging_handler
+            self.mp_ctx.Queue(-1), logging_handler
         )
 
         # shared memory manager to handle shared state
         # (simulates the sacess manager process)
-        with Manager() as shmem_manager:
+        with self.mp_ctx.Manager() as shmem_manager:
             sacess_manager = SacessManager(
                 shmem_manager=shmem_manager,
                 ess_options=ess_init_args,
@@ -223,7 +230,7 @@ class SacessOptimizer:
             ]
             # launch worker processes
             worker_processes = [
-                Process(
+                self.mp_ctx.Process(
                     name=f"{self.__class__.__name__}-worker-{i:02d}",
                     target=_run_worker,
                     args=(
@@ -244,21 +251,29 @@ class SacessOptimizer:
 
             # wait for finish
             # collect results
-            histories = [
+            self.worker_results = [
                 sacess_manager._result_queue.get()
                 for _ in range(self.num_workers)
             ]
-            self.histories = histories
             for p in worker_processes:
                 p.join()
 
         logging_thread.stop()
+
+        self.histories = [
+            worker_result.history for worker_result in self.worker_results
+        ]
+
         result = self._create_result(problem)
 
         walltime = time.time() - start_time
+        n_eval_total = sum(
+            worker_result.n_eval for worker_result in self.worker_results
+        )
         logger.info(
-            f"{self.__class__.__name__} stopped after {walltime:3g}s with global best "
-            f"{result.optimize_result[0].fval}."
+            f"{self.__class__.__name__} stopped after {walltime:3g}s "
+            f"and {n_eval_total} objective evaluations "
+            f"with global best {result.optimize_result[0].fval}."
         )
 
         return result
@@ -340,7 +355,7 @@ class SacessManager:
     def __init__(
         self,
         shmem_manager: SyncManager,
-        ess_options: List[Dict[str, Any]],
+        ess_options: list[dict[str, Any]],
         dim: int,
     ):
         self._num_workers = len(ess_options)
@@ -360,12 +375,12 @@ class SacessManager:
         self._logger = logging.getLogger()
         self._result_queue = shmem_manager.Queue()
 
-    def get_best_solution(self) -> Tuple[np.array, float]:
+    def get_best_solution(self) -> tuple[np.array, float]:
         """Get the best objective value and corresponding parameters."""
         with self._lock:
             return np.array(self._best_known_x), self._best_known_fx.value
 
-    def reconfigure_worker(self, worker_idx: int) -> Dict:
+    def reconfigure_worker(self, worker_idx: int) -> dict:
         """Reconfigure the given worker.
 
         Updates the ESS options for the given worker to those of the worker at
@@ -440,10 +455,15 @@ class SacessManager:
                 # reject solution
                 self._rejections.value += 1
 
+                rel_change = (
+                    abs(abs_change / self._best_known_fx.value)
+                    if self._best_known_fx.value != 0
+                    else np.nan
+                )
                 self._logger.debug(
                     f"Rejected solution from worker {sender_idx} "
                     f"abs change: {abs_change} "
-                    f"rel change: {abs(abs_change / self._best_known_fx.value):.4g} "
+                    f"rel change: {rel_change:.4g} "
                     f"(threshold: {self._rejection_threshold.value}) "
                     f"(total rejections: {self._rejections.value})."
                 )
@@ -490,7 +510,7 @@ class SacessWorker:
     def __init__(
         self,
         manager: SacessManager,
-        ess_kwargs: Dict[str, Any],
+        ess_kwargs: dict[str, Any],
         worker_idx: int,
         max_walltime_s: float = np.inf,
         loglevel: int = logging.INFO,
@@ -572,11 +592,20 @@ class SacessWorker:
 
             self._logger.info(
                 f"sacess worker {self._worker_idx} iteration {ess.n_iter} "
-                f"(best: {self._best_known_fx})."
+                f"(best: {self._best_known_fx}, "
+                f"n_eval: {ess.evaluator.n_eval})."
             )
 
         ess.history.finalize(exitflag=ess.exit_flag.name)
-        self._manager._result_queue.put(ess.history)
+        worker_result = SacessWorkerResult(
+            x=ess.x_best,
+            fx=ess.fx_best,
+            history=ess.history,
+            n_eval=ess.evaluator.n_eval,
+            n_iter=ess.n_iter,
+            exit_flag=ess.exit_flag,
+        )
+        self._manager._result_queue.put(worker_result)
         ess._report_final()
 
     def _setup_ess(self, startpoint_method: StartpointMethod) -> ESSOptimizer:
@@ -645,10 +674,13 @@ class SacessWorker:
 
     def maybe_update_best(self, x: np.array, fx: float):
         """Maybe update the best known solution and send it to the manager."""
+        rel_change = (
+            abs((fx - self._best_known_fx) / fx) if fx != 0 else np.nan
+        )
         self._logger.debug(
             f"Worker {self._worker_idx} maybe sending solution {fx}. "
             f"best known: {self._best_known_fx}, "
-            f"rel change: {(fx - self._best_known_fx) / fx:.4g}, "
+            f"rel change: {rel_change:.4g}, "
             f"threshold: {self._acceptance_threshold}"
         )
 
@@ -758,7 +790,7 @@ def get_default_ess_options(
         "pypesto.optimize.Optimizer",
         Callable[..., "pypesto.optimize.Optimizer"],
     ] = True,
-) -> List[Dict]:
+) -> list[dict]:
     """Get default ESS settings for (SA)CESS.
 
     Returns settings for ``num_workers`` parallel scatter searches, combining
@@ -1011,3 +1043,35 @@ class SacessFidesFactory:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(fides_options={self._fides_options}, fides_kwargs={self._fides_kwargs})"
+
+
+@dataclass
+class SacessWorkerResult:
+    """Container for :class:`SacessWorker` results.
+
+    Contains various information about the optimization process of a single
+    :class:`SacessWorker` instance that is to be sent to
+    :class:`SacessOptimizer`.
+
+    Attributes
+    ----------
+    x:
+        Best parameters found.
+    fx:
+        Objective value corresponding to ``x``.
+    n_eval:
+        Number of objective evaluations performed.
+    n_iter:
+        Number of scatter search iterations performed.
+    history:
+        History object containing information about the optimization process.
+    exit_flag:
+        Exit flag of the optimization process.
+    """
+
+    x: np.array
+    fx: float
+    n_eval: int
+    n_iter: int
+    history: "pypesto.history.memory.MemoryHistory"
+    exit_flag: ESSExitFlag

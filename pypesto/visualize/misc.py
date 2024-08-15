@@ -1,6 +1,8 @@
+import logging
 import warnings
+from collections.abc import Iterable
 from numbers import Number
-from typing import Iterable, List, Optional, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -22,9 +24,11 @@ from ..result import Result
 from ..util import assign_clusters, delete_nan_inf
 from .clust_color import assign_colors_for_list
 
+logger = logging.getLogger(__name__)
+
 
 def process_result_list(
-    results: Union[Result, List[Result]], colors=None, legends=None
+    results: Union[Result, list[Result]], colors=None, legends=None
 ):
     """
     Assign colors and legends to a list of results, check user provided lists.
@@ -302,8 +306,8 @@ def process_start_indices(
     """
     Process the start_indices.
 
-    Create an array of indices if a number was provided and checks that the
-    indices do not exceed the max_index.
+    Create an array of indices if a number was provided, checks that the indices
+    do not exceed the max_index and removes starts with non-finite fval.
 
     Parameters
     ----------
@@ -322,7 +326,7 @@ def process_start_indices(
         start_indices = ALL
     if isinstance(start_indices, str):
         if start_indices == ALL:
-            return np.asarray(range(len(result.optimize_result)))
+            start_indices = np.asarray(range(len(result.optimize_result)))
         elif start_indices == ALL_CLUSTERED:
             clust_ind, clust_size = assign_clusters(
                 delete_nan_inf(result.optimize_result.fval)[1]
@@ -335,12 +339,12 @@ def process_start_indices(
             start_indices = np.concatenate(
                 [np.where(clust_ind == i_clust)[0] for i_clust in clust_gr2]
             )
-            return start_indices
+            start_indices = start_indices
         elif start_indices == FIRST_CLUSTER:
             clust_ind = assign_clusters(
                 delete_nan_inf(result.optimize_result.fval)[1]
             )[0]
-            return np.where(clust_ind == 0)[0]
+            start_indices = np.where(clust_ind == 0)[0]
         else:
             raise ValueError(
                 f"Permissible values for start_indices are {ALL}, "
@@ -357,6 +361,18 @@ def process_start_indices(
         for start_index in start_indices
         if start_index < len(result.optimize_result)
     ]
+
+    # filter out the indices that are not finite
+    start_indices_unfiltered = len(start_indices)
+    start_indices = [
+        start_index
+        for start_index in start_indices
+        if np.isfinite(result.optimize_result[start_index].fval)
+    ]
+    if len(start_indices) != start_indices_unfiltered:
+        logger.warning(
+            "Some start indices were removed due to inf or nan function values."
+        )
 
     return np.asarray(start_indices)
 

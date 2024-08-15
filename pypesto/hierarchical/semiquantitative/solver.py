@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import warnings
 
 import numpy as np
@@ -27,7 +29,7 @@ from .parameter import SplineInnerParameter
 from .problem import SemiquantProblem
 
 try:
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 

@@ -2,9 +2,10 @@
 
 import contextlib
 import time
+from collections.abc import Sequence
 from functools import wraps
 from pathlib import Path
-from typing import Sequence, Union
+from typing import Union
 
 import h5py
 import numpy as np

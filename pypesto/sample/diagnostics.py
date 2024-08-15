@@ -11,7 +11,9 @@ from .geweke_test import burn_in_by_sequential_geweke
 logger = logging.getLogger(__name__)
 
 
-def geweke_test(result: Result, zscore: float = 2.0) -> int:
+def geweke_test(
+    result: Result, zscore: float = 2.0, chain_number: int = 0
+) -> int:
     """
     Calculate the burn-in of MCMC chains.
 
@@ -21,6 +23,9 @@ def geweke_test(result: Result, zscore: float = 2.0) -> int:
         The pyPESTO result object with filled sample result.
     zscore:
         The Geweke test threshold.
+    chain_number:
+        The chain number to be used for the Geweke test (in a parallel tempering setting).
+        Usually we are only interested in the first chain.
 
     Returns
     -------
@@ -29,16 +34,17 @@ def geweke_test(result: Result, zscore: float = 2.0) -> int:
         do not differ significantly regarding Geweke test -> Burn-In
     """
     # Get parameter samples as numpy arrays
-    chain = np.asarray(result.sample_result.trace_x[0])
+    chain = np.asarray(result.sample_result.trace_x[chain_number])
 
     # Calculate burn in index
     burn_in = burn_in_by_sequential_geweke(chain=chain, zscore=zscore)
 
-    # Log
-    logger.info(f"Geweke burn-in index: {burn_in}")
+    if chain_number == 0:
+        # Log
+        logger.info(f"Geweke burn-in index: {burn_in}")
 
-    # Fill in burn-in value into result
-    result.sample_result.burn_in = burn_in
+        # Fill in burn-in value into result
+        result.sample_result.burn_in = burn_in
 
     return burn_in
 

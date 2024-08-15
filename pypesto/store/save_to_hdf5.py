@@ -92,7 +92,7 @@ class ProblemHDF5Writer:
                     value = np.asarray(value)
                     if value.size:
                         write_array(problem_grp, problem_attr, value)
-                elif isinstance(value, Integral):
+                elif isinstance(value, (Integral, str)):
                     problem_grp.attrs[problem_attr] = value
 
 
@@ -316,3 +316,9 @@ def write_result(
     if sample:
         pypesto_sample_writer = SamplingResultHDF5Writer(filename)
         pypesto_sample_writer.write(result, overwrite=overwrite)
+
+    if hasattr(result, "variational_result"):
+        logger.warning(
+            "Results from variational inference are not saved in the hdf5 file. "
+            "You have to save them manually."
+        )

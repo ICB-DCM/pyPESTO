@@ -160,7 +160,7 @@ class PEtabJlObjective(JuliaObjective):
         )
         # add a new line at the top of the original module to use the
         # precompiled module
-        with open(self.source_file, "r") as read_f:
+        with open(self.source_file) as read_f:
             if read_f.readline().endswith("_pre\n"):
                 with open("dummy_temp_file.jl", "w+") as write_f:
                     write_f.write(f"using {self.module}_pre\n\n")

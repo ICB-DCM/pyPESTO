@@ -3,8 +3,8 @@
 import os
 import tempfile
 import unittest
+from collections.abc import Sequence
 from stat import S_IMODE, S_IWGRP, S_IWOTH, S_IWRITE
-from typing import Sequence
 
 import numpy as np
 import pytest
@@ -236,9 +236,7 @@ class HistoryTest(unittest.TestCase):
 
     def check_history_consistency(self, start: pypesto.OptimizerResult):
         def xfull(x_trace):
-            return self.problem.get_full_vector(
-                x_trace, self.problem.x_fixed_vals
-            )
+            return self.problem.get_full_vector(x_trace)
 
         if isinstance(start.history, (CsvHistory, Hdf5History)):
             # get index of optimal parameter
@@ -433,8 +431,8 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_grad=True,
             trace_record_hess=False,
         )
-
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
     def test_trace_grad_integrated(self):
         self.obj = rosen_for_sensi(
@@ -447,13 +445,18 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_grad=True,
             trace_record_hess=False,
         )
-
-        self.check_history()
+        # Expect RuntimeWarning since we cannot handle bounds and
+        # UserWarning for integrated=True
+        with pytest.warns(Warning) as warninfo:
+            self.check_history()
+        warns = {warn.category for warn in warninfo}
+        expected_warns = {RuntimeWarning, UserWarning}
+        assert warns == expected_warns
 
     def test_trace_all(self):
         self.obj = rosen_for_sensi(
             max_sensi_order=2,
-            integrated=True,
+            integrated=False,
         )["obj"]
 
         self.history_options = HistoryOptions(
@@ -464,10 +467,11 @@ class FunModeHistoryTest(HistoryTest):
             trace_record_sres=True,
         )
         self.fix_pars = False
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
     def test_trace_all_aggregated(self):
-        self.obj = rosen_for_sensi(max_sensi_order=2, integrated=True)["obj"]
+        self.obj = rosen_for_sensi(max_sensi_order=2, integrated=False)["obj"]
 
         self.history_options = HistoryOptions(
             trace_record=True,
@@ -478,7 +482,8 @@ class FunModeHistoryTest(HistoryTest):
         )
         self.obj = pypesto.objective.AggregatedObjective([self.obj, self.obj])
         self.fix_pars = False
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
 
 class CRFunModeHistoryTest(HistoryTest):
@@ -511,7 +516,8 @@ class CRFunModeHistoryTest(HistoryTest):
         )
 
         self.fix_pars = False
-        self.check_history()
+        with pytest.warns(RuntimeWarning, match="cannot handle bounds"):
+            self.check_history()
 
 
 @pytest.fixture(params=["memory", "csv", "hdf5", ""])

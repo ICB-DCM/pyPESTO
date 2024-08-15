@@ -2,7 +2,6 @@
 
 import logging
 import warnings
-from typing import Tuple
 
 import numpy as np
 from scipy.stats import norm
@@ -47,11 +46,15 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
         n = nw
 
     # Number of windows
-    k = np.floor((n - n_overlap) / (nw - n_overlap)).astype(int)
+    k = (
+        np.floor((n - n_overlap) / (nw - n_overlap)).astype(int)
+        if nw != n_overlap
+        else 0
+    )
     index = np.arange(nw)
     # Normalizing scale factor
     kmu = k * np.linalg.norm(w) ** 2
-    spectral_density = np.zeros((nfft))
+    spectral_density = np.zeros(nfft)
 
     for _ in range(k):
         xw = w * x[index]
@@ -59,12 +62,15 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
         Xx = np.absolute(np.fft.fft(xw, n=nfft, axis=0)) ** 2
         spectral_density += Xx
 
-    # Normalize
-    spectral_density = spectral_density * (1 / kmu)
-
     n2 = np.floor(nfft / 2).astype(int)
 
     spectral_density = spectral_density[0:n2]
+
+    # Normalize
+    if kmu != 0:
+        spectral_density = spectral_density * (1 / kmu)
+    else:
+        spectral_density = np.full(spectral_density.shape, np.nan)
 
     return spectral_density
 
@@ -95,7 +101,7 @@ def spectrum0(x: np.ndarray) -> np.ndarray:
 
 def calculate_zscore(
     chain: np.ndarray, a: float = 0.1, b: float = 0.5
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """
     Perform a Geweke test on a chain.
 
@@ -146,16 +152,18 @@ def calculate_zscore(
         # Mean of Second fraction
         mean_b = np.mean(chain[index_b:, :], axis=0)
 
-    # Spectral estimates for variance
-    spectrum_a = spectrum0(chain[0:index_a, :])
-    spectrum_b = spectrum0(chain[index_b:, :])
+        # Spectral estimates for variance
+        spectrum_a = spectrum0(chain[0:index_a, :])
+        spectrum_b = spectrum0(chain[index_b:, :])
 
-    # Calculate z-score
-    z_score = (mean_a - mean_b) / (
-        np.sqrt(spectrum_a / index_a + spectrum_b / (nsamples - index_b + 1))
-    )
-    # Calculate significance (p value)
-    p = 2 * (1 - norm.cdf(np.absolute(z_score)))
+        # Calculate z-score
+        z_score = (mean_a - mean_b) / (
+            np.sqrt(
+                spectrum_a / index_a + spectrum_b / (nsamples - index_b + 1)
+            )
+        )
+        # Calculate significance (p value)
+        p = 2 * (1 - norm.cdf(np.absolute(z_score)))
 
     return z_score, p
 
@@ -197,7 +205,7 @@ def burn_in_by_sequential_geweke(
     # to sorting p-values
     max_z = np.max(np.absolute(z), axis=1)
     idxs = max_z.argsort()[::-1]  # sort descend
-    alpha2 = zscore * np.ones((len(idxs)))
+    alpha2 = zscore * np.ones(len(idxs))
 
     for i in range(len(max_z)):
         alpha2[idxs[i]] /= len(fragments) - np.argwhere(idxs == i).item(0) + 1

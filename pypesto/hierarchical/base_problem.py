@@ -1,18 +1,20 @@
 """Inner optimization problem in hierarchical optimization."""
 
+from __future__ import annotations
+
 import copy
 import logging
-from typing import Union
 
 import numpy as np
 import pandas as pd
 
+from ..C import LIN, LOG, LOG10
 from .base_parameter import InnerParameter
 
 try:
     import amici
-    import petab
-    from petab.C import OBSERVABLE_ID, TIME
+    import petab.v1 as petab
+    from petab.v1.C import OBSERVABLE_ID, TIME
 except ImportError:
     pass
 
@@ -60,10 +62,10 @@ class InnerProblem:
 
     @staticmethod
     def from_petab_amici(
-        petab_problem: "petab.Problem",
-        amici_model: "amici.Model",
-        edatas: list["amici.ExpData"],
-    ) -> "InnerProblem":
+        petab_problem: petab.Problem,
+        amici_model: amici.Model,
+        edatas: list[amici.ExpData],
+    ) -> InnerProblem:
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
     def get_x_ids(self) -> list[str]:
@@ -80,6 +82,10 @@ class InnerProblem:
         the meaning of these parameters based solely on their value.
         """
         return list(self.xs.keys())
+
+    def get_interpretable_x_scales(self) -> list[str]:
+        """Get scales of interpretable inner parameters."""
+        return [x.scale for x in self.xs.values()]
 
     def get_xs_for_type(
         self, inner_parameter_type: str
@@ -118,7 +124,9 @@ class InnerProblem:
         try:
             return self.xs[inner_parameter_id]
         except KeyError:
-            raise KeyError(f"Cannot find parameter with id {id}.") from None
+            raise KeyError(
+                f"Cannot find parameter with id {inner_parameter_id}."
+            ) from None
 
     def is_empty(self) -> bool:
         """Check for emptiness.
@@ -193,6 +201,11 @@ class AmiciInnerProblem(InnerProblem):
             amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
         ]
 
+        # Mask the data using the inner problem mask. This is necessary
+        # because the inner problem is aware of only the data it uses.
+        for i in range(len(data)):
+            data[i][~self.data_mask[i]] = np.nan
+
         if len(self.data) != len(data):
             return False
 
@@ -214,16 +227,36 @@ def scale_value_dict(
     return scaled_dct
 
 
-def scale_value(
-    val: Union[float, np.array], scale: str
-) -> Union[float, np.array]:
+def scale_value(val: float | np.array, scale: str) -> float | np.array:
     """Scale a single value."""
-    if scale == "lin":
+    if scale == LIN:
         return val
-    if scale == "log":
+    if scale == LOG:
         return np.log(val)
-    if scale == "log10":
+    if scale == LOG10:
         return np.log10(val)
+    raise ValueError(f"Scale {scale} not recognized.")
+
+
+def scale_back_value_dict(
+    dct: dict[str, float], problem: InnerProblem
+) -> dict[str, float]:
+    """Scale back a value dictionary."""
+    scaled_dct = {}
+    for key, val in dct.items():
+        x = problem.get_for_id(key)
+        scaled_dct[key] = scale_back_value(val, x.scale)
+    return scaled_dct
+
+
+def scale_back_value(val: float | np.array, scale: str) -> float | np.array:
+    """Scale back a single value."""
+    if scale == LIN:
+        return val
+    if scale == LOG:
+        return np.exp(val)
+    if scale == LOG10:
+        return 10**val
     raise ValueError(f"Scale {scale} not recognized.")
 
 

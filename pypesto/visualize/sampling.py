@@ -1,7 +1,8 @@
 import logging
 import warnings
+from collections.abc import Sequence
 from colorsys import rgb_to_hls
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -44,7 +45,7 @@ def sampling_fval_traces(
     full_trace: bool = False,
     stepsize: int = 1,
     title: str = None,
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
     ax: matplotlib.axes.Axes = None,
 ):
     """
@@ -119,7 +120,7 @@ def sampling_fval_traces(
     return ax
 
 
-def _get_level_percentiles(level: float) -> Tuple[float, float]:
+def _get_level_percentiles(level: float) -> tuple[float, float]:
     """Convert a credibility level to percentiles.
 
     Similar to the highest-density region of a symmetric, unimodal distribution
@@ -147,11 +148,11 @@ def _get_level_percentiles(level: float) -> Tuple[float, float]:
 
 
 def _get_statistic_data(
-    summary: Dict[str, PredictionResult],
+    summary: dict[str, PredictionResult],
     statistic: str,
     condition_id: str,
     output_id: str,
-) -> Tuple[Sequence[float], Sequence[float]]:
+) -> tuple[Sequence[float], Sequence[float]]:
     """Get statistic-, condition-, and output-specific data.
 
     Parameters
@@ -182,18 +183,18 @@ def _get_statistic_data(
 
 
 def _plot_trajectories_by_condition(
-    summary: Dict[str, PredictionResult],
+    summary: dict[str, PredictionResult],
     condition_ids: Sequence[str],
     output_ids: Sequence[str],
     axes: matplotlib.axes.Axes,
     levels: Sequence[float],
-    level_opacities: Dict[int, float],
-    labels: Dict[str, str],
+    level_opacities: dict[int, float],
+    labels: dict[str, str],
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
-    grouped_measurements: Dict[
-        Tuple[str, str], Sequence[Sequence[float]]
+    grouped_measurements: dict[
+        tuple[str, str], Sequence[Sequence[float]]
     ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
@@ -276,10 +277,10 @@ def _plot_trajectories_by_condition(
             for level_index, level in enumerate(levels):
                 # Get the percentiles that correspond to the credibility level,
                 # as their labels in the `summary`.
-                lower_label, upper_label = [
+                lower_label, upper_label = (
                     get_percentile_label(percentile)
                     for percentile in _get_level_percentiles(level)
-                ]
+                )
                 # Get the data for each percentile.
                 t_lower, lower_data = _get_statistic_data(
                     summary,
@@ -329,18 +330,18 @@ def _plot_trajectories_by_condition(
 
 
 def _plot_trajectories_by_output(
-    summary: Dict[str, PredictionResult],
+    summary: dict[str, PredictionResult],
     condition_ids: Sequence[str],
     output_ids: Sequence[str],
     axes: matplotlib.axes.Axes,
     levels: Sequence[float],
-    level_opacities: Dict[int, float],
-    labels: Dict[str, str],
+    level_opacities: dict[int, float],
+    labels: dict[str, str],
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
-    grouped_measurements: Dict[
-        Tuple[str, str], Sequence[Sequence[float]]
+    grouped_measurements: dict[
+        tuple[str, str], Sequence[Sequence[float]]
     ] = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
@@ -408,10 +409,10 @@ def _plot_trajectories_by_output(
             for level_index, level in enumerate(levels):
                 # Get the percentiles that correspond to the credibility level,
                 # as their labels in the `summary`.
-                lower_label, upper_label = [
+                lower_label, upper_label = (
                     get_percentile_label(percentile)
                     for percentile in _get_level_percentiles(level)
-                ]
+                )
                 # Get the data for each percentile.
                 t_lower, lower_data = _get_statistic_data(
                     summary,
@@ -468,8 +469,8 @@ def _plot_trajectories_by_output(
 
 
 def _get_condition_and_output_ids(
-    summary: Dict[str, PredictionResult],
-) -> Tuple[Sequence[str], Sequence[str]]:
+    summary: dict[str, PredictionResult],
+) -> tuple[Sequence[str], Sequence[str]]:
     """Get all condition and output IDs in a prediction summary.
 
     Parameters
@@ -515,7 +516,7 @@ def _handle_legends(
     fig: matplotlib.figure.Figure,
     axes: matplotlib.axes.Axes,
     levels: Union[float, Sequence[float]],
-    labels: Dict[str, str],
+    labels: dict[str, str],
     level_opacities: Sequence[float],
     variable_names: Sequence[str],
     variable_colors: Sequence[RGB],
@@ -525,7 +526,7 @@ def _handle_legends(
     average: str,
     add_sd: bool,
     grouped_measurements: Optional[
-        Dict[Tuple[str, str], Sequence[Sequence[float]]]
+        dict[tuple[str, str], Sequence[Sequence[float]]]
     ],
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
@@ -682,7 +683,7 @@ def _handle_colors(
     levels: Union[float, Sequence[float]],
     n_variables: int,
     reverse: bool = False,
-) -> Tuple[Sequence[float], Sequence[RGB]]:
+) -> tuple[Sequence[float], Sequence[RGB]]:
     """Calculate the colors for the prediction trajectories plot.
 
     Parameters
@@ -719,9 +720,9 @@ def sampling_prediction_trajectories(
     ensemble_prediction: EnsemblePrediction,
     levels: Union[float, Sequence[float]],
     title: str = None,
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
     axes: matplotlib.axes.Axes = None,
-    labels: Dict[str, str] = None,
+    labels: dict[str, str] = None,
     axis_label_padding: int = 50,
     groupby: str = CONDITION,
     condition_gap: float = 0.01,
@@ -815,7 +816,7 @@ def sampling_prediction_trajectories(
     # Handle data
     grouped_measurements = {}
     if measurement_df is not None:
-        import petab
+        import petab.v1 as petab
 
         for condition_id in condition_ids:
             if petab.PARAMETER_SEPARATOR in condition_id:
@@ -967,7 +968,7 @@ def sampling_parameter_cis(
     step: float = 0.05,
     show_median: bool = True,
     title: str = None,
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
     ax: matplotlib.axes.Axes = None,
 ) -> matplotlib.axes.Axes:
     """
@@ -1076,7 +1077,7 @@ def sampling_parameter_traces(
     stepsize: int = 1,
     use_problem_bounds: bool = True,
     suptitle: str = None,
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
     ax: matplotlib.axes.Axes = None,
 ):
     """
@@ -1188,7 +1189,7 @@ def sampling_scatter(
     stepsize: int = 1,
     suptitle: str = None,
     diag_kind: str = "kde",
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
     show_bounds: bool = True,
 ):
     """
@@ -1255,7 +1256,7 @@ def sampling_1d_marginals(
     plot_type: str = "both",
     bw_method: str = "scott",
     suptitle: str = None,
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
 ):
     """
     Plot marginals.
@@ -1418,7 +1419,7 @@ def get_data_to_plot(
     pd_iter = pd.DataFrame(data=indices, columns=["iteration"])
 
     if full_trace:
-        converged = np.zeros((len(arr_fval)))
+        converged = np.zeros(len(arr_fval))
         converged[_burn_in:] = 1
         pd_conv = pd.DataFrame(data=converged, columns=["converged"])
 

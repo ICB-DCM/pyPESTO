@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import copy
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -32,7 +34,8 @@ from .solver import SemiquantInnerSolver
 
 try:
     import amici
-    from amici.parameter_mapping import ParameterMapping
+    from amici.petab.conditions import fill_in_parameters
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
@@ -78,12 +81,12 @@ class SemiquantCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list["amici.ExpData"],
+        edatas: list[amici.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list["amici.ReturnData"] = None,
+        rdatas: list[amici.ReturnData] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -154,7 +157,7 @@ class SemiquantCalculator(AmiciCalculator):
             )
 
             # fill in parameters
-            amici.parameter_mapping.fill_in_parameters(
+            fill_in_parameters(
                 edatas=edatas,
                 problem_parameters=x_dct,
                 scaled_parameters=True,

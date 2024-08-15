@@ -3,7 +3,7 @@
 import logging
 
 import amici.petab.simulations
-import petab
+import petab.v1 as petab
 import petabtests
 import pytest
 

@@ -8,23 +8,26 @@ import shutil
 import sys
 import tempfile
 import warnings
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from functools import partial
 from importlib.metadata import version
 from typing import (
     Any,
     Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
 )
 
 import numpy as np
 import pandas as pd
+import petab.v1 as petab
+from petab.v1.C import (
+    ESTIMATE,
+    NOISE_PARAMETERS,
+    OBSERVABLE_ID,
+    PREEQUILIBRATION_CONDITION_ID,
+    SIMULATION_CONDITION_ID,
+)
+from petab.v1.models import MODEL_TYPE_SBML
 
 from ..C import (
     CENSORED,
@@ -56,16 +59,7 @@ try:
     import amici.petab.conditions
     import amici.petab.parameter_mapping
     import amici.petab.simulations
-    import petab
     from amici.petab.import_helpers import check_model
-    from petab.C import (
-        ESTIMATE,
-        NOISE_PARAMETERS,
-        OBSERVABLE_ID,
-        PREEQUILIBRATION_CONDITION_ID,
-        SIMULATION_CONDITION_ID,
-    )
-    from petab.models import MODEL_TYPE_SBML
 except ImportError:
     amici = None
 
@@ -94,7 +88,7 @@ class PetabImporter(AmiciObjectBuilder):
         validate_petab: bool = True,
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
-        inner_options: Dict = None,
+        inner_options: dict = None,
     ):
         """Initialize importer.
 
@@ -179,7 +173,7 @@ class PetabImporter(AmiciObjectBuilder):
 
     @staticmethod
     def from_yaml(
-        yaml_config: Union[dict, str],
+        yaml_config: dict | str,
         output_folder: str = None,
         model_name: str = None,
     ) -> PetabImporter:
@@ -203,7 +197,7 @@ class PetabImporter(AmiciObjectBuilder):
         *args,
         rtol: float = 1e-2,
         atol: float = 1e-3,
-        mode: Union[str, List[str]] = None,
+        mode: str | list[str] = None,
         multi_eps=None,
         **kwargs,
     ) -> bool:
@@ -408,7 +402,7 @@ class PetabImporter(AmiciObjectBuilder):
         model: amici.Model = None,
         simulation_conditions=None,
         verbose: bool = True,
-    ) -> List[amici.ExpData]:
+    ) -> list[amici.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
         # create model
         if model is None:
@@ -568,10 +562,10 @@ class PetabImporter(AmiciObjectBuilder):
         self,
         objective: AmiciObjective = None,
         amici_output_fields: Sequence[str] = None,
-        post_processor: Union[Callable, None] = None,
-        post_processor_sensi: Union[Callable, None] = None,
-        post_processor_time: Union[Callable, None] = None,
-        max_chunk_size: Union[int, None] = None,
+        post_processor: Callable | None = None,
+        post_processor_sensi: Callable | None = None,
+        post_processor_time: Callable | None = None,
+        max_chunk_size: int | None = None,
         output_ids: Sequence[str] = None,
         condition_ids: Sequence[str] = None,
     ) -> AmiciPredictor:
@@ -655,7 +649,7 @@ class PetabImporter(AmiciObjectBuilder):
 
         return predictor
 
-    def create_prior(self) -> Union[NegLogParameterPriors, None]:
+    def create_prior(self) -> NegLogParameterPriors | None:
         """
         Create a prior from the parameter table.
 
@@ -673,6 +667,13 @@ class PetabImporter(AmiciObjectBuilder):
                     isinstance(prior_type_entry, str)
                     and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
                 ):
+                    # check if parameter for which prior is defined is a fixed parameter
+                    if x_id in self.petab_problem.x_fixed_ids:
+                        logger.warning(
+                            f"Parameter {x_id} is marked as fixed but has a "
+                            f"prior defined. This might be unintended."
+                        )
+
                     prior_params = [
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[
@@ -709,9 +710,9 @@ class PetabImporter(AmiciObjectBuilder):
     def create_problem(
         self,
         objective: AmiciObjective = None,
-        x_guesses: Optional[Iterable[float]] = None,
-        problem_kwargs: Dict[str, Any] = None,
-        startpoint_kwargs: Dict[str, Any] = None,
+        x_guesses: Iterable[float] | None = None,
+        problem_kwargs: dict[str, Any] = None,
+        startpoint_kwargs: dict[str, Any] = None,
         **kwargs,
     ) -> Problem:
         """Create a :class:`pypesto.problem.Problem`.
@@ -1043,8 +1044,8 @@ class PetabStartpoints(CheckedStartpoints):
     def __init__(self, petab_problem: petab.Problem, **kwargs):
         super().__init__(**kwargs)
         self._parameter_df = petab_problem.parameter_df.copy()
-        self._priors: Optional[List[Tuple]] = None
-        self._free_ids: Optional[List[str]] = None
+        self._priors: list[tuple] | None = None
+        self._free_ids: list[str] | None = None
 
     def _setup(
         self,

@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 import numbers
 import warnings
-from typing import TYPE_CHECKING, Dict, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
 
@@ -23,7 +24,7 @@ from ...logging import log_level_active
 if TYPE_CHECKING:
     try:
         import amici
-        from amici.parameter_mapping import (
+        from amici.petab.parameter_mapping import (
             ParameterMapping,
             ParameterMappingForCondition,
         )
@@ -37,8 +38,8 @@ logger = logging.getLogger(__name__)
 
 
 def map_par_opt_to_par_sim(
-    condition_map_sim_var: Dict[str, Union[float, str]],
-    x_dct: Dict[str, float],
+    condition_map_sim_var: dict[str, float | str],
+    x_dct: dict[str, float],
     amici_model: AmiciModel,
 ) -> np.ndarray:
     """
@@ -123,23 +124,25 @@ def create_identity_parameter_mapping(
     both in preequilibration and simulation, are assumed to be provided
     correctly in model or edatas already.
     """
-    import amici.parameter_mapping
+    from amici.petab.parameter_mapping import (
+        ParameterMapping,
+        ParameterMappingForCondition,
+        amici_to_petab_scale,
+    )
 
     x_ids = list(amici_model.getParameterIds())
     x_scales = list(amici_model.getParameterScale())
-    parameter_mapping = amici.parameter_mapping.ParameterMapping()
+    parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
-            x_id: amici.parameter_mapping.amici_to_petab_scale(x_scale)
+            x_id: amici_to_petab_scale(x_scale)
             for x_id, x_scale in zip(x_ids, x_scales)
         }
         # assumes fixed parameters are filled in already
-        mapping_for_condition = (
-            amici.parameter_mapping.ParameterMappingForCondition(
-                map_sim_var=condition_map_sim_var,
-                scale_map_sim_var=condition_scale_map_sim_var,
-            )
+        mapping_for_condition = ParameterMappingForCondition(
+            map_sim_var=condition_map_sim_var,
+            scale_map_sim_var=condition_scale_map_sim_var,
         )
 
         parameter_mapping.append(mapping_for_condition)
@@ -149,8 +152,8 @@ def create_identity_parameter_mapping(
 def par_index_slices(
     par_opt_ids: Sequence[str],
     par_sim_ids: Sequence[str],
-    condition_map_sim_var: Dict[str, Union[float, str]],
-) -> Tuple[np.ndarray, np.ndarray]:
+    condition_map_sim_var: dict[str, float | str],
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate numpy arrays for indexing based on `mapping_par_opt_to_par_sim`.
 
@@ -210,7 +213,7 @@ def par_index_slices(
 def add_sim_grad_to_opt_grad(
     par_opt_ids: Sequence[str],
     par_sim_ids: Sequence[str],
-    condition_map_sim_var: Dict[str, Union[float, str]],
+    condition_map_sim_var: dict[str, float | str],
     sim_grad: np.ndarray,
     opt_grad: np.ndarray,
     coefficient: float = 1.0,
@@ -258,7 +261,7 @@ def add_sim_grad_to_opt_grad(
 def add_sim_hess_to_opt_hess(
     par_opt_ids: Sequence[str],
     par_sim_ids: Sequence[str],
-    condition_map_sim_var: Dict[str, Union[float, str]],
+    condition_map_sim_var: dict[str, float | str],
     sim_hess: np.ndarray,
     opt_hess: np.ndarray,
     coefficient: float = 1.0,
@@ -309,7 +312,7 @@ def add_sim_hess_to_opt_hess(
 def sim_sres_to_opt_sres(
     par_opt_ids: Sequence[str],
     par_sim_ids: Sequence[str],
-    condition_map_sim_var: Dict[str, Union[float, str]],
+    condition_map_sim_var: dict[str, float | str],
     sim_sres: np.ndarray,
     coefficient: float = 1.0,
 ) -> np.ndarray:
@@ -361,9 +364,9 @@ def log_simulation(data_ix, rdata) -> None:
 
 def get_error_output(
     amici_model: AmiciModel,
-    edatas: Sequence["amici.ExpData"],
-    rdatas: Sequence["amici.ReturnData"],
-    sensi_orders: Tuple[int, ...],
+    edatas: Sequence[amici.ExpData],
+    rdatas: Sequence[amici.ReturnData],
+    sensi_orders: tuple[int, ...],
     mode: ModeType,
     dim: int,
 ) -> dict:
@@ -402,7 +405,7 @@ def get_error_output(
 
 
 def init_return_values(
-    sensi_orders: Tuple[int, ...],
+    sensi_orders: tuple[int, ...],
     mode: ModeType,
     dim: int,
     error: bool = False,
