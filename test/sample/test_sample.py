@@ -871,6 +871,7 @@ def test_harmonic_mean_log_evidence():
     result = optimize.minimize(
         problem,
         progress_bar=False,
+        n_starts=10,
     )
     result = sample.sample(
         problem,
@@ -933,6 +934,7 @@ def test_bridge_sampling():
     result = optimize.minimize(
         problem,
         progress_bar=False,
+        n_starts=10
     )
     result = sample.sample(
         problem,
