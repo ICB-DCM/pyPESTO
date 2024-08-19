@@ -861,6 +861,24 @@ def test_thermodynamic_integration():
     )
 
 
+def test_laplace_approximation_log_evidence():
+    """Test the laplace approximation of the log evidence."""
+    log_evidence_true = -1.15  # approximated by hand
+
+    problem = create_petab_problem()
+
+    # hess
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=10,
+        progress_bar=False,
+    )
+    log_evidence = sample.estimate_evidence.laplace_approximation_log_evidence(
+        problem, result.optimize_result.x[0]
+    )
+    assert np.isclose(log_evidence, log_evidence_true, atol=0.1)
+
+
 @pytest.mark.flaky(reruns=2)
 def test_harmonic_mean_log_evidence():
     tol = 1
@@ -880,13 +898,17 @@ def test_harmonic_mean_log_evidence():
     )
 
     # compute the log evidence using harmonic mean
-    harmonic_evidence = sample.util.harmonic_mean_log_evidence(result)
+    harmonic_evidence = sample.estimate_evidence.harmonic_mean_log_evidence(
+        result
+    )
     # compute the log evidence using stabilized harmonic mean
     prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
-    harmonic_stabilized_evidence = sample.util.harmonic_mean_log_evidence(
-        result=result,
-        prior_samples=prior_samples,
-        neg_log_likelihood_fun=problem.objective,
+    harmonic_stabilized_evidence = (
+        sample.estimate_evidence.harmonic_mean_log_evidence(
+            result=result,
+            prior_samples=prior_samples,
+            neg_log_likelihood_fun=problem.objective,
+        )
     )
 
     # compute real evidence
@@ -939,5 +961,5 @@ def test_bridge_sampling():
     )
 
     # compute the log evidence using harmonic mean
-    bridge_log_evidence = sample.util.bridge_sampling(result)
+    bridge_log_evidence = sample.estimate_evidence.bridge_sampling(result)
     assert isinstance(bridge_log_evidence, float)

@@ -32,4 +32,3 @@ from .optimizer import (
     ScipyOptimizer,
 )
 from .options import OptimizeOptions
-from .util import laplace_approximation_log_evidence
