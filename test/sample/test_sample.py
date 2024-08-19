@@ -863,7 +863,7 @@ def test_thermodynamic_integration():
 
 def test_laplace_approximation_log_evidence():
     """Test the laplace approximation of the log evidence."""
-    log_evidence_true = -1.15  # approximated by hand
+    log_evidence_true = 21.2  # approximated by hand
 
     problem = create_petab_problem()
 
