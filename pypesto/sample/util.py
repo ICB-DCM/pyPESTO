@@ -151,7 +151,7 @@ def harmonic_mean_log_evidence(
         Samples from the prior distribution. If samples from the prior are provided,
         the stabilized harmonic mean is computed (recommended). Then, the likelihood function must be provided as well.
     neg_log_likelihood_fun: callable
-        Function to evaluate the negative log likelihood.
+        Function to evaluate the negative log likelihood. Necessary if prior_samples is not `None`.
     """
     from scipy.optimize import minimize_scalar
     from scipy.special import logsumexp
