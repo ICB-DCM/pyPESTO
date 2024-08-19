@@ -38,6 +38,7 @@ nbs_2=(
   'sampler_study.ipynb'
   'sampling_diagnostics.ipynb'
   'model_selection.ipynb'
+  'bayes_factors.ipynb'
 )
 
 # All tested notebooks
