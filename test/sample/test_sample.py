@@ -931,11 +931,7 @@ def test_bridge_sampling():
     )
 
     # run optimization and MCMC
-    result = optimize.minimize(
-        problem,
-        progress_bar=False,
-        n_starts=10
-    )
+    result = optimize.minimize(problem, progress_bar=False, n_starts=10)
     result = sample.sample(
         problem,
         n_samples=1000,
