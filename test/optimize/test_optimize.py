@@ -682,6 +682,8 @@ def test_assign_ids():
 
 def test_laplace_approximation_log_evidence():
     """Test the laplace approximation of the log evidence."""
+    log_evidence_true = -1.15  # approximated by hand
+
     prob = pypesto.Problem(
         objective=rosen_for_sensi(max_sensi_order=2)["obj"],
         lb=0 * np.ones((1, 2)),
@@ -697,4 +699,4 @@ def test_laplace_approximation_log_evidence():
     log_evidence = laplace_approximation_log_evidence(
         prob, result.optimize_result.x[0]
     )
-    assert isinstance(log_evidence, float)
+    assert np.isclose(log_evidence, log_evidence_true, atol=0.1)
