@@ -184,7 +184,7 @@ class ParallelTemperingSampler(Sampler):
         method: str = "trapezoid",
         use_all_chains: bool = True,
     ) -> Union[float, None]:
-        """Perform thermodynamic integration or steppingstone samping to estimate the log evidence.
+        """Perform thermodynamic integration or steppingstone sampling to estimate the log evidence.
 
         Thermodynamic integration is performed by integrating the mean log likelihood over the temperatures.
         Errors might come from the samples itself or the numerical integration.
