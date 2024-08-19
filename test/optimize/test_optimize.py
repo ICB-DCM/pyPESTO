@@ -681,6 +681,7 @@ def test_assign_ids():
 
 
 def test_laplace_approximation_log_evidence():
+    """Test the laplace approximation of the log evidence."""
     prob = pypesto.Problem(
         objective=rosen_for_sensi(max_sensi_order=2)["obj"],
         lb=0 * np.ones((1, 2)),
@@ -690,7 +691,7 @@ def test_laplace_approximation_log_evidence():
     # hess
     result = optimize.minimize(
         problem=prob,
-        n_starts=1,
+        n_starts=10,
         progress_bar=False,
     )
     log_evidence = laplace_approximation_log_evidence(

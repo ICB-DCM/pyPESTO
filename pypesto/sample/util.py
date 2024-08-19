@@ -7,7 +7,11 @@ from typing import Optional
 import numpy as np
 
 from ..C import PYPESTO_MAX_N_SAMPLES
-from ..objective import AggregatedObjective
+from ..objective import (
+    AggregatedObjective,
+    NegLogParameterPriors,
+    NegLogPriors,
+)
 from ..optimize.util import laplace_approximation_log_evidence
 from ..result import Result
 from .diagnostics import geweke_test
@@ -307,13 +311,30 @@ def bridge_sampling(
 
     # Compute the log-likelihood, log-prior, and log-proposal for the posterior and proposal samples
     # assumes that the objective function is the negative log-likelihood + negative log-prior
+
+    # get index of prior in the objective function
+    likelihood_fun_indices = []
+    for i, obj in enumerate(result.problem.objective._objectives):
+        if not isinstance(obj, NegLogParameterPriors) and not isinstance(
+            obj, NegLogPriors
+        ):
+            likelihood_fun_indices.append(i)
+
     def log_likelihood_fun(x_array):
         return np.array(
             [
-                -result.problem.objective._objectives[0](
-                    result.problem.get_full_vector(
-                        x=x, x_fixed_vals=result.problem.x_fixed_vals
-                    )
+                np.sum(
+                    [
+                        -obj(
+                            result.problem.get_full_vector(
+                                x=x, x_fixed_vals=result.problem.x_fixed_vals
+                            )
+                        )
+                        for obj_i, obj in enumerate(
+                            result.problem.objective._objectives
+                        )
+                        if obj_i in likelihood_fun_indices
+                    ]
                 )
                 for x in x_array
             ]
@@ -322,10 +343,18 @@ def bridge_sampling(
     def log_prior_fun(x_array):
         return np.array(
             [
-                -result.problem.objective._objectives[1](
-                    result.problem.get_full_vector(
-                        x=x, x_fixed_vals=result.problem.x_fixed_vals
-                    )
+                np.sum(
+                    [
+                        -obj(
+                            result.problem.get_full_vector(
+                                x=x, x_fixed_vals=result.problem.x_fixed_vals
+                            )
+                        )
+                        for obj_i, obj in enumerate(
+                            result.problem.objective._objectives
+                        )
+                        if obj_i not in likelihood_fun_indices
+                    ]
                 )
                 for x in x_array
             ]
@@ -339,7 +368,6 @@ def bridge_sampling(
     log_prior_proposal = log_prior_fun(proposal_samples)
     log_proposal_proposal = log_proposal_fun(proposal_samples)
 
-    i = 0
     log_h_posterior_1 = log_s1 + log_likelihood_posterior + log_prior_posterior
     log_h_proposal_1 = log_s1 + log_likelihood_proposal + log_prior_proposal
     for i in range(max_iter):
