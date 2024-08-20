@@ -134,7 +134,7 @@ def harmonic_mean_log_evidence(
 def bridge_sampling(
     result: Result,
     n_posterior_samples_init: Optional[int] = None,
-    initial_guess_log_evidence: Optional[np.ndarray] = None,
+    initial_guess_log_evidence: Optional[float] = None,
     max_iter: int = 1000,
     tol: float = 1e-6,
 ) -> float:
@@ -152,7 +152,7 @@ def bridge_sampling(
         The pyPESTO result object with filled sample result.
     n_posterior_samples_init: int
         Number of samples used to calibrate the proposal function. By default, half of the posterior samples are used.
-    initial_guess_log_evidence: np.ndarray
+    initial_guess_log_evidence: float
         Initial guess for the log evidence. By default, the Laplace approximation is used to compute the initial guess.
     max_iter: int
         Maximum number of iterations. Default is 1000.
@@ -211,9 +211,16 @@ def bridge_sampling(
         proposal_samples = np.random.multivariate_normal(
             mean=posterior_mean, cov=posterior_cov, size=n_proposal_samples
         )
-    log_proposal_fun = stats.multivariate_normal(
-        mean=posterior_mean, cov=posterior_cov
-    ).logpdf
+    try:
+        log_proposal_fun = stats.multivariate_normal(
+            mean=posterior_mean, cov=posterior_cov
+        ).logpdf
+    except np.linalg.LinAlgError:
+        # if covariance matrix is not positive definite (numerically), use diagonal covariance matrix only
+        posterior_cov = np.diag(np.diag(posterior_cov))
+        log_proposal_fun = stats.norm(
+            loc=posterior_mean, scale=np.sqrt(posterior_cov)
+        ).logpdf
 
     # Compute the weights for the bridge sampling estimate
     log_s1 = np.log(
