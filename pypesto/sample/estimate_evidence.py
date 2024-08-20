@@ -74,6 +74,9 @@ def harmonic_mean_log_evidence(
     from scipy.optimize import minimize_scalar
     from scipy.special import logsumexp
 
+    if result.sample_result is None:
+        raise ValueError("No samples available. Run sampling first.")
+
     # compute negative log likelihood from traces
     burn_in = geweke_test(result)
     trace_neglogpost = result.sample_result.trace_neglogpost[0, burn_in:]
