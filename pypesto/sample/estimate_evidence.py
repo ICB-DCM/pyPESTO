@@ -218,8 +218,8 @@ def bridge_sampling(
     except np.linalg.LinAlgError:
         # if covariance matrix is not positive definite (numerically), use diagonal covariance matrix only
         posterior_cov = np.diag(np.diag(posterior_cov))
-        log_proposal_fun = stats.norm(
-            loc=posterior_mean, scale=np.sqrt(posterior_cov)
+        log_proposal_fun = stats.multivariate_normal(
+            mean=posterior_mean, cov=posterior_cov
         ).logpdf
 
     # Compute the weights for the bridge sampling estimate
