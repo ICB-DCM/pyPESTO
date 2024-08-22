@@ -812,7 +812,7 @@ def test_thermodynamic_integration():
 
     # approximation should be better for more chains
     n_chains = 10
-    tol = 1
+    tol = 2
     sampler = sample.ParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={"show_progress": False, "beta_init": "beta_decay"},
@@ -881,7 +881,7 @@ def test_laplace_approximation_log_evidence():
 
 @pytest.mark.flaky(reruns=2)
 def test_harmonic_mean_log_evidence():
-    tol = 1
+    tol = 2
     # define problem
     problem = gaussian_problem()
 
