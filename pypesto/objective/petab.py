@@ -56,13 +56,7 @@ class PetabSimulatorObjective(ObjectiveBase):
         x_unscaled = self.petab_problem.unscale_parameters(x_dict)
         par_df = self.petab_problem.parameter_df
         par_df["nominalValue"] = par_df.index.map(x_unscaled)
-        # add here try except whether simulator has its own method for this
-        try:
-            self.simulator.set_parameters(x_unscaled)
-        except AttributeError:
-            self.simulator = self.simulator.__class__(
-                petab_problem=self.petab_problem
-            )
+        self.simulator.set_parameters(x_unscaled)
 
     def call_unprocessed(
         self,
