@@ -100,7 +100,7 @@ def test_ordinal_calculator_and_objective():
     # with finite differences.
     assert np.allclose(
         finite_differences_results[1],
-        calculator_result["grad"],
+        calculator_result["grad"][petab_problem.x_free_indices],
     )
 
 

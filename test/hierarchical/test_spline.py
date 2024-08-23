@@ -210,7 +210,9 @@ def test_spline_calculator_and_objective():
     # The gradient should be close to the one calculated using
     # finite differences.
     assert np.allclose(
-        calculator_results["minimal_diff_on"]["grad"],
+        calculator_results["minimal_diff_on"]["grad"][
+            petab_problem.x_free_indices
+        ],
         FD_results[1],
         atol=atol,
     )
