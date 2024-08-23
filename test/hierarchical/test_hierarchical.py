@@ -11,7 +11,7 @@ import petab.v1 as petab
 import pypesto
 from pypesto.C import (
     INNER_PARAMETER_BOUNDS,
-    LOG10,
+    LIN,
     LOWER_BOUND,
     MODE_FUN,
     UPPER_BOUND,
@@ -347,7 +347,7 @@ def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
         InnerParameter(
             inner_parameter_id=inner_parameter_id,
             inner_parameter_type=inner_parameter_type,
-            scale=LOG10,
+            scale=LIN,
             lb=INNER_PARAMETER_BOUNDS[inner_parameter_type][LOWER_BOUND],
             ub=INNER_PARAMETER_BOUNDS[inner_parameter_type][UPPER_BOUND],
             ixs=mask,
