@@ -201,6 +201,19 @@ def bridge_sampling(
     n_proposal_samples = posterior_samples.shape[0]
     posterior_mean = np.mean(samples_calibration, axis=0)
     posterior_cov = np.cov(samples_calibration.T)
+    # if covariance matrix is not positive definite (numerically), use diagonal covariance matrix only
+    try:
+        # proposal density function
+        log_proposal_fun = stats.multivariate_normal(
+            mean=posterior_mean, cov=posterior_cov
+        ).logpdf
+    except np.linalg.LinAlgError:
+        posterior_cov = np.diag(np.diag(posterior_cov))
+        log_proposal_fun = stats.multivariate_normal(
+            mean=posterior_mean, cov=posterior_cov
+        ).logpdf
+
+    # generate proposal samples
     if posterior_cov.size == 1:
         # univariate case
         proposal_samples = np.random.normal(
@@ -214,16 +227,6 @@ def bridge_sampling(
         proposal_samples = np.random.multivariate_normal(
             mean=posterior_mean, cov=posterior_cov, size=n_proposal_samples
         )
-    try:
-        log_proposal_fun = stats.multivariate_normal(
-            mean=posterior_mean, cov=posterior_cov
-        ).logpdf
-    except np.linalg.LinAlgError:
-        # if covariance matrix is not positive definite (numerically), use diagonal covariance matrix only
-        posterior_cov = np.diag(np.diag(posterior_cov))
-        log_proposal_fun = stats.multivariate_normal(
-            mean=posterior_mean, cov=posterior_cov
-        ).logpdf
 
     # Compute the weights for the bridge sampling estimate
     log_s1 = np.log(
