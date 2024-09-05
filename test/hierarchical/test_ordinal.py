@@ -175,7 +175,7 @@ def test_ordinal_calculator_and_objective():
         problem.objective,
     )
     finite_differences_results = finite_differences(
-        petab_problem.x_nominal_scaled,
+        petab_problem.x_nominal_free_scaled,
         (
             0,
             1,
@@ -209,7 +209,7 @@ def test_ordinal_calculator_and_objective():
     # with finite differences.
     assert np.allclose(
         finite_differences_results[1],
-        calculator_results[STANDARD]["grad"],
+        calculator_results[STANDARD]["grad"][petab_problem.x_free_indices],
     )
 
     # Since the nominal parameters are close to true ones,
