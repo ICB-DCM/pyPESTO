@@ -193,6 +193,13 @@ class OrdinalProblem(AmiciInnerProblem):
         """
         return []
 
+    def get_interpretable_x_scales(self) -> list[str]:
+        """Get scales of interpretable inner parameters.
+
+        There are no interpretable inner parameters for the ordinal problem.
+        """
+        return []
+
     def get_groups_for_xs(self, inner_parameter_type: str) -> list[int]:
         """Get unique list of ``OptimalScalingParameter.group`` values."""
         groups = [x.group for x in self.get_xs_for_type(inner_parameter_type)]
