@@ -26,7 +26,7 @@ def calculate_ci_mcmc_sample(
     ci_level:
         Lower tail probability, defaults to 95% interval.
     exclude_burn_in:
-        Whether to exclude the burn-in samples. Defaults to True.
+        Whether to exclude the burn-in samples.
 
     Returns
     -------

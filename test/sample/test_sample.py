@@ -832,15 +832,21 @@ def test_thermodynamic_integration():
     )
 
     # compute the log evidence using trapezoid and simpson rule
-    log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
-    log_evidence_not_all = sampler.compute_log_evidence(
+    log_evidence = sample.evidence.parallel_tempering_log_evidence(
+        result, method="trapezoid"
+    )
+    log_evidence_not_all = sample.evidence.parallel_tempering_log_evidence(
         result, method="trapezoid", use_all_chains=False
     )
-    log_evidence_simps = sampler.compute_log_evidence(result, method="simpson")
+    log_evidence_simps = sample.evidence.parallel_tempering_log_evidence(
+        result, method="simpson"
+    )
 
     # use steppingstone sampling
-    log_evidence_steppingstone = sampler.compute_log_evidence(
-        result, method="steppingstone"
+    log_evidence_steppingstone = (
+        sample.evidence.parallel_tempering_log_evidence(
+            result, method="steppingstone"
+        )
     )
 
     # compute evidence
@@ -873,7 +879,7 @@ def test_laplace_approximation_log_evidence():
         n_starts=10,
         progress_bar=False,
     )
-    log_evidence = sample.estimate_evidence.laplace_approximation_log_evidence(
+    log_evidence = sample.evidence.laplace_approximation_log_evidence(
         problem, result.optimize_result.x[0]
     )
     assert np.isclose(log_evidence, log_evidence_true, atol=0.1)
@@ -898,9 +904,7 @@ def test_harmonic_mean_log_evidence():
     )
 
     # compute the log evidence using harmonic mean
-    harmonic_evidence = sample.estimate_evidence.harmonic_mean_log_evidence(
-        result
-    )
+    harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
     # compute the log evidence using stabilized harmonic mean
     prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
     harmonic_stabilized_evidence = (
@@ -929,6 +933,7 @@ def test_harmonic_mean_log_evidence():
 
 @pytest.mark.flaky(reruns=2)
 def test_bridge_sampling():
+    tol = 2
     # define problem
     objective = Objective(
         fun=lambda x: -gaussian_llh(x),
@@ -961,5 +966,6 @@ def test_bridge_sampling():
     )
 
     # compute the log evidence using harmonic mean
-    bridge_log_evidence = sample.estimate_evidence.bridge_sampling(result)
-    assert isinstance(bridge_log_evidence, float)
+    bridge_log_evidence = sample.evidence.bridge_sampling_log_evidence(result)
+    harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
+    assert np.isclose(bridge_log_evidence, harmonic_evidence, atol=tol)

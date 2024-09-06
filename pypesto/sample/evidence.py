@@ -2,10 +2,15 @@
 
 
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
+from scipy import stats
+from scipy.integrate import simpson, trapezoid
+from scipy.optimize import minimize_scalar
+from scipy.special import logsumexp
 
+from ..C import SIMPSON, STEPPINGSTONE, TRAPEZOID
 from ..objective import (
     AggregatedObjective,
     NegLogParameterPriors,
@@ -24,19 +29,18 @@ def laplace_approximation_log_evidence(
     """
     Compute the log evidence using the Laplace approximation.
 
-    Expects the problem to have a Hessian method implemented and the objective to be negative log posterior.
+    The objective in your `problem` must be a negative log posterior, and support Hessian computation.
 
     Parameters
     ----------
     problem:
         The problem to compute the log evidence for.
-    x: np.ndarray
+    x:
         The maximum a posteriori estimate at which to compute the log evidence.
 
     Returns
     -------
     log_evidence: float
-        The log
     """
     hessian = problem.objective(
         problem.get_reduced_vector(x), sensi_orders=(2,)
@@ -64,16 +68,17 @@ def harmonic_mean_log_evidence(
 
     Parameters
     ----------
-    result: Result
-    prior_samples: np.ndarray (n_samples, n_parameters)
+    result:
+    prior_samples:
         Samples from the prior distribution. If samples from the prior are provided,
         the stabilized harmonic mean is computed (recommended). Then, the likelihood function must be provided as well.
     neg_log_likelihood_fun: callable
         Function to evaluate the negative log likelihood. Necessary if prior_samples is not `None`.
-    """
-    from scipy.optimize import minimize_scalar
-    from scipy.special import logsumexp
 
+    Returns
+    -------
+    log_evidence
+    """
     if result.sample_result is None:
         raise ValueError("No samples available. Run sampling first.")
 
@@ -134,7 +139,129 @@ def harmonic_mean_log_evidence(
     return sol.x
 
 
-def bridge_sampling(
+def parallel_tempering_log_evidence(
+    result: Result,
+    method: str = "trapezoid",
+    use_all_chains: bool = True,
+) -> Union[float, None]:
+    """Perform thermodynamic integration or steppingstone sampling to estimate the log evidence.
+
+    Thermodynamic integration is performed by integrating the mean log likelihood over the temperatures.
+    Errors might come from the samples itself or the numerical integration.
+    Steppingstone sampling is a form of importance sampling that uses the maximum likelihood of each temperature.
+    It does not require an integration, but can be biased for a small number of temperatures.
+    See (Annis et al., 2019), https://doi.org/10.1016/j.jmp.2019.01.005, for more details.
+
+    This should be used with a beta decay temperature schedule and not with the adaptive version of
+     parallel tempering sampling as the temperature schedule is not optimal for thermodynamic integration.
+
+    Parameters
+    ----------
+    result:
+        Result object containing the samples.
+    method:
+        Integration method, either 'trapezoid' or 'simpson' to perform thermodynamic integration
+        (uses scipy for integration) or 'steppingstone' to perform steppingstone sampling.
+    use_all_chains:
+        If True, calculate burn-in for each chain and use the maximal burn-in for all chains for the integration.
+        This will fail if not all chains have converged yet.
+        Otherwise, use only the converged chains for the integration (might increase the integration error).
+    """
+    # compute burn in for all chains but the last one (prior only)
+    burn_ins = np.zeros(len(result.sample_result.betas), dtype=int)
+    for i_chain in range(len(result.sample_result.betas)):
+        burn_ins[i_chain] = geweke_test(result, chain_number=i_chain)
+    max_burn_in = int(np.max(burn_ins))
+
+    if max_burn_in >= result.sample_result.trace_x.shape[1]:
+        logger.warning(
+            f"At least {np.sum(burn_ins >= result.sample_result.trace_x.shape[1])} chains seem to not have "
+            f"converged yet. You may want to use a larger number of samples."
+        )
+        if use_all_chains:
+            raise ValueError(
+                "Not all chains have converged yet. You may want to use a larger number of samples, "
+                "or try ´use_all_chains=False´, which might increase the integration error."
+            )
+
+    if use_all_chains:
+        # estimate mean of log likelihood for each beta
+        trace_loglike = (
+            result.sample_result.trace_neglogprior[::-1, max_burn_in:]
+            - result.sample_result.trace_neglogpost[::-1, max_burn_in:]
+        )
+        mean_loglike_per_beta = np.mean(trace_loglike, axis=1)
+        temps = result.sample_result.betas[::-1]
+    else:
+        # estimate mean of log likelihood for each beta if chain has converged
+        mean_loglike_per_beta = []
+        trace_loglike = []
+        temps = []
+        for i_chain in reversed(range(len(result.sample_result.betas))):
+            if burn_ins[i_chain] < result.sample_result.trace_x.shape[1]:
+                # save temperature-chain as it is converged
+                temps.append(result.sample_result.betas[i_chain])
+                # calculate mean log likelihood for each beta
+                trace_loglike_i = (
+                    result.sample_result.trace_neglogprior[
+                        i_chain, burn_ins[i_chain] :
+                    ]
+                    - result.sample_result.trace_neglogpost[
+                        i_chain, burn_ins[i_chain] :
+                    ]
+                )
+                trace_loglike.append(trace_loglike_i)
+                mean_loglike_per_beta.append(np.mean(trace_loglike_i))
+
+    if method == TRAPEZOID:
+        log_evidence = trapezoid(
+            # integrate from low to high temperature
+            y=mean_loglike_per_beta,
+            x=temps,
+        )
+    elif method == SIMPSON:
+        log_evidence = simpson(
+            # integrate from low to high temperature
+            y=mean_loglike_per_beta,
+            x=temps,
+        )
+    elif method == STEPPINGSTONE:
+        log_evidence = steppingstone(temps=temps, trace_loglike=trace_loglike)
+    else:
+        raise ValueError(
+            f"Unknown method {method}. Choose 'trapezoid', 'simpson' for thermodynamic integration or ",
+            "'steppingstone' for steppingstone sampling.",
+        )
+
+    return log_evidence
+
+
+def steppingstone(temps: np.ndarray, trace_loglike: np.ndarray) -> float:
+    """Perform steppingstone sampling to estimate the log evidence.
+
+    Implementation based on  Annis et al. (2019): https://doi.org/10.1016/j.jmp.2019.01.005.
+
+    Parameters
+    ----------
+    temps:
+        Temperature values.
+    trace_loglike:
+        Log likelihood values for each temperature.
+    """
+    from scipy.special import logsumexp
+
+    ss_log_evidences = np.zeros(len(temps) - 1)
+    for t_i in range(1, len(temps)):
+        # we use the maximum likelihood times the temperature difference to stabilize the logsumexp
+        # original formulation uses only the maximum likelihood, this is equivalent
+        ss_log_evidences[t_i - 1] = logsumexp(
+            trace_loglike[t_i - 1] * (temps[t_i] - temps[t_i - 1])
+        ) - np.log(trace_loglike[t_i - 1].size)
+    log_evidence = np.sum(ss_log_evidences)
+    return log_evidence
+
+
+def bridge_sampling_log_evidence(
     result: Result,
     n_posterior_samples_init: Optional[int] = None,
     initial_guess_log_evidence: Optional[float] = None,
@@ -144,27 +271,29 @@ def bridge_sampling(
     """
     Compute the log evidence using bridge sampling.
 
-    Based on "A Tutorial on Bridge Sampling" by Gronau et al. (2017): https://api.semanticscholar.org/CorpusID:5447695.
+    Based on "A Tutorial on Bridge Sampling" by Gronau et al. (2017): https://doi.org/10.1016/j.jmp.2017.09.005.
     Using the optimal bridge function by Meng and Wong (1996) which minimises the relative mean-squared error.
     Proposal function is calibrated using posterior samples, which are not used for the final bridge estimate
     (as this may result in an underestimation of the marginal likelihood, see Overstall and Forster (2010)).
 
     Parameters
     ----------
-    result: Result
+    result:
         The pyPESTO result object with filled sample result.
-    n_posterior_samples_init: int
+    n_posterior_samples_init:
         Number of samples used to calibrate the proposal function. By default, half of the posterior samples are used.
-    initial_guess_log_evidence: float
+    initial_guess_log_evidence:
         Initial guess for the log evidence. By default, the Laplace approximation is used to compute the initial guess.
-    max_iter: int
+    max_iter:
         Maximum number of iterations. Default is 1000.
-    tol: float
+    tol:
         Tolerance for convergence. Default is 1e-6.
-    """
-    from scipy import stats
-    from scipy.special import logsumexp
 
+
+    Returns
+    -------
+    log_evidence
+    """
     if result.sample_result is None:
         raise ValueError("No samples available. Run sampling first.")
     if not isinstance(result.problem.objective, AggregatedObjective):

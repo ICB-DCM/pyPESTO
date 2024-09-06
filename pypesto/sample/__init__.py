@@ -11,10 +11,11 @@ from .adaptive_parallel_tempering import AdaptiveParallelTemperingSampler
 from .diagnostics import auto_correlation, effective_sample_size, geweke_test
 from .dynesty import DynestySampler
 from .emcee import EmceeSampler
-from .estimate_evidence import (
-    bridge_sampling,
+from .evidence import (
+    bridge_sampling_log_evidence,
     harmonic_mean_log_evidence,
     laplace_approximation_log_evidence,
+    parallel_tempering_log_evidence,
 )
 from .metropolis import MetropolisSampler
 from .parallel_tempering import ParallelTemperingSampler

@@ -7,9 +7,8 @@ import numpy as np
 
 from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
-from ..result import McmcPtResult, Result
+from ..result import McmcPtResult
 from ..util import tqdm
-from .diagnostics import geweke_test
 from .sampler import InternalSampler, Sampler
 
 logger = logging.getLogger(__name__)
@@ -177,135 +176,6 @@ class ParallelTemperingSampler(Sampler):
 
     def adjust_betas(self, i_sample: int, swapped: Sequence[bool]):
         """Adjust temperature values. Default: Do nothing."""
-
-    def compute_log_evidence(
-        self,
-        result: Result,
-        method: str = "trapezoid",
-        use_all_chains: bool = True,
-    ) -> Union[float, None]:
-        """Perform thermodynamic integration or steppingstone sampling to estimate the log evidence.
-
-        Thermodynamic integration is performed by integrating the mean log likelihood over the temperatures.
-        Errors might come from the samples itself or the numerical integration.
-        Steppingstone sampling is a form of importance sampling that uses the maximum likelihood of each temperature.
-        It does not require an integration, but can be biased for a small number of temperatures.
-        See Annis et al. (2019), https://doi.org/10.1016/j.jmp.2019.01.005, for more details.
-
-        Parameters
-        ----------
-        result:
-            Result object containing the samples.
-        method:
-            Integration method, either 'trapezoid' or 'simpson' to perform thermodynamic integration
-            (uses scipy for integration) or 'steppingstone' to perform steppingstone sampling.
-        use_all_chains:
-            If True, calculate burn-in for each chain and use the maximal burn-in for all chains for the integration.
-            This will fail if not all chains have converged yet.
-            Otherwise, use only the converged chains for the integration (might increase the integration error).
-        """
-        from scipy.integrate import simpson, trapezoid
-
-        if self.options["beta_init"] == EXPONENTIAL_DECAY:
-            logger.warning(
-                "The temperature schedule is not optimal for thermodynamic integration. "
-                f"Carefully check the results. Consider using beta_init='{BETA_DECAY}' for better results."
-            )
-
-        # compute burn in for all chains but the last one (prior only)
-        burn_ins = np.zeros(len(self.betas), dtype=int)
-        for i_chain in range(len(self.betas)):
-            burn_ins[i_chain] = geweke_test(result, chain_number=i_chain)
-        max_burn_in = int(np.max(burn_ins))
-
-        if max_burn_in >= result.sample_result.trace_x.shape[1]:
-            logger.warning(
-                f"At least {np.sum(burn_ins >= result.sample_result.trace_x.shape[1])} chains seem to not have "
-                f"converged yet. You may want to use a larger number of samples."
-            )
-            if use_all_chains:
-                raise ValueError(
-                    "Not all chains have converged yet. You may want to use a larger number of samples, "
-                    "or try ´use_all_chains=False´, which might increase the integration error."
-                )
-
-        if use_all_chains:
-            # estimate mean of log likelihood for each beta
-            trace_loglike = (
-                result.sample_result.trace_neglogprior[::-1, max_burn_in:]
-                - result.sample_result.trace_neglogpost[::-1, max_burn_in:]
-            )
-            mean_loglike_per_beta = np.mean(trace_loglike, axis=1)
-            temps = self.betas[::-1]
-        else:
-            # estimate mean of log likelihood for each beta if chain has converged
-            mean_loglike_per_beta = []
-            trace_loglike = []
-            temps = []
-            for i_chain in reversed(range(len(self.betas))):
-                if burn_ins[i_chain] < result.sample_result.trace_x.shape[1]:
-                    # save temperature-chain as it is converged
-                    temps.append(self.betas[i_chain])
-                    # calculate mean log likelihood for each beta
-                    trace_loglike_i = (
-                        result.sample_result.trace_neglogprior[
-                            i_chain, burn_ins[i_chain] :
-                        ]
-                        - result.sample_result.trace_neglogpost[
-                            i_chain, burn_ins[i_chain] :
-                        ]
-                    )
-                    trace_loglike.append(trace_loglike_i)
-                    mean_loglike_per_beta.append(np.mean(trace_loglike_i))
-
-        if method == "trapezoid":
-            log_evidence = trapezoid(
-                # integrate from low to high temperature
-                y=mean_loglike_per_beta,
-                x=temps,
-            )
-        elif method == "simpson":
-            log_evidence = simpson(
-                # integrate from low to high temperature
-                y=mean_loglike_per_beta,
-                x=temps,
-            )
-        elif method == "steppingstone":
-            log_evidence = steppingstone(
-                temps=temps, trace_loglike=trace_loglike
-            )
-        else:
-            raise ValueError(
-                f"Unknown method {method}. Choose 'trapezoid', 'simpson' for thermodynamic integration or ",
-                "'steppingstone' for steppingstone sampling.",
-            )
-
-        return log_evidence
-
-
-def steppingstone(temps: np.ndarray, trace_loglike: np.ndarray) -> float:
-    """Perform steppingstone sampling to estimate the log evidence.
-
-    Implementation based on  Annis et al. (2019): https://doi.org/10.1016/j.jmp.2019.01.005.
-
-    Parameters
-    ----------
-    temps:
-        Temperature values.
-    trace_loglike:
-        Log likelihood values for each temperature.
-    """
-    from scipy.special import logsumexp
-
-    ss_log_evidences = np.zeros(len(temps) - 1)
-    for t_i in range(1, len(temps)):
-        # we use the maximum likelihood times the temperature difference to stabilize the logsumexp
-        # original formulation uses only the maximum likelihood, this is equivalent
-        ss_log_evidences[t_i - 1] = logsumexp(
-            trace_loglike[t_i - 1] * (temps[t_i] - temps[t_i - 1])
-        ) - np.log(trace_loglike[t_i - 1].size)
-    log_evidence = np.sum(ss_log_evidences)
-    return log_evidence
 
 
 def beta_decay_betas(n_chains: int, alpha: float) -> np.ndarray:
