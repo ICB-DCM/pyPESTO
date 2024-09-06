@@ -907,12 +907,10 @@ def test_harmonic_mean_log_evidence():
     harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
     # compute the log evidence using stabilized harmonic mean
     prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
-    harmonic_stabilized_evidence = (
-        sample.estimate_evidence.harmonic_mean_log_evidence(
-            result=result,
-            prior_samples=prior_samples,
-            neg_log_likelihood_fun=problem.objective,
-        )
+    harmonic_stabilized_evidence = sample.evidence.harmonic_mean_log_evidence(
+        result=result,
+        prior_samples=prior_samples,
+        neg_log_likelihood_fun=problem.objective,
     )
 
     # compute real evidence
