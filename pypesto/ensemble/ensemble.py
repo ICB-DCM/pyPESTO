@@ -555,7 +555,7 @@ class Ensemble:
     def from_sample(
         result: Result,
         remove_burn_in: bool = True,
-        f_quantile: float = None,
+        ci_level: float = None,
         chain_slice: slice = None,
         x_names: Sequence[str] = None,
         lower_bound: np.ndarray = None,
@@ -572,9 +572,9 @@ class Ensemble:
         remove_burn_in:
             Exclude parameter vectors from the ensemble if they are in the
             "burn-in".
-        f_quantile:
+        ci_level:
             A form of relative cutoff. Exclude parameter vectors, for which the
-            (non-normalized) posterior value is not within the f_quantile best
+            (non-normalized) posterior value is not within the `ci_level` best
             values.
         chain_slice:
             Subset the chain with a slice. Any "burn-in" removal occurs first.
@@ -599,20 +599,17 @@ class Ensemble:
             lower_bound = result.problem.lb
         if upper_bound is None:
             upper_bound = result.problem.ub
+        burn_in = 0
         if remove_burn_in:
             if result.sample_result.burn_in is None:
                 geweke_test(result)
             burn_in = result.sample_result.burn_in
             x_vectors = x_vectors[burn_in:]
-        else:
-            burn_in = 0
 
         # added cutoff
-        if f_quantile is None:
-            pass
-        else:
+        if ci_level is not None:
             x_vectors = calculate_hpd(
-                result=result, burn_in=burn_in, ci_level=f_quantile
+                result=result, burn_in=burn_in, ci_level=ci_level
             )
 
         if chain_slice is not None:
@@ -1278,28 +1275,28 @@ def calculate_hpd(
     ci_level: float = 0.95,
 ):
     """
-    Calculate Highest Posterior Density (HPD) samples of pypesto sampling result.
+    Calculate Highest Posterior Density (HPD) samples.
 
-    The HPD is calculated for a user-defined credibility level (ci_level). The
+    The HPD is calculated for a user-defined credibility level (`ci_level`). The
     HPD includes all parameter vectors with a (non-normalized) posterior
-    probability that is higher than the lowest 1-ci_level %
+    probability that is higher than the lowest `1-ci_level` %
     posterior probability values.
 
     Parameters
     ----------
     result:
-        The optimization result from which to create the ensemble.
+        The sampling result from which to create the ensemble.
     burn_in:
         Burn in index that is cut off before HPD is calculated.
     ci_level:
         Credibility level of the resulting HPD. 0.95 corresponds to the 95% CI.
-        Values between 0 and 1 are allowed.
+        Only values between 0 and 1 are allowed.
 
     Returns
     -------
-    The HPD parameter vector.
+    The HPD parameter vectors.
     """
-    if ci_level < 0 or ci_level > 1:
+    if not 0 <= ci_level <= 1:
         raise ValueError(
             f"ci_level={ci_level} is not valid. Choose 0<=ci_level<=1."
         )
