@@ -28,6 +28,7 @@ try:
     from amici.petab.conditions import fill_in_parameters
 
     from ..hierarchical import InnerCalculatorCollector
+    from ..hierarchical.base_problem import scale_back_value_dict
     from ..hierarchical.relative.calculator import RelativeAmiciCalculator
     from ..hierarchical.relative.problem import RelativeInnerProblem
     from ..hierarchical.semiquantitative.calculator import SemiquantCalculator
@@ -299,6 +300,18 @@ def plot_linear_observable_mappings_from_pypesto_result(
             pypesto_problem.inner_x_names,
             pypesto_result.optimize_result.list[start_index][INNER_PARAMETERS],
         )
+    )
+
+    # Remove inner parameters not belonging to the relative inner problem.
+    inner_parameter_values = {
+        key: value
+        for key, value in inner_parameter_values.items()
+        if key in inner_problem.get_x_ids()
+    }
+
+    # Scale the inner parameters back to linear scale.
+    inner_parameter_values = scale_back_value_dict(
+        inner_parameter_values, inner_problem
     )
 
     ######################################
