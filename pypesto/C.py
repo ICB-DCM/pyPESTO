@@ -84,6 +84,10 @@ X = "x"
 X0 = "x0"
 ID = "id"
 
+AMICI = "amici"
+ROADRUNNER = "roadrunner"
+PETAB = "petab"
+
 
 ###############################################################################
 # HIERARCHICAL SCALING + OFFSET

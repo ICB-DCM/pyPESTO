@@ -21,9 +21,12 @@ except ImportError:
     roadrunner = None
 
 from ..C import (
+    AMICI,
     CENSORED,
     ORDINAL,
     ORDINAL_OPTIONS,
+    PETAB,
+    ROADRUNNER,
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
 )
@@ -74,7 +77,7 @@ class PetabImporter:
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
         inner_options: dict | None = None,
-        simulator_type: str = "amici",
+        simulator_type: str = AMICI,
         simulator: petab.Simulator | None = None,
         rr: roadrunner.RoadRunner | None = None,
     ):
@@ -168,7 +171,7 @@ class PetabImporter:
 
         self.simulator_type = simulator_type
         self.simulator = simulator
-        if simulator_type == "petab" and simulator is None:
+        if simulator_type == PETAB and simulator is None:
             raise ValueError(
                 "A petab simulator object must be provided if the simulator "
                 "type is 'petab'."
@@ -180,7 +183,7 @@ class PetabImporter:
         yaml_config: dict | str,
         output_folder: str = None,
         model_name: str = None,
-        simulator_type: str = "amici",
+        simulator_type: str = AMICI,
     ) -> PetabImporter:
         """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
@@ -288,7 +291,7 @@ class PetabImporter:
 
     def create_objective_creator(self) -> ObjectiveCreator:
         """Choose factory depending on the simulator type."""
-        if self.simulator_type == "amici":
+        if self.simulator_type == AMICI:
             return AmiciObjectiveCreator(
                 petab_problem=self.petab_problem,
                 output_folder=self.output_folder,
@@ -298,11 +301,11 @@ class PetabImporter:
                 non_quantitative_data_types=self._non_quantitative_data_types,
                 validate_petab=self.validate_petab,
             )
-        elif self.simulator_type == "petab":
+        elif self.simulator_type == PETAB:
             return PetabSimulatorObjectiveCreator(
                 petab_problem=self.petab_problem, simulator=self.simulator
             )
-        elif self.simulator_type == "roadrunner":
+        elif self.simulator_type == ROADRUNNER:
             return RoadRunnerObjectiveCreator(
                 petab_problem=self.petab_problem, rr=self.roadrunner_instance
             )
@@ -447,7 +450,7 @@ class PetabImporter:
         condition_ids: Sequence[str] = None,
     ) -> AmiciPredictor:
         """See :meth:`AmiciObjectiveCreator.create_predictor`."""
-        if self.simulator_type != "amici":
+        if self.simulator_type != AMICI:
             raise ValueError(
                 "Predictor can only be created for amici models and is "
                 "supposed to be created from the AmiciObjectiveCreator."
