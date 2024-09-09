@@ -62,7 +62,7 @@ logger = logging.getLogger(__name__)
 
 
 class ObjectiveCreator(ABC):
-    """Abstract factory for creating an objective function."""
+    """Abstract Creator for creating an objective function."""
 
     @abstractmethod
     def create_objective(self, **kwargs) -> ObjectiveBase:
@@ -84,7 +84,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         validate_petab: bool = True,
     ):
         """
-        Initialize the factory.
+        Initialize the creator.
 
         Parameters
         ----------
