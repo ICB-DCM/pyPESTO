@@ -174,7 +174,7 @@ def test_spline_calculator_and_objective():
 
     finite_differences = pypesto.objective.FD(problem.objective)
     FD_results = finite_differences(
-        x=petab_problem.x_nominal_scaled,
+        x=petab_problem.x_nominal_free_scaled,
         sensi_orders=(0, 1),
         mode=MODE_FUN,
     )
@@ -212,7 +212,9 @@ def test_spline_calculator_and_objective():
     # The gradient should be close to the one calculated using
     # finite differences.
     assert np.allclose(
-        calculator_results["minimal_diff_on"]["grad"],
+        calculator_results["minimal_diff_on"]["grad"][
+            petab_problem.x_free_indices
+        ],
         FD_results[1],
         atol=atol,
     )
