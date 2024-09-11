@@ -2,7 +2,6 @@
 
 import copy
 import numbers
-import sys
 from functools import partial
 
 import numpy as np
@@ -12,11 +11,6 @@ import sympy as sp
 import pypesto
 
 from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
-
-pytest_skip_aesara = pytest.mark.skipif(
-    sys.version_info >= (3, 12),
-    reason="Skipped Aesara tests on Python 3.12 or higher",
-)
 
 
 @pytest.fixture(params=[True, False])
@@ -182,44 +176,6 @@ def test_finite_difference_checks():
         result_multi_eps["rel_err"].squeeze(),
         min(rel_err(_eps) for _eps in multi_eps),
     )
-
-
-@pytest_skip_aesara
-def test_aesara(max_sensi_order, integrated):
-    """Test function composition and gradient computation via aesara"""
-    import aesara.tensor as aet
-
-    from pypesto.objective.aesara import AesaraObjective
-
-    prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
-
-    # create aesara specific symbolic tensor variables
-    x = aet.specify_shape(aet.vector("x"), (2,))
-
-    # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.arcsinh(prob["x"])
-
-    # compose rosenbrock function with sinh transformation
-    obj = AesaraObjective(prob["obj"], x, aet.sinh(x))
-
-    # check function values and derivatives, also after copy
-    for _obj in (obj, copy.deepcopy(obj)):
-        # function value
-        assert _obj(x_ref) == prob["fval"]
-
-        # gradient
-        if max_sensi_order > 0:
-            assert np.allclose(
-                _obj(x_ref, sensi_orders=(1,)), prob["grad"] * np.cosh(x_ref)
-            )
-
-        # hessian
-        if max_sensi_order > 1:
-            assert np.allclose(
-                prob["hess"] * (np.diag(np.power(np.cosh(x_ref), 2)))
-                + np.diag(prob["grad"] * np.sinh(x_ref)),
-                _obj(x_ref, sensi_orders=(2,)),
-            )
 
 
 @pytest.mark.parametrize("enable_x64", [True, False])
