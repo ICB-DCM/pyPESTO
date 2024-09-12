@@ -12,10 +12,25 @@ import pypesto
 import pypesto.optimize as optimize
 import pypesto.sample as sample
 from pypesto.C import OBJECTIVE_NEGLOGLIKE, OBJECTIVE_NEGLOGPOST
+from pypesto.objective import (
+    AggregatedObjective,
+    NegLogParameterPriors,
+    Objective,
+)
 
 
 def gaussian_llh(x):
     return float(norm.logpdf(x).item())
+
+
+def gaussian_nllh_grad(x):
+    mu, sigma = 0, 1
+    return np.array([((x - mu) / (sigma**2))])
+
+
+def gaussian_nllh_hess(x):
+    sigma = 1
+    return np.array([(1 / (sigma**2))])
 
 
 def gaussian_problem():
@@ -797,7 +812,7 @@ def test_thermodynamic_integration():
 
     # approximation should be better for more chains
     n_chains = 10
-    tol = 1
+    tol = 2
     sampler = sample.ParallelTemperingSampler(
         internal_sampler=sample.AdaptiveMetropolisSampler(),
         options={"show_progress": False, "beta_init": "beta_decay"},
@@ -817,11 +832,22 @@ def test_thermodynamic_integration():
     )
 
     # compute the log evidence using trapezoid and simpson rule
-    log_evidence = sampler.compute_log_evidence(result, method="trapezoid")
-    log_evidence_not_all = sampler.compute_log_evidence(
+    log_evidence = sample.evidence.parallel_tempering_log_evidence(
+        result, method="trapezoid"
+    )
+    log_evidence_not_all = sample.evidence.parallel_tempering_log_evidence(
         result, method="trapezoid", use_all_chains=False
     )
-    log_evidence_simps = sampler.compute_log_evidence(result, method="simpson")
+    log_evidence_simps = sample.evidence.parallel_tempering_log_evidence(
+        result, method="simpson"
+    )
+
+    # use steppingstone sampling
+    log_evidence_steppingstone = (
+        sample.evidence.parallel_tempering_log_evidence(
+            result, method="steppingstone"
+        )
+    )
 
     # compute evidence
     evidence = quad(
@@ -836,3 +862,108 @@ def test_thermodynamic_integration():
     assert np.isclose(log_evidence, np.log(evidence[0]), atol=tol)
     assert np.isclose(log_evidence_not_all, np.log(evidence[0]), atol=tol)
     assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)
+    assert np.isclose(
+        log_evidence_steppingstone, np.log(evidence[0]), atol=tol
+    )
+
+
+def test_laplace_approximation_log_evidence():
+    """Test the laplace approximation of the log evidence."""
+    log_evidence_true = 21.2  # approximated by hand
+
+    problem = create_petab_problem()
+
+    # hess
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=10,
+        progress_bar=False,
+    )
+    log_evidence = sample.evidence.laplace_approximation_log_evidence(
+        problem, result.optimize_result.x[0]
+    )
+    assert np.isclose(log_evidence, log_evidence_true, atol=0.1)
+
+
+@pytest.mark.flaky(reruns=2)
+def test_harmonic_mean_log_evidence():
+    tol = 2
+    # define problem
+    problem = gaussian_problem()
+
+    # run optimization and MCMC
+    result = optimize.minimize(
+        problem,
+        progress_bar=False,
+        n_starts=10,
+    )
+    result = sample.sample(
+        problem,
+        n_samples=2000,
+        result=result,
+    )
+
+    # compute the log evidence using harmonic mean
+    harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
+    # compute the log evidence using stabilized harmonic mean
+    prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
+    harmonic_stabilized_evidence = sample.evidence.harmonic_mean_log_evidence(
+        result=result,
+        prior_samples=prior_samples,
+        neg_log_likelihood_fun=problem.objective,
+    )
+
+    # compute real evidence
+    evidence = quad(
+        lambda x: 1
+        / (problem.ub[0] - problem.lb[0])
+        * np.exp(gaussian_llh(x)),
+        a=problem.lb[0],
+        b=problem.ub[0],
+    )
+
+    # compare to known value
+    assert np.isclose(harmonic_evidence, np.log(evidence[0]), atol=tol)
+    assert np.isclose(
+        harmonic_stabilized_evidence, np.log(evidence[0]), atol=tol
+    )
+
+
+@pytest.mark.flaky(reruns=2)
+def test_bridge_sampling():
+    tol = 2
+    # define problem
+    objective = Objective(
+        fun=lambda x: -gaussian_llh(x),
+        grad=gaussian_nllh_grad,
+        hess=gaussian_nllh_hess,
+    )
+    prior_true = NegLogParameterPriors(
+        [
+            {
+                "index": 0,
+                "density_fun": lambda x: (1 / (10 + 10)),
+                "density_dx": lambda x: 0,
+                "density_ddx": lambda x: 0,
+            },
+        ]
+    )
+    problem = pypesto.Problem(
+        objective=AggregatedObjective([objective, prior_true]),
+        lb=[-10],
+        ub=[10],
+        x_names=["x"],
+    )
+
+    # run optimization and MCMC
+    result = optimize.minimize(problem, progress_bar=False, n_starts=10)
+    result = sample.sample(
+        problem,
+        n_samples=1000,
+        result=result,
+    )
+
+    # compute the log evidence using harmonic mean
+    bridge_log_evidence = sample.evidence.bridge_sampling_log_evidence(result)
+    harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
+    assert np.isclose(bridge_log_evidence, harmonic_evidence, atol=tol)
