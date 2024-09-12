@@ -25,6 +25,8 @@ def calculate_ci_mcmc_sample(
         The pyPESTO result object with filled sample result.
     ci_level:
         Lower tail probability, defaults to 95% interval.
+    exclude_burn_in:
+        Whether to exclude the burn-in samples.
 
     Returns
     -------
