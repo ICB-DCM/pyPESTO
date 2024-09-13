@@ -348,6 +348,9 @@ class SacessManager:
         adaptation of ``_rejection_threshold``.
     _rejection_threshold: Threshold for relative objective improvements that
         incoming solutions have to pass to be accepted
+    _rejection_threshold_min: ``_rejection_threshold`` will be reduced (halved)
+        if too few solutions are accepted. This value is the lower limit for
+        ``_rejection_threshold``.
     _lock: Lock for accessing shared state.
     _logger: A logger instance
     """
@@ -368,6 +371,8 @@ class SacessManager:
         # However, their implementation uses 0.1 *percent*. I assume this is a
         # mistake in the paper.
         self._rejection_threshold = shmem_manager.Value("d", 0.001)
+        self._rejection_threshold_min = 0.001
+
         # scores of the workers, ordered by worker-index
         # initial score is the worker index
         self._worker_scores = shmem_manager.Array(
@@ -472,8 +477,11 @@ class SacessManager:
                 )
                 # adapt acceptance threshold if too many solutions have been
                 #  rejected
-                if self._rejections.value > self._num_workers:
-                    self._rejection_threshold.value /= 2
+                if self._rejections.value >= self._num_workers:
+                    self._rejection_threshold.value = min(
+                        self._rejection_threshold.value / 2,
+                        self._rejection_threshold_min,
+                    )
                     self._logger.debug(
                         "Lowered acceptance threshold to "
                         f"{self._rejection_threshold.value}."
@@ -526,7 +534,8 @@ class SacessWorker:
         self._n_received_solutions = 0
         self._neval = 0
         self._ess_kwargs = ess_kwargs
-        self._acceptance_threshold = 0.005
+        # Default value from original SaCeSS implementation
+        self._acceptance_threshold = 0.0001
         self._n_sent_solutions = 0
         self._max_walltime_s = max_walltime_s
         self._start_time = None
