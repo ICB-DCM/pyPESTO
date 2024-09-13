@@ -363,8 +363,11 @@ class SacessManager:
         self._best_known_fx = shmem_manager.Value("d", np.inf)
         self._best_known_x = shmem_manager.Array("d", [np.nan] * dim)
         self._rejections = shmem_manager.Value("i", 0)
-        # initial value from [PenasGon2017]_ p.9
-        self._rejection_threshold = shmem_manager.Value("d", 0.1)
+        # The initial value for the acceptance/rejection threshold in
+        # [PenasGon2017]_ p.9 is 0.1.
+        # However, their implementation uses 0.1 *percent*. I assume this is a
+        # mistake in the paper.
+        self._rejection_threshold = shmem_manager.Value("d", 0.001)
         # scores of the workers, ordered by worker-index
         # initial score is the worker index
         self._worker_scores = shmem_manager.Array(
