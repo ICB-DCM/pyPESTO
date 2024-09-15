@@ -675,11 +675,13 @@ class SacessWorker:
         Update ESS settings if conditions are met.
         """
         # Update ESS settings if we received way more solutions than we sent
+        #  Note: [PenasGon2017]_ Algorithm 5 uses AND in the following
+        #  condition, but the accompanying implementation uses OR.
         if (
             self._n_received_solutions
             > self._options.adaptation_sent_coeff * self._n_sent_solutions
             + self._options.adaptation_sent_offset
-            and self._neval > problem.dim * self._options.adaptation_min_evals
+            or self._neval > problem.dim * self._options.adaptation_min_evals
         ):
             self._ess_kwargs = self._manager.reconfigure_worker(
                 self._worker_idx
