@@ -623,6 +623,7 @@ class SacessWorker:
             exit_flag=ess.exit_flag,
         )
         self._manager._result_queue.put(worker_result)
+        self._logger.debug(f"Final configuration: {self._ess_kwargs}")
         ess._report_final()
 
     def _setup_ess(self, startpoint_method: StartpointMethod) -> ESSOptimizer:
