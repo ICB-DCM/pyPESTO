@@ -351,8 +351,8 @@ class SacessManager:
         more promising the respective worker is considered)
     _worker_comms: Number of communications received from the individual
         workers
-    _rejections: Number of rejected solutions received from workers since last
-        adaptation of ``_rejection_threshold``.
+    _rejections: Number of rejected solutions received from workers since the
+        last adaptation of ``_rejection_threshold``.
     _rejection_threshold: Threshold for relative objective improvements that
         incoming solutions have to pass to be accepted
     _lock: Lock for accessing shared state.
@@ -441,7 +441,7 @@ class SacessManager:
                     np.isfinite(fx)
                     and not np.isfinite(self._best_known_fx.value)
                 )
-                # avoid division by 0. just accept any improvement if best
+                # avoid division by 0. just accept any improvement if the best
                 # known value is 0.
                 or (self._best_known_fx.value == 0 and fx < 0)
                 or (
@@ -483,8 +483,8 @@ class SacessManager:
                     f"(threshold: {self._rejection_threshold.value}) "
                     f"(total rejections: {self._rejections.value})."
                 )
-                # adapt acceptance threshold if too many solutions have been
-                #  rejected
+                # adapt the acceptance threshold if too many solutions have
+                #  been rejected
                 if self._rejections.value >= self._num_workers:
                     self._rejection_threshold.value = min(
                         self._rejection_threshold.value / 2,
@@ -704,7 +704,7 @@ class SacessWorker:
             f"threshold: {self._options.worker_acceptance_threshold}"
         )
 
-        # solution improves best value by at least a factor of ...
+        # solution improves the best value by at least a factor of ...
         if (
             (np.isfinite(fx) and not np.isfinite(self._best_known_fx))
             or (self._best_known_fx == 0 and fx < 0)
@@ -746,7 +746,7 @@ class SacessWorker:
                 refset.attributes["cooperative_solution"]
             )
         ).size == 0:
-            # the attribute exists, but no member is marked as cooperative
+            # the attribute exists, but no member is marked as the cooperative
             # solution. this may happen if we shrink the refset.
             cooperative_solution_idx = np.argmax(refset.fx)
 
@@ -792,7 +792,7 @@ def _run_worker(
     # different random seeds per process
     np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
-    # Forward log messages to logging process
+    # Forward log messages to the logging process
     h = logging.handlers.QueueHandler(log_process_queue)
     worker._logger = logging.getLogger(multiprocessing.current_process().name)
     worker._logger.addHandler(h)

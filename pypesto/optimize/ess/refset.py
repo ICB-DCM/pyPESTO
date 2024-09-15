@@ -80,7 +80,7 @@ class RefSet:
         self,
         n_diverse: int,
     ):
-        """Create initial reference set from random parameters.
+        """Create an initial reference set from random parameters.
 
         Sample ``n_diverse`` random points, populate half of the RefSet using
         the best solutions and fill the rest with random points.
@@ -90,7 +90,7 @@ class RefSet:
         self.initialize_from_array(x_diverse=x_diverse, fx_diverse=fx_diverse)
 
     def initialize_from_array(self, x_diverse: np.array, fx_diverse: np.array):
-        """Create initial reference set using the provided points.
+        """Create an initial reference set using the provided points.
 
         Populate half of the RefSet using the best given solutions and fill the
         rest with a random selection from the remaining points.
@@ -174,7 +174,8 @@ class RefSet:
         If the dimension does not change, do nothing.
         If size is decreased, drop entries from the end (i.e., the worst
         values, assuming it is sorted). If size is increased, the new
-        entries are filled with randomly and the refset is sorted.
+        entries are filled with randomly sampled parameters and the refset is
+        sorted.
 
         NOTE: Any attributes are just truncated or filled with zeros.
         """
