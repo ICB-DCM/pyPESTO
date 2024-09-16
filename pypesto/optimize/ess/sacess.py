@@ -1106,10 +1106,6 @@ class SacessOptions:
         rejected solutions exceeds the number of workers, the threshold is
         halved until it reaches ``manager_minimum_rejection_threshold``.
 
-        _acceptance_threshold: Minimum relative improvement of the objective
-        compared to the best known value to be eligible for submission to the
-        Manager.
-
     worker_acceptance_threshold:
         Minimum relative improvement of the objective compared to the best
         known value to be eligible for submission to the Manager.
