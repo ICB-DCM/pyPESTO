@@ -32,6 +32,7 @@ __all__ = [
     "SacessOptimizer",
     "get_default_ess_options",
     "SacessFidesFactory",
+    "SacessOptions",
 ]
 
 logger = logging.getLogger(__name__)
