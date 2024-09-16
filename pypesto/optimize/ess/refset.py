@@ -131,14 +131,29 @@ class RefSet:
 
         Assumes RefSet is sorted.
         """
+        # Compare [PenasGon2007]
+        #  Note that the main text states that distance between the two points
+        #  is normalized to the bounds of the search space. However,
+        #  Algorithm 1, line 9 normalizes to x_j instead. The accompanying
+        #  code does normalize to max(abs(x_i), abs(x_j)).
+        # Normalizing to the bounds of the search space seems more reasonable.
+        #  Otherwise, for a parameter with bounds [lb, ub],
+        #  where (ub-lb)/ub < proximity_threshold, we would never find an
+        #  admissible point.
         x = self.x
+        ub, lb = self.evaluator.problem.ub, self.evaluator.problem.lb
+
+        def normalize(x):
+            """Normalize parameter vector to the bounds of the search space."""
+            return (x - lb) / (ub - lb)
+
         for i in range(self.dim):
             for j in range(i + 1, self.dim):
                 # check proximity
                 # zero-division may occur here
                 with np.errstate(divide="ignore", invalid="ignore"):
                     while (
-                        np.max(np.abs((x[i] - x[j]) / x[j]))
+                        np.max(np.abs(normalize(x[i]) - normalize(x[j])))
                         <= self.proximity_threshold
                     ):
                         # too close. replace x_j.
