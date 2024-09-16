@@ -24,7 +24,9 @@ from pypesto.optimize.ess import (
     SacessOptimizer,
     get_default_ess_options,
 )
-from pypesto.optimize.util import assign_ids
+from pypesto.optimize.util import (
+    assign_ids,
+)
 from pypesto.store import read_result
 
 from ..base.test_x_fixed import create_problem
