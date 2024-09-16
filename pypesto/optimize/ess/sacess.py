@@ -1100,7 +1100,7 @@ class SacessWorkerResult:
 class SacessOptions:
     """Container for :class:`SacessOptimizer` hyperparameters.
 
-    Attributes
+    Parameters
     ----------
     manager_initial_rejection_threshold, manager_minimum_rejection_threshold:
         Initial and minimum threshold for relative objective improvements that
