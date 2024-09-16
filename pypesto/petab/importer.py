@@ -289,9 +289,25 @@ class PetabImporter:
         """
         return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
-    def create_objective_creator(self) -> ObjectiveCreator:
-        """Choose :class:`ObjectiveCreator` depending on the simulator type."""
-        if self.simulator_type == AMICI:
+    def create_objective_creator(
+        self,
+        simulator_type: str = AMICI,
+        simulator: petab.Simulator | None = None,
+    ) -> ObjectiveCreator:
+        """Choose :class:`ObjectiveCreator` depending on the simulator type.
+
+        Parameters
+        ----------
+        simulator_type:
+            The type of simulator to use. Depending on this different kinds
+            of objectives will be created. Allowed types are 'amici', 'petab',
+            and 'roadrunner'.
+        simulator:
+            In case of a ``simulator_type == 'petab'``, the simulator object
+            has to be provided. Otherwise the argument is not used.
+
+        """
+        if simulator_type == AMICI:
             return AmiciObjectiveCreator(
                 petab_problem=self.petab_problem,
                 output_folder=self.output_folder,
@@ -301,11 +317,11 @@ class PetabImporter:
                 non_quantitative_data_types=self._non_quantitative_data_types,
                 validate_petab=self.validate_petab,
             )
-        elif self.simulator_type == PETAB:
+        elif simulator_type == PETAB:
             return PetabSimulatorObjectiveCreator(
-                petab_problem=self.petab_problem, simulator=self.simulator
+                petab_problem=self.petab_problem, simulator=simulator
             )
-        elif self.simulator_type == ROADRUNNER:
+        elif simulator_type == ROADRUNNER:
             return RoadRunnerObjectiveCreator(
                 petab_problem=self.petab_problem, rr=self.roadrunner_instance
             )
@@ -342,7 +358,10 @@ class PetabImporter:
         A :class:`pypesto.problem.Problem` for the objective.
         """
         if objective is None:
-            self.objective_constructor = self.create_objective_creator()
+            self.objective_constructor = self.create_objective_creator(
+                kwargs.pop("simulator_type", self.simulator_type),
+                kwargs.pop("simulator", self.simulator),
+            )
             objective = self.objective_constructor.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
@@ -428,7 +447,10 @@ class PetabImporter:
             DeprecationWarning,
             stacklevel=2,
         )
-        objective_constructor = self.create_objective_creator()
+        objective_constructor = self.create_objective_creator(
+            kwargs.pop("simulator_type", self.simulator_type),
+            kwargs.pop("simulator", self.simulator),
+        )
         return objective_constructor.create_objective(
             model=model,
             solver=solver,
