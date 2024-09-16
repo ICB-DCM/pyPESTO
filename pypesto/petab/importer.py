@@ -37,7 +37,7 @@ from ..predict import AmiciPredictor
 from ..problem import HierarchicalProblem, Problem
 from ..result import PredictionResult
 from ..startpoint import StartpointMethod
-from .factory import (
+from .objective_creator import (
     AmiciObjectiveCreator,
     ObjectiveCreator,
     PetabSimulatorObjectiveCreator,
@@ -290,7 +290,7 @@ class PetabImporter:
         return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
     def create_objective_creator(self) -> ObjectiveCreator:
-        """Choose factory depending on the simulator type."""
+        """Choose :class:`ObjectiveCreator` depending on the simulator type."""
         if self.simulator_type == AMICI:
             return AmiciObjectiveCreator(
                 petab_problem=self.petab_problem,
@@ -342,8 +342,8 @@ class PetabImporter:
         A :class:`pypesto.problem.Problem` for the objective.
         """
         if objective is None:
-            self.factory = self.create_objective_creator()
-            objective = self.factory.create_objective(**kwargs)
+            self.objective_constructor = self.create_objective_creator()
+            objective = self.objective_constructor.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
         x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
@@ -428,8 +428,8 @@ class PetabImporter:
             DeprecationWarning,
             stacklevel=2,
         )
-        factory = self.create_objective_creator()
-        return factory.create_objective(
+        objective_constructor = self.create_objective_creator()
+        return objective_constructor.create_objective(
             model=model,
             solver=solver,
             edatas=edatas,
@@ -460,8 +460,8 @@ class PetabImporter:
             DeprecationWarning,
             stacklevel=2,
         )
-        factory = self.create_objective_creator()
-        return factory.create_predictor(
+        objective_constructor = self.create_objective_creator()
+        return objective_constructor.create_predictor(
             objective=objective,
             amici_output_fields=amici_output_fields,
             post_processor=post_processor,
