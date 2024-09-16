@@ -687,6 +687,7 @@ class SacessWorker:
             self._ess_kwargs = self._manager.reconfigure_worker(
                 self._worker_idx
             )
+            self._refset.sort()
             self._refset.resize(self._ess_kwargs["dim_refset"])
             self._logger.debug(
                 f"Updated settings on worker {self._worker_idx} to "
