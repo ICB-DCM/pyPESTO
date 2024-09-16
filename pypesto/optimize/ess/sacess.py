@@ -16,6 +16,7 @@ from typing import Any, Callable
 from uuid import uuid1
 from warnings import warn
 
+import cloudpickle
 import numpy as np
 
 import pypesto
@@ -242,9 +243,13 @@ class SacessOptimizer:
                     name=f"{self.__class__.__name__}-worker-{i:02d}",
                     target=_run_worker,
                     args=(
-                        worker,
-                        problem,
-                        startpoint_method,
+                        cloudpickle.dumps(
+                            (
+                                worker,
+                                problem,
+                                startpoint_method,
+                            ),
+                        ),
                         logging_thread.queue,
                     ),
                 )
@@ -782,16 +787,16 @@ class SacessWorker:
         return str(Path(tmpdir, f"sacess-{worker_idx:02d}_tmp.h5").absolute())
 
 
-def _run_worker(
-    worker: SacessWorker,
-    problem: Problem,
-    startpoint_method: StartpointMethod,
-    log_process_queue: multiprocessing.Queue,
-):
+def _run_worker(pickled_args: bytes, log_process_queue: multiprocessing.Queue):
     """Run the given SACESS worker.
 
     Helper function as entrypoint for sacess worker processes.
     """
+    unpickled_args: tuple[
+        SacessWorker, Problem, StartpointMethod
+    ] = cloudpickle.loads(pickled_args)
+    (worker, problem, startpoint_method) = unpickled_args
+
     # different random seeds per process
     np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
