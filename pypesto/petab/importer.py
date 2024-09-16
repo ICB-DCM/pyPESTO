@@ -466,6 +466,21 @@ class PetabImporter(AmiciObjectBuilder):
             edatas = self.create_edatas(
                 model=model, simulation_conditions=simulation_conditions
             )
+        else:
+            simulation_conditions = pd.DataFrame(
+                [
+                    {
+                        PREEQUILIBRATION_CONDITION_ID: edata.id.split("+")[0]
+                        if "+" in edata.id
+                        else "",
+                        # why is this not CONDITION_SEP ¯\_(ツ)_/¯?
+                        SIMULATION_CONDITION_ID: edata.id.split("+")[1]
+                        if "+" in edata.id
+                        else edata.id,
+                    }
+                    for edata in edatas
+                ]
+            )
 
         parameter_mapping = (
             amici.petab.parameter_mapping.create_parameter_mapping(
