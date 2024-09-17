@@ -15,7 +15,7 @@ Release notes
     - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443)
     - Update references/documentation (#1404, #1456)
 - Visualize
-    - allow log and/or linear scale for visulaization (#1435)
+    - allow log and/or linear scale for visualization (#1435)
 - Optimization
     - SacessOptimizer: Fix acceptance threshold for objective improvement (#1457)
     - SacessOptimizer: expose more hyperparameters + minor fixes (#1459)
