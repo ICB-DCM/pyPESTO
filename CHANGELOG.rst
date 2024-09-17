@@ -6,6 +6,26 @@ Release notes
 ..........
 
 
+0.5.4 (2024-09-19)
+-------------------
+
+- **Breaking Changes**
+    - Remove Aesara support (#1453, #1455)
+- General
+    - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443)
+    - Update references/documentation (#1404, #1456)
+- Visualize
+    - allow log and/or linear scale for visulaization (#1435)
+- Optimization
+    - SacessOptimizer: Fix acceptance threshold for objective improvement (#1457)
+    - SacessOptimizer: expose more hyperparameters + minor fixes (#1459)
+    - SacessOptimizer, ESSOptimizer: Bound-normalize parameters for proximity check (#1462)
+- Objective
+    - FD-objective correctly working with fixed parameters (#1446)
+- Sampling
+    - Bayes Factor Tutorial (#1444)
+
+
 0.5.3 (2024-08-01)
 -------------------
 
