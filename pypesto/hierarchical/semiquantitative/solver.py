@@ -440,6 +440,64 @@ class SemiquantInnerSolver(InnerSolver):
             **inner_options,
         )
 
+        # if not results.success:
+        #     # Plot the estimated spline and the data
+        #     import matplotlib.pyplot as plt
+
+        #     # Get spline heights at knots xi from their differences s
+        #     # By summing up the differences, we get the spline heights
+        #     xi = np.cumsum(results.x)
+
+        #     # Plot the spline, it's knot points are the c values
+        #     plt.plot(spline_bases, xi, label="Spline")
+
+        #     # Plot the data, it is between the sim_all values and measurements
+        #     plt.plot(group_dict[CURRENT_SIMULATION], group_dict[DATAPOINTS], "o")
+        #     plt.plot(spline_bases, xi, "*", label="Knot points")
+        #     plt.show()
+
+        #     # Run gradient checks for the inner_gradient_wrapper.
+        #     # It is implemented to be the gradient of the objective_function_wrapper.
+        #     from scipy.optimize import check_grad
+
+        #     # Check the gradient of the objective function
+        #     grad_diff = check_grad(
+        #         objective_function_wrapper,
+        #         inner_gradient_wrapper,
+        #         results.x,
+        #     )
+        #     print(f"Gradient difference: {grad_diff}")
+        #     # Print the gradient evaluated with finite differences and the analytical gradient
+        #     # Use scipy to get the finite difference gradient
+        #     from scipy.optimize import approx_fprime
+        #     finite_diff_grad = approx_fprime(
+        #         results.x, objective_function_wrapper, 1e-8
+        #     )
+        #     analytical_grad = inner_gradient_wrapper(results.x)
+        #     print(f"Finite difference gradient: {finite_diff_grad}")
+        #     print(f"Analytical gradient: {inner_gradient_wrapper(results.x)}")
+        #     breakpoint()
+
+        #     # Check the gradient by plotting the analytical and finite difference gradient value
+        #     # on a scatter plot for a HUGE amount of points
+        #     import matplotlib.pyplot as plt
+        #     from scipy.optimize import approx_fprime
+
+        #     # sample a milion points
+        #     all_samples_of_x = np.random.uniform(0, 1, (10000, len(results.x)))
+        #     all_analytical_values = np.array([inner_gradient_wrapper(x) for x in all_samples_of_x]).flatten()
+        #     all_finite_diff_values = np.array([approx_fprime(x, objective_function_wrapper, 1e-8) for x in all_samples_of_x]).flatten()
+
+        #     # Add to the values the values for the current x
+        #     all_analytical_values = np.concatenate([all_analytical_values, analytical_grad])
+        #     all_finite_diff_values = np.concatenate([all_finite_diff_values, finite_diff_grad])
+
+        #     plt.scatter(all_analytical_values, all_finite_diff_values)
+        #     plt.xlabel('Analytical gradient')
+        #     plt.ylabel('Finite difference gradient')
+        #     plt.show()
+        #     breakpoint()
+
         return results
 
     @staticmethod
@@ -494,8 +552,8 @@ class SemiquantInnerSolver(InnerSolver):
             # Set the n(k) values for the simulations
             for i in range(len(sim_all)):
                 n[i] = np.ceil((sim_all[i] - c[0]) / delta_c) + 1
-                if n[i] > N:
-                    n[i] = N
+                if n[i] > N + 1:
+                    n[i] = N + 1
                     warnings.warn(
                         "Interval for a simulation has been set to a larger "
                         "value than the number of spline parameters.",
@@ -507,12 +565,12 @@ class SemiquantInnerSolver(InnerSolver):
             c = np.linspace(min_all, max_all, N)
             for i in range(len(sim_all)):
                 if i == max_idx:
-                    n[i] = N
+                    n[i] = N + 1
                 elif i == min_idx:
                     n[i] = 1
                 else:
                     n[i] = np.ceil((sim_all[i] - c[0]) / delta_c) + 1
-                if n[i] > N:
+                if n[i] > N + 1:
                     n[i] = N
 
         n = n.astype(int)
@@ -649,7 +707,7 @@ def _calculate_nllh_for_group(
     if group_dict[OPTIMIZE_NOISE]:
         sigma = _calculate_sigma_for_group(
             residuals_squared=residuals_squared,
-            n_datapoints=N,
+            n_datapoints=K,
         )
         group_dict[INNER_NOISE_PARS] = sigma
     else:
@@ -729,6 +787,7 @@ def _calculate_nllh_gradient_for_group(
         c=c,
         n=n,
     )
+    K = len(sim_all)
 
     # Calculate sigma
     if group_dict[OPTIMIZE_NOISE]:
@@ -743,7 +802,7 @@ def _calculate_nllh_gradient_for_group(
         )
         sigma = _calculate_sigma_for_group(
             residuals_squared=residuals_squared,
-            n_datapoints=N,
+            n_datapoints=K,
         )
         group_dict[INNER_NOISE_PARS] = sigma
     else:
@@ -766,6 +825,7 @@ def _calculate_nllh_gradient_for_group(
     nllh_gradient = (
         residuals_squared_gradient / (sigma**2) + regularization_term_gradient
     )
+
     return nllh_gradient
 
 
@@ -783,6 +843,14 @@ def _calculate_sigma_for_group(
         The number of datapoints.
     """
     sigma = np.sqrt(2 * residuals_squared / n_datapoints)
+
+    # For numerical stability, set sigma to a minimum value of 1e-16
+    # if sigma < 1e-6:
+    #     warnings.warn(
+    #         "The calculated sigma is smaller than 1e-6. "
+    #         "Setting sigma to 1e-6.",
+    #     )
+    sigma = np.maximum(sigma, 1e-6)
 
     return sigma
 
@@ -836,17 +904,11 @@ def _calculate_residuals_gradient_for_group(
         if i == 0:
             gradient[i] += s[i] - z_k
         elif i == N:
-            gradient[:i] += np.full(i, sum_s - z_k)
+            gradient[:i] += sum_s - z_k
         else:
-            gradient[i] += (
-                ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
-                * (y_k - c[i - 1])
-                / delta_c
-            )
-            gradient[:i] += np.full(
-                i,
-                (y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k,
-            )
+            common_term = (y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k
+            gradient[i] += common_term * (y_k - c[i - 1]) / delta_c
+            gradient[:i] += common_term
     return gradient
 
 
@@ -958,8 +1020,10 @@ def get_spline_mapped_simulations(
 
     for y_k, n_k, index in zip(sim_all, n, range(len(sim_all))):
         interval_index = n_k - 1
-        if interval_index == 0 or interval_index == N:
+        if interval_index == 0:
             mapped_simulations[index] = xi[interval_index]
+        elif interval_index == N:
+            mapped_simulations[index] = xi[interval_index - 1]
         else:
             mapped_simulations[index] = (y_k - c[interval_index - 1]) * (
                 xi[interval_index] - xi[interval_index - 1]
