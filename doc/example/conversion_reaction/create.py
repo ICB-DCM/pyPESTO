@@ -68,7 +68,7 @@ yaml_config = {
     PARAMETER_FILE: "parameters.tsv",
     PROBLEMS: [
         {
-            SBML_FILES: ["conversion_reaction.xml"],
+            SBML_FILES: ["model_conversion_reaction.xml"],
             CONDITION_FILES: ["conditions.tsv"],
             MEASUREMENT_FILES: ["measurements.tsv"],
             OBSERVABLE_FILES: ["observables.tsv"],

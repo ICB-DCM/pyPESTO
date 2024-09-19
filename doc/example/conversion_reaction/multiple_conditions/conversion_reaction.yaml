@@ -8,4 +8,4 @@ problems:
   observable_files:
   - ../observables.tsv
   sbml_files:
-  - ../conversion_reaction.xml
+  - ../model_conversion_reaction.xml
