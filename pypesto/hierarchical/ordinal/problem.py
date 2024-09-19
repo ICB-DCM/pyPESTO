@@ -389,10 +389,10 @@ class OrdinalProblem(AmiciInnerProblem):
         eps: float,
     ) -> np.ndarray:
         """Return vector of minimal gaps and ranges."""
-        max_simulation = np.nanmax(y_sim_all)
+        # max_simulation = np.nanmax(y_sim_all)
 
-        interval_range = max_simulation / (2 * len(xs) + 1)
-        interval_gap = max_simulation / (4 * (len(xs) - 1) + 1)
+        interval_range = 1 / (2 * len(xs) + 1)
+        interval_gap = 1 / (4 * (len(xs) - 1) + 1)
 
         d = np.zeros(self.groups[group][NUM_CONSTR_FULL])
 
@@ -416,25 +416,25 @@ class OrdinalProblem(AmiciInnerProblem):
         sy_all: np.ndarray,
     ) -> np.ndarray:
         """Return the derivative of vector of minimal gaps and ranges with respect to an outer parameter."""
-        max_sim_idx = np.argmax(y_sim_all)
-        max_sy = sy_all[max_sim_idx]
-        dd_dtheta = np.zeros(self.groups[group][NUM_CONSTR_FULL])
+        # max_sim_idx = np.argmax(y_sim_all)
+        # max_sy = sy_all[max_sim_idx]
+        # dd_dtheta = np.zeros(self.groups[group][NUM_CONSTR_FULL])
 
-        dinterval_range_dtheta = max_sy / (2 * len(xs) + 1)
-        dinterval_gap_dtheta = max_sy / (4 * (len(xs) - 1) + 1)
+        # dinterval_range_dtheta = max_sy / (2 * len(xs) + 1)
+        # dinterval_gap_dtheta = max_sy / (4 * (len(xs) - 1) + 1)
 
-        dd_dtheta[
-            2 * self.groups[group][NUM_DATAPOINTS] + 1 : 2
-            * self.groups[group][NUM_DATAPOINTS]
-            + self.groups[group][NUM_CATEGORIES]
-        ] = dinterval_gap_dtheta
+        # dd_dtheta[
+        #     2 * self.groups[group][NUM_DATAPOINTS] + 1 : 2
+        #     * self.groups[group][NUM_DATAPOINTS]
+        #     + self.groups[group][NUM_CATEGORIES]
+        # ] = dinterval_gap_dtheta
 
-        dd_dtheta[
-            2 * self.groups[group][NUM_DATAPOINTS]
-            + self.groups[group][NUM_CATEGORIES] :
-        ] = dinterval_range_dtheta
+        # dd_dtheta[
+        #     2 * self.groups[group][NUM_DATAPOINTS]
+        #     + self.groups[group][NUM_CATEGORIES] :
+        # ] = dinterval_range_dtheta
 
-        return dd_dtheta
+        return np.zeros(self.groups[group][NUM_CONSTR_FULL])
 
     def get_censored_group_quantitative_ixs(
         self, xs: list[OrdinalParameter]

@@ -794,8 +794,8 @@ def compute_interval_constraints(
             4 * (len(inner_parameters) - 1) + 1
         )
     elif options[INTERVAL_CONSTRAINTS] == MAX:
-        interval_range = max_simulation / (2 * len(inner_parameters) + 1)
-        interval_gap = max_simulation / (4 * (len(inner_parameters) - 1) + 1)
+        interval_range = 1 / (2 * len(inner_parameters) + 1)
+        interval_gap = 1 / (4 * (len(inner_parameters) - 1) + 1)
     else:
         raise NotImplementedError(
             f"intervalConstraints = "
