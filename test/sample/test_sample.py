@@ -965,5 +965,7 @@ def test_bridge_sampling():
 
     # compute the log evidence using harmonic mean
     bridge_log_evidence = sample.evidence.bridge_sampling_log_evidence(result)
-    harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
-    assert np.isclose(bridge_log_evidence, harmonic_evidence, atol=tol)
+    laplace = sample.evidence.laplace_approximation_log_evidence(
+        problem, result.optimize_result.x[0]
+    )
+    assert np.isclose(bridge_log_evidence, laplace, atol=tol)
