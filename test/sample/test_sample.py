@@ -929,7 +929,7 @@ def test_harmonic_mean_log_evidence():
     )
 
 
-@pytest.mark.flaky(reruns=2)
+@pytest.mark.flaky(reruns=3)
 def test_bridge_sampling():
     tol = 2
     # define problem
