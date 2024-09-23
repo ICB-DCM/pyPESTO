@@ -848,13 +848,6 @@ def get_default_ess_options(
         return max(min_dimrefset, ceil((1 + sqrt(4 * dim * x)) / 2))
 
     settings = [
-        # settings for first worker
-        {
-            "dim_refset": dim_refset(10),
-            "balance": 0.5,
-            "local_n2": 10,
-        },
-        # for the remaining workers, cycle through these settings
         # 1
         {
             "dim_refset": dim_refset(1),
@@ -1006,10 +999,7 @@ def get_default_ess_options(
         elif local_optimizer is not False:
             cur_settings["local_optimizer"] = local_optimizer
 
-    return [
-        settings[0],
-        *(itertools.islice(itertools.cycle(settings[1:]), num_workers - 1)),
-    ]
+    return list(itertools.islice(itertools.cycle(settings), num_workers))
 
 
 class SacessFidesFactory:
