@@ -22,6 +22,7 @@ from pypesto.optimize.ess import (
     ESSOptimizer,
     SacessFidesFactory,
     SacessOptimizer,
+    SacessOptions,
     get_default_ess_options,
 )
 from pypesto.optimize.util import (
@@ -490,6 +491,11 @@ def test_ess(problem, local_optimizer, ess_type, request):
             sacess_loglevel=logging.DEBUG,
             ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
+            options=SacessOptions(
+                adaptation_min_evals=500,
+                adaptation_sent_offset=10,
+                adaptation_sent_coeff=5,
+            ),
         )
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")

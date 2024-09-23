@@ -195,7 +195,7 @@ class SacessOptimizer:
         start_time = time.time()
         logger.debug(
             f"Running {self.__class__.__name__} with {self.num_workers} "
-            f"workers: {self.ess_init_args}"
+            f"workers: {self.ess_init_args} and {self.options}."
         )
         ess_init_args = self.ess_init_args or get_default_ess_options(
             num_workers=self.num_workers, dim=problem.dim
@@ -563,7 +563,8 @@ class SacessWorker:
         self._manager._logger = self._logger
 
         self._logger.debug(
-            f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
+            f"#{self._worker_idx} starting "
+            f"({self._ess_kwargs}, {self._options})."
         )
 
         evaluator = create_function_evaluator(
@@ -693,6 +694,13 @@ class SacessWorker:
             self._logger.debug(
                 f"Updated settings on worker {self._worker_idx} to "
                 f"{self._ess_kwargs}"
+            )
+        else:
+            self._logger.debug(
+                f"Worker {self._worker_idx} not adapting. "
+                f"Received: {self._n_received_solutions} <= {self._options.adaptation_sent_coeff * self._n_sent_solutions + self._options.adaptation_sent_offset}, "
+                f"Sent: {self._n_sent_solutions}, "
+                f"neval: {self._neval} <= {problem.dim * self._options.adaptation_min_evals}."
             )
 
     def maybe_update_best(self, x: np.array, fx: float):
