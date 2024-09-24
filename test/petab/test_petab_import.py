@@ -167,16 +167,19 @@ def test_max_sensi_order():
     """Test that the AMICI objective created via PEtab exposes derivatives
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
-    problem = pypesto.petab.PetabImporter.from_yaml(
+    importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
+    problem = importer.create_problem()
 
     # define test parameter
-    par = problem.petab_problem.x_nominal_scaled
-    npar = len(par)
+    par = np.asarray(importer.petab_problem.x_nominal_scaled)[
+        problem.x_free_indices
+    ]
+    npar = problem.dim
 
     # auto-computed max_sensi_order and fim_for_hess
-    objective = problem.create_objective()
+    objective = problem.objective
     hess = objective(par, sensi_orders=(2,))
     assert hess.shape == (npar, npar)
     assert (hess != 0).any()
@@ -190,18 +193,24 @@ def test_max_sensi_order():
     )
 
     # fix max_sensi_order to 1
-    objective = problem.create_objective(max_sensi_order=1)
+    objective = importer.create_problem(
+        objective=importer.create_objective(max_sensi_order=1)
+    ).objective
     objective(par, sensi_orders=(1,))
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # do not use FIM
-    objective = problem.create_objective(fim_for_hess=False)
+    objective = importer.create_problem(
+        objective=importer.create_objective(fim_for_hess=False)
+    ).objective
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # only allow computing function values
-    objective = problem.create_objective(max_sensi_order=0)
+    objective = importer.create_problem(
+        objective=importer.create_objective(max_sensi_order=0)
+    ).objective
     objective(par)
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(1,))
