@@ -13,7 +13,7 @@ parameter estimation.
 
 ## Feature overview
 
-![](https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/gfx/concept_pypesto.pdf)
+![](https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/gfx/concept_pypesto.png)
 *Feature overview of pyPESTO. Figure taken from [bioinformatics publication](https://doi.org/10.1093/bioinformatics/btad711)*
 
 pyPESTO features include:
