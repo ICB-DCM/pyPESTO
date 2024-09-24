@@ -18,27 +18,27 @@ parameter estimation.
 
 pyPESTO features include:
 
-* Parameter estimation interfacing multiple optimization algorithms including
+* Parameter estimation interfacing **multiple optimization algorithms** including
   multi-start local and global optimization. ([example](https://pypesto.readthedocs.io/en/latest/example/getting_started.html),
   [overview of optimizers](https://pypesto.readthedocs.io/en/latest/api/pypesto.optimize.html))
-* Interface to multiple simulators including
+* Interface to **multiple simulators** including
   * [AMICI](https://github.com/AMICI-dev/AMICI/) for efficient simulation and
     sensitivity analysis of ordinary differential equation (ODE) models. ([example](https://pypesto.readthedocs.io/en/latest/example/amici.html))
   * [RoadRunner](https://libroadrunner.org/) for simulation of SBML models. ([example](https://pypesto.readthedocs.io/en/latest/example/roadrunner.html))
   * [Jax](https://jax.readthedocs.io/en/latest/quickstart.html) and
     [Julia](https://julialang.org) for automatic differentiation.
-* Uncertainty quantification using various methods:
-  * Profile likelihoods.
-  * Sampling using Markov chain Monte Carlo (MCMC), parallel tempering, and
+* **Uncertainty quantification** using various methods:
+  * **Profile likelihoods**.
+  * **Sampling** using Markov chain Monte Carlo (MCMC), parallel tempering, and
     interfacing other samplers including [emcee](https://emcee.readthedocs.io/en/stable/),
     [pymc](https://www.pymc.io/welcome.html) and
     [dynesty](https://dynesty.readthedocs.io/en/stable/).
     ([example](https://pypesto.readthedocs.io/en/latest/example/sampler_study.html))
-  * Variational inference
-* Complete parameter estimation pipeline for systems biology problems specified in
+  * **Variational inference**
+* **Complete** parameter estimation **pipeline** for systems biology problems specified in
   [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab).
   ([example](https://pypesto.readthedocs.io/en/latest/example/petab_import.html))
-* Parameter estimation pipelines for different modes of data:
+* Parameter estimation pipelines for **different modes of data**:
   * **Relative (scaled and offset) data** as described in
     [Schmiester et al. (2020)](https://doi.org/10.1093/bioinformatics/btz581).
     ([example](https://pypesto.readthedocs.io/en/latest/example/relative_data.html))
@@ -48,8 +48,8 @@ pyPESTO features include:
     ([example](https://pypesto.readthedocs.io/en/latest/example/ordinal_data.html))
   * **Censored data**. ([example](https://pypesto.readthedocs.io/en/latest/example/censored_data.html))
   * **Nonlinear-monotone data**. ([example](https://pypesto.readthedocs.io/en/latest/example/semiquantitative_data.html))
-* Model selection. ([example](https://pypesto.readthedocs.io/en/latest/example/model_selection.html)
-* Various visualization methods to analyze parameter estimation results.
+* **Model selection**. ([example](https://pypesto.readthedocs.io/en/latest/example/model_selection.html))
+* Various **visualization methods** to analyze parameter estimation results.
 
 ## Quick install
 
