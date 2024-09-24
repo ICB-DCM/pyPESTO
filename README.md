@@ -15,25 +15,33 @@ parameter estimation.
 
 pyPESTO features include:
 
-* Multi-start local optimization
-* Profile computation
-* Result visualization
-* Interface to [AMICI](https://github.com/AMICI-dev/AMICI/) for efficient
-  simulation and sensitivity analysis of ordinary differential equation (ODE)
-  models
-  ([example](https://github.com/ICB-DCM/pyPESTO/blob/main/doc/example/amici.ipynb))
-* Parameter estimation pipeline for systems biology problems specified in
+* Parameter Estimation interfacing multiple optimization algorithms including
+  multi-start local and global optimization. ([example](https://pypesto.readthedocs.io/en/latest/example/getting_started.html), [overview of optimizers](https://pypesto.readthedocs.io/en/latest/api/pypesto.optimize.html))
+* Interface to multiple simulators including
+  * [AMICI](https://github.com/AMICI-dev/AMICI/) for efficient simulation and
+    sensitivity analysis of ordinary differential equation (ODE) models. ([example](https://pypesto.readthedocs.io/en/latest/example/amici.html))
+  * [RoadRunner](https://libroadrunner.org/) for simulation of SBML models. ([example](https://pypesto.readthedocs.io/en/latest/example/roadrunner.html))
+  * [Jax](https://jax.readthedocs.io/en/latest/quickstart.html) and [Julia](https://julialang.org) for
+    automatic differentiation.
+* Uncertainty quantification using various methods:
+  * profile likelihoods
+  * sampling
+  * variational inference
+* Complete parameter estimation pipeline for systems biology problems specified in
   [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
-  ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/petab_import.ipynb))
-* Parameter estimation with relative (scaled and offset) data as described in
-  [Schmiester et al. (2020)](https://doi.org/10.1093/bioinformatics/btz581).
-  ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/relative_data.ipynb))
-* Parameter estimation with ordinal data as described in
-  [Schmiester et al. (2020)](https://doi.org/10.1007/s00285-020-01522-w) and
-  [Schmiester et al. (2021)](https://doi.org/10.1093/bioinformatics/btab512).
-  ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/ordinal_data.ipynb))
-* Parameter estimation with censored data. ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/censored_data.ipynb))
-* Parameter estimation with nonlinear-monotone data. ([example](https://github.com/ICB-DCM/pyPESTO/blob/master/doc/example/semiquantitative_data.ipynb))
+  ([example](https://pypesto.readthedocs.io/en/latest/example/petab_import.html))
+* Parameter estimation pipelines for different modes of data:
+  * **Relative (scaled and offset) data** as described in
+    [Schmiester et al. (2020)](https://doi.org/10.1093/bioinformatics/btz581).
+    ([example](https://pypesto.readthedocs.io/en/latest/example/relative_data.html))
+  * **Ordinal data** as described in
+    [Schmiester et al. (2020)](https://doi.org/10.1007/s00285-020-01522-w) and
+    [Schmiester et al. (2021)](https://doi.org/10.1093/bioinformatics/btab512).
+    ([example](https://pypesto.readthedocs.io/en/latest/example/ordinal_data.html))
+  * **Censored data**. ([example](https://pypesto.readthedocs.io/en/latest/example/censored_data.html))
+  * **Nonlinear-monotone data**. ([example](https://pypesto.readthedocs.io/en/latest/example/semiquantitative_data.html))
+* Model selection. ([example](https://pypesto.readthedocs.io/en/latest/example/model_selection.html)
+* Various Visualization methods to analyze the results of the parameter estimation.
 
 ## Quick install
 
