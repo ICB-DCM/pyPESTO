@@ -13,7 +13,7 @@ parameter estimation.
 
 ## Feature overview
 
-![](https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/gfx/concept_pypesto.png)
+![](https://raw.githubusercontent.com/ICB-DCM/pyPESTO/main/doc/gfx/concept_pypesto.png)
 *Feature overview of pyPESTO. Figure taken from the [Bioinformatics publication](https://doi.org/10.1093/bioinformatics/btad711).*
 
 pyPESTO features include:
@@ -47,7 +47,7 @@ pyPESTO features include:
     [Schmiester et al. (2021)](https://doi.org/10.1093/bioinformatics/btab512).
     ([example](https://pypesto.readthedocs.io/en/latest/example/ordinal_data.html))
   * **Censored data**. ([example](https://pypesto.readthedocs.io/en/latest/example/censored_data.html))
-  * **Nonlinear-monotone data**. ([example](https://pypesto.readthedocs.io/en/latest/example/semiquantitative_data.html))
+  * **Semiquantitative data** as described in [Doresic et al. (2024)](https://doi.org/10.1093/bioinformatics/btae210). ([example](https://pypesto.readthedocs.io/en/latest/example/semiquantitative_data.html))
 * **Model selection**. ([example](https://pypesto.readthedocs.io/en/latest/example/model_selection.html))
 * Various **visualization methods** to analyze parameter estimation results.
 
@@ -94,7 +94,7 @@ When presenting work that employs pyPESTO, feel free to use one of the icons in
 [doc/logo/](doc/logo):
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/logo/logo.png" height="75" alt="AMICI Logo">
+  <img src="https://raw.githubusercontent.com/ICB-DCM/pyPESTO/main/doc/logo/logo.png" height="75" alt="AMICI Logo">
 </p>
 
 There is a list of [publications using pyPESTO](https://pypesto.readthedocs.io/en/latest/references.html).
