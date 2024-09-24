@@ -112,5 +112,5 @@ class ProfileOptions(dict):
         if self.default_step_size < self.min_step_size:
             raise ValueError("default_step_size must be >= min_step_size.")
 
-        if self.magic_factor_obj_value < 0 or self.magic_factor_obj_value >= 1:
-            raise ValueError("magic_factor_obj_value must be >= 0 and < 1.")
+        if self.magic_factor_obj_value < 1:
+            raise ValueError("magic_factor_obj_value must be > 1.")
