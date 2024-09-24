@@ -44,13 +44,13 @@ class ProfileOptions(dict):
         self,
         default_step_size: float = 0.01,
         min_step_size: float = 0.001,
-        max_step_size: float = 1.0,
+        max_step_size: float = 0.1,
         step_size_factor: float = 1.25,
         delta_ratio_max: float = 0.1,
         ratio_min: float = 0.145,
         reg_points: int = 10,
         reg_order: int = 4,
-        magic_factor_obj_value: float = 0.5,
+        magic_factor_obj_value: float = 1.5,
         whole_path: bool = False,
     ):
         super().__init__()

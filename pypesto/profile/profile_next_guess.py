@@ -284,7 +284,6 @@ def adaptive_step(
         def par_extrapol(step_length):
             # Define a trust region for the step size in all directions
             # to avoid overshooting TODO: just using max_step_size for now
-            # TODO: This is L1 norm trust region, maybe change to L2 norm?
             step_in_x = np.clip(
                 step_length * delta_x_dir,
                 -options.max_step_size,
@@ -300,12 +299,12 @@ def adaptive_step(
     # compute the next objective value which we aim for
     high_next_obj_target = (
         -np.log(1.0 - options.delta_ratio_max)
-        + 1.5 * abs(last_delta_fval)
+        + options.magic_factor_obj_value * abs(last_delta_fval)
         + current_profile.fval_path[-1]
     )
     low_next_obj_target = (
         +np.log(1.0 - options.delta_ratio_max)
-        - 1.5 * abs(last_delta_fval)
+        - options.magic_factor_obj_value * abs(last_delta_fval)
         + current_profile.fval_path[-1]
     )
     # TODO: Change 1.5 to magic factor
