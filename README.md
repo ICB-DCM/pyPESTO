@@ -16,19 +16,24 @@ parameter estimation.
 pyPESTO features include:
 
 * Parameter Estimation interfacing multiple optimization algorithms including
-  multi-start local and global optimization. ([example](https://pypesto.readthedocs.io/en/latest/example/getting_started.html), [overview of optimizers](https://pypesto.readthedocs.io/en/latest/api/pypesto.optimize.html))
+  multi-start local and global optimization. ([example](https://pypesto.readthedocs.io/en/latest/example/getting_started.html),
+  [overview of optimizers](https://pypesto.readthedocs.io/en/latest/api/pypesto.optimize.html))
 * Interface to multiple simulators including
   * [AMICI](https://github.com/AMICI-dev/AMICI/) for efficient simulation and
     sensitivity analysis of ordinary differential equation (ODE) models. ([example](https://pypesto.readthedocs.io/en/latest/example/amici.html))
   * [RoadRunner](https://libroadrunner.org/) for simulation of SBML models. ([example](https://pypesto.readthedocs.io/en/latest/example/roadrunner.html))
-  * [Jax](https://jax.readthedocs.io/en/latest/quickstart.html) and [Julia](https://julialang.org) for
-    automatic differentiation.
+  * [Jax](https://jax.readthedocs.io/en/latest/quickstart.html) and
+    [Julia](https://julialang.org) for automatic differentiation.
 * Uncertainty quantification using various methods:
-  * profile likelihoods
-  * sampling
-  * variational inference
+  * Profile likelihoods.
+  * Sampling using markov chain monte carlo (MCMC), parrallel tempering, and
+    interfacing other samplers including [emcee](https://emcee.readthedocs.io/en/stable/),
+    [pymc](https://www.pymc.io/welcome.html) and
+    [dynasty](https://dynesty.readthedocs.io/en/stable/).
+    ([example](https://pypesto.readthedocs.io/en/latest/example/sampler_study.html))
+  * Variational inference
 * Complete parameter estimation pipeline for systems biology problems specified in
-  [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab)
+  [SBML](http://sbml.org/) and [PEtab](https://github.com/PEtab-dev/PEtab).
   ([example](https://pypesto.readthedocs.io/en/latest/example/petab_import.html))
 * Parameter estimation pipelines for different modes of data:
   * **Relative (scaled and offset) data** as described in
