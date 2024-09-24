@@ -94,7 +94,7 @@ When presenting work that employs pyPESTO, feel free to use one of the icons in
 [doc/logo/](doc/logo):
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ICB-DCM/pyPESTO/main/doc/logo/logo.png" height="75" alt="AMICI Logo">
+  <img src="https://raw.githubusercontent.com/ICB-DCM/pyPESTO/main/doc/logo/logo.png" height="75" alt="pyPESTO Logo">
 </p>
 
 There is a list of [publications using pyPESTO](https://pypesto.readthedocs.io/en/latest/references.html).
