@@ -14,11 +14,11 @@ parameter estimation.
 ## Feature overview
 
 ![](https://raw.githubusercontent.com/ICB-DCM/pyPESTO/master/doc/gfx/concept_pypesto.png)
-*Feature overview of pyPESTO. Figure taken from [bioinformatics publication](https://doi.org/10.1093/bioinformatics/btad711)*
+*Feature overview of pyPESTO. Figure taken from the [Bioinformatics publication](https://doi.org/10.1093/bioinformatics/btad711).*
 
 pyPESTO features include:
 
-* Parameter Estimation interfacing multiple optimization algorithms including
+* Parameter estimation interfacing multiple optimization algorithms including
   multi-start local and global optimization. ([example](https://pypesto.readthedocs.io/en/latest/example/getting_started.html),
   [overview of optimizers](https://pypesto.readthedocs.io/en/latest/api/pypesto.optimize.html))
 * Interface to multiple simulators including
@@ -29,10 +29,10 @@ pyPESTO features include:
     [Julia](https://julialang.org) for automatic differentiation.
 * Uncertainty quantification using various methods:
   * Profile likelihoods.
-  * Sampling using markov chain monte carlo (MCMC), parrallel tempering, and
+  * Sampling using Markov chain Monte Carlo (MCMC), parallel tempering, and
     interfacing other samplers including [emcee](https://emcee.readthedocs.io/en/stable/),
     [pymc](https://www.pymc.io/welcome.html) and
-    [dynasty](https://dynesty.readthedocs.io/en/stable/).
+    [dynesty](https://dynesty.readthedocs.io/en/stable/).
     ([example](https://pypesto.readthedocs.io/en/latest/example/sampler_study.html))
   * Variational inference
 * Complete parameter estimation pipeline for systems biology problems specified in
@@ -49,7 +49,7 @@ pyPESTO features include:
   * **Censored data**. ([example](https://pypesto.readthedocs.io/en/latest/example/censored_data.html))
   * **Nonlinear-monotone data**. ([example](https://pypesto.readthedocs.io/en/latest/example/semiquantitative_data.html))
 * Model selection. ([example](https://pypesto.readthedocs.io/en/latest/example/model_selection.html)
-* Various Visualization methods to analyze the results of the parameter estimation.
+* Various visualization methods to analyze parameter estimation results.
 
 ## Quick install
 
