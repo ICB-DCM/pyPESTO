@@ -124,8 +124,10 @@ def walk_along_profile(
                 if np.isfinite(optimizer_result.fval):
                     optimization_successful = True
                     if max_step_reduce_factor == 1.0:
-                        color_next = np.concatenate((color_now[:3], [0.3]))
+                        # The color of the point is set to black if no changes were made
+                        color_next = np.array([0, 0, 0, 1])
                     else:
+                        # The color of the point is set to red if the max_step_size was reduced
                         color_next = np.array([1, 0, 0, 1])
                 else:
                     max_step_reduce_factor *= 0.5
@@ -203,6 +205,7 @@ def walk_along_profile(
 
                 if np.isfinite(optimizer_result.fval):
                     optimization_successful = True
+                    # The color of the point is set to blue if the min_step_size was increased
                     color_next = np.array([0, 0, 1, 1])
                 else:
                     min_step_increase_factor *= 1.25
@@ -247,6 +250,7 @@ def walk_along_profile(
                     ),
                 )
                 if np.isfinite(optimizer_result.fval):
+                    # The color of the point is set to green if the parameter was resampled
                     color_next = np.array([0, 1, 0, 1])
                     break
 

@@ -25,6 +25,7 @@ def profiles(
     ratio_min: float = 0.0,
     show_bounds: bool = False,
     plot_objective_values: bool = False,
+    quality_colors: bool = False,
 ) -> plt.Axes:
     """
     Plot classical 1D profile plot.
@@ -60,13 +61,26 @@ def profiles(
     plot_objective_values:
         Whether to plot the objective function values instead of the likelihood
         ratio values.
+    debugging_colors:
+        If set to True, the profiles are colored according to types of steps the
+        profiler took. This gives additional information about the profile quality.
+        Red indicates a step for which min_step_size was reduced, blue indicates a step for which
+        max_step_size was increased, and green indicates a step for which the profiler
+        had to resample the parameter vector due to optimization failure of the previous two.
+        Black indicates a step for which none of the above was necessary. This option is only
+        available if there is only one result and one profile_list_id (one profile per plot).
 
     Returns
     -------
     ax:
         The plot axes.
     """
-    color_requested = colors is not None
+
+    if colors is not None and quality_colors:
+        raise ValueError(
+            "Cannot visualize the profiles with `quality_colors` of profiler_result.color_path "
+            " and `colors` provided at the same time. Please provide only one of them."
+        )
 
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
@@ -104,13 +118,14 @@ def profiles(
             else:
                 # multiple results per axes object
                 color_ind = i_result
-            # If there is only one result and one profile_list_id,
-            # we use the colors provided by profiler_result.color_path.
-            # Do this only if no color was requested.
+
+            # If debugging_colors is set to True, we use the colors provided
+            # by profiler_result.color_path. This will be done only if there is
+            # only one result and one profile_list_id (basically one profile per plot).
             if (
                 len(results) == 1
                 and len(profile_list_ids) == 1
-                and not color_requested
+                and quality_colors
             ):
                 color = color_paths
             else:
@@ -364,10 +379,10 @@ def profile_lowlevel(
             ax.plot(
                 [xs[i - 1], xs[i]],
                 [ratios[i - 1], ratios[i]],
-                color=(point_color[:3], 0.3),
+                color=(0, 0, 0, 1),
                 linestyle="-",
             )
-            if not single_color and point_color[3] == 1:
+            if not single_color and point_color != (0, 0, 0, 1):
                 ax.plot(xs[i], ratios[i], color=point_color, marker="o")
             else:
                 ax.plot(xs[i], ratios[i], color=point_color, marker=".")

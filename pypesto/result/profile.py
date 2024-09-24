@@ -40,7 +40,11 @@ class ProfilerResult(dict):
         Number of Hessian evaluations.
     color_path:
         The color of the profile path. Signifies types of steps made.
-        With any resampling, the color of the path becomes bluer.
+        Red indicates a step for which min_step_size was reduced, blue
+        indicates a step for which max_step_size was increased, and green
+        indicates a step for which the profiler had to resample the parameter
+        vector due to optimization failure of the previous two. Black
+        indicates a step for which none of the above was necessary.
     message:
         Textual comment on the profile result.
 
