@@ -10,5 +10,6 @@ from .refset import RefSet
 from .sacess import (
     SacessFidesFactory,
     SacessOptimizer,
+    SacessOptions,
     get_default_ess_options,
 )

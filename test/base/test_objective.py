@@ -2,7 +2,6 @@
 
 import copy
 import numbers
-import sys
 from functools import partial
 
 import numpy as np
@@ -12,11 +11,6 @@ import sympy as sp
 import pypesto
 
 from ..util import CRProblem, poly_for_sensi, rosen_for_sensi
-
-pytest_skip_aesara = pytest.mark.skipif(
-    sys.version_info >= (3, 12),
-    reason="Skipped Aesara tests on Python 3.12 or higher",
-)
 
 
 @pytest.fixture(params=[True, False])
@@ -184,44 +178,6 @@ def test_finite_difference_checks():
     )
 
 
-@pytest_skip_aesara
-def test_aesara(max_sensi_order, integrated):
-    """Test function composition and gradient computation via aesara"""
-    import aesara.tensor as aet
-
-    from pypesto.objective.aesara import AesaraObjective
-
-    prob = rosen_for_sensi(max_sensi_order, integrated, [0, 1])
-
-    # create aesara specific symbolic tensor variables
-    x = aet.specify_shape(aet.vector("x"), (2,))
-
-    # apply inverse transform such that we evaluate at prob['x']
-    x_ref = np.arcsinh(prob["x"])
-
-    # compose rosenbrock function with sinh transformation
-    obj = AesaraObjective(prob["obj"], x, aet.sinh(x))
-
-    # check function values and derivatives, also after copy
-    for _obj in (obj, copy.deepcopy(obj)):
-        # function value
-        assert _obj(x_ref) == prob["fval"]
-
-        # gradient
-        if max_sensi_order > 0:
-            assert np.allclose(
-                _obj(x_ref, sensi_orders=(1,)), prob["grad"] * np.cosh(x_ref)
-            )
-
-        # hessian
-        if max_sensi_order > 1:
-            assert np.allclose(
-                prob["hess"] * (np.diag(np.power(np.cosh(x_ref), 2)))
-                + np.diag(prob["grad"] * np.sinh(x_ref)),
-                _obj(x_ref, sensi_orders=(2,)),
-            )
-
-
 @pytest.mark.parametrize("enable_x64", [True, False])
 @pytest.mark.parametrize("fix_parameters", [True, False])
 def test_jax(max_sensi_order, integrated, enable_x64, fix_parameters):
@@ -342,12 +298,20 @@ def fd_delta(request):
     return request.param
 
 
-def test_fds(fd_method, fd_delta):
+# add a fixture for fixed and unfixed parameters
+@pytest.mark.parametrize("fixed", [True, False])
+def test_fds(fd_method, fd_delta, fixed):
     """Test finite differences."""
     problem = CRProblem()
 
-    # reference objective
-    obj = problem.get_objective()
+    if fixed:
+        fixed_problem = problem.get_problem()
+        fixed_problem.fix_parameters([1], problem.p_true[1])
+        obj = fixed_problem.objective
+        p = problem.p_true[0]
+    else:
+        obj = problem.get_objective()
+        p = problem.p_true
 
     # FDs for everything
     obj_fd = pypesto.FD(
@@ -394,7 +358,6 @@ def test_fds(fd_method, fd_delta):
         delta_grad=fd_delta,
         delta_res=fd_delta,
     )
-    p = problem.p_true
 
     # check that function values coincide (call delegated)
     for attr in ["fval", "res"]:
