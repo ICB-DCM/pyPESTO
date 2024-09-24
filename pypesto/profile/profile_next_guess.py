@@ -272,7 +272,7 @@ def adaptive_step(
                         )
                     )
             # Define a trust region for the step size in all directions
-            # to avoid overshooting TODO below
+            # to avoid overshooting
             x_step = np.clip(
                 x_step, x - options.max_step_size, x + options.max_step_size
             )
@@ -283,7 +283,7 @@ def adaptive_step(
         # if not, we do simple extrapolation
         def par_extrapol(step_length):
             # Define a trust region for the step size in all directions
-            # to avoid overshooting TODO: just using max_step_size for now
+            # to avoid overshooting
             step_in_x = np.clip(
                 step_length * delta_x_dir,
                 -options.max_step_size,
@@ -307,8 +307,6 @@ def adaptive_step(
         - options.magic_factor_obj_value * abs(last_delta_fval)
         + current_profile.fval_path[-1]
     )
-    # TODO: Change 1.5 to magic factor
-    # TODO: change default max min step sizes
 
     # Clip both by 0.5 * delta_obj_value to avoid overshooting
     if delta_obj_value != 0:
