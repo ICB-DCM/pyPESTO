@@ -539,21 +539,14 @@ def do_line_search(
     decreasing_to_high_target = False
 
     # Determine the direction of the step
-    if next_obj >= current_obj:
-        next_obj_target = high_next_obj_target
-        if next_obj >= high_next_obj_target:
-            direction = "decrease"
-            decreasing_to_high_target = True
-        else:
-            direction = "increase"
-
-    elif next_obj < current_obj:
-        next_obj_target = low_next_obj_target
-        if next_obj <= low_next_obj_target:
-            direction = "decrease"
-            decreasing_to_low_target = True
-        else:
-            direction = "increase"
+    if next_obj > low_next_obj_target and next_obj < high_next_obj_target:
+        direction = "increase"
+    elif next_obj <= low_next_obj_target:
+        direction = "decrease"
+        decreasing_to_low_target = True
+    elif next_obj >= high_next_obj_target:
+        direction = "decrease"
+        decreasing_to_high_target = True
 
     if direction == "increase":
         adapt_factor = options.step_size_factor
@@ -587,22 +580,22 @@ def do_line_search(
         next_obj = problem.objective(problem.get_reduced_vector(next_x))
 
         # check for root crossing and compute correct step size in case
-        if (
-            (direction == "increase" and next_obj > high_next_obj_target)
-            or (direction == "increase" and next_obj < low_next_obj_target)
-            or (
-                direction == "decrease"
-                and next_obj < high_next_obj_target
-                and decreasing_to_high_target
-            )
-            or (
-                direction == "decrease"
-                and next_obj > low_next_obj_target
-                and decreasing_to_low_target
-            )
+        if (direction == "increase" and next_obj > high_next_obj_target) or (
+            direction == "decrease"
+            and next_obj < high_next_obj_target
+            and decreasing_to_high_target
         ):
             return next_x_interpolate(
-                next_obj, last_obj, next_x, last_x, next_obj_target
+                next_obj, last_obj, next_x, last_x, high_next_obj_target
+            )
+
+        if (direction == "increase" and next_obj < low_next_obj_target) or (
+            direction == "decrease"
+            and next_obj > low_next_obj_target
+            and decreasing_to_low_target
+        ):
+            return next_x_interpolate(
+                next_obj, last_obj, next_x, last_x, low_next_obj_target
             )
 
 
