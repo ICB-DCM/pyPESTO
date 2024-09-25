@@ -379,17 +379,12 @@ def handle_profile_history(
     reg_par = None
 
     # Is this the first step along this profile? If so, try a simple step
-    if n_profile_points == 1:
-        # try to use the default step size
-        step_size_guess = options.default_step_size
-        delta_obj_value = 0.0
-        last_delta_fval = 0.0
-    elif np.isclose(
+    # Do the same if the last two points are too close to avoid division by small numbers
+    if n_profile_points == 1 or np.isclose(
         current_profile.x_path[par_index, -1],
         current_profile.x_path[par_index, -2],
     ):
-        # do the same if the last two points are the same
-        # to avoid division by zero or a very small number
+        # try to use the default step size
         step_size_guess = options.default_step_size
         delta_obj_value = 0.0
         last_delta_fval = 0.0
