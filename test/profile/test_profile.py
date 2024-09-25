@@ -479,6 +479,7 @@ def test_gh1165(lb, ub):
         progress_bar=False,
         profile_options=profile.ProfileOptions(
             min_step_size=0.1,
+            max_step_size=1.0,
             delta_ratio_max=0.05,
             default_step_size=0.5,
             ratio_min=0.01,

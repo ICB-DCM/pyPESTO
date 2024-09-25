@@ -61,7 +61,7 @@ def profiles(
     plot_objective_values:
         Whether to plot the objective function values instead of the likelihood
         ratio values.
-    debugging_colors:
+    quality_colors:
         If set to True, the profiles are colored according to types of steps the
         profiler took. This gives additional information about the profile quality.
         Red indicates a step for which min_step_size was reduced, blue indicates a step for which
