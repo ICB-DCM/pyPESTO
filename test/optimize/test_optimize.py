@@ -524,6 +524,22 @@ def test_ess_multiprocess(problem, request):
 
     from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
 
+    # augment objective with parameter prior to check it's copyable
+    #  https://github.com/ICB-DCM/pyPESTO/issues/1465
+    #  https://github.com/ICB-DCM/pyPESTO/pull/1467
+    problem.objective = pypesto.objective.AggregatedObjective(
+        [
+            problem.objective,
+            pypesto.objective.NegLogParameterPriors(
+                [
+                    pypesto.objective.get_parameter_prior_dict(
+                        0, "uniform", [0, 1], "lin"
+                    )
+                ]
+            ),
+        ]
+    )
+
     ess = ESSOptimizer(
         max_iter=20,
         # also test passing a callable as local_optimizer
