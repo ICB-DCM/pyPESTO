@@ -379,7 +379,7 @@ def profile_lowlevel(
             ax.plot(
                 [xs[i - 1], xs[i]],
                 [ratios[i - 1], ratios[i]],
-                color=(0, 0, 0, 1),
+                color=color if single_color else (0, 0, 0, 1),
                 linestyle="-",
             )
             if not single_color and point_color != (0, 0, 0, 1):
