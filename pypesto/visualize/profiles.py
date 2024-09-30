@@ -142,6 +142,7 @@ def profiles(
                 show_bounds=show_bounds,
                 lb_full=result.problem.lb_full,
                 ub_full=result.problem.ub_full,
+                plot_objective_values=plot_objective_values,
             )
 
     # parse and apply plotting options
@@ -165,6 +166,7 @@ def profiles_lowlevel(
     show_bounds: bool = False,
     lb_full: Sequence[float] = None,
     ub_full: Sequence[float] = None,
+    plot_objective_values: bool = False,
 ) -> list[plt.Axes]:
     """
     Lowlevel routine for profile plotting.
@@ -190,6 +192,9 @@ def profiles_lowlevel(
         Lower bound.
     ub_full:
         Upper bound.
+    plot_objective_values:
+        Whether to plot the objective function values instead of the likelihood
+        ratio values.
 
     Returns
     -------
@@ -288,7 +293,10 @@ def profiles_lowlevel(
             ax[counter].set_xlabel(x_labels[counter])
 
         if counter % columns == 0:
-            ax[counter].set_ylabel("Log-posterior ratio")
+            if plot_objective_values:
+                ax[counter].set_ylabel("Objective function value")
+            else:
+                ax[counter].set_ylabel("Log-posterior ratio")
 
         # increase counter and cleanup legend
         counter += 1
