@@ -20,6 +20,8 @@ import pypesto
 import pypesto.optimize as optimize
 from pypesto.optimize.ess import (
     ESSOptimizer,
+    FunctionEvaluatorMP,
+    RefSet,
     SacessFidesFactory,
     SacessOptimizer,
     SacessOptions,
@@ -528,8 +530,6 @@ def test_ess_multiprocess(problem, request):
 
     from fides.constants import Options as FidesOptions
 
-    from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
-
     # augment objective with parameter prior to check it's copyable
     #  https://github.com/ICB-DCM/pyPESTO/issues/1465
     #  https://github.com/ICB-DCM/pyPESTO/pull/1467
@@ -567,6 +567,14 @@ def test_ess_multiprocess(problem, request):
         refset=refset,
     )
     print("ESS result: ", res.summary())
+
+
+def test_ess_refset_repr():
+    assert RefSet(10, None).__repr__() == "RefSet(dim=10)"
+    assert (
+        RefSet(10, None, x=np.zeros(10), fx=np.arange(10)).__repr__()
+        == "RefSet(dim=10, fx=[0 ... 9])"
+    )
 
 
 def test_scipy_integrated_grad():
