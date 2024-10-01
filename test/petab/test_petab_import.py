@@ -51,7 +51,9 @@ class PetabImportTest(unittest.TestCase):
             self.petab_importers.append(importer)
 
             # check model
-            model = importer.create_model(force_compile=False)
+            model = importer.create_objective_creator().create_model(
+                force_compile=False
+            )
 
             # observable ids
             model_obs_ids = list(model.getObservableIds())
@@ -62,12 +64,13 @@ class PetabImportTest(unittest.TestCase):
 
     def test_2_simulate(self):
         for petab_importer in self.petab_importers:
-            obj = petab_importer.create_objective()
-            edatas = petab_importer.create_edatas()
+            factory = petab_importer.create_objective_creator()
+            obj = factory.create_objective()
+            edatas = factory.create_edatas()
             self.obj_edatas.append((obj, edatas))
 
             # run function
-            x_nominal = petab_importer.petab_problem.x_nominal_scaled
+            x_nominal = factory.petab_problem.x_nominal_scaled
             ret = obj(x_nominal)
 
             self.assertTrue(np.isfinite(ret))
@@ -114,12 +117,12 @@ class PetabImportTest(unittest.TestCase):
     def test_check_gradients(self):
         """Test objective FD-gradient check function."""
         # Check gradients of simple model (should always be a true positive)
-        model_name = "Bachmann_MSB2011"
-        petab_problem = pypesto.petab.PetabImporter.from_yaml(
+        model_name = "Boehm_JProteomeRes2014"
+        importer = pypesto.petab.PetabImporter.from_yaml(
             os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
         )
 
-        objective = petab_problem.create_objective()
+        objective = importer.create_problem().objective
         objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_forward
         )
@@ -127,7 +130,9 @@ class PetabImportTest(unittest.TestCase):
         objective.amici_solver.setRelativeTolerance(1e-12)
 
         self.assertFalse(
-            petab_problem.check_gradients(multi_eps=[1e-3, 1e-4, 1e-5])
+            objective.check_gradients_match_finite_differences(
+                multi_eps=[1e-3, 1e-4, 1e-5]
+            )
         )
 
 
@@ -167,16 +172,16 @@ def test_max_sensi_order():
     """Test that the AMICI objective created via PEtab exposes derivatives
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
-    problem = pypesto.petab.PetabImporter.from_yaml(
+    importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
 
     # define test parameter
-    par = problem.petab_problem.x_nominal_scaled
+    par = importer.petab_problem.x_nominal_scaled
     npar = len(par)
 
     # auto-computed max_sensi_order and fim_for_hess
-    objective = problem.create_objective()
+    objective = importer.create_objective_creator().create_objective()
     hess = objective(par, sensi_orders=(2,))
     assert hess.shape == (npar, npar)
     assert (hess != 0).any()
@@ -190,18 +195,24 @@ def test_max_sensi_order():
     )
 
     # fix max_sensi_order to 1
-    objective = problem.create_objective(max_sensi_order=1)
+    objective = importer.create_objective_creator().create_objective(
+        max_sensi_order=1
+    )
     objective(par, sensi_orders=(1,))
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # do not use FIM
-    objective = problem.create_objective(fim_for_hess=False)
+    objective = importer.create_objective_creator().create_objective(
+        fim_for_hess=False
+    )
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # only allow computing function values
-    objective = problem.create_objective(max_sensi_order=0)
+    objective = importer.create_objective_creator().create_objective(
+        max_sensi_order=0
+    )
     objective(par)
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(1,))

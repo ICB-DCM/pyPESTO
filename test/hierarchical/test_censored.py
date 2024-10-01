@@ -39,10 +39,7 @@ def test_optimization():
     )
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    importer.create_model()
-
-    objective = importer.create_objective()
-    problem = importer.create_problem(objective)
+    problem = importer.create_problem()
 
     result = pypesto.optimize.minimize(
         problem=problem, n_starts=1, optimizer=optimizer
@@ -63,8 +60,7 @@ def test_ordinal_calculator_and_objective():
     petab_problem = petab.Problem.from_yaml(example_censored_yaml)
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    objective = importer.create_objective()
-    problem = importer.create_problem(objective)
+    problem = importer.create_problem()
 
     def calculate(problem, x_dct):
         return problem.objective.calculator(

@@ -10,7 +10,8 @@ import petabtests
 import pytest
 
 import pypesto
-import pypesto.objective.roadrunner as objective_rr
+import pypesto.petab
+from pypesto.objective.roadrunner import simulation_to_measurement_df
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -60,19 +61,21 @@ def _execute_case_rr(case, model_type, version):
     # import petab problem
     yaml_file = case_dir / petabtests.problem_yaml_name(case)
 
-    importer = objective_rr.PetabImporterRR.from_yaml(yaml_file)
+    importer = pypesto.petab.PetabImporter.from_yaml(
+        yaml_file, simulator_type="roadrunner"
+    )
     petab_problem = importer.petab_problem
-    obj = importer.create_objective()
+    obj = importer.create_problem().objective
 
     # the scaled parameters
-    problem_parameters = importer.petab_problem.x_nominal_scaled
+    problem_parameters = importer.petab_problem.x_nominal_free_scaled
 
     # simulate
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
 
     # extract results
     llh = -ret["fval"]
-    simulation_df = objective_rr.simulation_to_measurement_df(
+    simulation_df = simulation_to_measurement_df(
         ret["simulation_results"], petab_problem.measurement_df
     )
 
@@ -117,7 +120,9 @@ def test_deepcopy():
         os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
     petab_problem.model_name = model_name
-    importer = objective_rr.PetabImporterRR(petab_problem)
+    importer = pypesto.petab.PetabImporter(
+        petab_problem, simulator_type="roadrunner"
+    )
     problem_parameters = petab_problem.x_nominal_free_scaled
 
     problem = importer.create_problem()
@@ -147,7 +152,9 @@ def test_multiprocessing():
         os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
     petab_problem.model_name = model_name
-    importer = objective_rr.PetabImporterRR(petab_problem)
+    importer = pypesto.petab.PetabImporter(
+        petab_problem, simulator_type="roadrunner"
+    )
 
     problem = importer.create_problem()
     # start 30 times from the same point
