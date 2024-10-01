@@ -12,18 +12,23 @@ Release notes
 - **Breaking Changes**
     - Remove Aesara support (#1453, #1455)
 - General
-    - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443)
-    - Update references/documentation (#1404, #1456)
+    - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443, #1473)
+    - Update references/documentation (#1404, #1456, #1474)
 - Visualize
     - allow log and/or linear scale for visualization (#1435)
+    - More informative error message for start indices. (#1472)
 - Optimization
     - SacessOptimizer: Fix acceptance threshold for objective improvement (#1457)
     - SacessOptimizer: expose more hyperparameters + minor fixes (#1459)
     - SacessOptimizer, ESSOptimizer: Bound-normalize parameters for proximity check (#1462)
 - Objective
     - FD-objective correctly working with fixed parameters (#1446)
+    - Petab Importer reforge (#1442)
+    - Use cloudpickle for serializing NegLogParameterPriors (#1467)
 - Sampling
     - Bayes Factor Tutorial (#1444)
+- Ensemble
+    - Added HPD calculation to ensemble (#1431)
 
 
 0.5.3 (2024-08-01)
