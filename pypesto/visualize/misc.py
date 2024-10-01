@@ -349,7 +349,7 @@ def process_start_indices(
             raise ValueError(
                 f"Permissible values for start_indices are {ALL}, "
                 f"{ALL_CLUSTERED}, {FIRST_CLUSTER}, an integer or a "
-                f"list of indices."
+                f"list of indices. Got {start_indices}."
             )
     # if it is an integer n, select the first n starts
     if isinstance(start_indices, Number):
