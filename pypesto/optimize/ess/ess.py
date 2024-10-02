@@ -443,11 +443,15 @@ class ESSOptimizer:
             raise ValueError("i == j")
         x = self.refset.x
 
-        d = x[j] - x[i]
-        alpha = np.sign(j - i)
+        d = (x[j] - x[i]) / 2
+        # i < j implies f(x_i) < f(x_j)
+        alpha = 1 if i < j else -1
+        # beta is a relative rank-based distance between the two parents
+        #  0 <= beta <= 1
         beta = (np.abs(j - i) - 1) / (self.refset.dim - 2)
+        # new hyper-rectangle, biased towards the better parent
         c1 = x[i] - d * (1 + alpha * beta)
-        c2 = x[i] - d * (1 - alpha * beta)
+        c2 = x[i] + d * (1 - alpha * beta)
 
         # this will not always yield admissible points -> clip to bounds
         ub, lb = self.evaluator.problem.ub, self.evaluator.problem.lb
