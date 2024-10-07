@@ -11,6 +11,7 @@ from petab_select import (
     CANDIDATE_SPACE,
     MODELS,
     PREDECESSOR_MODEL,
+    UNCALIBRATED_MODELS,
     VIRTUAL_INITIAL_MODEL,
     CandidateSpace,
     Criterion,
@@ -393,13 +394,13 @@ class MethodCaller:
             user_calibrated_models=self.user_calibrated_models,
         )
 
-        if not iteration[MODELS]:
+        if not iteration[UNCALIBRATED_MODELS]:
             raise StopIteration("No valid models found.")
 
         # TODO parallelize calibration (maybe not sensible if
         #      `self.select_first_improvement`)
-        newly_calibrated_models = {}
-        for model in iteration[MODELS]:
+        calibrated_models = {}
+        for model in iteration[UNCALIBRATED_MODELS]:
             if (
                 model.get_criterion(
                     criterion=self.criterion,
@@ -419,7 +420,7 @@ class MethodCaller:
             else:
                 self.new_model_problem(model=model)
 
-            newly_calibrated_models[model.get_hash()] = model
+            calibrated_models[model.get_hash()] = model
             method_signal = self.handle_calibrated_model(
                 model=model,
                 predecessor_model=iteration[PREDECESSOR_MODEL],
@@ -429,7 +430,7 @@ class MethodCaller:
 
         iteration_results = petab_select.ui.end_iteration(
             candidate_space=iteration[CANDIDATE_SPACE],
-            newly_calibrated_models=newly_calibrated_models,
+            calibrated_models=calibrated_models,
         )
 
         self.calibrated_models.update(iteration_results[MODELS])
