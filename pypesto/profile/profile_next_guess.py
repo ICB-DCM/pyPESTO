@@ -299,12 +299,12 @@ def adaptive_step(
     # compute the next objective value which we aim for
     high_next_obj_target = (
         -np.log(1.0 - options.delta_ratio_max)
-        + options.magic_factor_obj_value * abs(last_delta_fval)
+        + options.adaptive_target_scaling_factor * abs(last_delta_fval)
         + current_profile.fval_path[-1]
     )
     low_next_obj_target = (
         +np.log(1.0 - options.delta_ratio_max)
-        - options.magic_factor_obj_value * abs(last_delta_fval)
+        - options.adaptive_target_scaling_factor * abs(last_delta_fval)
         + current_profile.fval_path[-1]
     )
 

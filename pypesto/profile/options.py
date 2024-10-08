@@ -32,9 +32,9 @@ class ProfileOptions(dict):
     reg_order:
         Maximum degree of regression polynomial used in regression based
         adaptive profile points proposal.
-    magic_factor_obj_value:
-        There is this magic factor in the old profiling code which slows down
-        profiling at small ratios (must be >= 0 and < 1).
+    adaptive_target_scaling_factor:
+        The scaling factor of the next_obj_target in next guess generation.
+        Larger values result in larger next_guess step size (must be > 1).
     whole_path:
         Whether to profile the whole bounds or only till we get below the
         ratio.
@@ -50,7 +50,7 @@ class ProfileOptions(dict):
         ratio_min: float = 0.145,
         reg_points: int = 10,
         reg_order: int = 4,
-        magic_factor_obj_value: float = 1.5,
+        adaptive_target_scaling_factor: float = 1.5,
         whole_path: bool = False,
     ):
         super().__init__()
@@ -63,7 +63,7 @@ class ProfileOptions(dict):
         self.delta_ratio_max = delta_ratio_max
         self.reg_points = reg_points
         self.reg_order = reg_order
-        self.magic_factor_obj_value = magic_factor_obj_value
+        self.adaptive_target_scaling_factor = adaptive_target_scaling_factor
         self.whole_path = whole_path
 
         self.validate()
@@ -112,5 +112,5 @@ class ProfileOptions(dict):
         if self.default_step_size < self.min_step_size:
             raise ValueError("default_step_size must be >= min_step_size.")
 
-        if self.magic_factor_obj_value < 1:
-            raise ValueError("magic_factor_obj_value must be > 1.")
+        if self.adaptive_target_scaling_factor < 1:
+            raise ValueError("adaptive_target_scaling_factor must be > 1.")

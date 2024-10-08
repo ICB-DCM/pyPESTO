@@ -93,7 +93,9 @@ def parameter_profile(
     profile_options = ProfileOptions.create_instance(profile_options)
     profile_options.validate()
 
-    # create a function handle that will be called later to get the next point
+    # Create a function handle that will be called later to get the next point.
+    # This function will be used to generate the initial points of optimization
+    # steps in profiling in `walk_along_profile.py`
     if isinstance(next_guess_method, str):
 
         def create_next_guess(
