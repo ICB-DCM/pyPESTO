@@ -560,7 +560,7 @@ class ESSOptimizer:
     def _maybe_update_global_best(self, x, fx):
         """Update the global best value if the provided value is better."""
         if fx < self.fx_best:
-            self.x_best = x[:]
+            self.x_best[:] = x
             self.fx_best = fx
             self.x_best_has_changed = True
             self.history.update(
@@ -583,9 +583,9 @@ class ESSOptimizer:
                 continue
 
             # offspring is better than parent
-            x_parent = self.refset.x[i]
+            x_parent = self.refset.x[i].copy()
             fx_parent = self.refset.fx[i]
-            x_child = x_best_children[i]
+            x_child = x_best_children[i].copy()
             fx_child = fx_best_children[i]
             improvement = 1
             # Multiplier used in determining the hyper-rectangle from which to
