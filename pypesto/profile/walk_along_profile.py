@@ -155,7 +155,7 @@ def walk_along_profile(
                 optimization_successful = True
                 color_next = np.concatenate((color_now[:3], [0.3]))
 
-        if not optimization_successful:
+        while not optimization_successful:
             # Cannot optimize successfully by reducing max_step_size
             # Let's try to optimize by increasing min_step_size
             logger.warning(
@@ -165,54 +165,51 @@ def walk_along_profile(
 
             min_step_increase_factor = 1.25
 
-            while not optimization_successful:
-                # Check min_step_size is not increased above max_step_size
-                if (
-                    options.min_step_size * min_step_increase_factor
-                    > options.max_step_size
-                ):
-                    logger.warning(
-                        "Min step size increased above max step size. "
-                        "Setting a higher max step size can help avoid this issue."
-                    )
-                    break
-
-                # compute the new start point for optimization
-                x_next = create_next_guess(
-                    x_now,
-                    i_par,
-                    par_direction,
-                    options,
-                    current_profile,
-                    problem,
-                    global_opt,
-                    min_step_increase_factor,
-                    1.0,
+            # Check min_step_size is not increased above max_step_size
+            if (
+                options.min_step_size * min_step_increase_factor
+                > options.max_step_size
+            ):
+                logger.warning(
+                    "Min step size increased above max step size. "
+                    "Setting a higher max step size can help avoid this issue."
                 )
+                break
 
-                # fix current profiling parameter to current value and set start point
-                problem.fix_parameters(i_par, x_next[i_par])
-                startpoint = x_next[problem.x_free_indices]
+            # compute the new start point for optimization
+            x_next = create_next_guess(
+                x_now,
+                i_par,
+                par_direction,
+                options,
+                current_profile,
+                problem,
+                global_opt,
+                min_step_increase_factor,
+                1.0,
+            )
 
-                optimizer_result = optimizer.minimize(
-                    problem=problem,
-                    x0=startpoint,
-                    id=str(0),
-                    optimize_options=OptimizeOptions(
-                        allow_failed_starts=False
-                    ),
+            # fix current profiling parameter to current value and set start point
+            problem.fix_parameters(i_par, x_next[i_par])
+            startpoint = x_next[problem.x_free_indices]
+
+            optimizer_result = optimizer.minimize(
+                problem=problem,
+                x0=startpoint,
+                id=str(0),
+                optimize_options=OptimizeOptions(allow_failed_starts=False),
+            )
+
+            if np.isfinite(optimizer_result.fval):
+                optimization_successful = True
+                # The color of the point is set to blue if the min_step_size was increased
+                color_next = np.array([0, 0, 1, 1])
+            else:
+                min_step_increase_factor *= 1.25
+                logger.warning(
+                    f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed. "
+                    f"Increasing min_step_size to {options.min_step_size * min_step_increase_factor}."
                 )
-
-                if np.isfinite(optimizer_result.fval):
-                    optimization_successful = True
-                    # The color of the point is set to blue if the min_step_size was increased
-                    color_next = np.array([0, 0, 1, 1])
-                else:
-                    min_step_increase_factor *= 1.25
-                    logger.warning(
-                        f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed. "
-                        f"Increasing min_step_size to {options.min_step_size * min_step_increase_factor}."
-                    )
 
         if not optimization_successful:
             # Cannot optimize successfully by reducing max_step_size or increasing min_step_size
