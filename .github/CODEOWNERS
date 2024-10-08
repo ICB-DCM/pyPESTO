@@ -1,7 +1,7 @@
 # see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # default owners = active maintainers
-* @Doresic @PaulJonasJost @m-philipps
+* @Doresic @PaulJonasJost @vwiela
 
 # Examples
 /doc/example/censored_data.ipynb @Doresic
@@ -28,29 +28,30 @@
 /pypesto/hierarchical/semiquantitative/ @Doresic
 /pypesto/history/ @PaulJonasJost
 /pypesto/objective/ @PaulJonasJost
+/pypesto/objective/julia @vwiela
 /pypesto/objective/amici/ @dweindl @FFroehlich
 /pypesto/objective/jax/ @FFroehlich
 /pypesto/objective/aesara/ @FFroehlich
 /pypesto/optimize/ @PaulJonasJost
 /pypesto/petab/ @dweindl @FFroehlich
 /pypesto/predict/ @dilpath
-/pypesto/problem/ @PaulJonasJost @m-philipps
-/pypesto/profile/ @PaulJonasJost
+/pypesto/problem/ @PaulJonasJost @vwiela
+/pypesto/profile/ @PaulJonasJost @Doresic
 /pypesto/result/ @PaulJonasJost
-/pypesto/sample/ @dilpath @vwiela
+/pypesto/sample/ @dilpath @arrjon
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
 /pypesto/visualize/ @stephanmg @m-philipps
 
 # Tests
-/test/base/ @PaulJonasJost @m-philipps
+/test/base/ @PaulJonasJost @vwiela
 /test/doc/ @PaulJonasJost
-/test/hierarchical/ @dweindl @doresic
-/test/julia/ @PaulJonasJost
+/test/hierarchical/ @dweindl @Doresic
+/test/julia/ @PaulJonasJost @vwiela
 /test/optimize/ @PaulJonasJost
 /test/petab/ @dweindl @FFroehlich
-/test/profile/ @PaulJonasJost
-/test/sample/ @dilpath
+/test/profile/ @PaulJonasJost @Doresic
+/test/sample/ @dilpath @arrjon
 /test/select/ @dilpath
 /test/visualize/ @stephanmg @m-philipps
