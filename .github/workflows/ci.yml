@@ -8,6 +8,7 @@ on:
     - develop
   pull_request:
   workflow_dispatch:
+  merge_group:
   schedule:
     # run Monday and Thursday at 03:42 UTC
     - cron: '42 3 * * MON,THU'
