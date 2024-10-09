@@ -128,24 +128,6 @@ def create_petab_problem():
     return problem
 
 
-def sample_petab_problem():
-    # create problem
-    problem = create_petab_problem()
-
-    sampler = sample.AdaptiveMetropolisSampler(
-        options={
-            "show_progress": False,
-        },
-    )
-    result = sample.sample(
-        problem,
-        n_samples=1000,
-        sampler=sampler,
-        x0=np.array([3, -4]),
-    )
-    return result
-
-
 def prior(x):
     return multivariate_normal.pdf(x, mean=-1.0, cov=0.7)
 
