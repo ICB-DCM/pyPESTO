@@ -819,6 +819,16 @@ def test_thermodynamic_integration():
         )
     )
 
+    # harmonic mean log evidence
+    harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
+    # compute the log evidence using stabilized harmonic mean
+    prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
+    harmonic_stabilized_evidence = sample.evidence.harmonic_mean_log_evidence(
+        result=result,
+        prior_samples=prior_samples,
+        neg_log_likelihood_fun=problem.objective,
+    )
+
     # compute evidence
     evidence = quad(
         lambda x: 1
@@ -834,6 +844,10 @@ def test_thermodynamic_integration():
     assert np.isclose(log_evidence_simps, np.log(evidence[0]), atol=tol)
     assert np.isclose(
         log_evidence_steppingstone, np.log(evidence[0]), atol=tol
+    )
+    assert np.isclose(harmonic_evidence, np.log(evidence[0]), atol=tol)
+    assert np.isclose(
+        harmonic_stabilized_evidence, np.log(evidence[0]), atol=tol
     )
 
 
@@ -853,50 +867,6 @@ def test_laplace_approximation_log_evidence():
         problem, result.optimize_result.x[0]
     )
     assert np.isclose(log_evidence, log_evidence_true, atol=0.1)
-
-
-@pytest.mark.flaky(reruns=2)
-def test_harmonic_mean_log_evidence():
-    tol = 2
-    # define problem
-    problem = gaussian_problem()
-
-    # run optimization and MCMC
-    result = optimize.minimize(
-        problem,
-        progress_bar=False,
-        n_starts=10,
-    )
-    result = sample.sample(
-        problem,
-        n_samples=2000,
-        result=result,
-    )
-
-    # compute the log evidence using harmonic mean
-    harmonic_evidence = sample.evidence.harmonic_mean_log_evidence(result)
-    # compute the log evidence using stabilized harmonic mean
-    prior_samples = np.random.uniform(problem.lb, problem.ub, size=100)
-    harmonic_stabilized_evidence = sample.evidence.harmonic_mean_log_evidence(
-        result=result,
-        prior_samples=prior_samples,
-        neg_log_likelihood_fun=problem.objective,
-    )
-
-    # compute real evidence
-    evidence = quad(
-        lambda x: 1
-        / (problem.ub[0] - problem.lb[0])
-        * np.exp(gaussian_llh(x)),
-        a=problem.lb[0],
-        b=problem.ub[0],
-    )
-
-    # compare to known value
-    assert np.isclose(harmonic_evidence, np.log(evidence[0]), atol=tol)
-    assert np.isclose(
-        harmonic_stabilized_evidence, np.log(evidence[0]), atol=tol
-    )
 
 
 @pytest.mark.flaky(reruns=3)
