@@ -42,7 +42,6 @@
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
-/pypesto/visualize/ @stephanmg @m-philipps
 
 # Tests
 /test/base/ @PaulJonasJost @vwiela
@@ -54,4 +53,3 @@
 /test/profile/ @PaulJonasJost @Doresic
 /test/sample/ @dilpath @arrjon
 /test/select/ @dilpath
-/test/visualize/ @stephanmg @m-philipps
