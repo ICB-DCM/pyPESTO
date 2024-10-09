@@ -209,7 +209,7 @@ def sampler(request):
     elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
     elif request.param == "Dynesty":
-        return sample.DynestySampler(objective_type="negloglike")
+        return sample.DynestySampler(objective_type=OBJECTIVE_NEGLOGLIKE)
 
 
 @pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
@@ -231,6 +231,7 @@ def test_pipeline(sampler, problem):
         n_starts=3,
         optimizer=optimizer,
         progress_bar=False,
+        filename=None,
     )
 
     # sample
@@ -239,9 +240,16 @@ def test_pipeline(sampler, problem):
         sampler=sampler,
         n_samples=100,
         result=result,
+        filename=None,
     )
-    # remove warnings in test/sample/test_sample.
-    # Warning here: pypesto/visualize/sampling.py:1104
+    # test dynesty mcmc samples
+    if isinstance(sampler, sample.DynestySampler):
+        trace_original = sampler.get_original_samples().trace_neglogpost
+        trace_mcmc = result.sample_result.trace_neglogpost
+        # Nested sampling function values are monotonically increasing
+        assert (np.diff(trace_original) <= 0).all()
+        # MCMC samples are not
+        assert not (np.diff(trace_mcmc) <= 0).all()
     # geweke test
     sample.geweke_test(result=result)
 
@@ -743,26 +751,6 @@ def test_samples_cis():
         assert (lb < ub).all()
         # check if dimensions agree
         assert lb.shape == ub.shape
-
-
-def test_dynesty_mcmc_samples():
-    problem = gaussian_problem()
-    sampler = sample.DynestySampler(objective_type=OBJECTIVE_NEGLOGLIKE)
-
-    result = sample.sample(
-        problem=problem,
-        sampler=sampler,
-        n_samples=None,
-        filename=None,
-    )
-
-    original_sample_result = sampler.get_original_samples()
-    mcmc_sample_result = result.sample_result
-
-    # Nested sampling function values are monotonically increasing
-    assert (np.diff(original_sample_result.trace_neglogpost) <= 0).all()
-    # MCMC samples are not
-    assert not (np.diff(mcmc_sample_result.trace_neglogpost) <= 0).all()
 
 
 def test_dynesty_posterior():
