@@ -155,16 +155,15 @@ def walk_along_profile(
                 optimization_successful = True
                 color_next = np.concatenate((color_now[:3], [0.3]))
 
-        while not optimization_successful:
+        if not optimization_successful:
             # Cannot optimize successfully by reducing max_step_size
             # Let's try to optimize by increasing min_step_size
             logger.warning(
                 f"Failing to optimize at {problem.x_names[i_par]}={x_next[i_par]} after reducing max_step_size."
                 f"Trying to increase min_step_size."
             )
-
             min_step_increase_factor = 1.25
-
+        while not optimization_successful:
             # Check min_step_size is not increased above max_step_size
             if (
                 options.min_step_size * min_step_increase_factor
