@@ -429,23 +429,20 @@ def test_regularize_covariance():
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
 
-def test_geweke_test_switch():
-    """Check geweke test returns expected burn in index."""
-    warm_up = np.zeros((100, 2))
-    converged = np.ones((901, 2))
+@pytest.mark.parametrize(
+    "warm_up_size, converged_size, expected_burn_in",
+    [
+        (100, 901, 100),  # "Larger" sample numbers
+        (25, 75, 25),  # Small sample numbers
+    ],
+)
+def test_geweke_test_switch(warm_up_size, converged_size, expected_burn_in):
+    """Check geweke test returns expected burn in index for different chain sizes."""
+    warm_up = np.zeros((warm_up_size, 2))
+    converged = np.ones((converged_size, 2))
     chain = np.concatenate((warm_up, converged), axis=0)
     burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain=chain)
-    assert burn_in == 100
-
-
-def test_geweke_test_switch_short():
-    """Check geweke test returns expected burn in index
-    for small sample numbers."""
-    warm_up = np.zeros((25, 2))
-    converged = np.ones((75, 2))
-    chain = np.concatenate((warm_up, converged), axis=0)
-    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain=chain)
-    assert burn_in == 25
+    assert burn_in == expected_burn_in
 
 
 def test_geweke_test_unconverged():
