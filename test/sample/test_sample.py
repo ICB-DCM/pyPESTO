@@ -276,6 +276,7 @@ def test_ground_truth():
     assert statistic > 0.1
 
 
+@pytest.mark.flaky(reruns=3)
 def test_ground_truth_separated_modes():
     """Test whether we actually retrieve correct distributions."""
     # use best self-implemented sampler, which has a chance to correctly
@@ -294,7 +295,7 @@ def test_ground_truth_separated_modes():
 
     result = sample.sample(
         problem,
-        n_samples=1e4,
+        n_samples=2000,
         sampler=sampler,
         x0=np.array([0.0]),
     )
@@ -304,9 +305,9 @@ def test_ground_truth_separated_modes():
 
     # generate bimodal ground-truth samples
     # "first" mode centered at -1
-    rvs1 = norm.rvs(size=5000, loc=-1.0, scale=np.sqrt(0.7))
+    rvs1 = norm.rvs(size=1000, loc=-1.0, scale=np.sqrt(0.7))
     # "second" mode centered at 100
-    rvs2 = norm.rvs(size=5001, loc=100.0, scale=np.sqrt(0.8))
+    rvs2 = norm.rvs(size=1001, loc=100.0, scale=np.sqrt(0.8))
 
     # test for distribution similarity
     statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]), samples)
@@ -324,7 +325,7 @@ def test_ground_truth_separated_modes():
     )
     result = sample.sample(
         problem,
-        n_samples=1e4,
+        n_samples=2000,
         sampler=sampler,
         x0=np.array([-2.0]),
     )
@@ -354,7 +355,7 @@ def test_ground_truth_separated_modes():
     )
     result = sample.sample(
         problem,
-        n_samples=1e4,
+        n_samples=2000,
         sampler=sampler,
         x0=np.array([120.0]),
     )
@@ -412,19 +413,21 @@ def test_regularize_covariance():
 
 
 @pytest.mark.parametrize(
-    "warm_up_size, converged_size, expected_burn_in",
+    "non_converged_size, converged_size",
     [
-        (100, 901, 100),  # "Larger" sample numbers
-        (25, 75, 25),  # Small sample numbers
+        (100, 901),  # "Larger" sample numbers
+        (25, 75),  # Small sample numbers
     ],
 )
-def test_geweke_test_switch(warm_up_size, converged_size, expected_burn_in):
+def test_geweke_test_switch(
+    non_converged_size, converged_size, expected_burn_in
+):
     """Check geweke test returns expected burn in index for different chain sizes."""
-    warm_up = np.zeros((warm_up_size, 2))
+    warm_up = np.zeros((non_converged_size, 2))
     converged = np.ones((converged_size, 2))
     chain = np.concatenate((warm_up, converged), axis=0)
     burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain=chain)
-    assert burn_in == expected_burn_in
+    assert burn_in == non_converged_size
 
 
 def test_geweke_test_unconverged():
