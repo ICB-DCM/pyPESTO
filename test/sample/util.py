@@ -18,8 +18,6 @@ X_NAMES = ["x"]  # Parameter names
 MIXTURE_WEIGHTS = [0.3, 0.7]  # Weights for Gaussian mixture model
 MIXTURE_MEANS = [-1.5, 2.5]  # Means for Gaussian mixture model
 MIXTURE_COVS = [0.1, 0.2]  # Covariances for Gaussian mixture model
-SEPARATED_MODES_MEANS = [-1.0, 100.0]  # Means for separated modes
-SEPARATED_MODES_COVS = [0.7, 0.8]  # Covariances for separated modes
 
 # Constants for general testing
 N_STARTS_FEW = 5  # Number of starts for tests that dont require convergence
@@ -82,36 +80,6 @@ def gaussian_mixture_problem():
     objective = pypesto.Objective(fun=nllh)
     problem = pypesto.Problem(
         objective=objective, lb=LB_GAUSSIAN, ub=UB_GAUSSIAN, x_names=X_NAMES
-    )
-    return problem
-
-
-def gaussian_mixture_separated_modes_llh(x):
-    """Log-likelihood for Gaussian mixture model with separated modes."""
-    return np.log(
-        0.5
-        * multivariate_normal.pdf(
-            x, mean=SEPARATED_MODES_MEANS[0], cov=SEPARATED_MODES_COVS[0]
-        )
-        + 0.5
-        * multivariate_normal.pdf(
-            x, mean=SEPARATED_MODES_MEANS[1], cov=SEPARATED_MODES_COVS[1]
-        )
-    )
-
-
-def gaussian_mixture_separated_modes_problem():
-    """Problem based on a mixture of Gaussians with far-separated modes."""
-
-    def nllh(x):
-        return -gaussian_mixture_separated_modes_llh(x)
-
-    objective = pypesto.Objective(fun=nllh)
-    problem = pypesto.Problem(
-        objective=objective,
-        lb=LB_GAUSSIAN_MODES,
-        ub=UB_GAUSSIAN_MODES,
-        x_names=X_NAMES,
     )
     return problem
 

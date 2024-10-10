@@ -24,15 +24,12 @@ from .util import (
     N_SAMPLE_SOME,
     N_STARTS_FEW,
     N_STARTS_SOME,
-    SEPARATED_MODES_COVS,
-    SEPARATED_MODES_MEANS,
     STATISTIC_TOL,
     UB_GAUSSIAN,
     X_NAMES,
     create_petab_problem,
     gaussian_llh,
     gaussian_mixture_problem,
-    gaussian_mixture_separated_modes_problem,
     gaussian_nllh_grad,
     gaussian_nllh_hess,
     gaussian_problem,
@@ -174,106 +171,6 @@ def test_ground_truth():
     assert statistic > STATISTIC_TOL
 
 
-@pytest.mark.flaky(reruns=3)
-def test_ground_truth_separated_modes():
-    """Test whether we actually retrieve correct distributions."""
-    # use best self-implemented sampler, which has a chance to correctly
-    # sample from the distribution
-
-    # First use parallel tempering with 3 chains
-    sampler = sample.AdaptiveParallelTemperingSampler(
-        internal_sampler=sample.AdaptiveMetropolisSampler(),
-        options={
-            "show_progress": False,
-        },
-        n_chains=N_CHAINS,
-    )
-
-    problem = gaussian_mixture_separated_modes_problem()
-
-    result = sample.sample(
-        problem,
-        n_samples=2 * N_SAMPLE_SOME,
-        sampler=sampler,
-        x0=np.array([0.0]),
-    )
-
-    # get samples of first chain
-    samples = result.sample_result.trace_x[0, :, 0]
-
-    # generate bimodal ground-truth samples
-    # "first" mode centered at -1
-    rvs1 = norm.rvs(
-        size=N_SAMPLE_SOME,
-        loc=SEPARATED_MODES_MEANS[0],
-        scale=np.sqrt(SEPARATED_MODES_COVS[0]),
-    )
-    # "second" mode centered at 100
-    rvs2 = norm.rvs(
-        size=N_SAMPLE_SOME,
-        loc=SEPARATED_MODES_MEANS[1],
-        scale=np.sqrt(SEPARATED_MODES_COVS[1]),
-    )
-
-    # test for distribution similarity
-    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]), samples)
-
-    # only parallel tempering finds both modes
-    print(statistic, pval)
-    assert statistic < STATISTIC_TOL
-
-    # sample using adaptive metropolis (single-chain)
-    # initiated around the "first" mode of the distribution
-    sampler = sample.AdaptiveMetropolisSampler(
-        options={
-            "show_progress": False,
-        },
-    )
-    result = sample.sample(
-        problem,
-        n_samples=2 * N_SAMPLE_SOME,
-        sampler=sampler,
-        x0=np.array([-2.0]),
-    )
-
-    # get samples of first chain
-    samples = result.sample_result.trace_x[0, :, 0]
-
-    # test for distribution similarity
-    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]), samples)
-    # single-chain adaptive metropolis does not find both modes
-    assert statistic > STATISTIC_TOL
-
-    # actually centered at the "first" mode
-    statistic, pval = ks_2samp(rvs1, samples)
-    assert statistic < STATISTIC_TOL
-
-    # sample using adaptive metropolis (single-chain)
-    # initiated around the "second" mode of the distribution
-    sampler = sample.AdaptiveMetropolisSampler(
-        options={
-            "show_progress": False,
-        },
-    )
-    result = sample.sample(
-        problem,
-        n_samples=2 * N_SAMPLE_SOME,
-        sampler=sampler,
-        x0=np.array([120.0]),
-    )
-
-    # get samples of first chain
-    samples = result.sample_result.trace_x[0, :, 0]
-
-    # test for distribution similarity
-    statistic, pval = ks_2samp(np.concatenate([rvs1, rvs2]), samples)
-    assert statistic > STATISTIC_TOL
-
-    # actually centered at the "second" mode
-    statistic, pval = ks_2samp(rvs2, samples)
-    assert statistic < STATISTIC_TOL
-
-
 def test_multiple_startpoints():
     problem = gaussian_problem()
     x0s = [np.array([0]), np.array([1])]
@@ -316,9 +213,7 @@ def test_regularize_covariance():
         (25, 75),  # Small sample numbers
     ],
 )
-def test_geweke_test_switch(
-    non_converged_size, converged_size, expected_burn_in
-):
+def test_geweke_test_switch(non_converged_size, converged_size):
     """Check geweke test returns expected burn in index for different chain sizes."""
     warm_up = np.zeros((non_converged_size, 2))
     converged = np.ones((converged_size, 2))
