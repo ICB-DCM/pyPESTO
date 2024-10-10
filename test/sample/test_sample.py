@@ -173,7 +173,7 @@ def test_ground_truth():
 
 def test_multiple_startpoints():
     problem = gaussian_problem()
-    x0s = [np.array([0]), np.array([1])]
+    x0s = [np.array([0]), np.array([1]), np.array([2])]
     sampler = sample.ParallelTemperingSampler(
         internal_sampler=sample.MetropolisSampler(),
         options={
@@ -188,10 +188,11 @@ def test_multiple_startpoints():
         sampler=sampler,
     )
 
-    assert result.sample_result.trace_neglogpost.shape[0] == 2
+    assert result.sample_result.trace_neglogpost.shape[0] == N_CHAINS
     assert [
         result.sample_result.trace_x[0][0],
         result.sample_result.trace_x[1][0],
+        result.sample_result.trace_x[2][0],
     ] == x0s
 
 
