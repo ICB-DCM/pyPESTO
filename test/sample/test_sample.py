@@ -85,7 +85,7 @@ def sampler(request):
     elif request.param == "Pymc":
         from pypesto.sample.pymc import PymcSampler
 
-        return PymcSampler(tune=5, progressbar=False)
+        return PymcSampler(tune=5, progressbar=False, chains=N_CHAINS)
     elif request.param == "Emcee":
         return sample.EmceeSampler(nwalkers=10)
     elif request.param == "Dynesty":

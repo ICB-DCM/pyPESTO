@@ -2,10 +2,10 @@
 
 
 import numpy as np
+import scipy.optimize as so
 from scipy.stats import multivariate_normal, norm, uniform
 
 import pypesto
-import pypesto.optimize as optimize
 
 # Constants for Gaussian problems or Uniform with Gaussian prior
 MU = 0  # Gaussian mean
@@ -118,7 +118,7 @@ def gaussian_mixture_separated_modes_problem():
 
 def rosenbrock_problem():
     """Problem based on Rosenbrock objective."""
-    objective = pypesto.Objective(fun=optimize.rosen, grad=optimize.rosen_der)
+    objective = pypesto.Objective(fun=so.rosen, grad=so.rosen_der)
 
     dim_full = 2
     lb = -5 * np.ones((dim_full, 1))
