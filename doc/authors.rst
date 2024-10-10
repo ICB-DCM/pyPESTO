@@ -24,3 +24,4 @@ with major contributions by (status 2024):
 - Erika Dudkin
 - Domagoj Doresic
 - Jonas Arruda
+- Maren Philipps
