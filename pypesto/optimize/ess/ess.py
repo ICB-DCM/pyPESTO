@@ -564,7 +564,7 @@ class ESSOptimizer:
             self.fx_best = fx
             self.x_best_has_changed = True
             self.history.update(
-                self.x_best,
+                self.x_best.copy(),
                 (0,),
                 pypesto.C.MODE_FUN,
                 {pypesto.C.FVAL: self.fx_best},
