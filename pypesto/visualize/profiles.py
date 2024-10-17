@@ -119,7 +119,7 @@ def profiles(
                 # multiple results per axes object
                 color_ind = i_result
 
-            # If debugging_colors is set to True, we use the colors provided
+            # If quality_colors is set to True, we use the colors provided
             # by profiler_result.color_path. This will be done only if there is
             # only one result and one profile_list_id (basically one profile per plot).
             if (
