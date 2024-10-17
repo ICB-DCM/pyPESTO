@@ -256,9 +256,9 @@ def profiles_lowlevel(
         # If we use colors from profiler_result.color_path,
         # we need to take the color path of each profile
         if isinstance(color, list) and isinstance(color[i_plot], np.ndarray):
-            i_color = color[i_plot]
+            color_i = color[i_plot]
         else:
-            i_color = color
+            color_i = color
 
         # handle legend
         if i_plot == 0:
@@ -279,7 +279,7 @@ def profiles_lowlevel(
                 fval,
                 ax[counter],
                 size=size,
-                color=i_color,
+                color=color_i,
                 legend_text=tmp_legend,
                 show_bounds=show_bounds,
                 lb=lb,
