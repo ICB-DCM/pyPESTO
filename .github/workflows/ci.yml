@@ -209,7 +209,7 @@ jobs:
 
     - name: Install PEtabJL dependencies
       run: >
-        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="PEtab", version="2.15.0"));
+        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="PEtab", version="3.2.1"));
         Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials")'
 
     - name: Run tests
