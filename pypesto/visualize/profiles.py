@@ -182,8 +182,9 @@ def profiles_lowlevel(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
-    color: RGBA, optional
-        Color for profiles in plot.
+    color: RGBA, list[np.ndarray[RGBA]], optional
+        Color for profiles in plot. In case of quality_colors=True, this is a list of
+        np.ndarray[RGBA] for each profile -- one color per profile point for each profile.
     legend_text:
         Label for line plots.
     show_bounds:
