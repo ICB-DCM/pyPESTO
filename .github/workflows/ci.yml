@@ -199,7 +199,7 @@ jobs:
     - name: Install julia
       uses: julia-actions/setup-julia@v2
       with:
-        version: 1.9
+        version: 1.11
 
     - name: Cache Julia
       uses: julia-actions/cache@v2
@@ -209,7 +209,7 @@ jobs:
 
     - name: Install PEtabJL dependencies
       run: >
-        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="PEtab", version="2.5.0"));
+        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="PEtab", version="2.15.0"));
         Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials")'
 
     - name: Run tests
