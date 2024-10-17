@@ -24,7 +24,7 @@ def parameter_profile(
     profile_index: Iterable[int] = None,
     profile_list: int = None,
     result_index: int = 0,
-    next_guess_method: Union[Callable, str] = "adaptive_step_regression",
+    next_guess_method: Union[Callable, str] = "adaptive_step_order_1",
     profile_options: ProfileOptions = None,
     progress_bar: bool = None,
     filename: Union[str, Callable, None] = None,
@@ -93,7 +93,9 @@ def parameter_profile(
     profile_options = ProfileOptions.create_instance(profile_options)
     profile_options.validate()
 
-    # create a function handle that will be called later to get the next point
+    # Create a function handle that will be called later to get the next point.
+    # This function will be used to generate the initial points of optimization
+    # steps in profiling in `walk_along_profile.py`
     if isinstance(next_guess_method, str):
 
         def create_next_guess(
@@ -104,6 +106,8 @@ def parameter_profile(
             current_profile_,
             problem_,
             global_opt_,
+            min_step_increase_factor_,
+            max_step_reduce_factor_,
         ):
             return next_guess(
                 x,
@@ -114,6 +118,8 @@ def parameter_profile(
                 current_profile_,
                 problem_,
                 global_opt_,
+                min_step_increase_factor_,
+                max_step_reduce_factor_,
             )
 
     elif callable(next_guess_method):

@@ -189,6 +189,7 @@ def fill_profile_list(
         gradnorm_path=np.array([gradnorm]),
         exitflag_path=np.array([optimizer_result["exitflag"]]),
         time_path=np.array([0.0]),
+        color_path=np.array([[1, 0, 0, 1]]),
         time_total=0.0,
         n_fval=0,
         n_grad=0,
