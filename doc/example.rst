@@ -50,6 +50,7 @@ Algorithms and features
    example/store.ipynb
    example/history_usage.ipynb
    example/model_selection.ipynb
+   example/model_evidence_and_bayes_factors.ipynb
    example/julia.ipynb
    example/relative_data.ipynb
    example/ordinal_data.ipynb

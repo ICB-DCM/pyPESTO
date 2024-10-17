@@ -75,6 +75,7 @@ class DynestySampler(Sampler):
         run_args: dict = None,
         dynamic: bool = True,
         objective_type: str = OBJECTIVE_NEGLOGPOST,
+        prior_transform: callable = None,
     ):
         """
         Initialize sampler.
@@ -95,6 +96,9 @@ class DynestySampler(Sampler):
             `pypesto.C.OBJECTIVE_NEGLOGPOST`. If
             `pypesto.C.OBJECTIVE_NEGLOGPOST`, then `x_priors` have to
             be defined in the problem.
+        prior_transform:
+            A function converting a sample from the unit cube to actual prior. If not provided, the default
+            `prior_transform` function is used, which assumes uniform priors.
         """
         if importlib.util.find_spec("dynesty") is None:
             raise SamplerImportError("dynesty")
@@ -118,31 +122,21 @@ class DynestySampler(Sampler):
             )
         self.objective_type = objective_type
 
+        if prior_transform is None:
+            # if priors are uniform, we can use the default prior transform (assuming that bounds are set correctly)
+            logger.warning(
+                "Assuming 'prior_transform' is correctly specified. If 'x_priors' is not uniform, 'prior_transform'"
+                " has to be adjusted accordingly."
+            )
+            self.prior_transform = self.prior_transform_from_uniform
+        else:
+            self.prior_transform = prior_transform
+
         # set in initialize
         self.problem: Problem | None = None
         self.sampler: (
             dynesty.DynamicNestedSampler | dynesty.NestedSampler | None
         ) = None
-
-    def prior_transform(self, prior_sample: np.ndarray) -> np.ndarray:
-        """Transform prior sample from unit cube to pyPESTO prior.
-
-        TODO support priors that are not uniform.
-             raise warning in `self.initialize` for now.
-
-        Parameters
-        ----------
-        prior_sample:
-            The prior sample, provided by dynesty.
-
-        Returns
-        -------
-        The transformed prior sample.
-        """
-        return (
-            prior_sample * (self.problem.ub - self.problem.lb)
-            + self.problem.lb
-        )
 
     def loglikelihood(self, x):
         """Log-probability density function."""
@@ -158,6 +152,25 @@ class DynestySampler(Sampler):
             )
         # problem.objective returns negative log-likelihood
         return -1.0 * self.problem.objective(x)
+
+    def prior_transform_from_uniform(
+        self, prior_sample: np.ndarray
+    ) -> np.ndarray:
+        """Transform prior sample from unit cube to pyPESTO prior.
+
+        Parameters
+        ----------
+        prior_sample:
+            The prior sample, provided by dynesty.
+
+        Returns
+        -------
+        The transformed prior sample.
+        """
+        return (
+            prior_sample * (self.problem.ub - self.problem.lb)
+            + self.problem.lb
+        )
 
     def initialize(
         self,
@@ -186,12 +199,6 @@ class DynestySampler(Sampler):
                     f"Assuming '{OBJECTIVE_NEGLOGLIKE}' as objective. "
                     f"'x_priors' defined in the problem will be ignored."
                 )
-
-        # if priors are uniform, we can use the default prior transform (assuming that bounds are set correctly)
-        logger.warning(
-            "Assuming 'prior_transform' is correctly specified. If 'x_priors' is not uniform, 'prior_transform'"
-            " has to be adjusted accordingly."
-        )
 
         # initialize sampler
         self.sampler = sampler_class(
