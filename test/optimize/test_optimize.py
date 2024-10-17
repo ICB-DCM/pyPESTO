@@ -20,8 +20,11 @@ import pypesto
 import pypesto.optimize as optimize
 from pypesto.optimize.ess import (
     ESSOptimizer,
+    FunctionEvaluatorMP,
+    RefSet,
     SacessFidesFactory,
     SacessOptimizer,
+    SacessOptions,
     get_default_ess_options,
 )
 from pypesto.optimize.util import (
@@ -490,6 +493,11 @@ def test_ess(problem, local_optimizer, ess_type, request):
             sacess_loglevel=logging.DEBUG,
             ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
+            options=SacessOptions(
+                adaptation_min_evals=500,
+                adaptation_sent_offset=10,
+                adaptation_sent_coeff=5,
+            ),
         )
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")
@@ -521,8 +529,6 @@ def test_ess_multiprocess(problem, request):
         pytest.skip()
 
     from fides.constants import Options as FidesOptions
-
-    from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
 
     # augment objective with parameter prior to check it's copyable
     #  https://github.com/ICB-DCM/pyPESTO/issues/1465
@@ -561,6 +567,14 @@ def test_ess_multiprocess(problem, request):
         refset=refset,
     )
     print("ESS result: ", res.summary())
+
+
+def test_ess_refset_repr():
+    assert RefSet(10, None).__repr__() == "RefSet(dim=10)"
+    assert (
+        RefSet(10, None, x=np.zeros(10), fx=np.arange(10)).__repr__()
+        == "RefSet(dim=10, fx=[0 ... 9])"
+    )
 
 
 def test_scipy_integrated_grad():
