@@ -195,7 +195,7 @@ class SacessOptimizer:
         start_time = time.time()
         logger.debug(
             f"Running {self.__class__.__name__} with {self.num_workers} "
-            f"workers: {self.ess_init_args}"
+            f"workers: {self.ess_init_args} and {self.options}."
         )
         ess_init_args = self.ess_init_args or get_default_ess_options(
             num_workers=self.num_workers, dim=problem.dim
@@ -563,7 +563,8 @@ class SacessWorker:
         self._manager._logger = self._logger
 
         self._logger.debug(
-            f"#{self._worker_idx} starting " f"({self._ess_kwargs})."
+            f"#{self._worker_idx} starting "
+            f"({self._ess_kwargs}, {self._options})."
         )
 
         evaluator = create_function_evaluator(
@@ -693,6 +694,13 @@ class SacessWorker:
             self._logger.debug(
                 f"Updated settings on worker {self._worker_idx} to "
                 f"{self._ess_kwargs}"
+            )
+        else:
+            self._logger.debug(
+                f"Worker {self._worker_idx} not adapting. "
+                f"Received: {self._n_received_solutions} <= {self._options.adaptation_sent_coeff * self._n_sent_solutions + self._options.adaptation_sent_offset}, "
+                f"Sent: {self._n_sent_solutions}, "
+                f"neval: {self._neval} <= {problem.dim * self._options.adaptation_min_evals}."
             )
 
     def maybe_update_best(self, x: np.array, fx: float):
@@ -840,13 +848,6 @@ def get_default_ess_options(
         return max(min_dimrefset, ceil((1 + sqrt(4 * dim * x)) / 2))
 
     settings = [
-        # settings for first worker
-        {
-            "dim_refset": dim_refset(10),
-            "balance": 0.5,
-            "local_n2": 10,
-        },
-        # for the remaining workers, cycle through these settings
         # 1
         {
             "dim_refset": dim_refset(1),
@@ -998,10 +999,7 @@ def get_default_ess_options(
         elif local_optimizer is not False:
             cur_settings["local_optimizer"] = local_optimizer
 
-    return [
-        settings[0],
-        *(itertools.islice(itertools.cycle(settings[1:]), num_workers - 1)),
-    ]
+    return list(itertools.islice(itertools.cycle(settings), num_workers))
 
 
 class SacessFidesFactory:
