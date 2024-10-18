@@ -6,13 +6,13 @@ Release notes
 ..........
 
 
-0.5.4 (2024-09-19)
+0.5.4 (2024-10-19)
 -------------------
 
 - **Breaking Changes**
     - Remove Aesara support (#1453, #1455)
 - General
-    - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443, #1473, #1484, #1486)
+    - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443, #1473, #1484, #1486, #1490, #1485)
     - Update references/documentation (#1404, #1456, #1474, #1479, #1483, #1470)
 - Profile
     - Improve Profiling Code (#1447)
@@ -21,13 +21,14 @@ Release notes
     - More informative error message for start indices. (#1472)
 - Optimization
     - SacessOptimizer: Fix acceptance threshold for objective improvement (#1457)
-    - SacessOptimizer: expose more hyperparameters + minor fixes (#1459)
+    - SacessOptimizer: expose more hyperparameters + minor fixes (#1459, #1476)
     - SacessOptimizer, ESSOptimizer: Bound-normalize parameters for proximity check (#1462)
     - ESSOptimizer: Fix bug in recombination and go-beyond (#1477, #1480)
 - Objective
     - FD-objective correctly working with fixed parameters (#1446)
     - Petab Importer reforge (#1442)
     - Use cloudpickle for serializing NegLogParameterPriors (#1467)
+    - Update PEtab.jl integration to match version 3.X
 - Sampling
     - Bayes Factor Tutorial (#1444)
 - Ensemble
