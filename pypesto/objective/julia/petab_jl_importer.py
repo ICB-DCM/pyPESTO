@@ -309,7 +309,7 @@ def _write_julia_file(
         f"found at {link_to_options}\n"
         f"petabProblem = PEtabODEProblem(\n\t"
         f"petabModel,\n\t"
-        f"ode_solver=ODESolver({odeSolvOpt_str}),\n\t"
+        f"odesolver=ODESolver({odeSolvOpt_str}),\n\t"
         f"gradient_method=:{options['gradient_method']},\n\t"
         f"hessian_method=:{options['hessian_method']},\n\t"
         f"sparse_jacobian={options['sparse_jacobian']},\n\t"
