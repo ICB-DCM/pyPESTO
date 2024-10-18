@@ -47,7 +47,7 @@ def profiles(
         List of reference points for optimization results, containing at
         least a function value fval.
     colors:
-        List of colors, or single color.
+        List of colors, or single color. Cannot be provided if quality_colors is set to True.
     legends:
         Labels for line plots, one label per result object.
     x_labels:
