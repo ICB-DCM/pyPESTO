@@ -9,7 +9,7 @@ This package was mainly developed by:
 - Paul Jonas Jost
 - Jakob Vanhoefer
 
-with major contributions by (status 2023):
+with major contributions by (status 2024):
 
 - Daniel Weindl
 - Dilan Pathirana
@@ -23,3 +23,5 @@ with major contributions by (status 2023):
 - Stephan Grein
 - Erika Dudkin
 - Domagoj Doresic
+- Jonas Arruda
+- Maren Philipps

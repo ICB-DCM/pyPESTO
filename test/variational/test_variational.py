@@ -1,29 +1,15 @@
 """Tests for `pypesto.sample` methods."""
 
-import pytest
 from scipy.stats import kstest
 
 import pypesto.optimize as optimize
 from pypesto.variational import variational_fit
 
-from ..sample.test_sample import (
-    gaussian_mixture_problem,
-    gaussian_problem,
-    rosenbrock_problem,
-)
+from ..sample.test_sample import problem  # noqa: F401, fixture from sampling
+from ..sample.util import STATISTIC_TOL, gaussian_problem
 
 
-@pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
-def problem(request):
-    if request.param == "gaussian":
-        return gaussian_problem()
-    if request.param == "gaussian_mixture":
-        return gaussian_mixture_problem()
-    elif request.param == "rosenbrock":
-        return rosenbrock_problem()
-
-
-def test_pipeline(problem):
+def test_pipeline(problem):  # noqa: F811
     """Check that a typical pipeline runs through."""
     # optimization
     optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
@@ -35,7 +21,7 @@ def test_pipeline(problem):
     )
 
     # sample
-    result = variational_fit(
+    variational_fit(
         problem=problem,
         n_iterations=100,
         n_samples=10,
@@ -45,15 +31,15 @@ def test_pipeline(problem):
 
 def test_ground_truth():
     """Test whether we actually retrieve correct distributions."""
-    problem = gaussian_problem()
+    problem_gaussian = gaussian_problem()
 
     result = optimize.minimize(
-        problem,
+        problem_gaussian,
         progress_bar=False,
     )
 
     result = variational_fit(
-        problem,
+        problem_gaussian,
         n_iterations=10000,
         n_samples=5000,
         result=result,
@@ -65,8 +51,8 @@ def test_ground_truth():
     # test against different distributions
     statistic, pval = kstest(samples, "norm")
     print(statistic, pval)
-    assert statistic < 0.1
+    assert statistic < STATISTIC_TOL
 
     statistic, pval = kstest(samples, "uniform")
     print(statistic, pval)
-    assert statistic > 0.1
+    assert statistic > STATISTIC_TOL

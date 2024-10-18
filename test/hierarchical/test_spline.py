@@ -95,9 +95,10 @@ def _create_problem(
         petab_problem,
         hierarchical=True,
     )
-    importer.create_model()
+    factory = importer.create_objective_creator()
+    factory.create_model()
 
-    objective = importer.create_objective(
+    objective = factory.create_objective(
         inner_options=option,
     )
     problem = importer.create_problem(objective)
@@ -125,7 +126,8 @@ def test_spline_calculator_and_objective():
             petab_problem,
             hierarchical=True,
         )
-        objective = importer.create_objective(
+        factory = importer.create_objective_creator()
+        objective = factory.create_objective(
             inner_options=option,
         )
         problem = importer.create_problem(objective)
@@ -172,7 +174,7 @@ def test_spline_calculator_and_objective():
 
     finite_differences = pypesto.objective.FD(problem.objective)
     FD_results = finite_differences(
-        x=petab_problem.x_nominal_scaled,
+        x=petab_problem.x_nominal_free_scaled,
         sensi_orders=(0, 1),
         mode=MODE_FUN,
     )
@@ -210,7 +212,9 @@ def test_spline_calculator_and_objective():
     # The gradient should be close to the one calculated using
     # finite differences.
     assert np.allclose(
-        calculator_results["minimal_diff_on"]["grad"],
+        calculator_results["minimal_diff_on"]["grad"][
+            petab_problem.x_free_indices
+        ],
         FD_results[1],
         atol=atol,
     )
@@ -474,8 +478,7 @@ def test_save_and_load_spline_knots():
         petab_problem,
         hierarchical=True,
     )
-    objective = importer.create_objective()
-    problem = importer.create_problem(objective)
+    problem = importer.create_problem()
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",

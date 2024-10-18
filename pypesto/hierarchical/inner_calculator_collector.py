@@ -286,6 +286,14 @@ class InnerCalculatorCollector(AmiciCalculator):
             ub.extend(ub_i)
         return np.asarray(lb), np.asarray(ub)
 
+    def get_interpretable_inner_par_scales(self) -> list[str]:
+        """Return the scales of interpretable inner parameters of all inner problems."""
+        return [
+            scale
+            for inner_calculator in self.inner_calculators
+            for scale in inner_calculator.inner_problem.get_interpretable_x_scales()
+        ]
+
     def __call__(
         self,
         x_dct: dict,
