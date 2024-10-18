@@ -67,6 +67,14 @@ class RefSet:
         self.n_stuck = np.zeros(shape=[dim])
         self.attributes: dict[Any, np.array] = {}
 
+    def __repr__(self):
+        fx = (
+            f", fx=[{np.min(self.fx)} ... {np.max(self.fx)}]"
+            if self.fx is not None and len(self.fx) >= 2
+            else ""
+        )
+        return f"RefSet(dim={self.dim}{fx})"
+
     def sort(self):
         """Sort RefSet by quality."""
         order = np.argsort(self.fx)
