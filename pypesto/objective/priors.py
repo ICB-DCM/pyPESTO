@@ -3,6 +3,7 @@ import math
 from collections.abc import Sequence
 from typing import Callable, Union
 
+import cloudpickle
 import numpy as np
 
 from .. import C
@@ -66,6 +67,14 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         self.prior_list = prior_list
         super().__init__(x_names)
+
+    def __getstate__(self):
+        """Get state using cloudpickle."""
+        return cloudpickle.dumps(self.__dict__)
+
+    def __setstate__(self, state):
+        """Set state using cloudpickle."""
+        self.__dict__.update(cloudpickle.loads(state))
 
     def call_unprocessed(
         self,

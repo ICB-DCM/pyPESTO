@@ -2,19 +2,27 @@
 
 Currently does not support sensitivities.
 """
+from __future__ import annotations
+
 from collections import OrderedDict
 from collections.abc import Sequence
-from typing import Optional, Union
 
 import numpy as np
-import roadrunner
-from petab.v1 import Problem as PetabProblem
-from petab.v1.parameter_mapping import ParMappingDictQuadruple
 
 from ...C import MODE_FUN, MODE_RES, ROADRUNNER_INSTANCE, X_NAMES, ModeType
 from ..base import ObjectiveBase
 from .roadrunner_calculator import RoadRunnerCalculator
 from .utils import ExpData, SolverOptions
+
+try:
+    from petab.v1 import Problem as PetabProblem
+    from petab.v1.parameter_mapping import ParMappingDictQuadruple
+except ImportError:
+    petab = None
+try:
+    import roadrunner
+except ImportError:
+    roadrunner = None
 
 
 class RoadRunnerObjective(ObjectiveBase):
@@ -26,12 +34,13 @@ class RoadRunnerObjective(ObjectiveBase):
     def __init__(
         self,
         rr: roadrunner.RoadRunner,
-        edatas: Union[Sequence[ExpData], ExpData],
+        edatas: Sequence[ExpData] | ExpData,
         parameter_mapping: list[ParMappingDictQuadruple],
         petab_problem: PetabProblem,
-        calculator: Optional[RoadRunnerCalculator] = None,
-        x_names: Optional[Sequence[str]] = None,
-        solver_options: Optional[SolverOptions] = None,
+        calculator: RoadRunnerCalculator | None = None,
+        x_ids: Sequence[str] | None = None,
+        x_names: Sequence[str] | None = None,
+        solver_options: SolverOptions | None = None,
     ):
         """Initialize the RoadRunner objective function.
 
@@ -52,6 +61,8 @@ class RoadRunnerObjective(ObjectiveBase):
             Might be removed later.
         calculator:
             The calculator to use. If None, a new instance is created.
+        x_ids:
+            IDs of Roadrunner parameters. Includes fixed parameters as well.
         x_names:
             Names of optimization parameters.
         """
@@ -68,6 +79,11 @@ class RoadRunnerObjective(ObjectiveBase):
         if solver_options is None:
             solver_options = SolverOptions()
         self.solver_options = solver_options
+        if x_ids is None:
+            x_ids = list(rr.model.getGlobalParameterIds())
+        self.x_ids = x_ids
+        if x_names is None:
+            x_names = x_ids
         super().__init__(x_names=x_names)
 
     def get_config(self) -> dict:
@@ -87,7 +103,7 @@ class RoadRunnerObjective(ObjectiveBase):
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
-    ) -> Union[float, np.ndarray, dict]:
+    ) -> float | np.ndarray | dict:
         """See :class:`ObjectiveBase` documentation."""
         return super().__call__(x, sensi_orders, mode, return_dict, **kwargs)
 
@@ -97,8 +113,8 @@ class RoadRunnerObjective(ObjectiveBase):
         sensi_orders: tuple[int, ...],
         mode: ModeType,
         return_dict: bool,
-        edatas: Optional[Sequence[ExpData]] = None,
-        parameter_mapping: Optional[list[ParMappingDictQuadruple]] = None,
+        edatas: Sequence[ExpData] | None = None,
+        parameter_mapping: list[ParMappingDictQuadruple] | None = None,
     ) -> dict:
         """
         Call objective function without pre- or post-processing and formatting.
@@ -114,7 +130,7 @@ class RoadRunnerObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         # convert x to dictionary
-        x = OrderedDict(zip(self.x_names, x))
+        x = OrderedDict(zip(self.x_ids, x))
         ret = self.calculator(
             x_dct=x,
             mode=mode,

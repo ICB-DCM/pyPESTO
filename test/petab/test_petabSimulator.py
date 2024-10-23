@@ -1,14 +1,13 @@
-"""Execute petab test suite."""
+"""Run PEtab tests for PetabSimulatorObjective."""
 
 import logging
 
-import amici.petab.simulations
+import basico.petab
 import petab.v1 as petab
 import petabtests
 import pytest
 
-import pypesto
-import pypesto.petab
+from pypesto.objective.petab import PetabSimulatorObjective
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,9 +16,8 @@ logger = logging.getLogger(__name__)
 @pytest.mark.parametrize(
     "case, model_type, version",
     [
-        (case, model_type, version)
-        for (model_type, version) in (("sbml", "v1.0.0"), ("pysb", "v2.0.0"))
-        for case in petabtests.get_cases(format_=model_type, version=version)
+        (case, "sbml", "v1.0.0")
+        for case in petabtests.get_cases(format_="sbml", version="v1.0.0")
     ],
 )
 def test_petab_case(case, model_type, version):
@@ -43,6 +41,8 @@ def _execute_case(case, model_type, version):
     """Run a single PEtab test suite case"""
     case = petabtests.test_id_str(case)
     logger.info(f"Case {case}")
+    if case in ["0006", "0009", "0010", "0017", "0018", "0019"]:
+        pytest.skip("Basico does not support these functionalities.")
 
     # case folder
     case_dir = petabtests.get_case_dir(case, model_type, version)
@@ -51,60 +51,32 @@ def _execute_case(case, model_type, version):
     solution = petabtests.load_solution(
         case, format=model_type, version=version
     )
-    gt_chi2 = solution[petabtests.CHI2]
     gt_llh = solution[petabtests.LLH]
     gt_simulation_dfs = solution[petabtests.SIMULATION_DFS]
-    tol_chi2 = solution[petabtests.TOL_CHI2]
     tol_llh = solution[petabtests.TOL_LLH]
     tol_simulations = solution[petabtests.TOL_SIMULATIONS]
 
     # import petab problem
     yaml_file = case_dir / petabtests.problem_yaml_name(case)
 
-    # unique folder for compiled amici model
-    model_name = (
-        f'petab_test_case_{case}_{model_type}_{version.replace(".", "_" )}'
-    )
-    output_folder = f"amici_models/{model_name}"
-
     # import and create objective function
-    if case.startswith("0006"):
-        petab_problem = petab.Problem.from_yaml(yaml_file)
-        petab.flatten_timepoint_specific_output_overrides(petab_problem)
-        importer = pypesto.petab.PetabImporter(
-            petab_problem=petab_problem,
-            output_folder=output_folder,
-            model_name=model_name,
-        )
-        petab_problem = petab.Problem.from_yaml(yaml_file)
-    else:
-        importer = pypesto.petab.PetabImporter.from_yaml(
-            yaml_file, output_folder=output_folder
-        )
-        petab_problem = importer.petab_problem
-    factory = importer.create_objective_creator()
-    model = factory.create_model(generate_sensitivity_code=False)
-    obj = factory.create_objective(model=model)
+    petab_problem = petab.Problem.from_yaml(yaml_file)
+    simulator = basico.petab.PetabSimulator(petab_problem)
+    obj = PetabSimulatorObjective(simulator)
 
     # the scaled parameters
-    problem_parameters = factory.petab_problem.x_nominal_scaled
+    problem_parameters = petab_problem.x_nominal_scaled
 
     # simulate
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
 
     # extract results
-    rdatas = ret["rdatas"]
-    chi2 = sum(rdata["chi2"] for rdata in rdatas)
     llh = -ret["fval"]
-    simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
-        rdatas, model, importer.petab_problem.measurement_df
+    simulation_df = ret["simulations"]
+
+    simulation_df = simulation_df.rename(
+        columns={petab.SIMULATION: petab.MEASUREMENT}
     )
-
-    if case.startswith("0006"):
-        simulation_df = petab.unflatten_simulation_df(
-            simulation_df, petab_problem
-        )
-
     petab.check_measurement_df(simulation_df, petab_problem.observable_df)
     simulation_df = simulation_df.rename(
         columns={petab.MEASUREMENT: petab.SIMULATION}
@@ -112,7 +84,6 @@ def _execute_case(case, model_type, version):
     simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
 
     # check if matches
-    chi2s_match = petabtests.evaluate_chi2(chi2, gt_chi2, tol_chi2)
     llhs_match = petabtests.evaluate_llh(llh, gt_llh, tol_llh)
     simulations_match = petabtests.evaluate_simulations(
         [simulation_df], gt_simulation_dfs, tol_simulations
@@ -120,23 +91,18 @@ def _execute_case(case, model_type, version):
 
     # log matches
     logger.log(
-        logging.INFO if chi2s_match else logging.ERROR,
-        f"CHI2: simulated: {chi2}, expected: {gt_chi2},"
-        f" match = {chi2s_match}",
-    )
-    logger.log(
         logging.INFO if simulations_match else logging.ERROR,
-        f"LLH: simulated: {llh}, expected: {gt_llh}, " f"match = {llhs_match}",
+        f"LLH: simulated: {llh}, expected: {gt_llh}, match = {llhs_match}",
     )
     logger.log(
         logging.INFO if simulations_match else logging.ERROR,
         f"Simulations: match = {simulations_match}",
     )
 
-    if not all([llhs_match, chi2s_match, simulations_match]):
+    if not all([llhs_match, simulations_match]):
         logger.error(f"Case {version}/{model_type}/{case} failed.")
         raise AssertionError(
-            f"Case {case}: Test results do not match " "expectations"
+            f"Case {case}: Test results do not match expectations"
         )
 
     logger.info(f"Case {version}/{model_type}/{case} passed.")
