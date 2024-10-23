@@ -199,17 +199,14 @@ jobs:
     - name: Install julia
       uses: julia-actions/setup-julia@v2
       with:
-        version: 1.9
-
-    - name: Cache Julia
-      uses: julia-actions/cache@v2
+        version: 1.11
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
 
     - name: Install PEtabJL dependencies
       run: >
-        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="PEtab", version="2.5.0"));
+        julia -e 'using Pkg; Pkg.add("PEtab");
         Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials")'
 
     - name: Run tests

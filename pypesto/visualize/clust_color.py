@@ -142,7 +142,11 @@ def assign_colors(
             colors = colors[0]
         return np.array([colors] * n_vals)
 
-    if colors.shape[1] == 4 and n_vals == colors.shape[0]:
+    if (
+        len(colors.shape) > 1
+        and colors.shape[1] == 4
+        and n_vals == colors.shape[0]
+    ):
         return colors
 
     if colors.shape[0] == 4:
@@ -195,13 +199,10 @@ def assign_colors_for_list(
         real_indices = np.arange(int(colors.shape[0] / 2))
         return colors[real_indices]
 
-    # if the user specified color lies does not match the number of results
-    if len(colors) != num_entries:
-        raise (
-            "Incorrect color input. Colors must be specified either as "
-            "list of [r, g, b, alpha] with length equal to function "
-            "values Number of function (here: " + str(num_entries) + "), "
-            "or as one single [r, g, b, alpha] color."
-        )
-
-    return colors
+    # Pass the colors through assign_colors to check correct format of RGBA
+    return assign_colors(
+        vals=np.array(list(range(num_entries))),
+        colors=colors,
+        balance_alpha=False,
+        highlight_global=False,
+    )
