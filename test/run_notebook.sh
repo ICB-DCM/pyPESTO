@@ -31,6 +31,7 @@ nbs_1=(
   'semiquantitative_data.ipynb'
   'getting_started.ipynb'
   'roadrunner.ipynb'
+  'gradient_check.ipynb'
 )
 
 # Sampling notebooks
