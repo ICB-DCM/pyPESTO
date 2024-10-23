@@ -5,6 +5,7 @@ This is for testing the petab import.
 import logging
 import os
 import unittest
+from itertools import chain
 
 import amici
 import benchmark_models_petab as models
@@ -17,8 +18,6 @@ import pypesto
 import pypesto.optimize
 import pypesto.petab
 from pypesto.petab import PetabImporter
-
-from .test_sbml_conversion import ATOL, RTOL
 
 # In CI, bionetgen is installed here
 BNGPATH = os.path.abspath(
@@ -119,7 +118,7 @@ class PetabImportTest(unittest.TestCase):
         # Check gradients of simple model (should always be a true positive)
         model_name = "Boehm_JProteomeRes2014"
         importer = pypesto.petab.PetabImporter.from_yaml(
-            os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+            models.get_problem_yaml_path(model_name)
         )
 
         objective = importer.create_problem().objective
@@ -137,35 +136,76 @@ class PetabImportTest(unittest.TestCase):
 
 
 def test_plist_mapping():
-    """Test that the AMICI objective created via PEtab correctly maps
-    gradient entries when some parameters are not estimated (realized via
-    edata.plist)."""
-    model_name = "Boehm_JProteomeRes2014"
-    petab_problem = pypesto.petab.PetabImporter.from_yaml(
+    """Test that the AMICI objective created via PEtab correctly uses
+    ExpData.plist.
+
+    That means, ensure that
+    1) it only computes gradient entries that are really required, and
+    2) correctly maps model-gradient entries to the objective gradient
+    3) with or without pypesto-fixed parameters.
+
+    In Bruno_JExpBot2016, different parameters are estimated in different
+    conditions.
+    """
+    model_name = "Bruno_JExpBot2016"
+    petab_importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
-
-    # define test parameter
-    par = np.asarray(petab_problem.petab_problem.x_nominal_scaled)
-
-    problem = petab_problem.create_problem()
-    objective = problem.objective
-    # check that x_names are correctly subsetted
-    assert objective.x_names == [
-        problem.x_names[ix] for ix in problem.x_free_indices
-    ]
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_forward
+    objective_creator = petab_importer.create_objective_creator()
+    problem = petab_importer.create_problem(
+        objective_creator.create_objective()
     )
-    objective.amici_solver.setAbsoluteTolerance(1e-10)
-    objective.amici_solver.setRelativeTolerance(1e-12)
+    objective = problem.objective
+    objective.amici_solver.setSensitivityMethod(
+        amici.SensitivityMethod.forward
+    )
+    objective.amici_solver.setAbsoluteTolerance(1e-16)
+    objective.amici_solver.setRelativeTolerance(1e-15)
+
+    # slightly perturb the parameters to avoid vanishing gradients
+    par = np.asarray(petab_importer.petab_problem.x_nominal_free_scaled) * 1.01
+
+    # call once to make sure ExpDatas are populated
+    fx1, grad1 = objective(par, sensi_orders=(0, 1))
+
+    plists1 = {edata.plist for edata in objective.edatas}
+    assert len(plists1) == 6, plists1
 
     df = objective.check_grad_multi_eps(
-        par[problem.x_free_indices], multi_eps=[1e-3, 1e-4, 1e-5]
+        par[problem.x_free_indices], multi_eps=[1e-5, 1e-6, 1e-7, 1e-8]
     )
     print("relative errors gradient: ", df.rel_err.values)
     print("absolute errors gradient: ", df.abs_err.values)
-    assert np.all((df.rel_err.values < RTOL) | (df.abs_err.values < ATOL))
+    assert np.all((df.rel_err.values < 1e-8) | (df.abs_err.values < 1e-10))
+
+    # do the same after fixing some parameters
+    # we fix them to the previous values, so we can compare the results
+    fixed_ids = ["init_b10_1", "init_bcry_1"]
+    # the corresponding amici parameters (they are only ever mapped to the
+    #  respective parameters in fixed_ids, and thus, should not occur in any
+    #  `plist` later on)
+    fixed_model_par_ids = ["init_b10", "init_bcry"]
+    fixed_model_par_idxs = [
+        objective.amici_model.getParameterIds().index(id)
+        for id in fixed_model_par_ids
+    ]
+    fixed_idxs = [problem.x_names.index(id) for id in fixed_ids]
+    problem.fix_parameters(fixed_idxs, par[fixed_idxs])
+    assert objective is problem.objective
+    assert problem.x_fixed_indices == fixed_idxs
+    fx2, grad2 = objective(par[problem.x_free_indices], sensi_orders=(0, 1))
+    assert np.isclose(fx1, fx2, rtol=1e-10, atol=1e-14)
+    assert np.allclose(
+        grad1[problem.x_free_indices], grad2, rtol=1e-10, atol=1e-14
+    )
+    plists2 = {edata.plist for edata in objective.edatas}
+    # the fixed parameters should have been in plist1, but not in plist2
+    assert (
+        set(fixed_model_par_idxs) - set(chain.from_iterable(plists1)) == set()
+    )
+    assert (
+        set(fixed_model_par_idxs) & set(chain.from_iterable(plists2)) == set()
+    )
 
 
 def test_max_sensi_order():

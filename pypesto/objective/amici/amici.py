@@ -178,8 +178,12 @@ class AmiciObjective(ObjectiveBase):
             parameter_mapping = create_identity_parameter_mapping(
                 amici_model, len(edatas)
             )
+        # parameter mapping where IDs of the currently fixed parameters
+        #  have been replaced by their respective values
+        #  (relevant for setting ``plist`` in ExpData later on)
         self.parameter_mapping = parameter_mapping
-
+        # parameter mapping independent of fixed parameters
+        self._parameter_mapping_full = copy.deepcopy(parameter_mapping)
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
         if (
@@ -654,3 +658,38 @@ class AmiciObjective(ObjectiveBase):
         return super().check_gradients_match_finite_differences(
             *args, x=x, x_free=x_free, **kwargs
         )
+
+    def update_from_problem(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ):
+        """Handle fixed parameters."""
+        super().update_from_problem(
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals,
+        )
+
+        # To make amici aware of fixed parameters, and thus, avoid computing
+        #  unnecessary sensitivities, we need to update the parameter mapping
+        #  and replace the IDs of all fixed parameters by their respective
+        #  values.
+        self.parameter_mapping = copy.deepcopy(self._parameter_mapping_full)
+        if not len(x_fixed_indices):
+            return
+
+        id_to_val = {
+            self.x_ids[x_idx]: x_val
+            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals)
+        }
+        for condition_mapping in self.parameter_mapping:
+            for (
+                model_par,
+                mapped_to_par,
+            ) in condition_mapping.map_sim_var.items():
+                if (val := id_to_val.get(mapped_to_par)) is not None:
+                    condition_mapping.map_sim_var[model_par] = val
