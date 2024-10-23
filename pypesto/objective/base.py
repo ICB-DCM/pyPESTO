@@ -1,5 +1,7 @@
 import copy
+import inspect
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from typing import Optional, Union
@@ -178,6 +180,19 @@ class ObjectiveBase(ABC):
         x_full = self.pre_post_processor.preprocess(x=x)
 
         # compute result
+        if (
+            "return_dict"
+            in inspect.signature(self.call_unprocessed).parameters
+        ):
+            kwargs["return_dict"] = return_dict
+        else:
+            warnings.warn(
+                "Please add `return_dict` to the argument list of your "
+                "objective's `call_unprocessed` method.",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+
         result = self.call_unprocessed(
             x=x_full, sensi_orders=sensi_orders, mode=mode, **kwargs
         )
@@ -204,6 +219,7 @@ class ObjectiveBase(ABC):
         x: np.ndarray,
         sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """
@@ -217,6 +233,10 @@ class ObjectiveBase(ABC):
             Specifies which sensitivities to compute, e.g. (0,1) -> fval, grad.
         mode:
             Whether to compute function values or residuals.
+        return_dict:
+            Whether the user requested additional information. Objectives can
+            use this to determine whether to e.g. return "full" or "minimal"
+            information.
 
         Returns
         -------

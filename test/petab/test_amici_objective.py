@@ -7,7 +7,7 @@ import os
 import amici
 import benchmark_models_petab as models
 import numpy as np
-import petab
+import petab.v1 as petab
 import pytest
 
 import pypesto
@@ -57,7 +57,7 @@ def test_error_leastsquares_with_ssigma():
     )
     petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(petab_problem)
-    obj = importer.create_objective()
+    obj = importer.create_objective_creator().create_objective()
     problem = importer.create_problem(
         obj, startpoint_kwargs={"check_fval": True, "check_grad": True}
     )

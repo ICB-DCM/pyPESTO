@@ -4,9 +4,9 @@ import logging
 from collections.abc import Iterable
 
 import pandas as pd
-import petab
+import petab.v1 as petab
 import petab_select.ui
-from petab.C import ESTIMATE, NOMINAL_VALUE
+from petab.v1.C import ESTIMATE, NOMINAL_VALUE
 from petab_select import Model, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
 
@@ -62,10 +62,11 @@ def model_to_pypesto_problem(
         hierarchical=hierarchical,
     )
     if objective is None:
-        amici_model = importer.create_model(
+        factory = importer.create_objective_creator()
+        amici_model = factory.create_model(
             non_estimated_parameters_as_constants=False,
         )
-        objective = importer.create_objective(
+        objective = factory.create_objective(
             model=amici_model,
         )
     pypesto_problem = importer.create_problem(

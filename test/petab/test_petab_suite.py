@@ -3,7 +3,7 @@
 import logging
 
 import amici.petab.simulations
-import petab
+import petab.v1 as petab
 import petabtests
 import pytest
 
@@ -82,11 +82,12 @@ def _execute_case(case, model_type, version):
             yaml_file, output_folder=output_folder
         )
         petab_problem = importer.petab_problem
-    model = importer.create_model(generate_sensitivity_code=False)
-    obj = importer.create_objective(model=model)
+    factory = importer.create_objective_creator()
+    model = factory.create_model(generate_sensitivity_code=False)
+    obj = factory.create_objective(model=model)
 
     # the scaled parameters
-    problem_parameters = importer.petab_problem.x_nominal_scaled
+    problem_parameters = factory.petab_problem.x_nominal_scaled
 
     # simulate
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)

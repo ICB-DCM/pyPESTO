@@ -19,6 +19,7 @@ nbs_1=(
   'amici.ipynb'
   'conversion_reaction.ipynb'
   'fixed_parameters.ipynb'
+  'history_usage.ipynb'
   'petab_import.ipynb'
   'prior_definition.ipynb'
   'custom_objective_function.ipynb'
@@ -37,6 +38,7 @@ nbs_2=(
   'sampler_study.ipynb'
   'sampling_diagnostics.ipynb'
   'model_selection.ipynb'
+  'model_evidence_and_bayes_factors.ipynb'
 )
 
 # All tested notebooks

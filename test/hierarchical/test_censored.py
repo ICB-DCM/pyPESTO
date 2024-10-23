@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import numpy as np
-import petab
+import petab.v1 as petab
 
 import pypesto
 import pypesto.logging
@@ -39,10 +39,7 @@ def test_optimization():
     )
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    importer.create_model()
-
-    objective = importer.create_objective()
-    problem = importer.create_problem(objective)
+    problem = importer.create_problem()
 
     result = pypesto.optimize.minimize(
         problem=problem, n_starts=1, optimizer=optimizer
@@ -63,8 +60,7 @@ def test_ordinal_calculator_and_objective():
     petab_problem = petab.Problem.from_yaml(example_censored_yaml)
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    objective = importer.create_objective()
-    problem = importer.create_problem(objective)
+    problem = importer.create_problem()
 
     def calculate(problem, x_dct):
         return problem.objective.calculator(
@@ -88,7 +84,7 @@ def test_ordinal_calculator_and_objective():
         problem.objective,
     )
     finite_differences_results = finite_differences(
-        petab_problem.x_nominal_scaled,
+        petab_problem.x_nominal_free_scaled,
         (
             0,
             1,
@@ -100,7 +96,7 @@ def test_ordinal_calculator_and_objective():
     # with finite differences.
     assert np.allclose(
         finite_differences_results[1],
-        calculator_result["grad"],
+        calculator_result["grad"][petab_problem.x_free_indices],
     )
 
 

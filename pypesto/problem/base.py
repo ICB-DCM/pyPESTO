@@ -1,5 +1,6 @@
 import copy
 import logging
+import sys
 from collections.abc import Iterable
 from typing import (
     Callable,
@@ -15,6 +16,7 @@ import pandas as pd
 from ..objective import ObjectiveBase
 from ..objective.priors import NegLogParameterPriors
 from ..startpoint import StartpointMethod, to_startpoint_method, uniform
+from ..version import __version__
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
 SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
@@ -164,6 +166,9 @@ class Problem:
             startpoint_method = uniform
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
+        # save python and pypesto version
+        self.python_version = ".".join(map(str, sys.version_info[:3]))
+        self.pypesto_version = __version__
 
     @property
     def lb(self) -> np.ndarray:
@@ -236,6 +241,15 @@ class Problem:
             x_fixed_indices=self.x_fixed_indices,
             x_fixed_vals=self.x_fixed_vals,
         )
+
+        # make prior aware of fixed parameters (for sampling etc.)
+        if self.x_priors is not None:
+            self.x_priors.update_from_problem(
+                dim_full=self.dim_full,
+                x_free_indices=self.x_free_indices,
+                x_fixed_indices=self.x_fixed_indices,
+                x_fixed_vals=self.x_fixed_vals,
+            )
 
         # sanity checks
         if len(self.x_scales) != self.dim_full:
@@ -332,7 +346,10 @@ class Problem:
         self.normalize()
 
     def get_full_vector(
-        self, x: Union[np.ndarray, None], x_fixed_vals: Iterable[float] = None
+        self,
+        x: Union[np.ndarray, None],
+        x_fixed_vals: Iterable[float] = None,
+        x_is_grad: bool = False,
     ) -> Union[np.ndarray, None]:
         """
         Map vector from dim to dim_full. Usually used for x, grad.
@@ -342,9 +359,9 @@ class Problem:
         x: array_like, shape=(dim,)
             The vector in dimension dim.
         x_fixed_vals: array_like, ndim=1, optional
-            The values to be used for the fixed indices. If None, then nans are
-            inserted. Usually, None will be used for grad and
-            problem.x_fixed_vals for x.
+            The values to be used for the fixed indices. If None and x_is_grad=False, problem.x_fixed_vals is used; for x_is_grad=True, nans are inserted.
+        x_is_grad: bool
+            If true, x is treated as gradients.
         """
         if x is None:
             return None
@@ -362,6 +379,9 @@ class Problem:
         x_full[..., self.x_free_indices] = x
         if x_fixed_vals is not None:
             x_full[..., self.x_fixed_indices] = x_fixed_vals
+            return x_full
+        if not x_is_grad:
+            x_full[..., self.x_fixed_indices] = self.x_fixed_vals
         return x_full
 
     def get_full_matrix(

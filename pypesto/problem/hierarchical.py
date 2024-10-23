@@ -35,6 +35,11 @@ class HierarchicalProblem(Problem):
         Only relevant if hierarchical is True. Contains the bounds of easily
         interpretable inner parameters only, e.g. noise parameters, scaling
         factors, offsets.
+    inner_scales:
+        The scales for the inner optimization parameters. Only relevant if
+        hierarchical is True. Contains the scales of easily interpretable inner
+        parameters only, e.g. noise parameters, scaling factors, offsets. Can
+        be pypesto.C.{LIN,LOG,LOG10}. Used only for visualization purposes.
     semiquant_observable_ids:
         The ids of semiquantitative observables. Only relevant if hierarchical
         is True. If not None, the optimization result's `spline_knots` will be
@@ -77,6 +82,13 @@ class HierarchicalProblem(Problem):
         self.inner_lb = np.array(inner_lb)
         self.inner_ub = np.array(inner_ub)
 
+        self.inner_scales = (
+            self.objective.calculator.get_interpretable_inner_par_scales()
+        )
+
         self.semiquant_observable_ids = (
             self.objective.calculator.semiquant_observable_ids
+        )
+        self.relative_observable_ids = (
+            self.objective.calculator.relative_observable_ids
         )

@@ -149,7 +149,7 @@ class EmceeSampler(Sampler):
         lb = self.problem.lb
         ub = self.problem.ub
 
-        # parameter dimenstion
+        # parameter dimension
         ndim = len(self.problem.x_free_indices)
 
         def log_prob(x):

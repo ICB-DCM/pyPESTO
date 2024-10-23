@@ -10,6 +10,7 @@ from .ess import (
     ESSOptimizer,
     SacessFidesFactory,
     SacessOptimizer,
+    SacessOptions,
     get_default_ess_options,
 )
 from .load import (

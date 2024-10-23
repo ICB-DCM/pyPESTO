@@ -1,5 +1,7 @@
 """Definition of an optimal scaling parameter class."""
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 
@@ -43,8 +45,8 @@ from .parameter import OrdinalParameter
 
 try:
     import amici
-    import petab
-    from petab.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
+    import petab.v1 as petab
+    from petab.v1.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
 except ImportError:
     pass
 
@@ -172,10 +174,10 @@ class OrdinalProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: "amici.Model",
-        edatas: list["amici.ExpData"],
+        amici_model: amici.Model,
+        edatas: list[amici.ExpData],
         method: str = None,
-    ) -> "OrdinalProblem":
+    ) -> OrdinalProblem:
         """Construct the inner problem from the `petab_problem`."""
         if not method:
             method = REDUCED
@@ -186,6 +188,13 @@ class OrdinalProblem(AmiciInnerProblem):
 
     def get_interpretable_x_ids(self) -> list[str]:
         """Get IDs of interpretable inner parameters.
+
+        There are no interpretable inner parameters for the ordinal problem.
+        """
+        return []
+
+    def get_interpretable_x_scales(self) -> list[str]:
+        """Get scales of interpretable inner parameters.
 
         There are no interpretable inner parameters for the ordinal problem.
         """
@@ -475,8 +484,8 @@ class OrdinalProblem(AmiciInnerProblem):
 
 def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
-    amici_model: "amici.Model",
-    edatas: list["amici.ExpData"],
+    amici_model: amici.Model,
+    edatas: list[amici.ExpData],
     method: str,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -511,7 +520,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
 def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
-    amici_model: "amici.Model",
+    amici_model: amici.Model,
 ) -> list[OrdinalParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
@@ -611,8 +620,8 @@ def get_estimate_for_method(method: str) -> tuple[bool, bool]:
 
 
 def optimal_scaling_ixs_for_measurement_specific_parameters(
-    petab_problem: "petab.Problem",
-    amici_model: "amici.Model",
+    petab_problem: petab.Problem,
+    amici_model: amici.Model,
     inner_parameters: list[OrdinalParameter],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.

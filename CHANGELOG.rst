@@ -6,6 +6,61 @@ Release notes
 ..........
 
 
+0.5.3 (2024-08-01)
+-------------------
+
+* General
+	* Notebook on history usage and comparison of multiple results. (#1389)
+	* GHA/test improvements (#1423, #1408, #1430)
+	* Numpy 2.0 compatibility (#1420, #1433)
+* PEtab
+	* Issue a warning if a fixed parameter has a prior defined (#1413)
+	* Update to libpetab 0.4.0 (#1422)
+* Optimize
+    * Added a Result object with lazy hdf5 loading (#1421)
+* RoadRunner
+	* Roadrunner handling of petab issue 0019 (#1419)
+	* Disentangle amici and roadrunner (#1429)
+* Amici
+	* Require `return_dict` in `ObjectiveBase.call_unprocessed` (fixes AMICI posterior RData) (#1424)
+* Hierarchical
+	* Visualize: visualization of estimated observable mapping (#1409)
+	* Hierarchical: avoid recomputing inner parameters if simulation failed (#1426)
+* Visualization
+	* Fixing Aggregated Objective Visualisations (#1411)
+
+
+0.5.2 (2024-05-27)
+-------------------
+
+* **New Feature**: Variational inference with PyMC (#1306)
+* PEtab
+    * Import of petab independent of amici (#1355)
+* Problem
+    * Added option to sample startpoints for a problem, from the problem directly. (#1364)
+    * More detailed defaults for problem.get_full_vector (#1393)
+    * Save pypesto and python version to the problem. (#1382)
+* Objective
+    * Fix calling priors in sampling with fixed parameters (#1378)
+    * Fix JaxObjective (#1400)
+* Optimize
+    * ESS optimizers: suppress divide-by-zero warnings; report n_eval (#1380)
+    * SacessOptimizer: collect worker stats (#1381)
+    * Add load method to Hdf5AmiciHistory (#1370)
+* Hierarchical
+    * Relative: fix log of zero for default 0 sigma values (#1377)
+* Sample
+    * Fix pypesto.sample.geweke_test.spectrum for nfft<=3 (#1388)
+* Visualize
+    * Handle correlation plot with nans (#1365)
+* General
+    * Remove scipy requirement from pypesto[pymc] (#1376)
+    * Require and test python >=3.10 according to NEP 29 (#1379)
+    * Fix various warnings (#1384)
+    * Small changes to GHA actions and tests (#1386, #1387, #1402, #1385)
+    * Improve Documentation (#1394, #1391, #1399, #1292, #1390)
+
+
 0.5.0 (2024-04-10)
 -------------------
 
