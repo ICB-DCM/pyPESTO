@@ -432,6 +432,28 @@ class PetabImporter:
 
         return problem
 
+    def create_model(
+        self,
+        force_compile: bool = False,
+        verbose: bool = True,
+        **kwargs,
+    ) -> amici.Model:
+        """See :meth:`AmiciObjectiveCreator.create_model`."""
+        warnings.warn(
+            "This function has been moved to `AmiciObjectiveCreator`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        objective_constructor = self.create_objective_creator(
+            kwargs.pop("simulator_type", self.simulator_type),
+            kwargs.pop("simulator", self.simulator),
+        )
+        return objective_constructor.create_model(
+            force_compile=force_compile,
+            verbose=verbose,
+            **kwargs,
+        )
+
     def create_objective(
         self,
         model: amici.Model = None,
