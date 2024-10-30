@@ -13,7 +13,7 @@ Release notes
     - Remove Aesara support (#1453, #1455)
 - General
     - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443, #1473, #1484, #1486, #1490, #1485)
-    - Update references/documentation (#1404, #1456, #1474, #1479, #1483, #1470)
+    - Update references/documentation (#1404, #1456, #1474, #1479, #1483, #1470, #1498)
 - Profile
     - Improve Profiling Code (#1447)
 - Visualize
@@ -26,9 +26,9 @@ Release notes
     - ESSOptimizer: Fix bug in recombination and go-beyond (#1477, #1480)
 - Objective
     - FD-objective correctly working with fixed parameters (#1446)
-    - Petab Importer reforge (#1442)
+    - Petab Importer reforge (#1442, #1502)
     - Use cloudpickle for serializing NegLogParameterPriors (#1467)
-    - Update PEtab.jl integration to match version 3.X
+    - Update PEtab.jl integration to match version 3.X (#1489)
 - Sampling
     - Bayes Factor Tutorial (#1444)
 - Ensemble
