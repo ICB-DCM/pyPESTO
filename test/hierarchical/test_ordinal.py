@@ -102,9 +102,10 @@ def _create_problem(
 ) -> pypesto.Problem:
     """Creates the ordinal pyPESTO problem with given options."""
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    importer.create_model()
+    factory = importer.create_objective_creator()
+    factory.create_model()
 
-    objective = importer.create_objective(
+    objective = factory.create_objective(
         inner_options=option,
     )
     problem = importer.create_problem(objective)
@@ -127,7 +128,8 @@ def test_ordinal_calculator_and_objective():
         importer = pypesto.petab.PetabImporter(
             petab_problem, hierarchical=True
         )
-        objective = importer.create_objective(
+        factory = importer.create_objective_creator()
+        objective = factory.create_objective(
             inner_options=options,
         )
         problem = importer.create_problem(objective)
@@ -175,7 +177,7 @@ def test_ordinal_calculator_and_objective():
         problem.objective,
     )
     finite_differences_results = finite_differences(
-        petab_problem.x_nominal_scaled,
+        petab_problem.x_nominal_free_scaled,
         (
             0,
             1,
@@ -209,7 +211,7 @@ def test_ordinal_calculator_and_objective():
     # with finite differences.
     assert np.allclose(
         finite_differences_results[1],
-        calculator_results[STANDARD]["grad"],
+        calculator_results[STANDARD]["grad"][petab_problem.x_free_indices],
     )
 
     # Since the nominal parameters are close to true ones,

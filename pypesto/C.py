@@ -84,6 +84,10 @@ X = "x"
 X0 = "x0"
 ID = "id"
 
+AMICI = "amici"
+ROADRUNNER = "roadrunner"
+PETAB = "petab"
+
 
 ###############################################################################
 # HIERARCHICAL SCALING + OFFSET
@@ -265,6 +269,9 @@ EXPONENTIAL_DECAY = (
     "exponential_decay"  # temperature schedule for parallel tempering
 )
 BETA_DECAY = "beta_decay"  # temperature schedule for parallel tempering
+TRAPEZOID = "trapezoid"  # method to compute log evidence
+SIMPSON = "simpson"  # method to compute log evidence
+STEPPINGSTONE = "steppingstone"  # method to compute log evidence
 
 ###############################################################################
 # PREDICT

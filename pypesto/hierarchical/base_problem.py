@@ -8,6 +8,7 @@ import logging
 import numpy as np
 import pandas as pd
 
+from ..C import LIN, LOG, LOG10
 from .base_parameter import InnerParameter
 
 try:
@@ -82,6 +83,10 @@ class InnerProblem:
         """
         return list(self.xs.keys())
 
+    def get_interpretable_x_scales(self) -> list[str]:
+        """Get scales of interpretable inner parameters."""
+        return [x.scale for x in self.xs.values()]
+
     def get_xs_for_type(
         self, inner_parameter_type: str
     ) -> list[InnerParameter]:
@@ -119,7 +124,9 @@ class InnerProblem:
         try:
             return self.xs[inner_parameter_id]
         except KeyError:
-            raise KeyError(f"Cannot find parameter with id {id}.") from None
+            raise KeyError(
+                f"Cannot find parameter with id {inner_parameter_id}."
+            ) from None
 
     def is_empty(self) -> bool:
         """Check for emptiness.
@@ -222,12 +229,34 @@ def scale_value_dict(
 
 def scale_value(val: float | np.array, scale: str) -> float | np.array:
     """Scale a single value."""
-    if scale == "lin":
+    if scale == LIN:
         return val
-    if scale == "log":
+    if scale == LOG:
         return np.log(val)
-    if scale == "log10":
+    if scale == LOG10:
         return np.log10(val)
+    raise ValueError(f"Scale {scale} not recognized.")
+
+
+def scale_back_value_dict(
+    dct: dict[str, float], problem: InnerProblem
+) -> dict[str, float]:
+    """Scale back a value dictionary."""
+    scaled_dct = {}
+    for key, val in dct.items():
+        x = problem.get_for_id(key)
+        scaled_dct[key] = scale_back_value(val, x.scale)
+    return scaled_dct
+
+
+def scale_back_value(val: float | np.array, scale: str) -> float | np.array:
+    """Scale back a single value."""
+    if scale == LIN:
+        return val
+    if scale == LOG:
+        return np.exp(val)
+    if scale == LOG10:
+        return 10**val
     raise ValueError(f"Scale {scale} not recognized.")
 
 

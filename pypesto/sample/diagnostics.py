@@ -33,6 +33,14 @@ def geweke_test(
         Iteration where the first and the last fraction of the chain
         do not differ significantly regarding Geweke test -> Burn-In
     """
+    if chain_number == 0:
+        # test if burn-in is already calculated
+        if result.sample_result.burn_in is not None:
+            logger.info(
+                f"Burn-in index ({result.sample_result.burn_in}) already calculated. Skipping Geweke test."
+            )
+            return result.sample_result.burn_in
+
     # Get parameter samples as numpy arrays
     chain = np.asarray(result.sample_result.trace_x[chain_number])
 
