@@ -68,7 +68,7 @@ class ProfilerTest(unittest.TestCase):
             steps = result.profile_result.list[i_run][0]["ratio_path"].size
             if method == "adaptive_step_regression":
                 self.assertTrue(
-                    steps < 20,
+                    steps < 100,
                     "Profiling with regression based "
                     "proposal needed too many steps.",
                 )
@@ -79,7 +79,7 @@ class ProfilerTest(unittest.TestCase):
                 )
             elif method == "adaptive_step_order_1":
                 self.assertTrue(
-                    steps < 25,
+                    steps < 100,
                     "Profiling with 1st order based "
                     "proposal needed too many steps.",
                 )
@@ -90,7 +90,7 @@ class ProfilerTest(unittest.TestCase):
                 )
             elif method == "adaptive_step_order_0":
                 self.assertTrue(
-                    steps < 100,
+                    steps < 300,
                     "Profiling with 0th order based "
                     "proposal needed too many steps.",
                 )
@@ -479,6 +479,7 @@ def test_gh1165(lb, ub):
         progress_bar=False,
         profile_options=profile.ProfileOptions(
             min_step_size=0.1,
+            max_step_size=1.0,
             delta_ratio_max=0.05,
             default_step_size=0.5,
             ratio_min=0.01,

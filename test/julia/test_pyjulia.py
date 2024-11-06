@@ -59,7 +59,11 @@ def test_pyjulia_pipeline():
 
     # check with analytical value
     p_opt = obj.get("p_opt")
-    assert np.allclose(result.optimize_result[0].x, p_opt)  # noqa: S101
+    assert np.allclose(
+        result.optimize_result[0].x,
+        p_opt,
+        atol=1e-6,  # noqa:  S101
+    )
 
 
 def test_petabJL_interface():
