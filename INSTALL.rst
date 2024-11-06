@@ -5,7 +5,7 @@ Install and upgrade
 Requirements
 ------------
 
-This package requires Python 3.8 or later (see :ref:`Python support`).
+This package requires Python 3.10 or later (see :ref:`Python support`).
 It is continuously tested on Linux, and most parts should also work on other
 operating systems (MacOS, Windows).
 
