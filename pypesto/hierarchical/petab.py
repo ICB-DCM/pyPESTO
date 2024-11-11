@@ -640,7 +640,10 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
             other_data_type,
             other_observables,
         ) in observables_by_data_type.items():
-            if data_type == other_data_type:
+            if data_type == other_data_type or (
+                data_type in CENSORING_TYPES
+                and other_data_type in CENSORING_TYPES
+            ):
                 continue
             if observables & other_observables:
                 raise ValueError(
