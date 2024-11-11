@@ -351,10 +351,7 @@ class MethodCaller:
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
-    def __call__(
-        self,
-        newly_calibrated_models: Optional[dict[str, Model]] = None,
-    ) -> tuple[list[Model], dict[str, Model]]:
+    def __call__(self) -> tuple[list[Model], dict[str, Model]]:
         """Run a single iteration of the model selection method.
 
         A single iteration here refers to calibration of all candidate models.
@@ -362,14 +359,6 @@ class MethodCaller:
         with the forward method, a single iteration would involve calibration
         of all models that have both: the same 3 estimated parameters; and 1
         additional estimated parameter.
-
-        The input `newly_calibrated_models` is from the previous iteration. The
-        output `newly_calibrated_models` is from the current iteration.
-
-        Parameters
-        ----------
-        newly_calibrated_models:
-            The newly calibrated models from the previous iteration.
 
         Returns
         -------
@@ -386,10 +375,6 @@ class MethodCaller:
             problem=self.petab_select_problem,
             candidate_space=self.candidate_space,
             limit=self.limit,
-            # FIXME confirm old results are reproducible after this change
-            # calibrated_models=self.calibrated_models,
-            # newly_calibrated_models=newly_calibrated_models,
-            # excluded_model_hashes=self.calibrated_models.keys(),
             criterion=self.criterion,
             user_calibrated_models=self.user_calibrated_models,
         )
