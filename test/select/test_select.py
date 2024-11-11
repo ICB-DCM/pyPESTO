@@ -279,6 +279,8 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
         "M1_3": -4.705,
         # 'M1_7': -4.056,  # skipped -- reproducibility requires many starts
     }
+    # As M1_7 criterion comparison is skipped, at least ensure it is present
+    assert {m.model_subspace_id for m in best_models} == {"M1_3", "M1_7"}
     test_best_models_criterion_values = {
         model.model_subspace_id: model.get_criterion(Criterion.AIC)
         for model in best_models

@@ -8,6 +8,10 @@ from typing import Any, Callable, Optional
 import numpy as np
 import petab_select
 from petab_select import (
+    CANDIDATE_SPACE,
+    MODELS,
+    PREDECESSOR_MODEL,
+    UNCALIBRATED_MODELS,
     VIRTUAL_INITIAL_MODEL,
     CandidateSpace,
     Criterion,
@@ -213,6 +217,11 @@ class MethodCaller:
         Specify the predecessor (initial) model for the model selection
         algorithm. If ``None``, then the algorithm will generate an initial
         predecessor model if required.
+    user_calibrated_models:
+        Supply calibration results for models yourself, as a list of models.
+        If a model with the same hash is encountered in the current model
+        selection run, and the user-supplied calibrated model has the
+        `criterion` value set, the model will not be calibrated again.
     select_first_improvement:
         If ``True``, model selection will terminate as soon as a better model
         is found. If `False`, all candidate models will be tested.
@@ -245,6 +254,7 @@ class MethodCaller:
         # TODO deprecated
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
         model_problem_options: dict = None,
+        user_calibrated_models: list[Model] = None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
@@ -255,6 +265,12 @@ class MethodCaller:
         self.predecessor_model = predecessor_model
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
+
+        self.user_calibrated_models = {}
+        if user_calibrated_models is not None:
+            self.user_calibrated_models = {
+                model.get_hash(): model for model in user_calibrated_models
+            }
 
         self.logger = MethodLogger()
 
@@ -335,10 +351,7 @@ class MethodCaller:
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
-    def __call__(
-        self,
-        newly_calibrated_models: Optional[dict[str, Model]] = None,
-    ) -> tuple[list[Model], dict[str, Model]]:
+    def __call__(self) -> tuple[list[Model], dict[str, Model]]:
         """Run a single iteration of the model selection method.
 
         A single iteration here refers to calibration of all candidate models.
@@ -346,14 +359,6 @@ class MethodCaller:
         with the forward method, a single iteration would involve calibration
         of all models that have both: the same 3 estimated parameters; and 1
         additional estimated parameter.
-
-        The input `newly_calibrated_models` is from the previous iteration. The
-        output `newly_calibrated_models` is from the current iteration.
-
-        Parameters
-        ----------
-        newly_calibrated_models:
-            The newly calibrated models from the previous iteration.
 
         Returns
         -------
@@ -366,39 +371,56 @@ class MethodCaller:
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
 
-        candidate_space = petab_select.ui.candidates(
+        iteration = petab_select.ui.start_iteration(
             problem=self.petab_select_problem,
             candidate_space=self.candidate_space,
             limit=self.limit,
-            calibrated_models=self.calibrated_models,
-            newly_calibrated_models=newly_calibrated_models,
-            excluded_model_hashes=self.calibrated_models.keys(),
             criterion=self.criterion,
+            user_calibrated_models=self.user_calibrated_models,
         )
-        predecessor_model = self.candidate_space.predecessor_model
 
-        if not candidate_space.models:
+        if not iteration[UNCALIBRATED_MODELS]:
             raise StopIteration("No valid models found.")
 
         # TODO parallelize calibration (maybe not sensible if
         #      `self.select_first_improvement`)
-        newly_calibrated_models = {}
-        for candidate_model in candidate_space.models:
-            # autoruns calibration
-            self.new_model_problem(model=candidate_model)
-            newly_calibrated_models[
-                candidate_model.get_hash()
-            ] = candidate_model
+        calibrated_models = {}
+        for model in iteration[UNCALIBRATED_MODELS]:
+            if (
+                model.get_criterion(
+                    criterion=self.criterion,
+                    compute=True,
+                    raise_on_failure=False,
+                )
+                is not None
+            ):
+                self.logger.log(
+                    message=(
+                        "Unexpected calibration result already available for "
+                        f"model: `{model.get_hash()}`. Skipping "
+                        "calibration."
+                    ),
+                    level="warning",
+                )
+            else:
+                self.new_model_problem(model=model)
+
+            calibrated_models[model.get_hash()] = model
             method_signal = self.handle_calibrated_model(
-                model=candidate_model,
-                predecessor_model=predecessor_model,
+                model=model,
+                predecessor_model=iteration[PREDECESSOR_MODEL],
             )
             if method_signal.proceed == MethodSignalProceed.STOP:
                 break
 
-        self.calibrated_models.update(newly_calibrated_models)
+        iteration_results = petab_select.ui.end_iteration(
+            candidate_space=iteration[CANDIDATE_SPACE],
+            calibrated_models=calibrated_models,
+        )
 
-        return predecessor_model, newly_calibrated_models
+        self.calibrated_models.update(iteration_results[MODELS])
+
+        return iteration[PREDECESSOR_MODEL], iteration_results[MODELS]
 
     def handle_calibrated_model(
         self,
