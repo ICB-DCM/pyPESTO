@@ -156,16 +156,13 @@ class Problem:
         self.handle_select_kwargs(kwargs)
         # TODO handle bidirectional
         method_caller = self.create_method_caller(**kwargs)
-        previous_best_model, newly_calibrated_models = method_caller(
-            # TODO add predecessor model to state
-            newly_calibrated_models=self.newly_calibrated_models,
-        )
+        previous_best_model, newly_calibrated_models = method_caller()
 
         self.update_with_newly_calibrated_models(
             newly_calibrated_models=newly_calibrated_models,
         )
 
-        best_model = petab_select.ui.best(
+        best_model = petab_select.ui.get_best(
             problem=self.petab_select_problem,
             models=self.newly_calibrated_models.values(),
             criterion=method_caller.criterion,
@@ -198,9 +195,7 @@ class Problem:
 
         while True:
             try:
-                previous_best_model, newly_calibrated_models = method_caller(
-                    newly_calibrated_models=self.newly_calibrated_models,
-                )
+                previous_best_model, newly_calibrated_models = method_caller()
                 self.update_with_newly_calibrated_models(
                     newly_calibrated_models=newly_calibrated_models,
                 )
@@ -247,33 +242,18 @@ class Problem:
         """
         self.handle_select_kwargs(kwargs)
         model_lists = []
-        newly_calibrated_models_list = [
-            self.newly_calibrated_models for _ in predecessor_models
-        ]
 
-        method_caller = self.create_method_caller(**kwargs)
-        for start_index, predecessor_model in enumerate(predecessor_models):
-            method_caller.candidate_space.previous_predecessor_model = (
-                predecessor_model
+        for predecessor_model in predecessor_models:
+            method_caller = self.create_method_caller(
+                **(kwargs | {"predecessor_model": predecessor_model})
             )
-            (
-                best_model,
-                newly_calibrated_models_list[start_index],
-            ) = method_caller(
-                newly_calibrated_models=newly_calibrated_models_list[
-                    start_index
-                ],
-            )
-            self.calibrated_models.update(
-                newly_calibrated_models_list[start_index]
-            )
+            (best_model, models) = method_caller()
+            self.calibrated_models |= models
 
-            model_lists.append(
-                newly_calibrated_models_list[start_index].values()
-            )
+            model_lists.append(list(models.values()))
             method_caller.candidate_space.reset()
 
-        best_model = petab_select.ui.best(
+        best_model = petab_select.ui.get_best(
             problem=method_caller.petab_select_problem,
             models=[model for models in model_lists for model in models],
             criterion=method_caller.criterion,
