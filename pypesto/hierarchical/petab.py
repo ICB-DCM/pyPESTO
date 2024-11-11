@@ -76,7 +76,10 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
     petab_problem:
         The PEtab problem.
     """
-    if PARAMETER_TYPE not in petab_problem.parameter_df:
+    if (
+        PARAMETER_TYPE not in petab_problem.parameter_df
+        and MEASUREMENT_TYPE not in petab_problem.measurement_df
+    ):
         # not a hierarchical optimization problem
         return
 
@@ -477,6 +480,18 @@ def _get_symbolic_formula_from_measurement(
         observable_id=observable_id,
         override_type=formula_type,
     )
+    # Search for placeholders in the formula that are not allowed to be
+    # overridden by inner parameters -- noise inner parameters should not
+    # be in observable formulas, and vice versa.
+    disallowed_formula_type = (
+        "noise" if formula_type == "observable" else "observable"
+    )
+    disallowed_formula_placeholders = get_formula_placeholders(
+        formula_string=formula_string,
+        observable_id=observable_id,
+        override_type=disallowed_formula_type,
+    )
+
     if formula_placeholders:
         overrides = measurement[formula_type + "Parameters"]
         overrides = (
@@ -486,6 +501,20 @@ def _get_symbolic_formula_from_measurement(
         )
         subs = dict(zip(formula_placeholders, overrides))
         symbolic_formula = symbolic_formula.subs(subs)
+
+    if disallowed_formula_placeholders:
+        disallowed_overrides = measurement[
+            disallowed_formula_type + "Parameters"
+        ]
+        disallowed_overrides = (
+            disallowed_overrides.split(PARAMETER_SEPARATOR)
+            if isinstance(disallowed_overrides, str)
+            else [disallowed_overrides]
+        )
+        disallowed_subs = dict(
+            zip(disallowed_formula_placeholders, disallowed_overrides)
+        )
+        symbolic_formula = symbolic_formula.subs(disallowed_subs)
 
     symbolic_formula_inner_parameters = {
         sp.Symbol(inner_parameter_id): inner_parameter_type
