@@ -76,66 +76,63 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
     petab_problem:
         The PEtab problem.
     """
-    if (
-        PARAMETER_TYPE not in petab_problem.parameter_df
-        and MEASUREMENT_TYPE not in petab_problem.measurement_df
-    ):
-        # not a hierarchical optimization problem
-        return
-
-    # ensure we only have linear parameter scale
-    inner_parameter_table = petab_problem.parameter_df[
-        petab_problem.parameter_df[PARAMETER_TYPE].isin(
-            [
-                InnerParameterType.OFFSET,
-                InnerParameterType.SIGMA,
-                InnerParameterType.SCALING,
-            ]
-        )
-    ]
-    if (
-        petab.PARAMETER_SCALE in inner_parameter_table
-        and not (
-            inner_parameter_table[petab.PARAMETER_SCALE].isna()
-            | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
-            | (
-                inner_parameter_table[PARAMETER_TYPE]
-                != InnerParameterType.SIGMA
+    if PARAMETER_TYPE in petab_problem.parameter_df:
+        # ensure we only have linear parameter scale
+        inner_parameter_table = petab_problem.parameter_df[
+            petab_problem.parameter_df[PARAMETER_TYPE].isin(
+                [
+                    InnerParameterType.OFFSET,
+                    InnerParameterType.SIGMA,
+                    InnerParameterType.SCALING,
+                ]
             )
-        ).all()
-    ):
-        sub_df = inner_parameter_table.loc[
-            :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
         ]
-        raise NotImplementedError(
-            "LOG and LOG10 parameter scale of inner parameters is not supported "
-            "for sigma parameters. Inner parameter table:\n"
-            f"{sub_df}"
+        if (
+            petab.PARAMETER_SCALE in inner_parameter_table
+            and not (
+                inner_parameter_table[petab.PARAMETER_SCALE].isna()
+                | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
+                | (
+                    inner_parameter_table[PARAMETER_TYPE]
+                    != InnerParameterType.SIGMA
+                )
+            ).all()
+        ):
+            sub_df = inner_parameter_table.loc[
+                :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
+            ]
+            raise NotImplementedError(
+                "LOG and LOG10 parameter scale of inner parameters is not supported "
+                "for sigma parameters. Inner parameter table:\n"
+                f"{sub_df}"
+            )
+        elif (
+            petab.PARAMETER_SCALE in inner_parameter_table
+            and not (
+                inner_parameter_table[petab.PARAMETER_SCALE].isna()
+                | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
+            ).all()
+        ):
+            sub_df = inner_parameter_table.loc[
+                :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
+            ]
+            warnings.warn(
+                f"LOG and LOG10 parameter scale of inner parameters is used only "
+                f"for their visualization, and does not affect their optimization. "
+                f"Inner parameter table:\n{sub_df}",
+                stacklevel=1,
+            )
+
+        inner_parameter_df = validate_measurement_formulae(
+            petab_problem=petab_problem
         )
-    elif (
-        petab.PARAMETER_SCALE in inner_parameter_table
-        and not (
-            inner_parameter_table[petab.PARAMETER_SCALE].isna()
-            | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
-        ).all()
-    ):
-        sub_df = inner_parameter_table.loc[
-            :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
-        ]
-        warnings.warn(
-            f"LOG and LOG10 parameter scale of inner parameters is used only "
-            f"for their visualization, and does not affect their optimization. "
-            f"Inner parameter table:\n{sub_df}",
-            stacklevel=1,
+
+        validate_inner_parameter_pairings(
+            inner_parameter_df=inner_parameter_df
         )
 
-    inner_parameter_df = validate_measurement_formulae(
-        petab_problem=petab_problem
-    )
-
-    validate_inner_parameter_pairings(inner_parameter_df=inner_parameter_df)
-
-    validate_observable_data_types(petab_problem=petab_problem)
+    if MEASUREMENT_TYPE in petab_problem.measurement_df:
+        validate_observable_data_types(petab_problem=petab_problem)
 
 
 def validate_inner_parameter_pairings(
