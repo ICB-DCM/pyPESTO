@@ -200,11 +200,13 @@ class SacessMinimizeMethod:
         self.num_workers = num_workers
         self.local_optimizer = local_optimizer
         self.optimizer_kwargs = optimizer_kwargs
-        self.tmpdir = Path(tmpdir)
+        self.tmpdir = tmpdir
         self.save_history = save_history
 
         if self.save_history and self.tmpdir is None:
             self.tmpdir = Path.cwd() / "sacess_tmpdir"
+        if self.tmpdir is not None:
+            self.tmpdir = Path(self.tmpdir)
 
     def __call__(self, problem: Problem, model_hash: str, **minimize_options):
         """Create then run a problem-specific sacess optimizer."""
