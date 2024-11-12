@@ -21,7 +21,6 @@ from ...C import (
     GRAD,
     HESS,
     INNER_PARAMETERS,
-    INNER_RDATAS,
     RDATAS,
     RES,
     SRES,
@@ -365,6 +364,6 @@ class RelativeAmiciCalculator(AmiciCalculator):
             rdatas=rdatas,
             inner_parameters=inner_parameters,
         )
-        inner_result[INNER_RDATAS] = rdatas
+        inner_result[RDATAS] = rdatas
 
         return inner_result, inner_parameters
