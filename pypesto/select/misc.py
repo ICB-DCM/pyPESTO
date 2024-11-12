@@ -217,6 +217,7 @@ class SacessMinimizeMethod:
         )
         for x in ess_init_args:
             x["local_optimizer"] = self.local_optimizer
+        model_tmpdir = None
         if self.tmpdir is not None:
             model_tmpdir = self.tmpdir / model_hash
             model_tmpdir.mkdir(exist_ok=False, parents=True)
