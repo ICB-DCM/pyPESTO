@@ -182,7 +182,7 @@ class SacessMinimizeMethod:
     selection, but a new problem-specific SaCeSS optimizer will be created
     every time a model is minimized.
 
-    Class attributes correspond to pyPESTO's SaCeSS optimizer, and are
+    Instance attributes correspond to pyPESTO's SaCeSS optimizer, and are
     documented there. Extra keyword arguments supplied to the constructor
     will be passed on to the constructor of the SaCeSS optimizer, for example,
     `max_walltime_s` can be specified in this way. If specified, `tmpdir` will
