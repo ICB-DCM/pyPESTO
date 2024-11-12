@@ -20,7 +20,7 @@ from petab_select import (
 import pypesto.engine
 import pypesto.select
 import pypesto.visualize.select
-from pypesto.select import model_problem
+from pypesto.select import SacessMinimizeMethod, model_problem
 from pypesto.select.misc import correct_x_guesses
 
 model_problem_options = {
@@ -496,3 +496,31 @@ def test_custom_objective(petab_problem_yaml):
     # The custom objective and gradient were returned.
     assert test_fun == expected_fun
     assert np.isclose(test_grad, expected_grad).all()
+
+
+def test_sacess_minimize_method(pypesto_select_problem, initial_models):
+    """Test `SacessMinimizeMethod`.
+
+    Only ensures that the pipeline runs.
+    """
+    predecessor_model = initial_models[1]
+
+    minimize_method = SacessMinimizeMethod(
+        num_workers=2,
+        max_walltime_s=1,
+    )
+
+    minimize_options = {
+        "startpoint_method": pypesto.startpoint.UniformStartpoints(),
+    }
+
+    model_problem_options = {
+        "minimize_method": minimize_method,
+        "minimize_options": minimize_options,
+    }
+
+    pypesto_select_problem.select_to_completion(
+        model_problem_options=model_problem_options,
+        method=petab_select.Method.FORWARD,
+        predecessor_model=predecessor_model,
+    )

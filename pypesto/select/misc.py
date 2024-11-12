@@ -13,6 +13,7 @@ from petab_select.constants import PETAB_PROBLEM
 
 from ..history import Hdf5History
 from ..objective import Objective
+from ..optimize import Optimizer
 from ..optimize.ess import (
     SacessOptimizer,
     get_default_ess_options,
@@ -191,8 +192,8 @@ class SacessMinimizeMethod:
     def __init__(
         self,
         num_workers: int,
-        local_optimizer,
-        tmpdir=None,
+        local_optimizer: Optimizer = None,
+        tmpdir: str | Path | None = None,
         save_history: bool = False,
         **optimizer_kwargs,
     ):
@@ -200,13 +201,14 @@ class SacessMinimizeMethod:
         self.num_workers = num_workers
         self.local_optimizer = local_optimizer
         self.optimizer_kwargs = optimizer_kwargs
-        self.tmpdir = tmpdir
         self.save_history = save_history
+
+        self.tmpdir = tmpdir
+        if self.tmpdir is not None:
+            self.tmpdir = Path(self.tmpdir)
 
         if self.save_history and self.tmpdir is None:
             self.tmpdir = Path.cwd() / "sacess_tmpdir"
-        if self.tmpdir is not None:
-            self.tmpdir = Path(self.tmpdir)
 
     def __call__(self, problem: Problem, model_hash: str, **minimize_options):
         """Create then run a problem-specific sacess optimizer."""
