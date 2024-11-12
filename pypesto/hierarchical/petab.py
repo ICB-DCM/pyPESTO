@@ -76,63 +76,63 @@ def validate_hierarchical_petab_problem(petab_problem: petab.Problem) -> None:
     petab_problem:
         The PEtab problem.
     """
-    if PARAMETER_TYPE not in petab_problem.parameter_df:
-        # not a hierarchical optimization problem
-        return
-
-    # ensure we only have linear parameter scale
-    inner_parameter_table = petab_problem.parameter_df[
-        petab_problem.parameter_df[PARAMETER_TYPE].isin(
-            [
-                InnerParameterType.OFFSET,
-                InnerParameterType.SIGMA,
-                InnerParameterType.SCALING,
-            ]
-        )
-    ]
-    if (
-        petab.PARAMETER_SCALE in inner_parameter_table
-        and not (
-            inner_parameter_table[petab.PARAMETER_SCALE].isna()
-            | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
-            | (
-                inner_parameter_table[PARAMETER_TYPE]
-                != InnerParameterType.SIGMA
+    if PARAMETER_TYPE in petab_problem.parameter_df:
+        # ensure we only have linear parameter scale
+        inner_parameter_table = petab_problem.parameter_df[
+            petab_problem.parameter_df[PARAMETER_TYPE].isin(
+                [
+                    InnerParameterType.OFFSET,
+                    InnerParameterType.SIGMA,
+                    InnerParameterType.SCALING,
+                ]
             )
-        ).all()
-    ):
-        sub_df = inner_parameter_table.loc[
-            :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
         ]
-        raise NotImplementedError(
-            "LOG and LOG10 parameter scale of inner parameters is not supported "
-            "for sigma parameters. Inner parameter table:\n"
-            f"{sub_df}"
+        if (
+            petab.PARAMETER_SCALE in inner_parameter_table
+            and not (
+                inner_parameter_table[petab.PARAMETER_SCALE].isna()
+                | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
+                | (
+                    inner_parameter_table[PARAMETER_TYPE]
+                    != InnerParameterType.SIGMA
+                )
+            ).all()
+        ):
+            sub_df = inner_parameter_table.loc[
+                :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
+            ]
+            raise NotImplementedError(
+                "LOG and LOG10 parameter scale of inner parameters is not supported "
+                "for sigma parameters. Inner parameter table:\n"
+                f"{sub_df}"
+            )
+        elif (
+            petab.PARAMETER_SCALE in inner_parameter_table
+            and not (
+                inner_parameter_table[petab.PARAMETER_SCALE].isna()
+                | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
+            ).all()
+        ):
+            sub_df = inner_parameter_table.loc[
+                :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
+            ]
+            warnings.warn(
+                f"LOG and LOG10 parameter scale of inner parameters is used only "
+                f"for their visualization, and does not affect their optimization. "
+                f"Inner parameter table:\n{sub_df}",
+                stacklevel=1,
+            )
+
+        inner_parameter_df = validate_measurement_formulae(
+            petab_problem=petab_problem
         )
-    elif (
-        petab.PARAMETER_SCALE in inner_parameter_table
-        and not (
-            inner_parameter_table[petab.PARAMETER_SCALE].isna()
-            | (inner_parameter_table[petab.PARAMETER_SCALE] == petab.LIN)
-        ).all()
-    ):
-        sub_df = inner_parameter_table.loc[
-            :, [PARAMETER_TYPE, petab.PARAMETER_SCALE]
-        ]
-        warnings.warn(
-            f"LOG and LOG10 parameter scale of inner parameters is used only "
-            f"for their visualization, and does not affect their optimization. "
-            f"Inner parameter table:\n{sub_df}",
-            stacklevel=1,
+
+        validate_inner_parameter_pairings(
+            inner_parameter_df=inner_parameter_df
         )
 
-    inner_parameter_df = validate_measurement_formulae(
-        petab_problem=petab_problem
-    )
-
-    validate_inner_parameter_pairings(inner_parameter_df=inner_parameter_df)
-
-    validate_observable_data_types(petab_problem=petab_problem)
+    if MEASUREMENT_TYPE in petab_problem.measurement_df:
+        validate_observable_data_types(petab_problem=petab_problem)
 
 
 def validate_inner_parameter_pairings(
@@ -477,6 +477,18 @@ def _get_symbolic_formula_from_measurement(
         observable_id=observable_id,
         override_type=formula_type,
     )
+    # Search for placeholders in the formula that are not allowed to be
+    # overridden by inner parameters -- noise inner parameters should not
+    # be in observable formulas, and vice versa.
+    disallowed_formula_type = (
+        "noise" if formula_type == "observable" else "observable"
+    )
+    disallowed_formula_placeholders = get_formula_placeholders(
+        formula_string=formula_string,
+        observable_id=observable_id,
+        override_type=disallowed_formula_type,
+    )
+
     if formula_placeholders:
         overrides = measurement[formula_type + "Parameters"]
         overrides = (
@@ -486,6 +498,20 @@ def _get_symbolic_formula_from_measurement(
         )
         subs = dict(zip(formula_placeholders, overrides))
         symbolic_formula = symbolic_formula.subs(subs)
+
+    if disallowed_formula_placeholders:
+        disallowed_overrides = measurement[
+            disallowed_formula_type + "Parameters"
+        ]
+        disallowed_overrides = (
+            disallowed_overrides.split(PARAMETER_SEPARATOR)
+            if isinstance(disallowed_overrides, str)
+            else [disallowed_overrides]
+        )
+        disallowed_subs = dict(
+            zip(disallowed_formula_placeholders, disallowed_overrides)
+        )
+        symbolic_formula = symbolic_formula.subs(disallowed_subs)
 
     symbolic_formula_inner_parameters = {
         sp.Symbol(inner_parameter_id): inner_parameter_type
@@ -614,7 +640,10 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
             other_data_type,
             other_observables,
         ) in observables_by_data_type.items():
-            if data_type == other_data_type:
+            if data_type == other_data_type or (
+                data_type in CENSORING_TYPES
+                and other_data_type in CENSORING_TYPES
+            ):
                 continue
             if observables & other_observables:
                 raise ValueError(
