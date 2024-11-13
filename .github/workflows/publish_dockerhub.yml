@@ -1,31 +1,32 @@
-name: publish-dockerhub
+name: Build and Push Docker Image
 
 on:
   push:
     branches:
-      - 'docker_hub_gha'
+      - main
+    paths:
+      - 'docker/**' 
+      - '.github/workflows/docker-publish.yml'
+  workflow_dispatch: 
 
 jobs:
-  docker:
+  build-and-push:
     runs-on: ubuntu-latest
+
     steps:
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      -
-        name: Login to Docker Hub
+      - name: Check out the repository
+        uses: actions/checkout@v2
+
+      - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-      -
-        name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          file: ${{ github.workspace }}/pyPESTO/docker/Dockerfile
-          push: true
-          tags: ICB_DCM/pypesto:latest
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Build and tag the Docker image
+        run: |
+          docker build -t ICB_DCM/pypesto:latest -f docker/Dockerfile .
+
+      - name: Push the Docker image to Docker Hub
+        run: |
+          docker push ICB_DCM/pypesto:latest
