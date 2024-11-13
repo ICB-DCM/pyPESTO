@@ -5,9 +5,9 @@ on:
     branches:
       - main
     paths:
-      - 'docker/**' 
+      - 'docker/**'
       - '.github/workflows/docker-publish.yml'
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   build-and-push:
