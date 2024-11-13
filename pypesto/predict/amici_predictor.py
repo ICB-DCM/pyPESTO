@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, List, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
 
 from ..result import PredictionResult
 
+PostProcessor = Callable[[list[dict[str, np.array]]], list[np.ndarray]]
+
 
 class AmiciPredictor:
     """
@@ -44,23 +47,23 @@ class AmiciPredictor:
     post-processed. There are no checks here to ensure that the sensitivities
     are correctly post-processed, this is explicitly left to the user.
     There are also no safeguards if the postprocessor routines fail. This may
-    happen if, e.g., a call to Amici fails, and no timepoints, states or
+    happen if, e.g., a call to AMICI fails, and no timepoints, states or
     observables are returned. As the AmiciPredictor is agnostic about the
     dimension of the postprocessor and also the dimension of the postprocessed
     output, these checks are also left to the user. An example for such a check
-    is provided in the default output (see _default_output()).
+    is provided in the default output (see :meth:`_default_output()`).
     """
 
     def __init__(
         self,
         amici_objective: AmiciObjective,
-        amici_output_fields: Union[Sequence[str], None] = None,
-        post_processor: Union[Callable, None] = None,
-        post_processor_sensi: Union[Callable, None] = None,
-        post_processor_time: Union[Callable, None] = None,
-        max_chunk_size: Union[int, None] = None,
-        output_ids: Union[Sequence[str], None] = None,
-        condition_ids: Union[Sequence[str], None] = None,
+        amici_output_fields: Sequence[str] | None = None,
+        post_processor: PostProcessor | None = None,
+        post_processor_sensi: PostProcessor | None = None,
+        post_processor_time: PostProcessor | None = None,
+        max_chunk_size: int | None = None,
+        output_ids: Sequence[str] | None = None,
+        condition_ids: Sequence[str] | None = None,
     ):
         """
         Initialize predictor.
@@ -115,7 +118,7 @@ class AmiciPredictor:
             the AMICI model (defaults to AMICI observables).
         condition_ids:
             List of identifiers for the conditions of the edata objects of the
-            amici objective, will be passed to the PredictionResult at call.
+            amici objective, will be passed to the :class:`PredictionResult` at call.
         """
         # save settings and objective
         self.amici_objective = amici_objective
@@ -152,9 +155,9 @@ class AmiciPredictor:
     def __call__(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...] = (0,),
+        sensi_orders: tuple[int, ...] = (0,),
         mode: ModeType = MODE_FUN,
-        output_file: str = '',
+        output_file: str = "",
         output_format: str = CSV,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
@@ -163,7 +166,7 @@ class AmiciPredictor:
         Call the predictor.
 
         Simulate a model for a certain prediction function.
-        This method relies on the AmiciObjective, which is underlying, but
+        This method relies on the :class:`AmiciObjective`, which is underlying, but
         allows the user to apply any post-processing of the results, the
         sensitivities, and the timepoints.
 
@@ -178,7 +181,7 @@ class AmiciPredictor:
         output_file:
             Path to an output file.
         output_format:
-            Either 'csv', 'h5'. If an output file is specified, this routine
+            Either ``'csv'`` or ``'h5'``. If an output file is specified, this routine
             will return a csv file, created from a DataFrame, or an h5 file,
             created from a dict.
         include_llh_weights:
@@ -191,15 +194,14 @@ class AmiciPredictor:
 
         Returns
         -------
-        results:
-            PredictionResult object containing timepoints, outputs, and
-            output_sensitivities if requested
+        PredictionResult object containing timepoints, outputs, and
+        output sensitivities if requested.
         """
         # sanity check for output
         if 2 in sensi_orders:
             raise Exception(
-                'Prediction simulation does currently not support '
-                'second order output.'
+                "Prediction simulation does currently not support "
+                "second order output."
             )
         # add llh and sigmay to amici output fields if requested
         if include_llh_weights and AMICI_LLH not in self.amici_output_fields:
@@ -255,9 +257,9 @@ class AmiciPredictor:
             elif output_format == H5:
                 results.write_to_h5(output_file=output_file)
             else:
-                raise Exception(
-                    f'Call to unknown format {output_format} for '
-                    f'output of pyPESTO prediction.'
+                raise ValueError(
+                    f"Call to unknown format {output_format} for "
+                    f"output of pyPESTO prediction."
                 )
 
         # return dependent on sensitivity order
@@ -266,11 +268,17 @@ class AmiciPredictor:
     def _get_outputs(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType = MODE_FUN,
         include_llh_weights: bool = False,
         include_sigmay: bool = False,
-    ) -> Tuple[List, List, List]:
+    ) -> tuple[
+        list[np.array],
+        list[np.array],
+        list[np.array],
+        list[np.array],
+        list[np.array],
+    ]:
         """
         Split the calls to amici into smaller chunks.
 
@@ -337,12 +345,20 @@ class AmiciPredictor:
                 mode=mode,
             )
 
-        def _default_output(amici_outputs):
+        def _default_output(
+            amici_outputs: list[dict[str, np.array]],
+        ) -> tuple[
+            list[np.array],
+            list[np.array],
+            list[np.array],
+            list[np.array],
+            list[np.array],
+        ]:
             """
             Create default output of prediction.
 
             Equals to observables of AMICI model. We need to check that call
-            to AMICI was successful (status == 0), before writing the output.
+            to AMICI was successful (``status == 0``), before writing the output.
             """
             amici_nt = [
                 len(edata.getTimepoints())
@@ -356,42 +372,52 @@ class AmiciPredictor:
             outputs_weights = []
             outputs_sigmay = []
             timepoints = [
-                amici_output[AMICI_T]
-                if amici_output[AMICI_STATUS] == 0
-                else np.full((amici_nt[i_condition],), np.nan)
+                (
+                    amici_output[AMICI_T]
+                    if amici_output[AMICI_STATUS] == 0
+                    else np.full((amici_nt[i_condition],), np.nan)
+                )
                 for i_condition, amici_output in enumerate(amici_outputs)
             ]
             # add outputs and sensitivities if requested
             if 0 in sensi_orders:
                 outputs = [
-                    amici_output[AMICI_Y]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    (
+                        amici_output[AMICI_Y]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full((amici_nt[i_condition], amici_ny), np.nan)
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             if 1 in sensi_orders:
                 outputs_sensi = [
-                    amici_output[AMICI_SY]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full(
-                        (amici_nt[i_condition], amici_np, amici_ny), np.nan
+                    (
+                        amici_output[AMICI_SY]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full(
+                            (amici_nt[i_condition], amici_np, amici_ny), np.nan
+                        )
                     )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             # add likelihood as weights if requested
             if include_llh_weights:
                 outputs_weights = [
-                    amici_output[AMICI_LLH]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.nan
+                    (
+                        amici_output[AMICI_LLH]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.nan
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
             # add standard deviations if requested
             if include_sigmay:
                 outputs_sigmay = [
-                    amici_output[AMICI_SIGMAY]
-                    if amici_output[AMICI_STATUS] == 0
-                    else np.full((1, amici_ny), np.nan)
+                    (
+                        amici_output[AMICI_SIGMAY]
+                        if amici_output[AMICI_STATUS] == 0
+                        else np.full((1, amici_ny), np.nan)
+                    )
                     for i_condition, amici_output in enumerate(amici_outputs)
                 ]
 
@@ -432,8 +458,14 @@ class AmiciPredictor:
         )
 
     def _wrap_call_to_amici(
-        self, amici_outputs, x, sensi_orders, mode, parameter_mapping, edatas
-    ):
+        self,
+        amici_outputs: list,
+        x: np.array,
+        sensi_orders: tuple[int, ...],
+        mode: ModeType,
+        parameter_mapping,
+        edatas,
+    ) -> None:
         """
         Encapsulate the call to amici.
 

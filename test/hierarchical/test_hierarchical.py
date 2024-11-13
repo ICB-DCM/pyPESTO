@@ -1,28 +1,30 @@
 """Tests for hierarchical optimization."""
+
+import copy
 import time
 
 import amici
 import numpy as np
 import pandas as pd
-import petab
+import petab.v1 as petab
 
 import pypesto
 from pypesto.C import (
     INNER_PARAMETER_BOUNDS,
-    LOG10,
+    LIN,
     LOWER_BOUND,
     MODE_FUN,
     UPPER_BOUND,
     InnerParameterType,
 )
-from pypesto.hierarchical.parameter import InnerParameter
+from pypesto.hierarchical.base_parameter import InnerParameter
+from pypesto.hierarchical.base_problem import InnerProblem
 from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
-from pypesto.hierarchical.problem import InnerProblem
-from pypesto.hierarchical.solver import (
+from pypesto.hierarchical.relative.solver import (
     AnalyticalInnerSolver,
     NumericalInnerSolver,
 )
-from pypesto.hierarchical.util import (
+from pypesto.hierarchical.relative.util import (
     apply_offset,
     apply_scaling,
     compute_optimal_offset,
@@ -56,8 +58,7 @@ def test_hierarchical_optimization_pipeline():
     problems = {}
     for flag in flags:
         importer = PetabImporter(petab_problems[flag], hierarchical=flag)
-        objective = importer.create_objective()
-        problem = importer.create_problem(objective)
+        problem = importer.create_problem()
         problem.objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_adjoint
         )
@@ -79,14 +80,13 @@ def test_hierarchical_optimization_pipeline():
     outer_indices = [
         ix
         for ix, x in enumerate(problems[False].x_names)
-        if x
-        not in problems[True].objective.calculator.inner_problem.get_x_ids()
+        if x not in problems[True].objective.calculator.get_inner_par_ids()
     ]
     problems[True].set_x_guesses(startpoints[:, outer_indices])
 
     inner_solvers = {
-        'analytical': AnalyticalInnerSolver(),
-        'numerical': NumericalInnerSolver(),
+        "analytical": AnalyticalInnerSolver(),
+        "numerical": NumericalInnerSolver(),
     }
 
     history_options = pypesto.HistoryOptions(trace_record=True)
@@ -111,29 +111,29 @@ def test_hierarchical_optimization_pipeline():
         best_fval = result.optimize_result.list[0].fval
 
         result = {
-            'list': result.optimize_result.list,
-            'time': wall_time,
-            'best_x': best_x,
-            'best_fval': best_fval,
+            "list": result.optimize_result.list,
+            "time": wall_time,
+            "best_x": best_x,
+            "best_fval": best_fval,
         }
         return result
 
     results = {}
     for problem, inner_solver_id in [
-        (problems[True], 'analytical'),
+        (problems[True], "analytical"),
         (problems[False], False),
-        (problems[True], 'numerical'),
+        (problems[True], "numerical"),
     ]:
         results[inner_solver_id] = get_result(problem, inner_solver_id)
 
     trace_False = np.array(
-        results[False]['list'][0].history.get_fval_trace(trim=True)
+        results[False]["list"][0].history.get_fval_trace(trim=True)
     )
     trace_numerical = np.array(
-        results['numerical']['list'][0].history.get_fval_trace(trim=True)
+        results["numerical"]["list"][0].history.get_fval_trace(trim=True)
     )
     trace_analytical = np.array(
-        results['numerical']['list'][0].history.get_fval_trace(trim=True)
+        results["numerical"]["list"][0].history.get_fval_trace(trim=True)
     )
 
     # The analytical inner solver is at least as good as (fval / speed) the
@@ -184,7 +184,7 @@ def test_hierarchical_calculator_and_objective():
     x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
     # Nominal sigma values are close to optimal.
     # One is changed here to facilitate testing.
-    x_dct['sd_pSTAT5A_rel'] = 0.5
+    x_dct["sd_pSTAT5A_rel"] = 0.5
 
     calculator_results = {
         flag: calculate(problems[flag], x_dct=x_dct) for flag in flags
@@ -193,26 +193,31 @@ def test_hierarchical_calculator_and_objective():
     # Hierarchical optimization means that the results differ here, because
     # the `False` case has suboptimal sigma values.
     assert not np.isclose(
-        calculator_results[True]['fval'],
-        calculator_results[False]['fval'],
+        calculator_results[True]["fval"],
+        calculator_results[False]["fval"],
     )
     assert not np.isclose(
-        calculator_results[True]['grad'],
-        calculator_results[False]['grad'],
+        calculator_results[True]["grad"],
+        calculator_results[False]["grad"],
     ).all()
 
-    x_dct.update(calculator_results[True]['inner_parameters'])
+    for inner_idx, inner_par in enumerate(
+        problems[True].objective.calculator.get_inner_par_ids()
+    ):
+        x_dct[inner_par] = calculator_results[True]["inner_parameters"][
+            inner_idx
+        ]
     calculator_results[False] = calculate(problem=problems[False], x_dct=x_dct)
 
     # The `False` case has copied the optimal sigma values from hierarchical
     # optimization, so can produce the same results now.
     assert np.isclose(
-        calculator_results[True]['fval'],
-        calculator_results[False]['fval'],
+        calculator_results[True]["fval"],
+        calculator_results[False]["fval"],
     )
     assert np.isclose(
-        calculator_results[True]['grad'],
-        calculator_results[False]['grad'],
+        calculator_results[True]["grad"],
+        calculator_results[False]["grad"],
     ).all()
 
     parameters = [x_dct[x_id] for x_id in petab_problem.x_free_ids]
@@ -314,23 +319,27 @@ def test_analytical_computations():
     assert np.isclose(sigma_value, expected_sigma_value, rtol=rtol)
 
 
-def inner_problem_exp():
+def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
     function = np.exp
-    timepoints = np.linspace(0, 10, 101)
+    timepoints = np.linspace(0, 3, 101)
 
     expected_values = {
-        'scaling_': 5,
-        'offset_': 2,
-        'sigma_': 3,
+        "scaling_": 5,
+        "offset_": 2,
+        "sigma_": 3,
     }
 
     simulation = function(timepoints)
 
-    data = (
-        expected_values['scaling_'] * simulation + expected_values['offset_']
-    )
-    data[0::2] -= expected_values['sigma_']
-    data[1::2] += expected_values['sigma_']
+    data = copy.deepcopy(simulation)
+    if add_scaling:
+        data *= expected_values["scaling_"]
+
+    if add_offset:
+        data += expected_values["offset_"]
+
+    data[0::2] -= expected_values["sigma_"]
+    data[1::2] += expected_values["sigma_"]
 
     mask = np.full(data.shape, True)
 
@@ -338,20 +347,30 @@ def inner_problem_exp():
         InnerParameter(
             inner_parameter_id=inner_parameter_id,
             inner_parameter_type=inner_parameter_type,
-            scale=LOG10,
+            scale=LIN,
             lb=INNER_PARAMETER_BOUNDS[inner_parameter_type][LOWER_BOUND],
             ub=INNER_PARAMETER_BOUNDS[inner_parameter_type][UPPER_BOUND],
             ixs=mask,
         )
         for inner_parameter_id, inner_parameter_type in [
-            ('offset_', InnerParameterType.OFFSET),
-            ('scaling_', InnerParameterType.SCALING),
-            ('sigma_', InnerParameterType.SIGMA),
+            (
+                ("offset_", InnerParameterType.OFFSET)
+                if add_offset
+                else (None, None)
+            ),
+            (
+                ("scaling_", InnerParameterType.SCALING)
+                if add_scaling
+                else (None, None)
+            ),
+            ("sigma_", InnerParameterType.SIGMA),
         ]
+        if inner_parameter_id is not None
     ]
 
-    inner_parameters[0].coupled = True
-    inner_parameters[1].coupled = True
+    if add_scaling and add_offset:
+        inner_parameters[0].coupled = inner_parameters[1]
+        inner_parameters[1].coupled = inner_parameters[0]
 
     inner_problem = InnerProblem(xs=inner_parameters, data=[data])
 
@@ -375,11 +394,11 @@ def test_analytical_inner_solver():
         scaled=False,
     )
 
-    assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
+    assert np.isclose(result["offset_"], expected_values["offset_"], rtol=rtol)
     assert np.isclose(
-        result['scaling_'], expected_values['scaling_'], rtol=rtol
+        result["scaling_"], expected_values["scaling_"], rtol=rtol
     )
-    assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
+    assert np.isclose(result["sigma_"], expected_values["sigma_"], rtol=rtol)
 
 
 def test_numerical_inner_solver():
@@ -390,7 +409,7 @@ def test_numerical_inner_solver():
 
     rtol = 1e-3
 
-    solver = NumericalInnerSolver(minimize_kwargs={'n_starts': 10})
+    solver = NumericalInnerSolver(minimize_kwargs={"n_starts": 10})
     result = solver.solve(
         problem=inner_problem,
         sim=[simulation],
@@ -398,11 +417,186 @@ def test_numerical_inner_solver():
         scaled=False,
     )
 
-    assert np.isclose(result['offset_'], expected_values['offset_'], rtol=rtol)
+    assert np.isclose(result["offset_"], expected_values["offset_"], rtol=rtol)
     assert np.isclose(
-        result['scaling_'], expected_values['scaling_'], rtol=rtol
+        result["scaling_"], expected_values["scaling_"], rtol=rtol
     )
-    assert np.isclose(result['sigma_'], expected_values['sigma_'], rtol=rtol)
+    assert np.isclose(result["sigma_"], expected_values["sigma_"], rtol=rtol)
+
+
+def test_non_coupled_analytical_inner_solver():
+    """Test analytically-solved non-coupled hierarchical inner parameters."""
+    # Test for only offset
+    inner_problem, expected_values, simulation = inner_problem_exp(
+        add_scaling=False
+    )
+    dummy_sigma = np.ones(simulation.shape)
+
+    rtol = 1e-1
+
+    solver = AnalyticalInnerSolver()
+    result = solver.solve(
+        problem=inner_problem,
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        scaled=False,
+    )
+    assert np.isclose(result["offset_"], expected_values["offset_"], rtol=rtol)
+    assert np.isclose(result["sigma_"], expected_values["sigma_"], rtol=rtol)
+
+    # Test for only scaling
+    inner_problem, expected_values, simulation = inner_problem_exp(
+        add_offset=False
+    )
+    dummy_sigma = np.ones(simulation.shape)
+
+    rtol = 1e-3
+
+    solver = AnalyticalInnerSolver()
+    result = solver.solve(
+        problem=inner_problem,
+        sim=[simulation],
+        sigma=[dummy_sigma],
+        scaled=False,
+    )
+
+    assert np.isclose(
+        result["scaling_"], expected_values["scaling_"], rtol=rtol
+    )
+    assert np.isclose(result["sigma_"], expected_values["sigma_"], rtol=rtol)
+
+
+def test_constrained_inner_solver():
+    """Test numerically- and analytically-solved box-constrained hierarchical inner parameters."""
+    inner_problem, expected_values, simulation = inner_problem_exp()
+
+    dummy_sigma = np.ones(simulation.shape)
+
+    all_lb = [(6, 3), (3, 0), (3, 1), (4, 3)]
+    all_ub = [(7, 4), (4, 1), (4, 3), (6, 4)]
+
+    all_expected_values = [
+        {"scaling_": 6, "offset_": 3},
+        {"scaling_": 4, "offset_": 1},
+        {
+            "scaling_": 4,  # all_lb[2][0],
+            "offset_": np.clip(
+                compute_optimal_offset(
+                    data=inner_problem.data,
+                    sim=[simulation],
+                    sigma=[dummy_sigma],
+                    mask=[np.full(simulation.shape, True)],
+                    optimal_scaling=4.0,
+                ),
+                1,  # all_lb[2][1],
+                3,  # all_ub[2][1],
+            ),
+        },
+        {
+            "scaling_": np.clip(
+                compute_optimal_scaling(
+                    data=inner_problem.data,
+                    sim=[simulation],
+                    sigma=[dummy_sigma],
+                    mask=[np.full(simulation.shape, True)],
+                    optimal_offset=3.0,
+                ),
+                4,  # all_lb[3][0],
+                6,  # all_ub[3][0],
+            ),
+            "offset_": 3,  # all_lb[3][1],
+        },
+    ]
+
+    for lb, ub, expected_values in zip(all_lb, all_ub, all_expected_values):
+        # Set seed for reproducibility
+        np.random.seed(1)
+        inner_problem.get_for_id("scaling_").lb = lb[0]
+        inner_problem.get_for_id("scaling_").ub = ub[0]
+        inner_problem.get_for_id("offset_").lb = lb[1]
+        inner_problem.get_for_id("offset_").ub = ub[1]
+
+        copied_sim = copy.deepcopy(simulation)
+        rtol = 1e-3
+
+        solver = AnalyticalInnerSolver()
+        ana_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        copied_sim = copy.deepcopy(simulation)
+        solver = NumericalInnerSolver(minimize_kwargs={"n_starts": 10})
+        num_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        assert np.isclose(ana_res["offset_"], num_res["offset_"], rtol=rtol)
+        assert np.isclose(ana_res["scaling_"], num_res["scaling_"], rtol=rtol)
+
+        assert np.isclose(
+            ana_res["offset_"], expected_values["offset_"], rtol=rtol
+        )
+        assert np.isclose(
+            ana_res["scaling_"], expected_values["scaling_"], rtol=rtol
+        )
+
+
+def test_non_coupled_constrained_inner_solver():
+    """Test non-coupled box-constrained hierarchical inner parameters."""
+    for current_par, add_scaling, add_offset, lb, ub in zip(
+        ["scaling_", "scaling_", "offset_", "offset_"],
+        [True, True, False, False],
+        [False, False, True, True],
+        [6, None, 3, None],
+        [None, 4, None, 1],
+    ):
+        # Set seed for reproducibility
+        np.random.seed(4)
+        inner_problem, expected_values, simulation = inner_problem_exp(
+            add_scaling=add_scaling,
+            add_offset=add_offset,
+        )
+        if lb is not None:
+            inner_problem.get_for_id(current_par).lb = lb
+            expected_values = {current_par: lb}
+        if ub is not None:
+            inner_problem.get_for_id(current_par).ub = ub
+            expected_values = {current_par: ub}
+
+        dummy_sigma = np.ones(simulation.shape)
+        copied_sim = copy.deepcopy(simulation)
+        rtol = 1e-3
+
+        solver = AnalyticalInnerSolver()
+        ana_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        copied_sim = copy.deepcopy(simulation)
+        solver = NumericalInnerSolver(minimize_kwargs={"n_starts": 10})
+        num_res = solver.solve(
+            problem=inner_problem,
+            sim=[copied_sim],
+            sigma=[dummy_sigma],
+            scaled=False,
+        )
+
+        assert np.isclose(
+            ana_res[current_par], num_res[current_par], rtol=rtol
+        )
+
+        assert np.isclose(
+            ana_res[current_par], expected_values[current_par], rtol=rtol
+        )
 
 
 def at_least_as_good_as(v, v0) -> bool:
@@ -455,7 +649,8 @@ def test_validate():
         pd.DataFrame(
             {
                 petab.PARAMETER_ID: ["s"],
-                "parameterType": ['scaling'],
+                "parameterType": ["scaling"],
+                "estimate": [1],
             }
         )
     )

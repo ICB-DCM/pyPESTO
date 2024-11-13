@@ -1,14 +1,16 @@
 """History utility functions."""
 
 import numbers
-from typing import Dict, Sequence, Union
+from collections.abc import Sequence
+from functools import wraps
+from typing import Union
 
 import numpy as np
 
 from ..C import SUFFIXES
 
-ResultDict = Dict[str, Union[float, np.ndarray]]
-MaybeArray = Union[np.ndarray, 'np.nan']
+ResultDict = dict[str, Union[float, np.ndarray]]
+MaybeArray = Union[np.ndarray, "np.nan"]
 
 
 class HistoryTypeError(ValueError):
@@ -38,6 +40,7 @@ def trace_wrap(f):
     integer `ix` the output to a single value.
     """
 
+    @wraps(f)
     def wrapped_f(
         self, ix: Union[Sequence[int], int, None] = None, trim: bool = False
     ) -> Union[Sequence[Union[float, MaybeArray]], Union[float, MaybeArray]]:

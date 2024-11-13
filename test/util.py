@@ -1,6 +1,5 @@
 """Various test problems and utility functions."""
 
-
 import importlib
 import os
 import sys
@@ -90,12 +89,12 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
         fun=arg_fun, grad=arg_grad, hess=arg_hess, res=arg_res, sres=arg_sres
     )
     return {
-        'obj': obj,
-        'max_sensi_order': max_sensi_order,
-        'x': x,
-        'fval': fun(x),
-        'grad': grad(x),
-        'hess': hess(x),
+        "obj": obj,
+        "max_sensi_order": max_sensi_order,
+        "x": x,
+        "fval": fun(x),
+        "grad": grad(x),
+        "hess": hess(x),
     }
 
 
@@ -193,17 +192,22 @@ class CRProblem:
 
         def fy(p):
             p0, p1 = p
-            e = anp.exp(-(p0 + p1) * self.ts)
-            x = (
-                1
-                / (-p0 - p1)
-                * anp.array(
-                    [
-                        [-p1 - p0 * e, -p1 + p1 * e],
-                        [-p0 + p0 * e, -p0 - p1 * e],
-                    ]
+            if p0 + p1 == 0:
+                # Return NaNs with the same shape as `x` would have
+                x_shape = (2, 2, len(self.ts))
+                x = anp.full(x_shape, anp.nan)
+            else:
+                e = anp.exp(-(p0 + p1) * self.ts)
+                x = (
+                    1
+                    / (-p0 - p1)
+                    * anp.array(
+                        [
+                            [-p1 - p0 * e, -p1 + p1 * e],
+                            [-p0 + p0 * e, -p0 - p1 * e],
+                        ]
+                    )
                 )
-            )
             y = anp.einsum("mnr,n->mr", x, self.x0)
             return y
 
@@ -288,15 +292,15 @@ class CRProblem:
 def load_amici_objective(example_name):
     """Load an `AmiciObjective for test purposes."""
     # name of the model that will also be the name of the python module
-    model_name = 'model_' + example_name
+    model_name = "model_" + example_name
 
     # sbml file
     sbml_file = os.path.join(
-        'doc', 'example', example_name, model_name + '.xml'
+        "doc", "example", example_name, model_name + ".xml"
     )
 
     # directory to which the generated model code is written
-    model_output_dir = os.path.join('doc', 'example', 'tmp', model_name)
+    model_output_dir = os.path.join("doc", "example", "tmp", model_name)
 
     if not os.path.exists(model_output_dir):
         os.makedirs(model_output_dir)
@@ -305,7 +309,7 @@ def load_amici_objective(example_name):
     try:
         model_module = importlib.import_module(model_name)
         model = model_module.getModel()
-    except ModuleNotFoundError:
+    except (ModuleNotFoundError, amici.AmiciVersionError):
         # import sbml model, compile and generate amici module
         sbml_importer = amici.SbmlImporter(sbml_file)
         sbml_importer.sbml2amici(model_name, model_output_dir, verbose=False)

@@ -193,11 +193,13 @@ def read_result_from_file(
     )
     result = OptimizerResult(
         id=identifier,
-        message='loaded from file',
+        message="loaded from file",
         exitflag=EXITFLAG_LOADED_FROM_FILE,
-        time=max(opt_hist.history.get_time_trace())
-        if len(opt_hist.history)
-        else 0.0,
+        time=(
+            max(opt_hist.history.get_time_trace())
+            if len(opt_hist.history)
+            else 0.0
+        ),
     )
     result.id = identifier
     result = fill_result_from_history(
@@ -270,9 +272,9 @@ def optimization_result_from_history(
         history. But missing "Time, Message and Exitflag" keys.
     """
     result = Result()
-    with h5py.File(filename, 'r') as f:
+    with h5py.File(filename, "r") as f:
         ids = list(f[HISTORY].keys())
-        x0s = [f[f'{HISTORY}/{id}/{TRACE}/0/{X}'][()] for id in ids]
+        x0s = [f[f"{HISTORY}/{id}/{TRACE}/0/{X}"][()] for id in ids]
 
     for id, x0 in zip(ids, x0s):
         history = Hdf5History(id=id, file=filename)

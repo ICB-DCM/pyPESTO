@@ -1,4 +1,5 @@
-from typing import List
+from collections.abc import Sequence
+from typing import Optional, Union
 
 import numpy as np
 
@@ -14,7 +15,7 @@ class ReferencePoint(dict):
 
     Attributes
     ----------
-    x: ndarray
+    x:
         Reference parameters.
     fval: float
         Function value, fun(x), for reference parameters.
@@ -28,7 +29,12 @@ class ReferencePoint(dict):
     """
 
     def __init__(
-        self, reference=None, x=None, fval=None, color=None, legend=None
+        self,
+        reference: Union[None, dict, tuple, "ReferencePoint"] = None,
+        x: Optional[Sequence] = None,
+        fval: Optional[float] = None,
+        color=None,
+        legend: Optional[str] = None,
     ):
         super().__init__()
 
@@ -74,17 +80,17 @@ class ReferencePoint(dict):
                 self.x = np.array(x)
             else:
                 raise ValueError(
-                    'Parameter vector x not passed, but is a '
-                    'mandatory input when creating a reference '
-                    'point. Stopping.'
+                    "Parameter vector x not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
                 )
             if fval is not None:
                 self.fval = fval
             else:
                 raise ValueError(
-                    'Objective value fval not passed, but is a '
-                    'mandatory input when creating a reference '
-                    'point. Stopping.'
+                    "Objective value fval not passed, but is a "
+                    "mandatory input when creating a reference "
+                    "point. Stopping."
                 )
             if color is not None:
                 self.color = color
@@ -98,30 +104,29 @@ class ReferencePoint(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
 
-def assign_colors(ref):
+def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
     """
     Assign colors to reference points, depending on user settings.
 
     Parameters
     ----------
-    ref: list of ReferencePoint
+    ref:
         Reference points, which need to get their color property filled
 
     Returns
     -------
-    ref: list of ReferencePoint
-        Reference points, which got their color property filled
+    Reference points, which got their color property filled
     """
     # loop over reference points
     auto_color_count = 0
     for i_ref in ref:
-        if i_ref['auto_color']:
+        if i_ref["auto_color"]:
             auto_color_count += 1
 
     auto_colors = [
@@ -132,8 +137,8 @@ def assign_colors(ref):
     # loop over reference points and assign auto_colors
     auto_color_count = 0
     for i_num, i_ref in enumerate(ref):
-        if i_ref['auto_color']:
-            i_ref['color'] = auto_colors[i_num]
+        if i_ref["auto_color"]:
+            i_ref["color"] = auto_colors[i_num]
             auto_color_count += 1
 
     return ref
@@ -141,7 +146,7 @@ def assign_colors(ref):
 
 def create_references(
     references=None, x=None, fval=None, color=None, legend=None
-) -> List[ReferencePoint]:
+) -> list[ReferencePoint]:
     """
     Create a list of reference point objects from user inputs.
 

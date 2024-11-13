@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence, Tuple
+from collections.abc import Sequence
 
 from ..C import ModeType
 from ..engine import Task
@@ -28,9 +28,9 @@ class PredictorTask(Task):
 
     def __init__(
         self,
-        predictor: 'pypesto.predict.Predictor',  # noqa: F821
+        predictor,  #: 'pypesto.predict.Predictor',  # noqa: F821
         x: Sequence[float],
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         id: str,
     ):
@@ -41,8 +41,8 @@ class PredictorTask(Task):
         self.mode = mode
         self.id = id
 
-    def execute(self) -> 'pypesto.predict.PredictionResult':  # noqa: F821
+    def execute(self):  # -> 'pypesto.predict.PredictionResult':  # noqa: F821
         """Execute and return the prediction."""
-        logger.info(f"Executing task {self.id}.")
+        logger.debug(f"Executing task {self.id}.")
         prediction = self.predictor(self.x, self.sensi_orders, self.mode)
         return prediction

@@ -2,8 +2,8 @@
 
 import logging
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 import h5py
 import numpy as np
@@ -79,7 +79,7 @@ def preprocess_hdf5_history(
 
 
 def postprocess_hdf5_history(
-    ret: List[OptimizerResult],
+    ret: list[OptimizerResult],
     storage_file: str,
     history_options: HistoryOptions,
 ) -> None:
@@ -101,14 +101,14 @@ def postprocess_hdf5_history(
     # create hdf5 file that gathers the others within history group
     if "{id}" in storage_file:
         storage_file = storage_file.replace("{id}", "")
-    with h5py.File(storage_file, mode='w') as f:
+    with h5py.File(storage_file, mode="w") as f:
         # create file and group
         f.require_group("history")
         # append links to each single result file
         for result in ret:
-            id = result['id']
-            f[f'history/{id}'] = h5py.ExternalLink(
-                result['history'].file, f'history/{id}'
+            id = result["id"]
+            f[f"history/{id}"] = h5py.ExternalLink(
+                result["history"].file, f"history/{id}"
             )
 
     # reset storage file (undo preprocessing changes)
@@ -185,6 +185,6 @@ def check_finite_bounds(lb, ub):
     """Raise if bounds are not finite."""
     if not np.isfinite(lb).all() or not np.isfinite(ub).all():
         raise ValueError(
-            'Selected optimizer cannot work with unconstrained '
-            'optimization problems.'
+            "Selected optimizer cannot work with unconstrained "
+            "optimization problems."
         )

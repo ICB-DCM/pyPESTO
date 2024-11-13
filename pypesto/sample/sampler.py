@@ -1,6 +1,7 @@
 """Various Sampler classes."""
+
 import abc
-from typing import Dict, List, Union
+from typing import Union
 
 import numpy as np
 
@@ -25,12 +26,12 @@ class Sampler(abc.ABC):
     `initialize`, and updated in `sample`.
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         self.options = self.__class__.translate_options(options)
 
     @abc.abstractmethod
     def initialize(
-        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+        self, problem: Problem, x0: Union[np.ndarray, list[np.ndarray]]
     ):
         """Initialize the sampler.
 
@@ -63,7 +64,7 @@ class Sampler(abc.ABC):
         """Get the generated samples."""
 
     @classmethod
-    def default_options(cls) -> Dict:
+    def default_options(cls) -> dict:
         """
         Set/Get default options.
 

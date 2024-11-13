@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 #
 # pyPESTO documentation build configuration file, created by
 # sphinx-quickstart on Mon Jul 30 08:30:38 2018.
@@ -20,88 +19,113 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../'))
+sys.path.insert(0, os.path.abspath("../"))
 
+# Silence:
+# Debugger warning: It seems that frozen modules are being used, which may
+# make the debugger miss breakpoints. Please pass -Xfrozen_modules=off
+# to python to disable frozen modules.
+# Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.
+os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
+
+# TQDM and nbsphinx do not play well together. Therefore, disable TQDM
+# for the documentation build.
+# (`Content block expected for the "raw" directive; none found.`)
+os.environ["TQDM_DISABLE"] = "1"
+
+# Enable parallel compilation of AMICI models
+os.environ["AMICI_PARALLEL_COMPILE"] = ""
 
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '3.0.4'
+needs_sphinx = "3.0.4"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
     # include documentation from docstrings
-    'sphinx.ext.autodoc',
+    "sphinx.ext.autodoc",
     # generate autodoc summaries
-    'sphinx.ext.autosummary',
+    "sphinx.ext.autosummary",
     # use mathjax for latex formulas
-    'sphinx.ext.mathjax',
+    "sphinx.ext.mathjax",
     # link to code
-    'sphinx.ext.viewcode',
+    "sphinx.ext.viewcode",
     # link to other projects' docs
-    'sphinx.ext.intersphinx',
+    "sphinx.ext.intersphinx",
     # support numpy and google style docstrings
-    'sphinx.ext.napoleon',
+    "sphinx.ext.napoleon",
     # support todo items
-    'sphinx.ext.todo',
+    "sphinx.ext.todo",
     # source parser for jupyter notebook files
-    'nbsphinx',
+    "nbsphinx",
     # code highlighting in jupyter cells
-    'IPython.sphinxext.ipython_console_highlighting',
+    "IPython.sphinxext.ipython_console_highlighting",
     # support markdown-based docs
-    'myst_parser',
+    "myst_parser",
     # bibtex references
-    'sphinxcontrib.bibtex',
+    "sphinxcontrib.bibtex",
     # ensure that jQuery is installed
-    'sphinxcontrib.jquery',
+    "sphinxcontrib.jquery",
+    # type hint formatting
+    "sphinx_autodoc_typehints",
 ]
 
 # default autodoc options
 # list for special-members seems not to be possible before 1.8
 autodoc_default_options = {
-    'members': True,
-    'undoc-members': True,
-    'special-members': '__init__, __call__',
-    'imported-members': True,
-    'show-inheritance': True,
-    'autodoc_inherit_docstrings': True,
+    "members": True,
+    "undoc-members": True,
+    "special-members": "__init__, __call__",
+    "imported-members": True,
+    "show-inheritance": True,
+    "autodoc_inherit_docstrings": True,
 }
-autodoc_mock_imports = ["amici"]
+autodoc_class_signature = "separated"
+
+# napoleon options
+napoleon_use_rtype = False
 
 # links for intersphinx
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'numpy': ('https://numpy.org/devdocs/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
-    'pandas': ('https://pandas.pydata.org/docs/', None),
-    'petab': (
-        'https://petab.readthedocs.io/projects/libpetab-python/en/latest/',
+    "amici": ("https://amici.readthedocs.io/en/latest/", None),
+    "fides": ("https://fides-optimizer.readthedocs.io/en/latest/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numpy": ("https://numpy.org/devdocs/", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "petab": (
+        "https://petab.readthedocs.io/projects/libpetab-python/en/latest/",
         None,
     ),
-    'amici': ('https://amici.readthedocs.io/en/latest/', None),
-    'fides': ('https://fides-optimizer.readthedocs.io/en/latest/', None),
+    "petab_select": ("https://petab-select.readthedocs.io/en/develop/", None),
+    "python": ("https://docs.python.org/3", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
 }
 
-bibtex_bibfiles = ["using_pypesto.bib"]
+
+typehints_document_rtype = True
+autodoc_typehints = "description"
+
+bibtex_bibfiles = ["using_pypesto.bib", "references.bib"]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'pyPESTO'
-copyright = '2018, The pyPESTO developers'
-author = 'The pyPESTO developers'
+project = "pyPESTO"
+copyright = "2018, The pyPESTO developers"
+author = "The pyPESTO developers"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -125,23 +149,23 @@ language = "en"
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = [
-    '_build',
-    'Thumbs.db',
-    '.DS_Store',
-    '**.ipynb_checkpoints',
-    'example/tmp',
-    'README.md',
+    "_build",
+    "Thumbs.db",
+    ".DS_Store",
+    "**.ipynb_checkpoints",
+    "example/tmp",
+    "README.md",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
 # Add notebooks prolog to Google Colab and nbviewer
 nbsphinx_prolog = r"""
-{% set docname = 'github/icb-dcm/pypesto/blob/main/doc/' + env.doc2path(env.docname, base=None) %}
+{% set docname = 'github/icb-dcm/pypesto/blob/main/doc/' + env.doc2path(env.docname, base=None)|string %}
 .. raw:: html
 
     <div class="note">
@@ -158,15 +182,15 @@ nbsphinx_prolog = r"""
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'collapse_navigation': False,
-    'navigation_depth': -1,
+    "collapse_navigation": False,
+    "navigation_depth": -1,
 }
 
 # Title
@@ -177,7 +201,7 @@ html_short_title = "pyPESTO"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # Favicon
 html_favicon = "logo/logo_favicon.png"
@@ -185,7 +209,7 @@ html_favicon = "logo/logo_favicon.png"
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'pyPESTOdoc'
+htmlhelp_basename = "pyPESTOdoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -211,10 +235,10 @@ latex_elements = {
 latex_documents = [
     (
         master_doc,
-        'pyPESTO.tex',
-        'pyPESTO Documentation',
-        'The pyPESTO developers',
-        'manual',
+        "pyPESTO.tex",
+        "pyPESTO Documentation",
+        "The pyPESTO developers",
+        "manual",
     ),
 ]
 
@@ -223,7 +247,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, 'pypesto', 'pyPESTO Documentation', [author], 1)]
+man_pages = [(master_doc, "pypesto", "pyPESTO Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -234,11 +258,11 @@ man_pages = [(master_doc, 'pypesto', 'pyPESTO Documentation', [author], 1)]
 texinfo_documents = [
     (
         master_doc,
-        'pyPESTO',
-        'pyPESTO Documentation',
+        "pyPESTO",
+        "pyPESTO Documentation",
         author,
-        'pyPESTO',
-        'One line description of project.',
-        'Miscellaneous',
+        "pyPESTO",
+        "One line description of project.",
+        "Miscellaneous",
     ),
 ]

@@ -6,7 +6,7 @@ from pypesto.C import InnerParameterType
 
 
 def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
-    'petab.Problem'  # noqa: F821
+    "petab.Problem"  # noqa: F821
 ):
     """
     Get Boehm_JProteomeRes2014 problem with scaled/offset observables.
@@ -14,10 +14,10 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
     Creates a modified version of the Boehm_JProteomeRes2014 benchmark problem,
     suitable for hierarchical optimization.
     """
-    import petab
+    import petab.v1 as petab
     from benchmark_models_petab import get_problem
 
-    from pypesto.hierarchical.problem import PARAMETER_TYPE
+    from pypesto.C import PARAMETER_TYPE
 
     petab_problem = get_problem("Boehm_JProteomeRes2014")
     # Add scaling and offset parameters
@@ -49,9 +49,9 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
             petab.ESTIMATE: 1,
         }
         for par_id in (
-            'offset_pSTAT5A_rel',
-            'offset_pSTAT5B_rel',
-            'offset_rSTAT5A_rel',
+            "offset_pSTAT5A_rel",
+            "offset_pSTAT5B_rel",
+            "offset_rSTAT5A_rel",
         )
     ]
 
@@ -66,9 +66,9 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
         }
         for par_id, nominal_value in zip(
             (
-                'scaling_pSTAT5A_rel',
-                'scaling_pSTAT5B_rel',
-                'scaling_rSTAT5A_rel',
+                "scaling_pSTAT5A_rel",
+                "scaling_pSTAT5B_rel",
+                "scaling_rSTAT5A_rel",
             ),
             (3.85261197844677, 6.59147818673419, 3.15271275648527),
         )
@@ -108,7 +108,7 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
 
 
 def get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds() -> (
-    'petab.Problem'  # noqa: F821
+    "petab.Problem"  # noqa: F821
 ):
     """
     See `get_Boehm_JProteomeRes2014_hierarchical_petab`.

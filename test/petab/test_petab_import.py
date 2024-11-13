@@ -5,11 +5,12 @@ This is for testing the petab import.
 import logging
 import os
 import unittest
+from itertools import chain
 
 import amici
 import benchmark_models_petab as models
 import numpy as np
-import petab
+import petab.v1 as petab
 import petabtests
 import pytest
 
@@ -18,15 +19,13 @@ import pypesto.optimize
 import pypesto.petab
 from pypesto.petab import PetabImporter
 
-from .test_sbml_conversion import ATOL, RTOL
-
 # In CI, bionetgen is installed here
 BNGPATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', 'BioNetGen-2.8.5')
+    os.path.join(os.path.dirname(__file__), "..", "..", "BioNetGen-2.8.5")
 )
-if 'BNGPATH' not in os.environ:
+if "BNGPATH" not in os.environ:
     logging.warning(f"Env var BNGPATH was not set. Setting to {BNGPATH}")
-    os.environ['BNGPATH'] = BNGPATH
+    os.environ["BNGPATH"] = BNGPATH
 
 
 class PetabImportTest(unittest.TestCase):
@@ -40,7 +39,7 @@ class PetabImportTest(unittest.TestCase):
         for model_name in ["Zheng_PNAS2012", "Boehm_JProteomeRes2014"]:
             # test yaml import for one model:
             yaml_config = os.path.join(
-                models.MODELS_DIR, model_name, model_name + '.yaml'
+                models.MODELS_DIR, model_name, model_name + ".yaml"
             )
             petab_problem = petab.Problem.from_yaml(yaml_config)
             self.petab_problems.append(petab_problem)
@@ -51,7 +50,9 @@ class PetabImportTest(unittest.TestCase):
             self.petab_importers.append(importer)
 
             # check model
-            model = importer.create_model(force_compile=False)
+            model = importer.create_objective_creator().create_model(
+                force_compile=False
+            )
 
             # observable ids
             model_obs_ids = list(model.getObservableIds())
@@ -62,12 +63,13 @@ class PetabImportTest(unittest.TestCase):
 
     def test_2_simulate(self):
         for petab_importer in self.petab_importers:
-            obj = petab_importer.create_objective()
-            edatas = petab_importer.create_edatas()
+            factory = petab_importer.create_objective_creator()
+            obj = factory.create_objective()
+            edatas = factory.create_edatas()
             self.obj_edatas.append((obj, edatas))
 
             # run function
-            x_nominal = petab_importer.petab_problem.x_nominal_scaled
+            x_nominal = factory.petab_problem.x_nominal_scaled
             ret = obj(x_nominal)
 
             self.assertTrue(np.isfinite(ret))
@@ -98,15 +100,14 @@ class PetabImportTest(unittest.TestCase):
         for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
             obj = obj_edatas[0]
             optimizer = pypesto.optimize.ScipyOptimizer(
-                options={'maxiter': 10}
+                options={"maxiter": 10}
             )
             problem = importer.create_problem(obj)
-            startpoints = importer.create_startpoint_method()
+            problem.startpoint_method = importer.create_startpoint_method()
             result = pypesto.optimize.minimize(
                 problem=problem,
                 optimizer=optimizer,
                 n_starts=2,
-                startpoint_method=startpoints,
                 progress_bar=False,
             )
 
@@ -115,12 +116,12 @@ class PetabImportTest(unittest.TestCase):
     def test_check_gradients(self):
         """Test objective FD-gradient check function."""
         # Check gradients of simple model (should always be a true positive)
-        model_name = "Bachmann_MSB2011"
-        petab_problem = pypesto.petab.PetabImporter.from_yaml(
-            os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+        model_name = "Boehm_JProteomeRes2014"
+        importer = pypesto.petab.PetabImporter.from_yaml(
+            models.get_problem_yaml_path(model_name)
         )
 
-        objective = petab_problem.create_objective()
+        objective = importer.create_problem().objective
         objective.amici_solver.setSensitivityMethod(
             amici.SensitivityMethod_forward
         )
@@ -128,56 +129,99 @@ class PetabImportTest(unittest.TestCase):
         objective.amici_solver.setRelativeTolerance(1e-12)
 
         self.assertFalse(
-            petab_problem.check_gradients(multi_eps=[1e-3, 1e-4, 1e-5])
+            objective.check_gradients_match_finite_differences(
+                multi_eps=[1e-3, 1e-4, 1e-5]
+            )
         )
 
 
 def test_plist_mapping():
-    """Test that the AMICI objective created via PEtab correctly maps
-    gradient entries when some parameters are not estimated (realized via
-    edata.plist)."""
-    model_name = "Boehm_JProteomeRes2014"
-    petab_problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+    """Test that the AMICI objective created via PEtab correctly uses
+    ExpData.plist.
+
+    That means, ensure that
+    1) it only computes gradient entries that are really required, and
+    2) correctly maps model-gradient entries to the objective gradient
+    3) with or without pypesto-fixed parameters.
+
+    In Bruno_JExpBot2016, different parameters are estimated in different
+    conditions.
+    """
+    model_name = "Bruno_JExpBot2016"
+    petab_importer = pypesto.petab.PetabImporter.from_yaml(
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
-
-    # define test parameter
-    par = np.asarray(petab_problem.petab_problem.x_nominal_scaled)
-
-    problem = petab_problem.create_problem()
+    objective_creator = petab_importer.create_objective_creator()
+    problem = petab_importer.create_problem(
+        objective_creator.create_objective()
+    )
     objective = problem.objective
-    # check that x_names are correctly subsetted
-    assert objective.x_names == [
-        problem.x_names[ix] for ix in problem.x_free_indices
-    ]
     objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_forward
+        amici.SensitivityMethod.forward
     )
-    objective.amici_solver.setAbsoluteTolerance(1e-10)
-    objective.amici_solver.setRelativeTolerance(1e-12)
+    objective.amici_solver.setAbsoluteTolerance(1e-16)
+    objective.amici_solver.setRelativeTolerance(1e-15)
+
+    # slightly perturb the parameters to avoid vanishing gradients
+    par = np.asarray(petab_importer.petab_problem.x_nominal_free_scaled) * 1.01
+
+    # call once to make sure ExpDatas are populated
+    fx1, grad1 = objective(par, sensi_orders=(0, 1))
+
+    plists1 = {edata.plist for edata in objective.edatas}
+    assert len(plists1) == 6, plists1
 
     df = objective.check_grad_multi_eps(
-        par[problem.x_free_indices], multi_eps=[1e-3, 1e-4, 1e-5]
+        par[problem.x_free_indices], multi_eps=[1e-5, 1e-6, 1e-7, 1e-8]
     )
     print("relative errors gradient: ", df.rel_err.values)
     print("absolute errors gradient: ", df.abs_err.values)
-    assert np.all((df.rel_err.values < RTOL) | (df.abs_err.values < ATOL))
+    assert np.all((df.rel_err.values < 1e-8) | (df.abs_err.values < 1e-10))
+
+    # do the same after fixing some parameters
+    # we fix them to the previous values, so we can compare the results
+    fixed_ids = ["init_b10_1", "init_bcry_1"]
+    # the corresponding amici parameters (they are only ever mapped to the
+    #  respective parameters in fixed_ids, and thus, should not occur in any
+    #  `plist` later on)
+    fixed_model_par_ids = ["init_b10", "init_bcry"]
+    fixed_model_par_idxs = [
+        objective.amici_model.getParameterIds().index(id)
+        for id in fixed_model_par_ids
+    ]
+    fixed_idxs = [problem.x_names.index(id) for id in fixed_ids]
+    problem.fix_parameters(fixed_idxs, par[fixed_idxs])
+    assert objective is problem.objective
+    assert problem.x_fixed_indices == fixed_idxs
+    fx2, grad2 = objective(par[problem.x_free_indices], sensi_orders=(0, 1))
+    assert np.isclose(fx1, fx2, rtol=1e-10, atol=1e-14)
+    assert np.allclose(
+        grad1[problem.x_free_indices], grad2, rtol=1e-10, atol=1e-14
+    )
+    plists2 = {edata.plist for edata in objective.edatas}
+    # the fixed parameters should have been in plist1, but not in plist2
+    assert (
+        set(fixed_model_par_idxs) - set(chain.from_iterable(plists1)) == set()
+    )
+    assert (
+        set(fixed_model_par_idxs) & set(chain.from_iterable(plists2)) == set()
+    )
 
 
 def test_max_sensi_order():
     """Test that the AMICI objective created via PEtab exposes derivatives
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
-    problem = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+    importer = pypesto.petab.PetabImporter.from_yaml(
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
 
     # define test parameter
-    par = problem.petab_problem.x_nominal_scaled
+    par = importer.petab_problem.x_nominal_scaled
     npar = len(par)
 
     # auto-computed max_sensi_order and fim_for_hess
-    objective = problem.create_objective()
+    objective = importer.create_objective_creator().create_objective()
     hess = objective(par, sensi_orders=(2,))
     assert hess.shape == (npar, npar)
     assert (hess != 0).any()
@@ -191,32 +235,38 @@ def test_max_sensi_order():
     )
 
     # fix max_sensi_order to 1
-    objective = problem.create_objective(max_sensi_order=1)
+    objective = importer.create_objective_creator().create_objective(
+        max_sensi_order=1
+    )
     objective(par, sensi_orders=(1,))
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # do not use FIM
-    objective = problem.create_objective(fim_for_hess=False)
+    objective = importer.create_objective_creator().create_objective(
+        fim_for_hess=False
+    )
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
 
     # only allow computing function values
-    objective = problem.create_objective(max_sensi_order=0)
+    objective = importer.create_objective_creator().create_objective(
+        max_sensi_order=0
+    )
     objective(par)
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(1,))
 
 
 def test_petab_pysb_optimization():
-    test_case = '0001'
+    test_case = "0001"
     test_case_dir = petabtests.get_case_dir(
-        test_case, version='v2.0.0', format_='pysb'
+        test_case, version="v2.0.0", format_="pysb"
     )
     petab_yaml = test_case_dir / petabtests.problem_yaml_name(test_case)
     # expected results
     solution = petabtests.load_solution(
-        test_case, format='pysb', version='v2.0.0'
+        test_case, format="pysb", version="v2.0.0"
     )
 
     petab_problem = petab.Problem.from_yaml(petab_yaml)
@@ -241,7 +291,7 @@ def test_petab_pysb_optimization():
     assert np.all(fvals <= -solution[petabtests.LLH])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(PetabImportTest())
     unittest.main()

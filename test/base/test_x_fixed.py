@@ -41,12 +41,11 @@ def test_optimize():
     # fixed values written into parameter vector
     assert optimizer_result.x[1] == 1
 
-    lb_full = problem.get_full_vector(problem.lb)
-    assert len(lb_full) == 5
+    assert len(problem.lb_full) == 5
 
 
 def create_problem():
-    objective = rosen_for_sensi(2)['obj']
+    objective = rosen_for_sensi(2)["obj"]
     lb = [-3, -3, -3, -3, -3]
     ub = [3, 3, 3, 3, 3]
     x_fixed_indices = [1, 3]

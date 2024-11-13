@@ -1,11 +1,12 @@
 import functools
+import logging
 import os
+from collections.abc import Sequence
 from functools import wraps
-from typing import Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
-import petab
+import petab.v1 as petab
 import pytest
 import scipy.optimize as so
 
@@ -17,7 +18,9 @@ import pypesto.predict as predict
 import pypesto.sample as sample
 import pypesto.util
 import pypesto.visualize as visualize
-from pypesto.C import INNER_PARAMETERS
+from pypesto.testing.examples import (
+    get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds,
+)
 from pypesto.visualize.model_fit import (
     time_trajectory_model,
     visualize_optimized_model_fit,
@@ -30,7 +33,7 @@ def close_fig(fun):
     @wraps(fun)
     def wrapped_fun(*args, **kwargs):
         ret = fun(*args, **kwargs)
-        plt.close('all')
+        plt.close("all")
         return ret
 
     return wrapped_fun
@@ -63,7 +66,7 @@ def create_problem(n_parameters: int = 2, x_names: Sequence[str] = None):
 def create_petab_problem():
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.abspath(
-        os.path.join(current_path, '..', '..', 'doc', 'example')
+        os.path.join(current_path, "..", "..", "doc", "example")
     )
 
     # import to petab
@@ -84,7 +87,7 @@ def sample_petab_problem():
 
     sampler = sample.AdaptiveMetropolisSampler(
         options={
-            'show_progress': False,
+            "show_progress": False,
         },
     )
     result = sample.sample(
@@ -130,14 +133,19 @@ def create_optimization_result_nan_inf():
     result = create_optimization_result()
 
     # append nan and inf
+    # depending on optimizer failed starts's x can be None or vector of np.nan
     optimizer_result = pypesto.OptimizerResult(
-        fval=float('nan'), x=np.array([float('nan'), float('nan')]), id='nan'
+        fval=float("nan"), x=np.array([float("nan"), float("nan")]), id="nan"
     )
     result.optimize_result.append(optimize_result=optimizer_result)
     optimizer_result = pypesto.OptimizerResult(
-        fval=-float('inf'),
-        x=np.array([-float('inf'), -float('inf')]),
-        id='inf',
+        fval=float("nan"), x=None, id="nan_none"
+    )
+    result.optimize_result.append(optimize_result=optimizer_result)
+    optimizer_result = pypesto.OptimizerResult(
+        fval=-float("inf"),
+        x=np.array([-float("inf"), -float("inf")]),
+        id="inf",
     )
     result.optimize_result.append(optimize_result=optimizer_result)
 
@@ -149,9 +157,9 @@ def create_optimization_history():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxfun': 200}
+    optimizer_options = {"maxfun": 200}
     optimizer = optimize.ScipyOptimizer(
-        method='TNC', options=optimizer_options
+        method="TNC", options=optimizer_options
     )
 
     history_options = pypesto.HistoryOptions(
@@ -164,7 +172,6 @@ def create_optimization_history():
         problem=problem,
         optimizer=optimizer,
         n_starts=5,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
         progress_bar=False,
@@ -178,8 +185,8 @@ def create_profile_result():
     result = create_optimization_result()
 
     # write some dummy results for profiling
-    ratio_path_1 = [0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15]
-    ratio_path_2 = [0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1]
+    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15])
+    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1])
     x_path_1 = np.array(
         [
             [2.0, 2.1, 2.3, 2.5, 2.7, 2.9, 3.0],
@@ -209,7 +216,7 @@ def create_plotting_options():
     # create sets of reference points (from tuple, dict and from list)
     ref1 = ([1.0, 1.5], 0.2)
     ref2 = ([1.8, 1.9], 0.6)
-    ref3 = {'x': np.array([1.4, 1.7]), 'fval': 0.4}
+    ref3 = {"x": np.array([1.4, 1.7]), "fval": 0.4}
     ref4 = [ref1, ref2]
     ref_point = visualize.create_references(ref4)
 
@@ -228,10 +235,12 @@ def post_processor(
     routines.
     """
     outputs = [
-        amici_output[output_type]
-        if amici_output[pypesto.C.AMICI_STATUS] == 0
-        else np.full(
-            (len(amici_output[pypesto.C.AMICI_T]), len(output_ids)), np.nan
+        (
+            amici_output[output_type]
+            if amici_output[pypesto.C.AMICI_STATUS] == 0
+            else np.full(
+                (len(amici_output[pypesto.C.AMICI_T]), len(output_ids)), np.nan
+            )
         )
         for amici_output in amici_outputs
     ]
@@ -314,7 +323,7 @@ def test_waterfall_with_options():
 
     # Test with linear scale
     visualize.waterfall(
-        result_1, reference=ref3, scale_y='lin', offset_y=0.2, y_limits=5.0
+        result_1, reference=ref3, scale_y="lin", offset_y=0.2, y_limits=5.0
     )
 
 
@@ -376,7 +385,7 @@ def test_parameters_with_options(scale_to_interval):
     # test calls with specific options
     visualize.parameters(
         result_1,
-        parameter_indices='all',
+        parameter_indices="all",
         reference=ref_point,
         size=alt_fig_size,
         colors=[1.0, 0.3, 0.3, 0.5],
@@ -385,7 +394,7 @@ def test_parameters_with_options(scale_to_interval):
 
     visualize.parameters(
         [result_1, result_2],
-        parameter_indices='all',
+        parameter_indices="all",
         reference=ref_point,
         balance_alpha=False,
         start_indices=(0, 1, 4),
@@ -394,7 +403,7 @@ def test_parameters_with_options(scale_to_interval):
 
     visualize.parameters(
         [result_1, result_2],
-        parameter_indices='free_only',
+        parameter_indices="free_only",
         start_indices=3,
         scale_to_interval=scale_to_interval,
     )
@@ -404,19 +413,21 @@ def test_parameters_with_options(scale_to_interval):
 def test_parameters_lowlevel():
     # create some dummy results
     (lb, ub) = create_bounds()
-    fvals = [0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11]
-    xs = [
-        [0.1, 1],
-        [1.2, 3],
-        [2, 4],
-        [1.2, 4.1],
-        [1.1, 3.5],
-        [4.2, 3.5],
-        [1, 4],
-        [6.2, 5],
-        [4.3, 3],
-        [3, 2],
-    ]
+    fvals = np.array([0.01, 0.02, 1.01, 2.02, 2.03, 2.04, 3, 4, 4.1, 4.11])
+    xs = np.array(
+        [
+            [0.1, 1],
+            [1.2, 3],
+            [2, 4],
+            [1.2, 4.1],
+            [1.1, 3.5],
+            [4.2, 3.5],
+            [1, 4],
+            [6.2, 5],
+            [4.3, 3],
+            [3, 2],
+        ]
+    )
 
     # pass lists
     visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub)
@@ -436,9 +447,9 @@ def test_parameters_hist():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxfun': 200}
+    optimizer_options = {"maxfun": 200}
     optimizer = optimize.ScipyOptimizer(
-        method='TNC', options=optimizer_options
+        method="TNC", options=optimizer_options
     )
 
     # run optimization
@@ -446,26 +457,36 @@ def test_parameters_hist():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
-    visualize.parameter_hist(result_1, 'x1')
-    visualize.parameter_hist(result_1, 'x1', start_indices=list(range(10)))
+    visualize.parameter_hist(result_1, "x1")
+    visualize.parameter_hist(result_1, "x1", start_indices=list(range(10)))
 
 
 @pytest.mark.parametrize("scale_to_interval", [None, (0, 1)])
 @close_fig
 def test_parameters_hierarchical(scale_to_interval):
-    # create the necessary results
-    result = create_optimization_result()
+    # obtain a petab problem with hierarchical parameters
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
+    helper_problem = importer.create_problem()
 
-    # add hierarchical parameters
-    for index, optimizer_result in enumerate(result.optimize_result.list):
-        optimizer_result[INNER_PARAMETERS] = {
-            'inner_x_1': index + 3,
-            'inner_x_2': index + 3 + 0.1,
-        }
+    # set x_guesses to nominal values for fast optimization
+    x_guesses = np.asarray(petab_problem.x_nominal_scaled)[
+        helper_problem.x_free_indices
+    ]
+    problem = importer.create_problem(x_guesses=[x_guesses])
+
+    # run optimization
+    n_starts = 1
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=n_starts,
+        progress_bar=False,
+    )
 
     # test a call with hierarchical parameters
     visualize.parameters(
@@ -541,7 +562,7 @@ def _test_ensemble_dimension_reduction():
 
     # test call via low-level routine 1
     visualize.ensemble_crosstab_scatter_lowlevel(
-        umap_components, component_labels=('A', 'B', 'C')
+        umap_components, component_labels=("A", "B", "C")
     )
 
     pca_components, pca_object = ensemble.get_pca_representation_parameters(
@@ -644,7 +665,7 @@ def test_profiles_with_options():
         reference=ref_point,
         size=alt_fig_size,
         profile_list_ids=[0, 1],
-        legends=['profile list 0', 'profile list 1'],
+        legends=["profile list 0", "profile list 1"],
         colors=[[1.0, 0.3, 0.3, 0.5], [0.5, 0.9, 0.4, 0.3]],
     )
 
@@ -725,8 +746,8 @@ def test_optimizer_history_with_options():
             start_indices=[0, 1, 4, 11],
             reference=ref_point,
             size=alt_fig_size,
-            trace_x='steps',
-            trace_y='fval',
+            trace_x="steps",
+            trace_y="fval",
             offset_y=-10.0,
             colors=[1.0, 0.3, 0.3, 0.5],
         )
@@ -738,7 +759,7 @@ def test_optimizer_history_with_options():
         start_indices=[0, 1, 4, 11],
         reference=ref_point,
         size=alt_fig_size,
-        scale_y='lin',
+        scale_y="lin",
     )
 
     # Test with y-limits as float
@@ -747,9 +768,8 @@ def test_optimizer_history_with_options():
         y_limits=5.0,
         start_indices=3,
         reference=ref3,
-        trace_x='time',
-        trace_y='gradnorm',
-        offset_y=10.0,
+        trace_x="time",
+        trace_y="gradnorm",
     )
 
 
@@ -781,9 +801,9 @@ def test_optimization_stats():
     problem = create_problem()
 
     # create optimizer
-    optimizer_options = {'maxfun': 200}
+    optimizer_options = {"maxfun": 200}
     optimizer = optimize.ScipyOptimizer(
-        method='TNC', options=optimizer_options
+        method="TNC", options=optimizer_options
     )
 
     # run optimization
@@ -791,7 +811,6 @@ def test_optimization_stats():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
@@ -799,54 +818,53 @@ def test_optimization_stats():
         problem=problem,
         optimizer=optimizer,
         n_starts=10,
-        startpoint_method=pypesto.startpoint.uniform,
         progress_bar=False,
     )
 
     visualize.optimization_run_property_per_multistart(
-        result_1, 'n_fval', legends='best result'
+        result_1, "n_fval", legends="best result"
     )
 
     visualize.optimization_run_property_per_multistart(
-        result_1, 'n_fval', plot_type='hist', legends='best result'
+        result_1, "n_fval", plot_type="hist", legends="best result"
     )
 
-    visualize.optimization_run_property_per_multistart(result_2, 'n_fval')
+    visualize.optimization_run_property_per_multistart(result_2, "n_fval")
 
     # test plotting of lists
     visualize.optimization_run_property_per_multistart(
         [result_1, result_2],
-        'n_fval',
-        legends=['result1', 'result2'],
-        plot_type='line',
+        "n_fval",
+        legends=["result1", "result2"],
+        plot_type="line",
     )
 
     visualize.optimization_run_property_per_multistart(
-        result_1, 'time', plot_type='hist', legends='best result'
+        result_1, "time", plot_type="hist", legends="best result"
     )
 
     visualize.optimization_run_property_per_multistart(
         [result_1, result_2],
-        'time',
+        "time",
         colors=[[0.5, 0.9, 0.9, 0.3], [0.9, 0.7, 0.8, 0.5]],
-        legends=['result1', 'result2'],
-        plot_type='hist',
+        legends=["result1", "result2"],
+        plot_type="hist",
     )
 
     visualize.optimization_run_properties_per_multistart([result_1, result_2])
 
-    visualize.optimization_run_properties_one_plot(result_1, ['time'])
+    visualize.optimization_run_properties_one_plot(result_1, ["time"])
 
     visualize.optimization_run_properties_one_plot(
-        result_1, ['n_fval', 'n_grad', 'n_hess']
+        result_1, ["n_fval", "n_grad", "n_hess"]
     )
 
     visualize.optimization_run_property_per_multistart(
         [result_1, result_2],
-        'time',
+        "time",
         colors=[[0.5, 0.9, 0.9, 0.3], [0.9, 0.7, 0.8, 0.5]],
-        legends=['result1', 'result2'],
-        plot_type='both',
+        legends=["result1", "result2"],
+        plot_type="both",
     )
 
 
@@ -1026,9 +1044,9 @@ def test_sampling_1d_marginals():
         result, i_chain=1, stepsize=5, size=(10, 10)
     )
     # call with other modes
-    visualize.sampling_1d_marginals(result, plot_type='hist')
+    visualize.sampling_1d_marginals(result, plot_type="hist")
     visualize.sampling_1d_marginals(
-        result, plot_type='kde', bw_method='silverman'
+        result, plot_type="kde", bw_method="silverman"
     )
 
 
@@ -1092,7 +1110,7 @@ def test_visualize_optimized_model_fit():
     """Test pypesto.visualize.visualize_optimized_model_fit"""
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.abspath(
-        os.path.join(current_path, '..', '..', 'doc', 'example')
+        os.path.join(current_path, "..", "..", "doc", "example")
     )
 
     # import to petab
@@ -1121,11 +1139,60 @@ def test_visualize_optimized_model_fit():
 
 
 @close_fig
+def test_visualize_optimized_model_fit_aggregated():
+    """Test pypesto.visualize.visualize_optimized_model_fit with an AggregatedObjective"""
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    dir_path = os.path.abspath(
+        os.path.join(current_path, "..", "..", "doc", "example")
+    )
+
+    # import to petab
+    petab_problem = petab.Problem.from_yaml(
+        os.path.join(
+            dir_path, "conversion_reaction", "conversion_reaction.yaml"
+        )
+    )
+
+    # add prior to the problem
+    petab_problem.parameter_df["objectivePriorType"] = "uniform"
+    objectivePriorParameters = [
+        f"{lb};{ub}"
+        for lb, ub in zip(
+            petab_problem.parameter_df.lowerBound,
+            petab_problem.parameter_df.upperBound,
+        )
+    ]
+    petab_problem.parameter_df[
+        "objectivePriorParameters"
+    ] = objectivePriorParameters
+
+    # import to pypesto
+    importer = pypesto.petab.PetabImporter(petab_problem)
+    # create problem
+    problem = importer.create_problem()
+    # check if the objective is an AggregatedObjective
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        progress_bar=False,
+    )
+
+    # test call of visualize_optimized_model_fit
+    visualize_optimized_model_fit(
+        petab_problem=petab_problem,
+        result=result,
+        pypesto_problem=problem,
+    )
+
+
+@close_fig
 def test_time_trajectory_model():
     """Test pypesto.visualize.time_trajectory_model"""
     current_path = os.path.dirname(os.path.realpath(__file__))
     dir_path = os.path.abspath(
-        os.path.join(current_path, '..', '..', 'doc', 'example')
+        os.path.join(current_path, "..", "..", "doc", "example")
     )
 
     # import to petab
@@ -1147,3 +1214,29 @@ def test_time_trajectory_model():
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)
+
+
+@close_fig
+def test_sacess_history():
+    """Test pypesto.visualize.optimizer_history.sacess_history"""
+    from pypesto.optimize.ess.sacess import SacessOptimizer
+    from pypesto.visualize.optimizer_history import sacess_history
+
+    problem = create_problem()
+    sacess = SacessOptimizer(
+        max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
+    )
+    sacess.minimize(problem)
+    sacess_history(sacess.histories)
+
+
+@pytest.mark.parametrize(
+    "result_creation",
+    [create_optimization_result, create_optimization_result_nan_inf],
+)
+@close_fig
+def test_parameters_correlation_matrix(result_creation):
+    """Test pypesto.visualize.parameters_correlation_matrix"""
+    result = result_creation()
+
+    visualize.parameters_correlation_matrix(result)

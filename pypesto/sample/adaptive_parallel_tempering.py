@@ -1,8 +1,10 @@
 """AdaptiveParallelTemperingSampler class."""
-from typing import Dict, Sequence
+
+from collections.abc import Sequence
 
 import numpy as np
 
+from ..C import EXPONENTIAL_DECAY
 from .parallel_tempering import ParallelTemperingSampler
 
 
@@ -27,14 +29,16 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
     """
 
     @classmethod
-    def default_options(cls) -> Dict:
+    def default_options(cls) -> dict:
         """Get default options for sampler."""
         options = super().default_options()
         # scaling factor for temperature adaptation
-        options['eta'] = 100
+        options["eta"] = 100
         # controls the adaptation degeneration velocity of the temperature
         # adaption.
-        options['nu'] = 1e3
+        options["nu"] = 1e3
+        # initial temperature schedule as in Vousden et. al. 2016.
+        options["beta_init"] = EXPONENTIAL_DECAY
 
         return options
 
@@ -44,8 +48,8 @@ class AdaptiveParallelTemperingSampler(ParallelTemperingSampler):
             return
 
         # parameters
-        nu = self.options['nu']
-        eta = self.options['eta']
+        nu = self.options["nu"]
+        eta = self.options["eta"]
         betas = self.betas
 
         # booleans to integer array

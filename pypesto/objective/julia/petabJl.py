@@ -1,4 +1,5 @@
 """Interface to PEtab.jl."""
+
 import logging
 import os
 
@@ -43,7 +44,7 @@ class PEtabJlObjective(JuliaObjective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
 
         self.module = module
         self.source_file = source_file
@@ -61,10 +62,10 @@ class PEtabJlObjective(JuliaObjective):
         self.petab_jl_problem = petab_jl_problem
 
         # get functions
-        fun = self.petab_jl_problem.compute_cost
-        grad = self.petab_jl_problem.compute_gradient
-        hess = self.petab_jl_problem.compute_hessian
-        x_names = np.asarray(self.petab_jl_problem.θ_names)
+        fun = self.petab_jl_problem.nllh
+        grad = self.petab_jl_problem.grad
+        hess = self.petab_jl_problem.hess
+        x_names = np.asarray(self.petab_jl_problem.xnames)
 
         # call the super super super constructor
         super(JuliaObjective, self).__init__(
@@ -75,9 +76,9 @@ class PEtabJlObjective(JuliaObjective):
         """Get state for pickling."""
         # if not dumped, dump it via JLD2
         return {
-            'module': self.module,
-            'source_file': self.source_file,
-            '_petab_problem_name': self._petab_problem_name,
+            "module": self.module,
+            "source_file": self.source_file,
+            "_petab_problem_name": self._petab_problem_name,
         }
 
     def __setstate__(self, state):
@@ -86,15 +87,17 @@ class PEtabJlObjective(JuliaObjective):
             setattr(self, key, value)
         # lazy imports
         try:
-            from julia import Main  # noqa: F401
-            from julia import Pkg
+            from julia import (
+                Main,  # noqa: F401
+                Pkg,
+            )
 
             Pkg.activate(".")
         except ImportError:
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         # Include module if not already included
         _read_source(self.module, self.source_file)
 
@@ -102,10 +105,10 @@ class PEtabJlObjective(JuliaObjective):
         self.petab_jl_problem = petab_jl_problem
 
         # get functions
-        fun = self.petab_jl_problem.compute_cost
-        grad = self.petab_jl_problem.compute_gradient
-        hess = self.petab_jl_problem.compute_hessian
-        x_names = np.asarray(self.petab_jl_problem.θ_names)
+        fun = self.petab_jl_problem.nllh
+        grad = self.petab_jl_problem.grad
+        hess = self.petab_jl_problem.hess
+        x_names = np.asarray(self.petab_jl_problem.xnames)
 
         # call the super super constructor
         super(JuliaObjective, self).__init__(fun, grad, hess, x_names)
@@ -140,7 +143,7 @@ class PEtabJlObjective(JuliaObjective):
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         # setting up a local project, where the precompilation will be done in
         from julia import Pkg
 
@@ -157,7 +160,7 @@ class PEtabJlObjective(JuliaObjective):
         )
         # add a new line at the top of the original module to use the
         # precompiled module
-        with open(self.source_file, "r") as read_f:
+        with open(self.source_file) as read_f:
             if read_f.readline().endswith("_pre\n"):
                 with open("dummy_temp_file.jl", "w+") as write_f:
                     write_f.write(f"using {self.module}_pre\n\n")

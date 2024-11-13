@@ -22,7 +22,7 @@ def close_fig(fun):
     @wraps(fun)
     def wrapped_fun(*args, **kwargs):
         ret = fun(*args, **kwargs)
-        plt.close('all')
+        plt.close("all")
         return ret
 
     return wrapped_fun
@@ -137,6 +137,6 @@ def test_sample():
         n_samples + 1,
         len(crproblem.p_true),
     )
-
+    sample.geweke_test(sample_result)
     # visualize the results
     visualize.sampling_1d_marginals(sample_result)

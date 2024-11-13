@@ -1,6 +1,8 @@
-"""This file serves as an example how to use MPIPoolEngine
+"""
+This file serves as an example how to use MPIPoolEngine
 to optimize across nodes and also as a test for the
-MPIPoolEngine."""
+MPIPoolEngine.
+"""
 import numpy as np
 import scipy as sp
 
@@ -13,8 +15,9 @@ from pypesto.store import OptimizationResultHDF5Writer, ProblemHDF5Writer
 
 
 def setup_rosen_problem(n_starts: int = 2):
-    """Set up the rosenbrock problem and return
-    a pypesto.Problem"""
+    """
+    Set up the rosenbrock problem and return a pypesto.Problem.
+    """
     objective = pypesto.Objective(
         fun=sp.optimize.rosen,
         grad=sp.optimize.rosen_der,
@@ -38,7 +41,7 @@ def setup_rosen_problem(n_starts: int = 2):
 # set all your code into this if condition.
 # This way only one core performs the code
 # and distributes the work of the optimization.
-if __name__ == '__main__':
+if __name__ == "__main__":
     # set number of starts
     n_starts = 2
     # create problem
@@ -56,7 +59,7 @@ if __name__ == '__main__':
     )
 
     # saving optimization results to hdf5
-    file_name = 'temp_result.h5'
+    file_name = "temp_result.h5"
     opt_result_writer = OptimizationResultHDF5Writer(file_name)
     problem_writer = ProblemHDF5Writer(file_name)
     problem_writer.write(problem)

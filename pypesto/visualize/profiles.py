@@ -1,4 +1,5 @@
-from typing import Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Optional, Union
 from warnings import warn
 
 import matplotlib.pyplot as plt
@@ -15,7 +16,7 @@ def profiles(
     results: Union[Result, Sequence[Result]],
     ax=None,
     profile_indices: Sequence[int] = None,
-    size: Sequence[float] = (18.5, 6.5),
+    size: tuple[float, float] = (18.5, 6.5),
     reference: Union[ReferencePoint, Sequence[ReferencePoint]] = None,
     colors=None,
     legends: Sequence[str] = None,
@@ -23,7 +24,9 @@ def profiles(
     profile_list_ids: Union[int, Sequence[int]] = 0,
     ratio_min: float = 0.0,
     show_bounds: bool = False,
-):
+    plot_objective_values: bool = False,
+    quality_colors: bool = False,
+) -> plt.Axes:
     """
     Plot classical 1D profile plot.
 
@@ -31,36 +34,56 @@ def profiles(
 
     Parameters
     ----------
-    results: list or pypesto.Result
+    results:
         List of or single `pypesto.Result` after profiling.
-    ax: list of matplotlib.Axes, optional
+    ax:
         List of axes objects to use.
-    profile_indices: list of integer values
+    profile_indices:
         List of integer values specifying which profiles should be plotted.
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
-    reference: list, optional
+    reference:
         List of reference points for optimization results, containing at
         least a function value fval.
-    colors: list, or RGBA, optional
-        List of colors, or single color.
-    legends: list or str, optional
+    colors:
+        List of colors, or single color. If multiple colors are passed, their
+        number needs to corresponds to either the number of results or the
+        number of profile_list_ids. Cannot be provided if quality_colors is set to True.
+    legends:
         Labels for line plots, one label per result object.
-    x_labels: list of str
+    x_labels:
         Labels for parameter value axes (e.g. parameter names).
-    profile_list_ids: int or list of ints, optional
-        Index or list of indices of the profile lists to be used for profiling.
+    profile_list_ids:
+        Index or list of indices of the profile lists to visualize.
     ratio_min:
         Minimum ratio below which to cut off.
     show_bounds:
         Whether to show, and extend the plot to, the lower and upper bounds.
+    plot_objective_values:
+        Whether to plot the objective function values instead of the likelihood
+        ratio values.
+    quality_colors:
+        If set to True, the profiles are colored according to types of steps the
+        profiler took. This gives additional information about the profile quality.
+        Red indicates a step for which min_step_size was reduced, blue indicates a step for which
+        max_step_size was increased, and green indicates a step for which the profiler
+        had to resample the parameter vector due to optimization failure of the previous two.
+        Black indicates a step for which none of the above was necessary. This option is only
+        available if there is only one result and one profile_list_id (one profile per plot).
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax:
         The plot axes.
     """
+
+    if colors is not None and quality_colors:
+        raise ValueError(
+            "Cannot visualize the profiles with `quality_colors` of profiler_result.color_path "
+            " and `colors` provided at the same time. Please provide only one of them."
+        )
+
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
         results, profile_list_ids, colors, legends
@@ -74,11 +97,12 @@ def profiles(
     # loop over results
     for i_result, result in enumerate(results):
         for i_profile_list, profile_list_id in enumerate(profile_list_ids):
-            fvals = handle_inputs(
+            fvals, color_paths = handle_inputs(
                 result,
                 profile_indices=profile_indices,
                 profile_list=profile_list_id,
                 ratio_min=ratio_min,
+                plot_objective_values=plot_objective_values,
             )
 
             # add x_labels for parameters
@@ -97,17 +121,30 @@ def profiles(
                 # multiple results per axes object
                 color_ind = i_result
 
+            # If quality_colors is set to True, we use the colors provided
+            # by profiler_result.color_path. This will be done only if there is
+            # only one result and one profile_list_id (basically one profile per plot).
+            if (
+                len(results) == 1
+                and len(profile_list_ids) == 1
+                and quality_colors
+            ):
+                color = color_paths
+            else:
+                color = colors[color_ind]
+
             # call lowlevel routine
             ax = profiles_lowlevel(
                 fvals=fvals,
                 ax=ax,
                 size=size,
-                color=colors[color_ind],
+                color=color,
                 legend_text=legends[color_ind],
                 x_labels=x_labels,
                 show_bounds=show_bounds,
                 lb_full=result.problem.lb_full,
                 ub_full=result.problem.ub_full,
+                plot_objective_values=plot_objective_values,
             )
 
     # parse and apply plotting options
@@ -122,16 +159,17 @@ def profiles(
 
 
 def profiles_lowlevel(
-    fvals,
-    ax=None,
-    size: Tuple[float, float] = (18.5, 6.5),
+    fvals: Union[float, Sequence[float]],
+    ax: Optional[Sequence[plt.Axes]] = None,
+    size: tuple[float, float] = (18.5, 6.5),
     color=None,
     legend_text: str = None,
     x_labels=None,
     show_bounds: bool = False,
-    lb_full=None,
-    ub_full=None,
-):
+    lb_full: Sequence[float] = None,
+    ub_full: Sequence[float] = None,
+    plot_objective_values: bool = False,
+) -> list[plt.Axes]:
     """
     Lowlevel routine for profile plotting.
 
@@ -139,21 +177,17 @@ def profiles_lowlevel(
 
     Parameters
     ----------
-    fvals: numeric list or array
+    fvals:
         Values to plot.
-    ax: list of matplotlib.Axes, optional
+    ax:
         List of axes object to use.
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
-    size: tuple, optional
-        Figure size (width, height) in inches. Is only applied when no ax
-        object is specified.
-    color: RGBA, optional
-        Color for profiles in plot.
-    legend_text: str
-        Label for line plots.
-    legend_text: List[str]
+    color: RGBA, list[np.ndarray[RGBA]], optional
+        Color for profiles in plot. In case of quality_colors=True, this is a list of
+        np.ndarray[RGBA] for each profile -- one color per profile point for each profile.
+    legend_text:
         Label for line plots.
     show_bounds:
         Whether to show, and extend the plot to, the lower and upper bounds.
@@ -161,11 +195,13 @@ def profiles_lowlevel(
         Lower bound.
     ub_full:
         Upper bound.
+    plot_objective_values:
+        Whether to plot the objective function values instead of the likelihood
+        ratio values.
 
     Returns
     -------
-    ax: matplotlib.Axes
-        The plot axes.
+    The plot axes.
     """
     # axes
     if ax is None:
@@ -179,14 +215,14 @@ def profiles_lowlevel(
         create_new_ax = False
 
     # count number of necessary axes
-    if isinstance(fvals, list):
+    if isinstance(fvals, Sequence):
         n_fvals = len(fvals)
     else:
         n_fvals = 1
         fvals = [fvals]
 
     # number of non-trivial profiles
-    n_profiles = sum((fval is not None for fval in fvals))
+    n_profiles = sum(fval is not None for fval in fvals)
 
     # if axes already exists, we have to match profiles to axes
     if not create_new_ax:
@@ -220,6 +256,12 @@ def profiles_lowlevel(
         # if we have empty profiles and more axes than profiles: skip
         if n_plots != n_fvals and fval is None:
             continue
+        # If we use colors from profiler_result.color_path,
+        # we need to take the color path of each profile
+        if isinstance(color, list) and isinstance(color[i_plot], np.ndarray):
+            color_i = color[i_plot]
+        else:
+            color_i = color
 
         # handle legend
         if i_plot == 0:
@@ -240,7 +282,7 @@ def profiles_lowlevel(
                 fval,
                 ax[counter],
                 size=size,
-                color=color,
+                color=color_i,
                 legend_text=tmp_legend,
                 show_bounds=show_bounds,
                 lb=lb,
@@ -249,18 +291,15 @@ def profiles_lowlevel(
 
         # labels
         if x_labels is None:
-            ax[counter].set_xlabel(f'Parameter {i_plot}')
+            ax[counter].set_xlabel(f"Parameter {i_plot}")
         else:
             ax[counter].set_xlabel(x_labels[counter])
 
         if counter % columns == 0:
-            ax[counter].set_ylabel('Log-posterior ratio')
-        else:
-            # fix pyPESTO/pyPESTO/pypesto/visualize/profiles.py:228:
-            # UserWarning: FixedFormatter should only be used
-            # together with FixedLocator. Fix from matplotlib #18848.
-            ax[counter].set_yticks(ax[counter].get_yticks())
-            ax[counter].set_yticklabels(['' for _ in ax[counter].get_yticks()])
+            if plot_objective_values:
+                ax[counter].set_ylabel("Objective function value")
+            else:
+                ax[counter].set_ylabel("Log-posterior ratio")
 
         # increase counter and cleanup legend
         counter += 1
@@ -269,30 +308,30 @@ def profiles_lowlevel(
 
 
 def profile_lowlevel(
-    fvals,
-    ax=None,
-    size: Tuple[float, float] = (18.5, 6.5),
+    fvals: Sequence[float],
+    ax: Optional[plt.Axes] = None,
+    size: tuple[float, float] = (18.5, 6.5),
     color=None,
     legend_text: str = None,
     show_bounds: bool = False,
     lb: float = None,
     ub: float = None,
-):
+) -> plt.Axes:
     """
     Lowlevel routine for plotting one profile, working with a numpy array only.
 
     Parameters
     ----------
-    fvals: numeric list or array
+    fvals:
         Values to plot.
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
     color: RGBA, optional
         Color for profiles in plot.
-    legend_text: str
+    legend_text:
         Label for line plots.
     show_bounds:
         Whether to show, and extend the plot to, the lower and upper bounds.
@@ -303,27 +342,64 @@ def profile_lowlevel(
 
     Returns
     -------
-    ax: matplotlib.Axes
-        The plot axes.
+    The plot axes.
     """
     # parse input
     fvals = np.asarray(fvals)
-
     # get colors
-    color = assign_colors([1.0], color)
+    if (
+        color is None
+        or isinstance(color, list)
+        or isinstance(color, tuple)
+        or (isinstance(color, np.ndarray) and not len(color.shape) == 2)
+    ):
+        color = assign_colors([1.0], color)
+        single_color = True
+    else:
+        single_color = False
 
     # axes
     if ax is None:
         ax = plt.subplots()[1]
-        ax.set_xlabel('Parameter value')
-        ax.set_ylabel('Log-posterior ratio')
+        ax.set_xlabel("Parameter value")
+        ax.set_ylabel("Log-posterior ratio")
         fig = plt.gcf()
         fig.set_size_inches(*size)
 
     # plot
     if fvals.size != 0:
         ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-        ax.plot(fvals[0, :], fvals[1, :], color=color[0], label=legend_text)
+        xs = fvals[0, :]
+        ratios = fvals[1, :]
+
+        # If we use colors from profiler_result.color_path,
+        # we need to make a mapping from profile points to their colors
+        if not single_color:
+            # Create a mapping from (x, ratio) to color
+            point_to_color = dict(zip(zip(xs, ratios), color))
+        else:
+            point_to_color = None
+
+        # Plot each profile point individually to allow for different colors
+        for i in range(1, len(xs)):
+            point_color = (
+                color
+                if single_color
+                else tuple(point_to_color[(xs[i], ratios[i])])
+            )
+            ax.plot(
+                [xs[i - 1], xs[i]],
+                [ratios[i - 1], ratios[i]],
+                color=color if single_color else (0, 0, 0, 1),
+                linestyle="-",
+            )
+            if not single_color and point_color != (0, 0, 0, 1):
+                ax.plot(xs[i], ratios[i], color=point_color, marker="o")
+            else:
+                ax.plot(xs[i], ratios[i], color=point_color, marker=".")
+
+        # Plot legend text
+        ax.plot([], [], color=color[0], label=legend_text)
 
     if legend_text is not None:
         ax.legend()
@@ -352,7 +428,7 @@ def handle_reference_points(ref, ax, profile_indices):
         # loop over axes objects
         for i_par, i_ax in enumerate(ax):
             for i_ref in ref:
-                current_x = i_ref['x'][profile_indices[i_par]]
+                current_x = i_ref["x"][profile_indices[i_par]]
                 i_ax.plot(
                     [current_x, current_x],
                     [0.0, 1.0],
@@ -372,29 +448,32 @@ def handle_inputs(
     profile_indices: Sequence[int],
     profile_list: int,
     ratio_min: float,
-):
+    plot_objective_values: bool,
+) -> list[np.array]:
     """
     Retrieve the values of the profiles to be plotted.
 
     Parameters
     ----------
-    result: pypesto.Result
+    result:
         Profile result obtained by 'profile.py'.
-    profile_indices: list of integer values
-        List of integer values specifying which profiles should be plotted.
-    profile_list: int, optional
+    profile_indices:
+        Sequence of integer values specifying which profiles should be plotted.
+    profile_list:
         Index of the profile list to be used for profiling.
-    ratio_min: int, optional
+    ratio_min:
         Exclude values where profile likelihood ratio is smaller than
         ratio_min.
+    plot_objective_values:
+        Whether to plot the objective function values instead of the likelihood
 
     Returns
     -------
-    fvals: numeric list
-        Including values that need to be plotted.
+    List of parameter values and ratios that need to be plotted.
     """
-    # extract ratio values values from result
+    # extract ratio values from result
     fvals = []
+    colors = []
     for i_par in range(0, len(result.profile_result.list[profile_list])):
         if (
             i_par in profile_indices
@@ -406,18 +485,31 @@ def handle_inputs(
             ratios = result.profile_result.list[profile_list][
                 i_par
             ].ratio_path[:]
+            colors_for_par = result.profile_result.list[profile_list][
+                i_par
+            ].color_path
 
             # constrain
             indices = np.where(ratios > ratio_min)
             xs = xs[indices]
             ratios = ratios[indices]
+            colors_for_par = colors_for_par[indices]
 
-            fvals_for_par = np.array([xs, ratios])
+            if plot_objective_values:
+                obj_vals = result.profile_result.list[profile_list][
+                    i_par
+                ].fval_path
+                obj_vals = obj_vals[indices]
+                fvals_for_par = np.array([xs, obj_vals])
+            else:
+                fvals_for_par = np.array([xs, ratios])
         else:
             fvals_for_par = None
+            colors_for_par = None
         fvals.append(fvals_for_par)
+        colors.append(colors_for_par)
 
-    return fvals
+    return fvals, colors
 
 
 def process_result_list_profiles(
@@ -437,8 +529,7 @@ def process_result_list_profiles(
         List of or single `pypesto.Result` after profiling.
     profile_list_ids: int or list of ints, optional
         Index or list of indices of the profile lists to be used for profiling.
-    colors: list of RGBA colors
-        colors for
+    colors: list of RGBA colors for plotting.
     legends: list of str
         Legends for plotting
 
@@ -502,14 +593,16 @@ def process_profile_indices(
 
     # get the profiles, which should be plotted and sanitize, if not plottable
     if profile_indices is None:
-        profile_indices = list(plottable_indices)
+        profile_indices_ret = list(plottable_indices)
     else:
+        profile_indices_ret = list(profile_indices)
         for ind in profile_indices:
             if ind not in plottable_indices:
-                profile_indices.remove(ind)
+                profile_indices_ret.remove(ind)
                 warn(
-                    'Requested to plot profile for parameter index %i, '
-                    'but profile has not been computed.' % ind
+                    f"Requested to plot profile for parameter index {ind}, "
+                    "but profile has not been computed.",
+                    stacklevel=2,
                 )
 
-    return profile_indices
+    return profile_indices_ret

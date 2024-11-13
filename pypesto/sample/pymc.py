@@ -1,8 +1,8 @@
 """Pymc v4 Sampler."""
+
 from __future__ import annotations
 
 import logging
-from typing import Union
 
 import arviz as az
 import numpy as np
@@ -111,10 +111,10 @@ class PymcSampler(Sampler):
     ):
         super().__init__(kwargs)
         self.step_function = step_function
-        self.problem: Union[Problem, None] = None
-        self.x0: Union[np.ndarray, None] = None
-        self.trace: Union[pymc.backends.Text, None] = None
-        self.data: Union[az.InferenceData, None] = None
+        self.problem: Problem | None = None
+        self.x0: np.ndarray | None = None
+        self.trace: pymc.backends.Text | None = None
+        self.data: az.InferenceData | None = None
 
     @classmethod
     def translate_options(cls, options):
@@ -127,7 +127,7 @@ class PymcSampler(Sampler):
             Options configuring the sampler.
         """
         if not options:
-            options = {'chains': 1}
+            options = {"chains": 1}
         return options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -163,7 +163,7 @@ class PymcSampler(Sampler):
         try:
             import pymc
         except ImportError:
-            raise SamplerImportError("pymc")
+            raise SamplerImportError("pymc") from None
 
         problem = self.problem
         log_post = PymcObjectiveOp.create_instance(problem.objective, beta)

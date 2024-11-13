@@ -1,12 +1,17 @@
 import copy
-from typing import Dict, List, Sequence, Union
+import logging
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
-from tqdm import tqdm
 
+from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
 from ..result import McmcPtResult
+from ..util import tqdm
 from .sampler import InternalSampler, Sampler
+
+logger = logging.getLogger(__name__)
 
 
 class ParallelTemperingSampler(Sampler):
@@ -36,25 +41,31 @@ class ParallelTemperingSampler(Sampler):
         internal_sampler: InternalSampler,
         betas: Sequence[float] = None,
         n_chains: int = None,
-        options: Dict = None,
+        options: dict = None,
     ):
         super().__init__(options)
 
         # set betas
         if (betas is None) == (n_chains is None):
             raise ValueError("Set either betas or n_chains.")
-        if betas is None:
+        if betas is None and self.options["beta_init"] == EXPONENTIAL_DECAY:
+            logger.info('Initializing betas with "near-exponential decay".')
             betas = near_exponential_decay_betas(
                 n_chains=n_chains,
-                exponent=self.options['exponent'],
-                max_temp=self.options['max_temp'],
+                exponent=self.options["exponent"],
+                max_temp=self.options["max_temp"],
+            )
+        elif betas is None and self.options["beta_init"] == BETA_DECAY:
+            logger.info('Initializing betas with "beta decay".')
+            betas = beta_decay_betas(
+                n_chains=n_chains, alpha=self.options["alpha"]
             )
         if betas[0] != 1.0:
             raise ValueError("The first chain must have beta=1.0")
         self.betas0 = np.array(betas)
         self.betas = None
 
-        self.temper_lpost = self.options['temper_log_posterior']
+        self.temper_lpost = self.options["temper_log_posterior"]
 
         self.samplers = [
             copy.deepcopy(internal_sampler) for _ in range(len(self.betas0))
@@ -64,17 +75,19 @@ class ParallelTemperingSampler(Sampler):
             sampler.make_internal(temper_lpost=self.temper_lpost)
 
     @classmethod
-    def default_options(cls) -> Dict:
+    def default_options(cls) -> dict:
         """Return the default options for the sampler."""
         return {
-            'max_temp': 5e4,
-            'exponent': 4,
-            'temper_log_posterior': False,
-            'show_progress': True,
+            "max_temp": 5e4,
+            "exponent": 4,
+            "temper_log_posterior": False,
+            "show_progress": None,
+            "beta_init": BETA_DECAY,  # replaced in adaptive PT
+            "alpha": 0.3,
         }
 
     def initialize(
-        self, problem: Problem, x0: Union[np.ndarray, List[np.ndarray]]
+        self, problem: Problem, x0: Union[np.ndarray, list[np.ndarray]]
     ):
         """Initialize all samplers."""
         n_chains = len(self.samplers)
@@ -89,9 +102,9 @@ class ParallelTemperingSampler(Sampler):
 
     def sample(self, n_samples: int, beta: float = 1.0):
         """Sample and swap in between samplers."""
-        show_progress = self.options['show_progress']
+        show_progress = self.options.get("show_progress", None)
         # loop over iterations
-        for i_sample in tqdm(range(int(n_samples)), disable=not show_progress):
+        for i_sample in tqdm(range(int(n_samples)), enable=show_progress):
             # TODO test
             # sample
             for sampler, beta in zip(self.samplers, self.betas):
@@ -163,6 +176,30 @@ class ParallelTemperingSampler(Sampler):
 
     def adjust_betas(self, i_sample: int, swapped: Sequence[bool]):
         """Adjust temperature values. Default: Do nothing."""
+
+
+def beta_decay_betas(n_chains: int, alpha: float) -> np.ndarray:
+    """Initialize betas to the (j-1)th quantile of a Beta(alpha, 1) distribution.
+
+    Proposed by Xie et al. (2011) to be used for thermodynamic integration.
+
+    Parameters
+    ----------
+    n_chains:
+        Number of chains to use.
+    alpha:
+        Tuning parameter that modulates the skew of the distribution over the temperatures.
+        For alpha=1 we have a uniform distribution, and as alpha decreases towards zero,
+        temperatures become positively skewed. Xie et al. (2011) propose alpha=0.3 as a good start.
+    """
+    if alpha <= 0 or alpha > 1:
+        raise ValueError("alpha must be in (0, 1]")
+
+    # special case of one chain
+    if n_chains == 1:
+        return np.array([1.0])
+
+    return np.power(np.arange(n_chains) / (n_chains - 1), 1 / alpha)[::-1]
 
 
 def near_exponential_decay_betas(

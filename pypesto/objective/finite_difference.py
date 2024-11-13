@@ -2,7 +2,7 @@
 
 import copy
 import logging
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Union
 
 import numpy as np
 
@@ -212,7 +212,7 @@ class FDDelta:
         self.delta = delta_opt
 
         # log
-        logger.info(f"Optimal FD delta: {self.delta}")
+        logger.debug(f"Optimal FD delta: {self.delta}")
         self.updates += 1
 
     def get(self) -> np.ndarray:
@@ -315,7 +315,7 @@ class FD(ObjectiveBase):
         delta_grad: Union[FDDelta, np.ndarray, float, str] = 1e-6,
         delta_res: Union[FDDelta, float, np.ndarray, str] = 1e-6,
         method: str = CENTRAL,
-        x_names: List[str] = None,
+        x_names: list[str] = None,
     ):
         super().__init__(x_names=x_names)
         self.obj: ObjectiveBase = obj
@@ -327,6 +327,7 @@ class FD(ObjectiveBase):
         self.delta_grad: FDDelta = to_delta(delta_grad)
         self.delta_res: FDDelta = to_delta(delta_res)
         self.method: str = method
+        self.pre_post_processor = obj.pre_post_processor
 
         if method not in FD.METHODS:
             raise ValueError(
@@ -335,8 +336,8 @@ class FD(ObjectiveBase):
 
     def __deepcopy__(
         self,
-        memodict: Dict = None,
-    ) -> 'FD':
+        memodict: dict = None,
+    ) -> "FD":
         """Create deepcopy of Objective."""
         other = self.__class__.__new__(self.__class__)
         for attr, val in self.__dict__.items():
@@ -371,8 +372,9 @@ class FD(ObjectiveBase):
     def call_unprocessed(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """
@@ -383,11 +385,17 @@ class FD(ObjectiveBase):
         """
         if mode == MODE_FUN:
             result = self._call_mode_fun(
-                x=x, sensi_orders=sensi_orders, **kwargs
+                x=x,
+                sensi_orders=sensi_orders,
+                return_dict=return_dict,
+                **kwargs,
             )
         elif mode == MODE_RES:
             result = self._call_mode_res(
-                x=x, sensi_orders=sensi_orders, **kwargs
+                x=x,
+                sensi_orders=sensi_orders,
+                return_dict=return_dict,
+                **kwargs,
             )
         else:
             raise ValueError("This mode is not supported.")
@@ -397,7 +405,8 @@ class FD(ObjectiveBase):
     def _call_mode_fun(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """Handle calls in function value mode.
@@ -408,6 +417,7 @@ class FD(ObjectiveBase):
         sensi_orders_obj, result = self._call_from_obj_fun(
             x=x,
             sensi_orders=sensi_orders,
+            return_dict=return_dict,
             **kwargs,
         )
 
@@ -429,13 +439,21 @@ class FD(ObjectiveBase):
         def f_fval(x):
             """Short-hand to get a function value."""
             return self.obj.call_unprocessed(
-                x=x, sensi_orders=(0,), mode=MODE_FUN, **kwargs
+                x=x,
+                sensi_orders=(0,),
+                mode=MODE_FUN,
+                return_dict=return_dict,
+                **kwargs,
             )[FVAL]
 
         def f_grad(x):
             """Short-hand to get a gradient value."""
             return self.obj.call_unprocessed(
-                x=x, sensi_orders=(1,), mode=MODE_FUN, **kwargs
+                x=x,
+                sensi_orders=(1,),
+                mode=MODE_FUN,
+                return_dict=return_dict,
+                **kwargs,
             )[GRAD]
 
         # update delta vectors
@@ -486,7 +504,8 @@ class FD(ObjectiveBase):
     def _call_mode_res(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
+        return_dict: bool,
         **kwargs,
     ) -> ResultDict:
         """Handle calls in residual mode.
@@ -497,6 +516,7 @@ class FD(ObjectiveBase):
         sensi_orders_obj, result = self._call_from_obj_res(
             x=x,
             sensi_orders=sensi_orders,
+            return_dict=return_dict,
             **kwargs,
         )
 
@@ -507,7 +527,11 @@ class FD(ObjectiveBase):
         def f_res(x):
             """Short-hand to get a function value."""
             return self.obj.call_unprocessed(
-                x=x, sensi_orders=(0,), mode=MODE_RES, **kwargs
+                x=x,
+                sensi_orders=(0,),
+                mode=MODE_RES,
+                return_dict=return_dict,
+                **kwargs,
             )[RES]
 
         # update delta vector
@@ -531,9 +555,10 @@ class FD(ObjectiveBase):
     def _call_from_obj_fun(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
+        return_dict: bool,
         **kwargs,
-    ) -> Tuple[Tuple[int, ...], ResultDict]:
+    ) -> tuple[tuple[int, ...], ResultDict]:
         """
         Call objective function for sensitivities.
 
@@ -553,16 +578,21 @@ class FD(ObjectiveBase):
         result = {}
         if sensi_orders_obj:
             result = self.obj.call_unprocessed(
-                x=x, sensi_orders=sensi_orders_obj, mode=MODE_FUN, **kwargs
+                x=x,
+                sensi_orders=sensi_orders_obj,
+                mode=MODE_FUN,
+                return_dict=return_dict,
+                **kwargs,
             )
         return sensi_orders_obj, result
 
     def _call_from_obj_res(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
+        return_dict: bool,
         **kwargs,
-    ) -> Tuple[Tuple[int, ...], ResultDict]:
+    ) -> tuple[tuple[int, ...], ResultDict]:
         """
         Call objective function for sensitivities in residual mode.
 
@@ -580,7 +610,11 @@ class FD(ObjectiveBase):
         result = {}
         if sensi_orders_obj:
             result = self.obj.call_unprocessed(
-                x=x, sensi_orders=sensi_orders_obj, mode=MODE_RES, **kwargs
+                x=x,
+                sensi_orders=sensi_orders_obj,
+                mode=MODE_RES,
+                return_dict=return_dict,
+                **kwargs,
             )
         return sensi_orders_obj, result
 

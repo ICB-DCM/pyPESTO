@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Union
 
 
 class OptimizeOptions(dict):
@@ -42,15 +42,15 @@ class OptimizeOptions(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError(key)
+            raise AttributeError(key) from None
 
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
     @staticmethod
     def assert_instance(
-        maybe_options: Union['OptimizeOptions', Dict],
-    ) -> 'OptimizeOptions':
+        maybe_options: Union["OptimizeOptions", dict],
+    ) -> "OptimizeOptions":
         """
         Return a valid options object.
 

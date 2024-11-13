@@ -3,12 +3,13 @@
 import logging
 import os
 from numbers import Integral
+from pathlib import Path
 from typing import Union
 
 import h5py
 import numpy as np
 
-from ..result import Result, SampleResult
+from ..result import ProfilerResult, Result, SampleResult
 from .hdf5 import write_array, write_float_array
 
 logger = logging.getLogger(__name__)
@@ -52,16 +53,16 @@ class ProblemHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 problem file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, problem, overwrite: bool = False):
         """Write HDF5 problem file from pyPESTO problem object."""
@@ -72,18 +73,18 @@ class ProblemHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'problem')
+            check_overwrite(f, overwrite, "problem")
             attrs_to_save = [
                 a
                 for a in dir(problem)
-                if not a.startswith('__')
+                if not a.startswith("__")
                 and not callable(getattr(problem, a))
                 and not hasattr(type(problem), a)
             ]
 
             problem_grp = f.create_group("problem")
             # save the configuration
-            f['problem/config'] = str(problem.objective.get_config())
+            f["problem/config"] = str(problem.objective.get_config())
 
             for problem_attr in attrs_to_save:
                 value = getattr(problem, problem_attr)
@@ -91,7 +92,7 @@ class ProblemHDF5Writer:
                     value = np.asarray(value)
                     if value.size:
                         write_array(problem_grp, problem_attr, value)
-                elif isinstance(value, Integral):
+                elif isinstance(value, (Integral, str)):
                     problem_grp.attrs[problem_attr] = value
 
 
@@ -105,16 +106,16 @@ class OptimizationResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize Writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, result: Result, overwrite=False):
         """Write HDF5 result file from pyPESTO result object."""
@@ -125,17 +126,17 @@ class OptimizationResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'optimization')
+            check_overwrite(f, overwrite, "optimization")
             optimization_grp = f.require_group("optimization")
             # settings =
             # optimization_grp.create_dataset("settings", settings, dtype=)
             results_grp = optimization_grp.require_group("results")
 
             for start in result.optimize_result.list:
-                start_id = start['id']
+                start_id = start["id"]
                 start_grp = results_grp.require_group(start_id)
                 for key in start.keys():
-                    if key == 'history':
+                    if key == "history":
                         continue
                     if isinstance(start[key], np.ndarray):
                         write_array(start_grp, key, start[key])
@@ -154,16 +155,16 @@ class SamplingResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize Writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, result: Result, overwrite: bool = False):
         """Write HDF5 sampling file from pyPESTO result object."""
@@ -184,7 +185,7 @@ class SamplingResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'sampling')
+            check_overwrite(f, overwrite, "sampling")
             results_grp = f.require_group("sampling/results")
 
             for key in result.sample_result.keys():
@@ -207,16 +208,16 @@ class ProfileResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: str):
+    def __init__(self, storage_filename: Union[str, Path]):
         """
         Initialize Writer.
 
         Parameters
         ----------
-        storage_filename: str
+        storage_filename:
             HDF5 result file name
         """
-        self.storage_filename = storage_filename
+        self.storage_filename = str(storage_filename)
 
     def write(self, result: Result, overwrite: bool = False):
         """Write HDF5 result file from pyPESTO result object."""
@@ -227,31 +228,46 @@ class ProfileResultHDF5Writer:
                 os.makedirs(basedir, exist_ok=True)
 
         with h5py.File(self.storage_filename, "a") as f:
-            check_overwrite(f, overwrite, 'profiling')
+            check_overwrite(f, overwrite, "profiling")
             profiling_grp = f.require_group("profiling")
 
             for profile_id, profile in enumerate(result.profile_result.list):
                 profile_grp = profiling_grp.require_group(str(profile_id))
                 for parameter_id, parameter_profile in enumerate(profile):
                     result_grp = profile_grp.require_group(str(parameter_id))
+                    self._write_profiler_result(parameter_profile, result_grp)
 
-                    if parameter_profile is None:
-                        result_grp.attrs['IsNone'] = True
-                        continue
-                    result_grp.attrs['IsNone'] = False
-                    for key in parameter_profile.keys():
-                        if isinstance(parameter_profile[key], np.ndarray):
-                            write_float_array(
-                                result_grp, key, parameter_profile[key]
-                            )
-                        elif parameter_profile[key] is not None:
-                            result_grp.attrs[key] = parameter_profile[key]
             f.flush()
+
+    @staticmethod
+    def _write_profiler_result(
+        parameter_profile: Union[ProfilerResult, None], result_grp: h5py.Group
+    ) -> None:
+        """Write a single ProfilerResult to hdf5.
+
+        Writes a single profile for a single parameter to the provided HDF5 group.
+        """
+        if parameter_profile is None:
+            result_grp.attrs["IsNone"] = True
+            return
+
+        result_grp.attrs["IsNone"] = False
+
+        for key, value in parameter_profile.items():
+            try:
+                if isinstance(value, np.ndarray):
+                    write_float_array(result_grp, key, value)
+                elif value is not None:
+                    result_grp.attrs[key] = value
+            except Exception as e:
+                raise ValueError(
+                    f"Error writing {key} ({value}) to {result_grp}."
+                ) from e
 
 
 def write_result(
     result: Result,
-    filename: str,
+    filename: Union[str, Path],
     overwrite: bool = False,
     problem: bool = True,
     optimize: bool = False,
@@ -300,3 +316,9 @@ def write_result(
     if sample:
         pypesto_sample_writer = SamplingResultHDF5Writer(filename)
         pypesto_sample_writer.write(result, overwrite=overwrite)
+
+    if hasattr(result, "variational_result"):
+        logger.warning(
+            "Results from variational inference are not saved in the hdf5 file. "
+            "You have to save them manually."
+        )

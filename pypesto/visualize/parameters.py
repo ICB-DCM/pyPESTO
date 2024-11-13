@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, Iterable, List, Optional, Sequence, Tuple, Union
+from collections.abc import Iterable, Sequence
+from typing import Callable, Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -10,7 +11,13 @@ from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import INNER_PARAMETERS, RGBA, WATERFALL_MAX_VALUE
+from ..C import (
+    INNER_PARAMETERS,
+    LOG10,
+    RGBA,
+    WATERFALL_MAX_VALUE,
+    InnerParameterType,
+)
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -20,23 +27,31 @@ from .misc import (
 )
 from .reference_points import ReferencePoint, create_references
 
+try:
+    from ..hierarchical.base_problem import scale_value
+    from ..hierarchical.relative import RelativeInnerProblem
+    from ..hierarchical.semiquantitative import SemiquantProblem
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
 
 def parameters(
     results: Union[Result, Sequence[Result]],
     ax: Optional[matplotlib.axes.Axes] = None,
-    parameter_indices: Union[str, Sequence[int]] = 'free_only',
-    lb: Optional[Union[np.ndarray, List[float]]] = None,
-    ub: Optional[Union[np.ndarray, List[float]]] = None,
-    size: Optional[Tuple[float, float]] = None,
-    reference: Optional[List[ReferencePoint]] = None,
-    colors: Optional[Union[RGBA, List[RGBA]]] = None,
-    legends: Optional[Union[str, List[str]]] = None,
+    parameter_indices: Union[str, Sequence[int]] = "free_only",
+    lb: Optional[Union[np.ndarray, list[float]]] = None,
+    ub: Optional[Union[np.ndarray, list[float]]] = None,
+    size: Optional[tuple[float, float]] = None,
+    reference: Optional[list[ReferencePoint]] = None,
+    colors: Optional[Union[RGBA, list[RGBA]]] = None,
+    legends: Optional[Union[str, list[str]]] = None,
     balance_alpha: bool = True,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    scale_to_interval: Optional[Tuple[float, float]] = None,
+    scale_to_interval: Optional[tuple[float, float]] = None,
     plot_inner_parameters: bool = True,
+    log10_scale_hier_sigma: bool = True,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -76,6 +91,9 @@ def parameters(
         ``None`` to use bounds as determined by ``lb, ub``.
     plot_inner_parameters:
         Flag indicating whether to plot inner parameters (default: True).
+    log10_scale_hier_sigma:
+        Flag indicating whether to scale inner parameters of type
+        ``InnerParameterType.SIGMA`` to log10 (default: True).
 
     Returns
     -------
@@ -86,9 +104,9 @@ def parameters(
     (results, colors, legends) = process_result_list(results, colors, legends)
 
     if isinstance(parameter_indices, str):
-        if parameter_indices == 'all':
+        if parameter_indices == "all":
             parameter_indices = range(0, results[0].problem.dim_full)
-        elif parameter_indices == 'free_only':
+        elif parameter_indices == "free_only":
             parameter_indices = results[0].problem.x_free_indices
         else:
             raise ValueError(
@@ -107,14 +125,26 @@ def parameters(
 
     for j, result in enumerate(results):
         # handle results and bounds
-        (lb, ub, x_labels, fvals, xs) = handle_inputs(
+        (lb, ub, x_labels, fvals, xs, x_axis_label) = handle_inputs(
             result=result,
             lb=lb,
             ub=ub,
             parameter_indices=parameter_indices,
             start_indices=start_indices,
             plot_inner_parameters=plot_inner_parameters,
+            log10_scale_hier_sigma=log10_scale_hier_sigma,
         )
+
+        # parse fvals and parameters
+        fvals = np.array(fvals)
+        # remove nan or inf values
+        xs, fvals = delete_nan_inf(
+            fvals=fvals,
+            x=xs,
+            xdim=len(ub) if ub is not None else 1,
+            magnitude_bound=WATERFALL_MAX_VALUE,
+        )
+
         lb, ub, xs = map(scale_parameters, (lb, ub, xs))
 
         # call lowlevel routine
@@ -124,6 +154,7 @@ def parameters(
             lb=lb,
             ub=ub,
             x_labels=x_labels,
+            x_axis_label=x_axis_label,
             ax=ax,
             size=size,
             colors=colors[j],
@@ -140,21 +171,21 @@ def parameters(
         if len(parameter_indices) < results[0].problem.dim_full:
             x_ref = np.array(
                 results[0].problem.get_reduced_vector(
-                    i_ref['x'], parameter_indices
+                    i_ref["x"], parameter_indices
                 )
             )
         else:
-            x_ref = np.array(i_ref['x'])
+            x_ref = np.array(i_ref["x"])
         x_ref = np.reshape(x_ref, (1, x_ref.size))
         x_ref = scale_parameters(x_ref)
 
         # plot reference parameters using lowlevel routine
         ax = parameters_lowlevel(
             x_ref,
-            [i_ref['fval']],
+            [i_ref["fval"]],
             ax=ax,
-            colors=i_ref['color'],
-            linestyle='--',
+            colors=i_ref["color"],
+            linestyle="--",
             legend_text=i_ref.legend,
             balance_alpha=balance_alpha,
         )
@@ -165,11 +196,11 @@ def parameters(
 def parameter_hist(
     result: Result,
     parameter_name: str,
-    bins: Union[int, str] = 'auto',
-    ax: Optional['matplotlib.Axes'] = None,
-    size: Optional[Tuple[float]] = (18.5, 10.5),
-    color: Optional[List[float]] = None,
-    start_indices: Optional[Union[int, List[int]]] = None,
+    bins: Union[int, str] = "auto",
+    ax: Optional["matplotlib.Axes"] = None,
+    size: Optional[tuple[float]] = (18.5, 10.5),
+    color: Optional[list[float]] = None,
+    start_indices: Optional[Union[int, list[int]]] = None,
 ):
     """
     Plot parameter values as a histogram.
@@ -223,15 +254,16 @@ def parameter_hist(
 
 
 def parameters_lowlevel(
-    xs: Sequence[Union[np.ndarray, List[float]]],
-    fvals: Union[np.ndarray, List[float]],
-    lb: Optional[Union[np.ndarray, List[float]]] = None,
-    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    xs: np.ndarray,
+    fvals: np.ndarray,
+    lb: Optional[Union[np.ndarray, list[float]]] = None,
+    ub: Optional[Union[np.ndarray, list[float]]] = None,
     x_labels: Optional[Iterable[str]] = None,
+    x_axis_label: str = "Parameter value",
     ax: Optional[matplotlib.axes.Axes] = None,
-    size: Optional[Tuple[float, float]] = None,
-    colors: Optional[Sequence[Union[np.ndarray, List[float]]]] = None,
-    linestyle: str = '-',
+    size: Optional[tuple[float, float]] = None,
+    colors: Optional[Sequence[Union[np.ndarray, list[float]]]] = None,
+    linestyle: str = "-",
     legend_text: Optional[str] = None,
     balance_alpha: bool = True,
 ) -> matplotlib.axes.Axes:
@@ -241,8 +273,8 @@ def parameters_lowlevel(
     Parameters
     ----------
     xs:
-        Including optimized parameters for each startpoint.
-        Shape: (n_starts, dim).
+        Including optimized parameters for each start that did not result in an infinite fval.
+        Shape: (n_starts_successful, dim).
     fvals:
         Function values. Needed to assign cluster colors.
     lb, ub:
@@ -268,16 +300,6 @@ def parameters_lowlevel(
     ax:
         The plot axes.
     """
-    # parse input
-    xs = np.array(xs)
-    fvals = np.array(fvals)
-    # remove nan or inf values in fvals and xs
-    xs, fvals = delete_nan_inf(
-        fvals=fvals,
-        x=xs,
-        xdim=len(ub) if ub is not None else 1,
-        magnitude_bound=WATERFALL_MAX_VALUE,
-    )
 
     if size is None:
         # 0.5 inch height per parameter
@@ -308,7 +330,7 @@ def parameters_lowlevel(
             parameters_ind,
             linestyle,
             color=colors[j_x],
-            marker='o',
+            marker="o",
             label=tmp_legend,
         )
 
@@ -320,14 +342,14 @@ def parameters_lowlevel(
     parameters_ind = np.array(parameters_ind).flatten()
     if lb is not None:
         lb = np.array(lb, dtype="float64")
-        ax.plot(lb.flatten(), parameters_ind, 'k--', marker='+')
+        ax.plot(lb.flatten(), parameters_ind, "k--", marker="+")
     if ub is not None:
         ub = np.array(ub, dtype="float64")
-        ax.plot(ub.flatten(), parameters_ind, 'k--', marker='+')
+        ax.plot(ub.flatten(), parameters_ind, "k--", marker="+")
 
-    ax.set_xlabel('Parameter value')
-    ax.set_ylabel('Parameter')
-    ax.set_title('Estimated parameters')
+    ax.set_xlabel(x_axis_label)
+    ax.set_ylabel("Parameter")
+    ax.set_title("Estimated parameters")
     if legend_text is not None:
         ax.legend()
 
@@ -336,12 +358,13 @@ def parameters_lowlevel(
 
 def handle_inputs(
     result: Result,
-    parameter_indices: List[int],
-    lb: Optional[Union[np.ndarray, List[float]]] = None,
-    ub: Optional[Union[np.ndarray, List[float]]] = None,
+    parameter_indices: list[int],
+    lb: Optional[Union[np.ndarray, list[float]]] = None,
+    ub: Optional[Union[np.ndarray, list[float]]] = None,
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     plot_inner_parameters: bool = False,
-) -> Tuple[np.ndarray, np.ndarray, List[str], np.ndarray, List[np.ndarray]]:
+    log10_scale_hier_sigma: bool = True,
+) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray, list[np.ndarray]]:
     """
     Compute the correct bounds for the parameter indices to be plotted.
 
@@ -361,6 +384,9 @@ def handle_inputs(
         int specifying up to which start index should be plotted
     plot_inner_parameters:
         Flag indicating whether inner parameters should be plotted.
+    log10_scale_hier_sigma:
+        Flag indicating whether to scale inner parameters of type
+        ``InnerParameterType.SIGMA`` to log10 (default: True).
 
     Returns
     -------
@@ -372,32 +398,22 @@ def handle_inputs(
         objective function values which are needed for plotting later
     xs:
         parameter values which will be plotted later
+    x_axis_label:
+        label for the x-axis
     """
     # retrieve results
     fvals = result.optimize_result.fval
     xs = result.optimize_result.x
-    # retrieve inner parameters if available
-    inner_xs = [
-        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
-    ]
-    if any(inner_xs):
-        # search for first non-empty inner_xs to obtain inner_xs_names
-        for inner_xs_idx in inner_xs:
-            if inner_xs_idx is not None:
-                inner_xs_names = list(inner_xs_idx.keys())
-                break
-        # fill inner_xs with nan if no inner_xs are available
-        inner_xs = [
-            np.full(len(inner_xs_names), np.nan)
-            if inner_xs_idx is None
-            else list(inner_xs_idx.values())
-            for inner_xs_idx in inner_xs
-        ]
-        # set bounds for inner parameters
-        inner_lb = np.full(len(inner_xs_names), -np.inf)
-        inner_ub = np.full(len(inner_xs_names), np.inf)
-    else:
-        inner_xs = None
+
+    # retrieve inner parameters in case of hierarchical optimization
+    (
+        inner_xs,
+        inner_xs_names,
+        inner_xs_scales,
+        inner_lb,
+        inner_ub,
+    ) = _handle_inner_inputs(result, log10_scale_hier_sigma)
+
     # parse indices which should be plotted
     if start_indices is not None:
         start_indices = process_start_indices(result, start_indices)
@@ -420,8 +436,8 @@ def handle_inputs(
     if ub is None:
         ub = result.problem.ub_full
 
-    # get labels
-    x_labels = result.problem.x_names
+    # get labels as x_names and scales
+    x_labels = list(zip(result.problem.x_names, result.problem.x_scales))
 
     # handle fixed and free indices
     if len(parameter_indices) < result.problem.dim_full:
@@ -433,28 +449,135 @@ def handle_inputs(
         ub = result.problem.get_reduced_vector(ub, parameter_indices)
         x_labels = [x_labels[int(i)] for i in parameter_indices]
     else:
-        lb = result.problem.get_full_vector(lb)
-        ub = result.problem.get_full_vector(ub)
+        lb = result.problem.lb_full
+        ub = result.problem.ub_full
 
     if inner_xs is not None and plot_inner_parameters:
         lb = np.concatenate([lb, inner_lb])
         ub = np.concatenate([ub, inner_ub])
-        x_labels = x_labels + inner_xs_names
+        inner_xs_labels = list(zip(inner_xs_names, inner_xs_scales))
+        x_labels = x_labels + inner_xs_labels
         xs_out = [
             np.concatenate([x, inner_x]) if x is not None else None
             for x, inner_x in zip(xs_out, inner_xs_out)
         ]
 
-    return lb, ub, x_labels, fvals_out, xs_out
+    # If all the scales are the same, put it in the x_axis_label
+    if len({x_scale for _, x_scale in x_labels}) == 1:
+        x_axis_label = "Parameter value (" + x_labels[0][1] + ")"
+        x_labels = [x_name for x_name, _ in x_labels]
+    else:
+        x_axis_label = "Parameter value"
+        x_labels = [f"{x_name} ({x_scale})" for x_name, x_scale in x_labels]
+
+    return lb, ub, x_labels, fvals_out, xs_out, x_axis_label
+
+
+def _handle_inner_inputs(
+    result: Result,
+    log10_scale_hier_sigma: bool = True,
+) -> Union[
+    tuple[None, None, None, None, None],
+    tuple[list[np.ndarray], list[str], list[str], np.ndarray, np.ndarray],
+]:
+    """Handle inner parameters from hierarchical optimization, if available.
+
+    Parameters
+    ----------
+    result:
+        Optimization result obtained by 'optimize.py'.
+    log10_scale_hier_sigma:
+        Flag indicating whether to scale inner parameters of type
+        ``InnerParameterType.SIGMA`` to log10 (default: True).
+
+    Returns
+    -------
+    inner_xs:
+        Inner parameter values which will be appended to xs.
+    inner_xs_names:
+        Inner parameter names.
+    inner_xs_scales:
+        Inner parameter scales.
+    inner_lb:
+        Inner parameter lower bounds.
+    inner_ub:
+        Inner parameter upper bounds.
+    """
+    inner_xs = [
+        res.get(INNER_PARAMETERS, None) for res in result.optimize_result.list
+    ]
+    inner_xs_names = None
+    inner_xs_scales = None
+    inner_lb = None
+    inner_ub = None
+
+    from ..problem import HierarchicalProblem
+
+    if any(inner_x is not None for inner_x in inner_xs) and isinstance(
+        result.problem, HierarchicalProblem
+    ):
+        inner_xs_names = result.problem.inner_x_names
+        # replace None with a list of nans
+        inner_xs = [
+            (
+                np.full(len(inner_xs_names), np.nan)
+                if inner_xs_for_start is None
+                else np.asarray(inner_xs_for_start)
+            )
+            for inner_xs_for_start in inner_xs
+        ]
+        # set bounds for inner parameters
+        inner_lb = result.problem.inner_lb
+        inner_ub = result.problem.inner_ub
+
+        # Scale inner parameter bounds according to their parameters scales
+        inner_xs_scales = result.problem.inner_scales
+
+        if log10_scale_hier_sigma:
+            inner_problems_with_sigma = [
+                inner_calculator.inner_problem
+                for inner_calculator in result.problem.objective.calculator.inner_calculators
+                if isinstance(
+                    inner_calculator.inner_problem, RelativeInnerProblem
+                )
+                or isinstance(inner_calculator.inner_problem, SemiquantProblem)
+            ]
+            for inner_problem in inner_problems_with_sigma:
+                for inner_x_idx, inner_x_name in enumerate(inner_xs_names):
+                    if (inner_x_name in inner_problem.get_x_ids()) and (
+                        inner_problem.get_for_id(
+                            inner_x_name
+                        ).inner_parameter_type
+                        == InnerParameterType.SIGMA
+                    ):
+                        # Scale all values, lower and upper bounds
+                        for inner_x_for_start in inner_xs:
+                            inner_x_for_start[inner_x_idx] = scale_value(
+                                inner_x_for_start[inner_x_idx], LOG10
+                            )
+                        inner_xs_scales[inner_x_idx] = LOG10
+
+        for inner_x_idx, inner_scale in enumerate(inner_xs_scales):
+            inner_lb[inner_x_idx] = scale_value(
+                inner_lb[inner_x_idx], inner_scale
+            )
+            inner_ub[inner_x_idx] = scale_value(
+                inner_ub[inner_x_idx], inner_scale
+            )
+
+    if inner_xs_names is None:
+        inner_xs = None
+
+    return inner_xs, inner_xs_names, inner_xs_scales, inner_lb, inner_ub
 
 
 def parameters_correlation_matrix(
     result: Result,
-    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    parameter_indices: Union[str, Sequence[int]] = "free_only",
     start_indices: Optional[Union[int, Iterable[int]]] = None,
-    method: Union[str, Callable] = 'pearson',
+    method: Union[str, Callable] = "pearson",
     cluster: bool = True,
-    cmap: Union[Colormap, str] = 'bwr',
+    cmap: Union[Colormap, str] = "bwr",
     return_table: bool = False,
 ) -> matplotlib.axes.Axes:
     """
@@ -495,7 +618,7 @@ def parameters_correlation_matrix(
     )
     # put all parameters into a dataframe, where columns are parameters
     parameters = [
-        result.optimize_result[i_start]['x'][parameter_indices]
+        result.optimize_result[i_start]["x"][parameter_indices]
         for i_start in start_indices
     ]
     x_labels = [
@@ -519,11 +642,11 @@ def parameters_correlation_matrix(
 
 def optimization_scatter(
     result: Result,
-    parameter_indices: Union[str, Sequence[int]] = 'free_only',
+    parameter_indices: Union[str, Sequence[int]] = "free_only",
     start_indices: Optional[Union[int, Iterable[int]]] = None,
     diag_kind: str = "kde",
     suptitle: str = None,
-    size: Tuple[float, float] = None,
+    size: tuple[float, float] = None,
     show_bounds: bool = False,
 ):
     """
@@ -561,23 +684,10 @@ def optimization_scatter(
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
-    # remove all start indices that encounter an inf value at the start
-    # resulting in optimize_result[start]["x"] being None
-    start_indices_finite = start_indices[
-        [
-            result.optimize_result[i_start]['x'] is not None
-            for i_start in start_indices
-        ]
-    ]
-    # compare start_indices with start_indices_finite and log a warning
-    if len(start_indices) != len(start_indices_finite):
-        logger.warning(
-            'Some start indices were removed due to inf values at the start.'
-        )
     # put all parameters into a dataframe, where columns are parameters
     parameters = [
-        result.optimize_result[i_start]['x'][parameter_indices]
-        for i_start in start_indices_finite
+        result.optimize_result[i_start]["x"][parameter_indices]
+        for i_start in start_indices
     ]
     x_labels = [
         result.problem.x_names[parameter_index]

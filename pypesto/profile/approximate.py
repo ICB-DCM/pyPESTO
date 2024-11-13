@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 from scipy.stats import multivariate_normal
@@ -50,8 +50,7 @@ def approximate_parameter_profile(
 
     Returns
     -------
-    result:
-        The profile results are filled into `result.profile_result`.
+    The profile results are filled into `result.profile_result`.
     """
     # Handling defaults
     # profiling indices

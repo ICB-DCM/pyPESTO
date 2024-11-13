@@ -3,7 +3,8 @@
 import copy
 import os
 import time
-from typing import Dict, List, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -20,7 +21,6 @@ from ..C import (
     RES,
     SRES,
     TIME,
-    X_INNER_OPT,
     ModeType,
     X,
 )
@@ -41,14 +41,14 @@ class CsvHistory(CountHistoryBase):
     options:
         History options.
     load_from_file:
-        If True, history will be initialized from data in the specified file
+        If True, history will be initialized from data in the specified file.
     """
 
     def __init__(
         self,
         file: str,
         x_names: Sequence[str] = None,
-        options: Union[HistoryOptions, Dict] = None,
+        options: Union[HistoryOptions, dict] = None,
         load_from_file: bool = False,
     ):
         super().__init__(options=options)
@@ -65,7 +65,7 @@ class CsvHistory(CountHistoryBase):
             trace = pd.read_csv(self.file, header=[0, 1], index_col=0)
             # replace 'nan' in cols with np.NAN
             cols = pd.DataFrame(trace.columns.to_list())
-            cols[cols == 'nan'] = np.NaN
+            cols[cols == "nan"] = np.nan
             trace.columns = pd.MultiIndex.from_tuples(
                 cols.to_records(index=False).tolist()
             )
@@ -78,27 +78,41 @@ class CsvHistory(CountHistoryBase):
             self._update_counts_from_trace()
 
     def _update_counts_from_trace(self) -> None:
-        self._n_fval = self._trace[(N_FVAL, np.NaN)].max()
-        self._n_grad = self._trace[(N_GRAD, np.NaN)].max()
-        self._n_hess = self._trace[(N_HESS, np.NaN)].max()
-        self._n_res = self._trace[(N_RES, np.NaN)].max()
-        self._n_sres = self._trace[(N_SRES, np.NaN)].max()
+        self._n_fval = self._trace[(N_FVAL, np.nan)].max()
+        self._n_grad = self._trace[(N_GRAD, np.nan)].max()
+        self._n_hess = self._trace[(N_HESS, np.nan)].max()
+        self._n_res = self._trace[(N_RES, np.nan)].max()
+        self._n_sres = self._trace[(N_SRES, np.nan)].max()
 
     def update(
         self,
         x: np.ndarray,
-        sensi_orders: Tuple[int, ...],
+        sensi_orders: tuple[int, ...],
         mode: ModeType,
         result: ResultDict,
     ) -> None:
-        """See `History` docstring."""
+        """See :meth:`HistoryBase.update`."""
         super().update(x, sensi_orders, mode, result)
         self._update_trace(x, mode, result)
 
     def finalize(self, message: str = None, exitflag: str = None):
-        """See `HistoryBase` docstring."""
-        super().finalize()
+        """See :meth:`HistoryBase.finalize`."""
+        super().finalize(message=message, exitflag=exitflag)
         self._save_trace(finalize=True)
+
+    def _simulation_to_values(self, result, used_time):
+        values = {
+            TIME: used_time,
+            N_FVAL: self._n_fval,
+            N_GRAD: self._n_grad,
+            N_HESS: self._n_hess,
+            N_RES: self._n_res,
+            N_SRES: self._n_sres,
+            FVAL: result[FVAL],
+            RES: result[RES],
+            HESS: result[HESS],
+        }
+        return values
 
     def _update_trace(
         self,
@@ -124,20 +138,10 @@ class CsvHistory(CountHistoryBase):
 
         # create table row
         row = pd.Series(
-            name=len(self._trace), index=self._trace.columns, dtype='object'
+            name=len(self._trace), index=self._trace.columns, dtype="object"
         )
 
-        values = {
-            TIME: used_time,
-            N_FVAL: self._n_fval,
-            N_GRAD: self._n_grad,
-            N_HESS: self._n_hess,
-            N_RES: self._n_res,
-            N_SRES: self._n_sres,
-            FVAL: result[FVAL],
-            RES: result[RES],
-            HESS: result[HESS],
-        }
+        values = self._simulation_to_values(result, used_time)
 
         for var, val in values.items():
             row[(var, np.nan)] = val
@@ -146,14 +150,10 @@ class CsvHistory(CountHistoryBase):
             X: x,
             GRAD: result[GRAD],
         }.items():
-            if var == X or self.options[f'trace_record_{var}']:
+            if var == X or self.options[f"trace_record_{var}"]:
                 row[var] = val
             else:
                 row[(var, np.nan)] = np.nan
-
-        if X_INNER_OPT in result:
-            for x_inner_id, x_inner_opt_value in result[X_INNER_OPT].items():
-                row[(X_INNER_OPT, x_inner_id)] = x_inner_opt_value
 
         self._trace = pd.concat(
             (self._trace, pd.DataFrame([row])),
@@ -162,12 +162,8 @@ class CsvHistory(CountHistoryBase):
         # save trace to file
         self._save_trace()
 
-    def _init_trace(self, x: np.ndarray):
-        """Initialize the trace."""
-        if self.x_names is None:
-            self.x_names = [f'x{i}' for i, _ in enumerate(x)]
-
-        columns: List[Tuple] = [
+    def _trace_columns(self) -> list[tuple]:
+        return [
             (c, np.nan)
             for c in [
                 TIME,
@@ -183,27 +179,34 @@ class CsvHistory(CountHistoryBase):
             ]
         ]
 
+    def _init_trace(self, x: np.ndarray):
+        """Initialize the trace."""
+        if self.x_names is None:
+            self.x_names = [f"x{i}" for i, _ in enumerate(x)]
+
+        columns = self._trace_columns()
+
         for var in [X, GRAD]:
-            if var == X or self.options[f'trace_record_{var}']:
+            if var == X or self.options[f"trace_record_{var}"]:
                 columns.extend([(var, x_name) for x_name in self.x_names])
             else:
                 columns.extend([(var,)])
 
         # TODO: multi-index for res, sres, hess
         self._trace = pd.DataFrame(
-            columns=pd.MultiIndex.from_tuples(columns), dtype='float64'
+            columns=pd.MultiIndex.from_tuples(columns), dtype="float64"
         )
 
         # only non-float64
         trace_dtypes = {
-            RES: 'object',
-            SRES: 'object',
-            HESS: 'object',
-            N_FVAL: 'int64',
-            N_GRAD: 'int64',
-            N_HESS: 'int64',
-            N_RES: 'int64',
-            N_SRES: 'int64',
+            RES: "object",
+            SRES: "object",
+            HESS: "object",
+            N_FVAL: "int64",
+            N_GRAD: "int64",
+            N_HESS: "int64",
+            N_RES: "int64",
+            N_SRES: "int64",
         }
 
         for var, dtype in trace_dtypes.items():
@@ -213,7 +216,7 @@ class CsvHistory(CountHistoryBase):
 
     def _save_trace(self, finalize: bool = False):
         """
-        Save to file via pd.DataFrame.to_csv().
+        Save to file via :meth:`pandas.DataFrame.to_csv`.
 
         Only done, if `self.storage_file` is not None and other conditions.
         apply.
@@ -243,49 +246,49 @@ class CsvHistory(CountHistoryBase):
         ix: Union[int, Sequence[int], None] = None,
         trim: bool = False,
     ) -> Union[Sequence[np.ndarray], np.ndarray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_x_trace`."""
         return list(self._trace[X].values[ix])
 
     @trace_wrap
     def get_fval_trace(
         self, ix: Union[int, Sequence[int], None], trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_fval_trace`."""
         return list(self._trace[(FVAL, np.nan)].values[ix])
 
     @trace_wrap
     def get_grad_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_grad_trace`."""
         return list(self._trace[GRAD].values[ix])
 
     @trace_wrap
     def get_hess_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_hess_trace`."""
         return list(self._trace[(HESS, np.nan)].values[ix])
 
     @trace_wrap
     def get_res_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_res_trace`."""
         return list(self._trace[(RES, np.nan)].values[ix])
 
     @trace_wrap
     def get_sres_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[MaybeArray], MaybeArray]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_sres_trace`."""
         return list(self._trace[(SRES, np.nan)].values[ix])
 
     @trace_wrap
     def get_time_trace(
         self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
     ) -> Union[Sequence[float], float]:
-        """See `HistoryBase` docstring."""
+        """See :meth:`HistoryBase.get_time_trace`."""
         return list(self._trace[(TIME, np.nan)].values[ix])
 
 
@@ -301,7 +304,7 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
 
     Returns
     -------
-    x: array as string.
+    Array as string.
     """
     if not isinstance(x, np.ndarray):
         return x
@@ -320,13 +323,13 @@ def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
 
     Returns
     -------
-    x: array as np.ndarray.
+    Array as :class:`numpy.ndarray`.
     """
     if not isinstance(x, str):
         return x
-    if x.startswith('[['):
+    if x.startswith("[["):
         return np.vstack(
-            [np.fromstring(xx, sep=' ') for xx in x[2:-2].split(']\n [')]
+            [np.fromstring(xx, sep=" ") for xx in x[2:-2].split("]\n [")]
         )
     else:
-        return np.fromstring(x[1:-1], sep=' ')
+        return np.fromstring(x[1:-1], sep=" ")

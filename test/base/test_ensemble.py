@@ -6,6 +6,7 @@ import scipy.optimize as so
 
 import pypesto
 import pypesto.optimize as optimize
+import pypesto.sample as sample
 from pypesto.C import AMICI_STATUS, AMICI_T, AMICI_Y, MEAN, WEIGHTED_SIGMA
 from pypesto.engine import MultiProcessEngine
 from pypesto.ensemble import (
@@ -32,7 +33,7 @@ def test_ensemble_from_optimization():
 
     problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
-    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     history_options = pypesto.HistoryOptions(trace_record=True)
     result = optimize.minimize(
         problem=problem,
@@ -44,10 +45,10 @@ def test_ensemble_from_optimization():
 
     # change fvals of each start
     for i_start, optimizer_result in enumerate(result.optimize_result.list):
-        optimizer_result['fval'] = i_start
-        for i_iter in range(len(optimizer_result['history']._trace['fval'])):
-            optimizer_result['history']._trace['fval'][i_iter] = (
-                len(optimizer_result['history']._trace['fval'])
+        optimizer_result["fval"] = i_start
+        for i_iter in range(len(optimizer_result["history"]._trace["fval"])):
+            optimizer_result["history"]._trace["fval"][i_iter] = (
+                len(optimizer_result["history"]._trace["fval"])
                 + i_start
                 - i_iter
             )
@@ -63,13 +64,13 @@ def test_ensemble_from_optimization():
 
     # compare vector_tags with the expected values:
     ep_tags = [
-        (int(result.optimize_result.list[i]['id']), -1) for i in [0, 1, 2, 3]
+        (result.optimize_result.list[i]["id"], -1) for i in [0, 1, 2, 3]
     ]
 
     hist_tags = [
         (
-            int(result.optimize_result.list[i]['id']),
-            len(result.optimize_result.list[i]['history']._trace['fval'])
+            result.optimize_result.list[i]["id"],
+            len(result.optimize_result.list[i]["history"]._trace["fval"])
             - 1
             - j,
         )
@@ -88,9 +89,13 @@ def test_ensemble_prediction_from_hdf5():
 
     def post_processor(amici_outputs, output_type, output_ids):
         outputs = [
-            amici_output[output_type]
-            if amici_output[AMICI_STATUS] == 0
-            else np.full((len(amici_output[AMICI_T]), len(output_ids)), np.nan)
+            (
+                amici_output[output_type]
+                if amici_output[AMICI_STATUS] == 0
+                else np.full(
+                    (len(amici_output[AMICI_T]), len(output_ids)), np.nan
+                )
+            )
             for amici_output in amici_outputs
         ]
         return outputs
@@ -107,7 +112,7 @@ def test_ensemble_prediction_from_hdf5():
     )
     ensemble_prediction = get_ensemble_prediction(max_size=10)
 
-    fn = 'test_file.hdf5'
+    fn = "test_file.hdf5"
     try:
         write_ensemble_prediction_to_h5(ensemble_prediction, fn)
         ensemble_prediction_r = read_ensemble_prediction_from_h5(
@@ -186,9 +191,13 @@ def get_ensemble_prediction(
     # such that the output is compatible with the next steps.
     def post_processor(amici_outputs, output_type, output_ids):
         outputs = [
-            amici_output[output_type]
-            if amici_output[AMICI_STATUS] == 0
-            else np.full((len(amici_output[AMICI_T]), len(output_ids)), np.nan)
+            (
+                amici_output[output_type]
+                if amici_output[AMICI_STATUS] == 0
+                else np.full(
+                    (len(amici_output[AMICI_T]), len(output_ids)), np.nan
+                )
+            )
             for amici_output in amici_outputs
         ]
         return outputs
@@ -216,3 +225,49 @@ def get_ensemble_prediction(
         progress_bar=False,
     )
     return ensemble_prediction
+
+
+def test_hpd_calculation():
+    """Test the calculation of Highest Posterior Density (HPD)."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=100,
+        result=result,
+    )
+
+    # Manually set up sample (only for testing)
+    burn_in = 1
+    result.sample_result.burn_in = burn_in
+    result.sample_result.trace_neglogpost[0][1:] = np.random.permutation(
+        np.arange(len(result.sample_result.trace_neglogpost[0][1:]))
+    )
+
+    hpd_ensemble = Ensemble.from_sample(
+        result=result, remove_burn_in=True, ci_level=0.95
+    )
+
+    expected_length = (
+        int((result.sample_result.trace_x[0][burn_in:].shape[0]) * 0.95) + 1
+    )
+    # Check that the HPD parameters have the expected shape
+    assert hpd_ensemble.x_vectors.shape == (problem.dim, expected_length)
+    x_indices = np.where(result.sample_result.trace_neglogpost[0][1:] <= 95)[0]
+    assert np.all(
+        [
+            np.any(np.all(x[:, None] == hpd_ensemble.x_vectors, axis=0))
+            for x in result.sample_result.trace_x[0][burn_in:][x_indices]
+        ]
+    )

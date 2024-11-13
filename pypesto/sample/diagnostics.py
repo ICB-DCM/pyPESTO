@@ -1,4 +1,5 @@
 """Calculate different diagnostics of the sampling result."""
+
 import logging
 
 import numpy as np
@@ -10,7 +11,9 @@ from .geweke_test import burn_in_by_sequential_geweke
 logger = logging.getLogger(__name__)
 
 
-def geweke_test(result: Result, zscore: float = 2.0) -> int:
+def geweke_test(
+    result: Result, zscore: float = 2.0, chain_number: int = 0
+) -> int:
     """
     Calculate the burn-in of MCMC chains.
 
@@ -20,25 +23,36 @@ def geweke_test(result: Result, zscore: float = 2.0) -> int:
         The pyPESTO result object with filled sample result.
     zscore:
         The Geweke test threshold.
+    chain_number:
+        The chain number to be used for the Geweke test (in a parallel tempering setting).
+        Usually we are only interested in the first chain.
 
     Returns
     -------
     burn_in:
         Iteration where the first and the last fraction of the chain
         do not differ significantly regarding Geweke test -> Burn-In
-
     """
+    if chain_number == 0:
+        # test if burn-in is already calculated
+        if result.sample_result.burn_in is not None:
+            logger.info(
+                f"Burn-in index ({result.sample_result.burn_in}) already calculated. Skipping Geweke test."
+            )
+            return result.sample_result.burn_in
+
     # Get parameter samples as numpy arrays
-    chain = np.asarray(result.sample_result.trace_x[0])
+    chain = np.asarray(result.sample_result.trace_x[chain_number])
 
     # Calculate burn in index
     burn_in = burn_in_by_sequential_geweke(chain=chain, zscore=zscore)
 
-    # Log
-    logger.info(f'Geweke burn-in index: {burn_in}')
+    if chain_number == 0:
+        # Log
+        logger.info(f"Geweke burn-in index: {burn_in}")
 
-    # Fill in burn-in value into result
-    result.sample_result.burn_in = burn_in
+        # Fill in burn-in value into result
+        result.sample_result.burn_in = burn_in
 
     return burn_in
 
@@ -88,7 +102,7 @@ def auto_correlation(result: Result) -> float:
     _auto_correlation = max(auto_correlation_vector)
 
     # Log
-    logger.info(f'Estimated chain autocorrelation: {_auto_correlation}')
+    logger.info(f"Estimated chain autocorrelation: {_auto_correlation}")
 
     # Fill in autocorrelation value into result
     result.sample_result.auto_correlation = _auto_correlation
@@ -135,7 +149,7 @@ def effective_sample_size(result: Result) -> float:
     ess = N / (1 + _auto_correlation)
 
     # Log
-    logger.info(f'Estimated effective sample size: {ess}')
+    logger.info(f"Estimated effective sample size: {ess}")
 
     # Fill in effective sample size value into result
     result.sample_result.effective_sample_size = ess

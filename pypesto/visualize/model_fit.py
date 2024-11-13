@@ -3,27 +3,40 @@ Visualization of the model fit after optimization.
 
 Currently only for PEtab problems.
 """
-from typing import Sequence, Union
+
+import copy
+import logging
+from collections.abc import Sequence
+from typing import Union
 
 import amici
 import amici.plotting
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
-import petab
-from amici.petab_objective import rdatas_to_simulation_df
-from petab.visualize import plot_problem
+import petab.v1 as petab
+from amici.petab.conditions import fill_in_parameters
+from amici.petab.simulations import rdatas_to_simulation_df
+from petab.v1.visualize import plot_problem
 
-from ..C import CENSORED, NONLINEAR_MONOTONE, ORDINAL, RDATAS
+from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
+from ..objective import (
+    AggregatedObjective,
+    AmiciObjective,
+    NegLogParameterPriors,
+    NegLogPriors,
+)
 from ..petab.importer import get_petab_non_quantitative_data_types
-from ..problem import Problem
+from ..problem import HierarchicalProblem, Problem
 from ..result import Result
+from .observable_mapping import _add_spline_mapped_simulations_to_model_fit
 from .ordinal_categories import plot_categories_from_pypesto_result
-from .spline_approximation import _add_spline_mapped_simulations_to_model_fit
 
-AmiciModel = Union['amici.Model', 'amici.ModelPtr']
+AmiciModel = Union["amici.Model", "amici.ModelPtr"]
 
 __all__ = ["visualize_optimized_model_fit", "time_trajectory_model"]
+
+logger = logging.getLogger(__name__)
 
 
 def visualize_optimized_model_fit(
@@ -34,7 +47,7 @@ def visualize_optimized_model_fit(
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
-) -> Union[matplotlib.axes.Axes, None]:
+) -> Union[matplotlib.axes.Axes, dict, list[matplotlib.axes.Axes], list[dict]]:
     """
     Visualize the optimized model fit of a PEtab problem.
 
@@ -68,62 +81,117 @@ def visualize_optimized_model_fit(
     axes: `matplotlib.axes.Axes` object of the created plot.
     None: In case subplots are saved to file
     """
-    x = result.optimize_result.list[start_index]['x'][
-        pypesto_problem.x_free_indices
-    ]
-    objective_result = pypesto_problem.objective(x, return_dict=True)
 
-    simulation_df = rdatas_to_simulation_df(
-        objective_result[RDATAS],
-        pypesto_problem.objective.amici_model,
-        petab_problem.measurement_df,
-    )
+    amici_models, objective_results = [], []
 
-    # handle flattened PEtab problems
-    petab_problem_to_plot = petab_problem
-    if unflattened_petab_problem:
-        simulation_df = petab.core.unflatten_simulation_df(
-            simulation_df=simulation_df,
-            petab_problem=unflattened_petab_problem,
+    # get amici model
+    if isinstance(pypesto_problem.objective, AmiciObjective):
+        x = result.optimize_result.list[start_index]["x"][
+            pypesto_problem.x_free_indices
+        ]
+
+        objective_results.append(
+            pypesto_problem.objective(x, return_dict=True)
         )
-        petab_problem_to_plot = unflattened_petab_problem
+        amici_models.append(pypesto_problem.objective.amici_model)
+    elif isinstance(pypesto_problem.objective, AggregatedObjective):
+        # iterate over objectives to find the amici models in the AggregatedObjective
+        x = result.optimize_result.list[start_index]["x"]
 
-    # plot
-    axes = plot_problem(
-        petab_problem=petab_problem_to_plot,
-        simulations_df=simulation_df,
-        **kwargs,
-    )
+        for objective in pypesto_problem.objective._objectives:
+            if isinstance(objective, AmiciObjective):
+                amici_models.append(objective.amici_model)
+                # objective expects full vector here
+                objective_results.append(objective(x, return_dict=True))
+            elif isinstance(
+                objective, Union[NegLogParameterPriors, NegLogPriors]
+            ):
+                # priors are not used for simulation
+                pass
+            else:
+                logger.warning(
+                    f"Objective {objective} is not an 'AmiciObjective' "
+                    f"or a 'NegLogParameterPriors'/'NegLogPriors' and hence will be ignored."
+                )
 
-    non_quantitative_data_types = get_petab_non_quantitative_data_types(
-        petab_problem
-    )
-
-    if non_quantitative_data_types:
-        if (
-            ORDINAL in non_quantitative_data_types
-            or CENSORED in non_quantitative_data_types
-        ):
-            axes = plot_categories_from_pypesto_result(
-                result,
-                start_index=start_index,
-                axes=axes,
+        if len(amici_models) == 0:
+            raise ValueError(
+                "'visualize_optimized_model_fit' only works with amici models. None were found."
             )
-        if NONLINEAR_MONOTONE in non_quantitative_data_types:
-            axes = _add_spline_mapped_simulations_to_model_fit(
-                result=result,
-                pypesto_problem=pypesto_problem,
-                start_index=start_index,
-                axes=axes,
+    else:
+        raise ValueError(
+            "'visualize_optimized_model_fit' only works with an 'AmiciObjective' or"
+            " an 'AggregatedObjective' containing an 'AmiciObjective'."
+        )
+
+    axes_list, simulation_df_list = [], []
+    for amici_model, objective_result in zip(amici_models, objective_results):
+        # get simulation results
+        simulation_df = rdatas_to_simulation_df(
+            objective_result[RDATAS],
+            amici_model,
+            petab_problem.measurement_df,  # todo: potentially needs to be changed to work with multiple models
+        )
+
+        # handle flattened PEtab problems
+        petab_problem_to_plot = petab_problem
+        if unflattened_petab_problem:
+            simulation_df = petab.core.unflatten_simulation_df(
+                simulation_df=simulation_df,
+                petab_problem=unflattened_petab_problem,
             )
+            petab_problem_to_plot = unflattened_petab_problem
+
+        # plot
+        axes = plot_problem(
+            petab_problem=petab_problem_to_plot,
+            simulations_df=simulation_df,
+            **kwargs,
+        )
+
+        non_quantitative_data_types = get_petab_non_quantitative_data_types(
+            petab_problem
+        )
+
+        if non_quantitative_data_types is not None:
+            if (
+                ORDINAL in non_quantitative_data_types
+                or CENSORED in non_quantitative_data_types
+            ):
+                axes = plot_categories_from_pypesto_result(
+                    result,
+                    start_index=start_index,
+                    axes=axes,
+                )
+            if SEMIQUANTITATIVE in non_quantitative_data_types:
+                axes = _add_spline_mapped_simulations_to_model_fit(
+                    result=result,
+                    pypesto_problem=pypesto_problem,
+                    start_index=start_index,
+                    axes=axes,
+                )
+
+        axes_list.append(axes)
+        simulation_df_list.append(simulation_df)
 
     if return_dict:
-        return {
-            'axes': axes,
-            'objective_result': objective_result,
-            'simulation_df': simulation_df,
-        }
-    return axes
+        dict_list = []
+        for axes, simulation_df, objective_result in zip(
+            axes_list, simulation_df_list, objective_results
+        ):
+            dict_list.append(
+                {
+                    "axes": axes,
+                    "objective_result": objective_result,
+                    "simulation_df": simulation_df,
+                }
+            )
+        if len(dict_list) == 1:
+            return dict_list[0]
+        return dict_list
+    if len(axes_list) == 1:
+        return axes_list[0]
+    return axes_list
 
 
 def time_trajectory_model(
@@ -174,24 +242,25 @@ def time_trajectory_model(
     if timepoints is None:
         end_time = max(problem.objective.edatas[0].getTimepoints())
         timepoints = np.linspace(start=0, stop=end_time, num=n_timepoints)
-    obj = problem.objective.set_custom_timepoints(timepoints_global=timepoints)
 
-    # evaluate objective with return dic = True to get data
-    parameters = result.optimize_result.list[start_index]['x']
-    # reduce vector to only include free indices. Needed downstream.
-    parameters = problem.get_reduced_vector(parameters)
-    ret = obj(parameters, mode='mode_fun', sensi_orders=(0,), return_dict=True)
+    # get rdatas
+    rdatas = _get_simulation_rdatas(
+        result=result,
+        problem=problem,
+        start_index=start_index,
+        simulation_timepoints=timepoints,
+    )
 
     if state_ids == [] and state_names == []:
         axes = _time_trajectory_model_without_states(
             model=problem.objective.amici_model,
-            rdatas=ret['rdatas'],
+            rdatas=rdatas,
             observable_ids=observable_ids,
         )
     else:
         axes = _time_trajectory_model_with_states(
             model=problem.objective.amici_model,
-            rdatas=ret['rdatas'],
+            rdatas=rdatas,
             state_ids=state_ids,
             state_names=state_names,
             observable_ids=observable_ids,
@@ -200,9 +269,102 @@ def time_trajectory_model(
     return axes
 
 
+def _get_simulation_rdatas(
+    result: Union[Result, Sequence[Result]],
+    problem: Problem,
+    start_index: int = 0,
+    simulation_timepoints: np.ndarray = None,
+) -> list[amici.ReturnData]:
+    """
+    Get simulation results for a given optimization result and timepoints.
+
+    Parameters
+    ----------
+    result:
+        The result object from optimization.
+    problem:
+        A pypesto problem.
+    timepoints:
+        Array of timepoints, at which the trajectory will be stored..
+
+    start_index:
+        Index of Optimization run to be plotted. Default is best start.
+    Returns
+    -------
+    rdatas:
+        List of amici.ReturnData objects containing the simulation results.
+    """
+    # add timepoints as needed
+    if simulation_timepoints is None:
+        end_time = max(problem.objective.edatas[0].getTimepoints())
+        simulation_timepoints = np.linspace(start=0, stop=end_time, num=1000)
+
+    # get optimization result
+    parameters = result.optimize_result.list[start_index]["x"]
+
+    # reduce vector to only include free indices. Needed downstream.
+    parameters = problem.get_reduced_vector(parameters)
+
+    # simulate with custom timepoints for hierarchical model
+    if isinstance(problem, HierarchicalProblem):
+        # get parameter dictionary
+        x_dct = dict(
+            zip(problem.x_names, result.optimize_result.list[start_index].x)
+        )
+
+        # evaluate objective with return dict = True to get inner parameters
+        ret = problem.objective(
+            parameters, mode="mode_fun", sensi_orders=(0,), return_dict=True
+        )
+
+        # update parameter dictionary with inner parameters
+        inner_parameter_dict = dict(
+            zip(problem.inner_x_names, ret["inner_parameters"])
+        )
+        x_dct.update(inner_parameter_dict)
+
+        parameter_mapping = problem.objective.parameter_mapping
+        edatas = copy.deepcopy(problem.objective.edatas)
+        amici_model = problem.objective.amici_model
+
+        # disable sensitivities to improve computation time
+        amici_solver = copy.deepcopy(problem.objective.amici_solver)
+        amici_solver.setSensitivityOrder(amici.SensitivityOrder.none)
+
+        for j in range(len(edatas)):
+            edatas[j].setTimepoints(simulation_timepoints)
+
+        fill_in_parameters(
+            edatas=edatas,
+            problem_parameters=x_dct,
+            scaled_parameters=True,
+            parameter_mapping=parameter_mapping,
+            amici_model=amici_model,
+        )
+
+        rdatas = amici.runAmiciSimulations(
+            amici_model,
+            amici_solver,
+            edatas,
+        )
+    else:
+        # set custom timepoints
+        obj = problem.objective.set_custom_timepoints(
+            timepoints_global=simulation_timepoints
+        )
+
+        # evaluate objective with return dict = True to get data
+        ret = obj(
+            parameters, mode="mode_fun", sensi_orders=(0,), return_dict=True
+        )
+        rdatas = ret["rdatas"]
+
+    return rdatas
+
+
 def _time_trajectory_model_with_states(
     model: AmiciModel,
-    rdatas: Union['amici.ReturnData', Sequence['amici.ReturnData']],
+    rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
     state_ids: Sequence[str],
     state_names: Sequence[str],
     observable_ids: Union[str, Sequence[str]],
@@ -277,7 +439,7 @@ def _time_trajectory_model_with_states(
 
 def _time_trajectory_model_without_states(
     model: AmiciModel,
-    rdatas: Union['amici.ReturnData', Sequence['amici.ReturnData']],
+    rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
     observable_ids: Union[str, Sequence[str]],
 ):
     """

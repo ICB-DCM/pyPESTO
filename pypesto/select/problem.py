@@ -1,11 +1,14 @@
 """Manage all components of a pyPESTO model selection problem."""
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+import warnings
+from collections.abc import Iterable
+from typing import Any, Optional
 
 import petab_select
 from petab_select import Model
 
-from ..C import TYPE_POSTPROCESSOR
 from .method import MethodCaller
+from .model_problem import TYPE_POSTPROCESSOR, ModelProblem  # noqa: F401
 
 
 class Problem:
@@ -26,8 +29,8 @@ class Problem:
     method_caller:
         A :class:`MethodCaller`, used to run a single iteration of a model
         selection method.
-    model_postprocessor:
-        A method that is applied to each model after calibration.
+    model_problem_options:
+        Passed to the constructor of :class:``ModelProblem``.
     petab_select_problem:
         A PEtab Select problem.
     """
@@ -38,9 +41,23 @@ class Problem:
         self,
         petab_select_problem: petab_select.Problem,
         model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        model_problem_options: dict = None,
     ):
         self.petab_select_problem = petab_select_problem
-        self.model_postprocessor = model_postprocessor
+
+        self.model_problem_options = {}
+        if model_problem_options is not None:
+            self.model_problem_options = model_problem_options
+        # TODO deprecated
+        if model_postprocessor is not None:
+            warnings.warn(
+                "Specifying `model_postprocessor` directly is deprecated. "
+                "Please specify it with `model_problem_options`, e.g. "
+                'model_problem_options={"postprocessor": ...}`.',
+                DeprecationWarning,
+                stacklevel=1,
+            )
+            self.model_problem_options["postprocessor"] = model_postprocessor
 
         self.set_state(
             calibrated_models={},
@@ -57,20 +74,24 @@ class Problem:
 
         Returns
         -------
-        MethodCaller
-            A `MethodCaller` instance.
+        A :class:`MethodCaller` instance.
         """
+        kwargs = kwargs.copy()
+        model_problem_options = self.model_problem_options | kwargs.pop(
+            "model_problem_options", {}
+        )
+
         return MethodCaller(
             petab_select_problem=self.petab_select_problem,
             calibrated_models=self.calibrated_models,
-            model_postprocessor=self.model_postprocessor,
+            model_problem_options=model_problem_options,
             **kwargs,
         )
 
     def set_state(
         self,
-        calibrated_models: Dict[str, Model],
-        newly_calibrated_models: Dict[str, Model],
+        calibrated_models: dict[str, Model],
+        newly_calibrated_models: dict[str, Model],
     ) -> None:
         """Set the state of the problem.
 
@@ -81,7 +102,7 @@ class Problem:
 
     def update_with_newly_calibrated_models(
         self,
-        newly_calibrated_models: Optional[Dict[str, Model]] = None,
+        newly_calibrated_models: Optional[dict[str, Model]] = None,
     ) -> None:
         """Update the state of the problem with newly calibrated models.
 
@@ -94,24 +115,24 @@ class Problem:
 
     def handle_select_kwargs(
         self,
-        kwargs: Dict[str, Any],
+        kwargs: dict[str, Any],
     ):
         """Check keyword arguments to select calls."""
         if "newly_calibrated_models" in kwargs:
             raise ValueError(
-                'Please supply `newly_calibrated_models` via '
-                '`pypesto.select.Problem.set_state`.'
+                "Please supply `newly_calibrated_models` via "
+                "`pypesto.select.Problem.set_state`."
             )
         if "calibrated_models" in kwargs:
             raise ValueError(
-                'Please supply `calibrated_models` via '
-                '`pypesto.select.Problem.set_state`.'
+                "Please supply `calibrated_models` via "
+                "`pypesto.select.Problem.set_state`."
             )
 
     def select(
         self,
         **kwargs,
-    ) -> Tuple[Model, Dict[str, Model], Dict[str, Model]]:
+    ) -> tuple[Model, dict[str, Model], dict[str, Model]]:
         """Run a single iteration of a model selection algorithm.
 
         The result is the selected model for the current run, independent of
@@ -121,14 +142,13 @@ class Problem:
 
         Returns
         -------
-        tuple
-            A 3-tuple, with the following values:
+        A 3-tuple, with the following values:
 
-               1. the best model;
-               2. all candidate models in this iteration, as a `dict` with
-                  model hashes as keys and models as values; and
-               3. all candidate models from all iterations, as a `dict` with
-                  model hashes as keys and models as values.
+           1. the best model;
+           2. all candidate models in this iteration, as a `dict` with
+              model hashes as keys and models as values; and
+           3. all candidate models from all iterations, as a `dict` with
+              model hashes as keys and models as values.
         """
         # TODO move some options to PEtab Select? e.g.:
         # - startpoint_latest_mle
@@ -136,16 +156,13 @@ class Problem:
         self.handle_select_kwargs(kwargs)
         # TODO handle bidirectional
         method_caller = self.create_method_caller(**kwargs)
-        previous_best_model, newly_calibrated_models = method_caller(
-            # TODO add predecessor model to state
-            newly_calibrated_models=self.newly_calibrated_models,
-        )
+        previous_best_model, newly_calibrated_models = method_caller()
 
         self.update_with_newly_calibrated_models(
             newly_calibrated_models=newly_calibrated_models,
         )
 
-        best_model = petab_select.ui.best(
+        best_model = petab_select.ui.get_best(
             problem=self.petab_select_problem,
             models=self.newly_calibrated_models.values(),
             criterion=method_caller.criterion,
@@ -159,7 +176,7 @@ class Problem:
     def select_to_completion(
         self,
         **kwargs,
-    ) -> List[Model]:
+    ) -> list[Model]:
         """Run an algorithm until an exception `StopIteration` is raised.
 
         ``kwargs`` are passed to the :class:`MethodCaller` constructor.
@@ -170,25 +187,15 @@ class Problem:
 
         Returns
         -------
-        list
-            The best models (the best model at each iteration).
+        The best models (the best model at each iteration).
         """
         best_models = []
         self.handle_select_kwargs(kwargs)
         method_caller = self.create_method_caller(**kwargs)
 
-        intermediate_kwargs = {}
         while True:
-            # TODO currently uses the best model so far, not the best model
-            #      from the previous iteration. Make this a possibility?
-            # TODO string literals
-            if best_models:
-                intermediate_kwargs["predecessor_model"] = best_models[-1]
             try:
-                previous_best_model, newly_calibrated_models = method_caller(
-                    **intermediate_kwargs,
-                    newly_calibrated_models=self.newly_calibrated_models,
-                )
+                previous_best_model, newly_calibrated_models = method_caller()
                 self.update_with_newly_calibrated_models(
                     newly_calibrated_models=newly_calibrated_models,
                 )
@@ -208,7 +215,7 @@ class Problem:
         self,
         predecessor_models: Iterable[Model] = None,
         **kwargs,
-    ) -> Tuple[Model, List[Model]]:
+    ) -> tuple[Model, list[Model]]:
         """Run an algorithm multiple times, with different predecessor models.
 
         Note that the same method caller is currently shared between all calls.
@@ -228,42 +235,25 @@ class Problem:
 
         Returns
         -------
-        tuple
-            A 2-tuple, with the following values:
+        A 2-tuple, with the following values:
 
-               1. the best model; and
-               2. the best models (the best model at each iteration).
+           1. the best model; and
+           2. the best models (the best model at each iteration).
         """
         self.handle_select_kwargs(kwargs)
         model_lists = []
-        newly_calibrated_models_list = [
-            self.newly_calibrated_models for _ in predecessor_models
-        ]
 
-        method_caller = self.create_method_caller(**kwargs)
-        for start_index, predecessor_model in enumerate(predecessor_models):
-            method_caller.candidate_space.previous_predecessor_model = (
-                predecessor_model
+        for predecessor_model in predecessor_models:
+            method_caller = self.create_method_caller(
+                **(kwargs | {"predecessor_model": predecessor_model})
             )
-            (
-                best_model,
-                newly_calibrated_models_list[start_index],
-            ) = method_caller(
-                predecessor_model=predecessor_model,
-                newly_calibrated_models=newly_calibrated_models_list[
-                    start_index
-                ],
-            )
-            self.calibrated_models.update(
-                newly_calibrated_models_list[start_index]
-            )
+            (best_model, models) = method_caller()
+            self.calibrated_models |= models
 
-            model_lists.append(
-                newly_calibrated_models_list[start_index].values()
-            )
+            model_lists.append(list(models.values()))
             method_caller.candidate_space.reset()
 
-        best_model = petab_select.ui.best(
+        best_model = petab_select.ui.get_best(
             problem=method_caller.petab_select_problem,
             models=[model for models in model_lists for model in models],
             criterion=method_caller.criterion,

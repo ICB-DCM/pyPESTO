@@ -1,5 +1,4 @@
 import numbers
-from typing import Dict, Tuple
 
 import numpy as np
 
@@ -57,7 +56,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
     * https://github.com/ICB-DCM/PESTO/blob/master/private/updateStatistics.m
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         super().__init__(options)
         self._cov = None
         self._mean_hist = None
@@ -71,35 +70,35 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
             # controls adaptation degeneration velocity of the proposals
             # in [0, 1], with 0 -> no adaptation, i.e. classical
             # Metropolis-Hastings
-            'decay_constant': 0.51,
+            "decay_constant": 0.51,
             # number of samples before adaptation decreases significantly.
             # a higher value reduces the impact of early adaptation
-            'threshold_sample': 1,
+            "threshold_sample": 1,
             # regularization factor for ill-conditioned cov matrices of
             # the adapted proposal density. regularization might happen if the
             # eigenvalues of the cov matrix strongly differ in order
             # of magnitude. in this case, the algorithm adds a small
             # diag matrix to the cov matrix with elements of this factor
-            'reg_factor': 1e-6,
+            "reg_factor": 1e-6,
             # initial covariance matrix. defaults to a unit matrix
-            'cov0': None,
+            "cov0": None,
             # target acceptance rate
-            'target_acceptance_rate': 0.234,
+            "target_acceptance_rate": 0.234,
             # show progress
-            'show_progress': True,
+            "show_progress": None,
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
         """Initialize the sampler."""
         super().initialize(problem, x0)
 
-        if self.options['cov0'] is not None:
-            cov0 = self.options['cov0']
+        if self.options["cov0"] is not None:
+            cov0 = self.options["cov0"]
             if isinstance(cov0, numbers.Real):
                 cov0 = float(cov0) * np.eye(len(x0))
         else:
             cov0 = np.eye(len(x0))
-        self._cov = regularize_covariance(cov0, self.options['reg_factor'])
+        self._cov = regularize_covariance(cov0, self.options["reg_factor"])
         self._mean_hist = self.trace_x[-1]
         self._cov_hist = self._cov
         self._cov_scale = 1.0
@@ -112,10 +111,10 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         self, x: np.ndarray, lpost: float, log_p_acc: float, n_sample_cur: int
     ):
         # parse options
-        decay_constant = self.options['decay_constant']
-        threshold_sample = self.options['threshold_sample']
-        reg_factor = self.options['reg_factor']
-        target_acceptance_rate = self.options['target_acceptance_rate']
+        decay_constant = self.options["decay_constant"]
+        threshold_sample = self.options["threshold_sample"]
+        reg_factor = self.options["reg_factor"]
+        target_acceptance_rate = self.options["target_acceptance_rate"]
 
         # compute historical mean and covariance
         self._mean_hist, self._cov_hist = update_history_statistics(
@@ -146,7 +145,7 @@ def update_history_statistics(
     x_new: np.ndarray,
     n_cur_sample: int,
     decay_constant: float,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Update sampling mean and covariance matrix via weighted average.
 
     Update sampling mean and covariance matrix based on the previous

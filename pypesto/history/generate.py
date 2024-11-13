@@ -1,7 +1,7 @@
 """Generate a history from options and inputs."""
 
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 from ..C import SUFFIXES_CSV, SUFFIXES_HDF5
 from .base import CountHistory, HistoryBase
@@ -13,9 +13,7 @@ from .util import HistoryTypeError
 
 
 def create_history(
-    id: str,
-    x_names: Sequence[str],
-    options: HistoryOptions,
+    id: str, x_names: Sequence[str], options: HistoryOptions
 ) -> HistoryBase:
     """Create a :class:`HistoryBase` object; Factory method.
 
@@ -30,8 +28,7 @@ def create_history(
 
     Returns
     -------
-    history:
-        A history object corresponding to the inputs.
+    A history object corresponding to the inputs.
     """
     # create different history types based on the inputs
     if options.storage_file is None:

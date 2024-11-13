@@ -5,11 +5,15 @@ Utilities
 Package-wide utilities.
 
 """
+
+from collections.abc import Sequence
 from numbers import Number
-from typing import Any, Callable, Optional, Tuple, Union
+from operator import itemgetter
+from typing import Any, Callable, Optional, Union
 
 import numpy as np
 from scipy import cluster
+from tqdm import tqdm as _tqdm
 
 
 def _check_none(fun: Callable[..., Any]) -> Callable[..., Union[Any, None]]:
@@ -188,7 +192,7 @@ def get_condition_label(condition_id: str) -> str:
     -------
     The condition label.
     """
-    return f'condition_{condition_id}'
+    return f"condition_{condition_id}"
 
 
 def assign_clusters(vals):
@@ -223,7 +227,7 @@ def assign_clusters(vals):
 
     # get clustering based on distance
     clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(vals), t=0.1, criterion='distance'
+        cluster.hierarchy.linkage(vals), t=0.1, criterion="distance"
     )
 
     # get unique clusters
@@ -241,10 +245,10 @@ def assign_clusters(vals):
 
 def delete_nan_inf(
     fvals: np.ndarray,
-    x: Optional[np.ndarray] = None,
+    x: Optional[Sequence[Union[np.ndarray, list[float]]]] = None,
     xdim: Optional[int] = 1,
     magnitude_bound: Optional[float] = np.inf,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Delete nan and inf values in fvals.
 
@@ -272,24 +276,64 @@ def delete_nan_inf(
     fvals = np.asarray(fvals)
     finite_fvals = np.isfinite(fvals) & (np.absolute(fvals) < magnitude_bound)
     if x is not None:
-        # if we start out with a list of x, the x corresponding
-        # to finite fvals may be None, so we cannot stack the x before taking
-        # subindexing
-        # If none of the fvals are finite, np.vstack will fail and np.take
-        # will not yield the correct dimension, so we try to construct an
-        # empty np.ndarray with the correct dimension (other functions rely
-        # on x.shape[1] to be of correct dimension)
         if np.isfinite(fvals).any():
-            x = np.vstack(np.take(x, np.where(finite_fvals)[0], axis=0))
+            finite_indices = np.where(finite_fvals)[0]
+            x = np.array(itemgetter(*finite_indices)(x))
+            # itemgetter does not return list for single element
+            if len(x.shape) == 1:
+                x = x.reshape((1, x.shape[0]))
         else:
+            # If none of the fvals are finite we try to construct an
+            # empty np.ndarray with the correct dimension (other functions rely
+            # on x.shape[1] to be of correct dimension)
+            x = np.array(x)
             x = np.empty(
                 (
                     0,
-                    x.shape[1]
-                    if x.ndim == 2
-                    else x[0].shape[0]
-                    if x[0] is not None
-                    else xdim,
+                    (
+                        x.shape[1]
+                        if x.ndim == 2
+                        else x[0].shape[0]
+                        if x[0] is not None
+                        else xdim
+                    ),
                 )
             )
     return x, fvals[finite_fvals]
+
+
+def tqdm(*args, enable: bool = None, **kwargs):
+    """
+    Create a progress bar using tqdm.
+
+    Parameters
+    ----------
+    args:
+        Arguments passed to tqdm.
+    enable:
+        Whether to enable the progress bar.
+        If None, use tqdm defaults.
+        Mutually exclusive with `disable`.
+    kwargs:
+        Keyword arguments passed to tqdm.
+
+    Returns
+    -------
+    progress_bar:
+        A progress bar.
+    """
+    # Drop the `disable` argument unless it is not-None.
+    # This way, we don't interfere with TQDM_DISABLE or other global
+    # tqdm settings.
+    disable = kwargs.pop("disable", None)
+
+    if enable is not None:
+        if disable is not None and enable != disable:
+            raise ValueError(
+                "Contradicting values for `enable` and `disable` passed."
+            )
+        disable = not enable
+
+    if disable is not None:
+        kwargs["disable"] = disable
+    return _tqdm(*args, **kwargs)

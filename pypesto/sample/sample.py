@@ -1,6 +1,6 @@
 import logging
 from time import process_time
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 
@@ -18,7 +18,7 @@ def sample(
     problem: Problem,
     n_samples: Optional[int],
     sampler: Sampler = None,
-    x0: Union[np.ndarray, List[np.ndarray]] = None,
+    x0: Union[np.ndarray, list[np.ndarray]] = None,
     result: Result = None,
     filename: Union[str, Callable, None] = None,
     overwrite: bool = False,
@@ -72,7 +72,7 @@ def sample(
         result.optimize_result.sort()
         if len(result.optimize_result.list) > 0:
             x0 = problem.get_reduced_vector(
-                result.optimize_result.list[0]['x']
+                result.optimize_result.list[0]["x"]
             )
         # TODO multiple x0 for PT, #269
 

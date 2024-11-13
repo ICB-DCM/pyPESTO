@@ -18,20 +18,31 @@ from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
-from pypesto.optimize.util import assign_ids
+from pypesto.optimize.ess import (
+    ESSOptimizer,
+    FunctionEvaluatorMP,
+    RefSet,
+    SacessFidesFactory,
+    SacessOptimizer,
+    SacessOptions,
+    get_default_ess_options,
+)
+from pypesto.optimize.util import (
+    assign_ids,
+)
 from pypesto.store import read_result
 
 from ..base.test_x_fixed import create_problem
 from ..util import CRProblem, rosen_for_sensi
 
 
-@pytest.fixture(params=['cr', 'rosen-integrated', 'rosen-separated'])
+@pytest.fixture(params=["cr", "rosen-integrated", "rosen-separated"])
 def problem(request) -> pypesto.Problem:
-    if request.param == 'cr':
+    if request.param == "cr":
         return CRProblem().get_problem()
-    elif 'rosen' in request.param:
-        integrated = 'integrated' in request.param
-        obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
+    elif "rosen" in request.param:
+        integrated = "integrated" in request.param
+        obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)["obj"]
         lb = 0 * np.ones((1, 2))
         ub = 1 * np.ones((1, 2))
         return pypesto.Problem(objective=obj, lb=lb, ub=ub)
@@ -41,33 +52,35 @@ def problem(request) -> pypesto.Problem:
 
 optimizers = [
     *[
-        ('scipy', method)
+        ("scipy", method)
         for method in [
-            'Nelder-Mead',
-            'Powell',
-            'CG',
-            'BFGS',
-            'Newton-CG',
-            'L-BFGS-B',
-            'TNC',
-            'COBYLA',
-            'SLSQP',
-            'trust-ncg',
-            'trust-exact',
-            'trust-krylov',
-            'ls_trf',
-            'ls_dogbox',
+            "Nelder-Mead",
+            "Powell",
+            "CG",
+            "BFGS",
+            "dogleg",
+            "Newton-CG",
+            "L-BFGS-B",
+            "TNC",
+            "COBYLA",
+            "SLSQP",
+            "trust-constr",
+            "trust-ncg",
+            "trust-exact",
+            "trust-krylov",
+            "ls_trf",
+            "ls_dogbox",
         ]
     ],
-    # disabled: ,'trust-constr', 'ls_lm', 'dogleg'
-    ('ipopt', ''),
-    ('dlib', ''),
-    ('pyswarm', ''),
-    ('cmaes', ''),
-    ('scipydiffevolopt', ''),
-    ('pyswarms', ''),
+    # disabled: 'ls_lm' (ValueError when passing bounds)
+    ("ipopt", ""),
+    ("dlib", ""),
+    ("pyswarm", ""),
+    ("cma", ""),
+    ("scipydiffevolopt", ""),
+    ("pyswarms", ""),
     *[
-        ('nlopt', method)
+        ("nlopt", method)
         for method in [
             nlopt.LD_VAR1,
             nlopt.LD_VAR2,
@@ -108,7 +121,7 @@ optimizers = [
         ]
     ],
     *[
-        ('fides', solver)
+        ("fides", solver)
         for solver in itt.product(
             [
                 None,
@@ -135,7 +148,10 @@ optimizers = [
 
 @pytest.fixture(
     params=optimizers,
-    ids=[f"{i}-{o[0]}" for i, o in enumerate(optimizers)],
+    ids=[
+        f"{i}-{o[0]}{'-' + str(o[1]) if isinstance(o[1], str) and o[1] else ''}"
+        for i, o in enumerate(optimizers)
+    ],
 )
 def optimizer(request):
     return request.param
@@ -160,7 +176,7 @@ def test_unbounded_minimize(optimizer):
     ub_init = 1.11 * np.ones((1, 2))
     ub = np.inf * np.ones(ub_init.shape)
     problem = pypesto.Problem(
-        rosen_for_sensi(max_sensi_order=2)['obj'],
+        rosen_for_sensi(max_sensi_order=2)["obj"],
         lb,
         ub,
         lb_init=lb_init,
@@ -171,17 +187,17 @@ def test_unbounded_minimize(optimizer):
     options = optimize.OptimizeOptions(allow_failed_starts=False)
 
     # check whether the optimizer is least squares
-    if isinstance(optimizer[1], str) and re.match(r'(?i)^(ls_)', optimizer[1]):
+    if isinstance(optimizer[1], str) and re.match(r"(?i)^(ls_)", optimizer[1]):
         return
 
     if optimizer in [
-        ('dlib', ''),
-        ('pyswarm', ''),
-        ('cmaes', ''),
-        ('scipydiffevolopt', ''),
-        ('pyswarms', ''),
+        ("dlib", ""),
+        ("pyswarm", ""),
+        ("cma", ""),
+        ("scipydiffevolopt", ""),
+        ("pyswarms", ""),
         *[
-            ('nlopt', method)
+            ("nlopt", method)
             for method in [
                 nlopt.GN_ESCH,
                 nlopt.GN_ISRES,
@@ -208,7 +224,6 @@ def test_unbounded_minimize(optimizer):
                 problem=problem,
                 optimizer=opt,
                 n_starts=1,
-                startpoint_method=pypesto.startpoint.uniform,
                 options=options,
                 progress_bar=False,
             )
@@ -218,49 +233,49 @@ def test_unbounded_minimize(optimizer):
             problem=problem,
             optimizer=opt,
             n_starts=1,
-            startpoint_method=pypesto.startpoint.uniform,
             options=options,
             progress_bar=False,
         )
 
     # check that ub/lb were reverted
-    assert isinstance(result.optimize_result.list[0]['fval'], float)
-    if optimizer not in [('scipy', 'ls_trf'), ('scipy', 'ls_dogbox')]:
-        assert np.isfinite(result.optimize_result.list[0]['fval'])
-        assert result.optimize_result.list[0]['x'] is not None
+    assert isinstance(result.optimize_result.list[0]["fval"], float)
+    if optimizer not in [("scipy", "ls_trf"), ("scipy", "ls_dogbox")]:
+        assert np.isfinite(result.optimize_result.list[0]["fval"])
+        assert result.optimize_result.list[0]["x"] is not None
     # check that result is not in bounds, optimum is at (1,1), so you would
     # hope that any reasonable optimizer manage to finish with x < ub,
     # but I guess some are pretty terrible
-    assert np.any(result.optimize_result.list[0]['x'] < lb_init) or np.any(
-        result.optimize_result.list[0]['x'] > ub_init
+    assert np.any(result.optimize_result.list[0]["x"] < lb_init) or np.any(
+        result.optimize_result.list[0]["x"] > ub_init
     )
 
 
 def get_optimizer(library, solver):
     """Constructs Optimizer given and optimization library and optimization
     solver specification"""
-    options = {'maxiter': 100}
+    options = {"maxiter": 100}
 
-    if library == 'scipy':
-        options['maxfun'] = options.pop('maxiter')
+    if library == "scipy":
+        if solver == "TNC" or solver.startswith("ls_"):
+            options["maxfun"] = options.pop("maxiter")
         optimizer = optimize.ScipyOptimizer(method=solver, options=options)
-    elif library == 'ipopt':
+    elif library == "ipopt":
         optimizer = optimize.IpoptOptimizer()
-    elif library == 'dlib':
+    elif library == "dlib":
         optimizer = optimize.DlibOptimizer(options=options)
-    elif library == 'pyswarm':
+    elif library == "pyswarm":
         optimizer = optimize.PyswarmOptimizer(options=options)
-    elif library == 'cmaes':
-        optimizer = optimize.CmaesOptimizer(options=options)
-    elif library == 'scipydiffevolopt':
+    elif library == "cma":
+        optimizer = optimize.CmaOptimizer(options=options)
+    elif library == "scipydiffevolopt":
         optimizer = optimize.ScipyDifferentialEvolutionOptimizer(
             options=options
         )
-    elif library == 'pyswarms':
+    elif library == "pyswarms":
         optimizer = optimize.PyswarmsOptimizer(options=options)
-    elif library == 'nlopt':
+    elif library == "nlopt":
         optimizer = optimize.NLoptOptimizer(method=solver, options=options)
-    elif library == 'fides':
+    elif library == "fides":
         options[fides.Options.SUBSPACE_DIM] = solver[1]
         optimizer = optimize.FidesOptimizer(
             options=options, hessian_update=solver[0], verbose=40
@@ -283,17 +298,16 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
         problem=problem,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         progress_bar=False,
     )
 
-    assert isinstance(result.optimize_result.list[0]['fval'], float)
+    assert isinstance(result.optimize_result.list[0]["fval"], float)
     if (library, solver) not in [
-        ('nlopt', nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
+        ("nlopt", nlopt.GD_STOGO_RAND)  # id 9, fails in 40% of cases
     ]:
-        assert np.isfinite(result.optimize_result.list[0]['fval'])
-        assert result.optimize_result.list[0]['x'] is not None
+        assert np.isfinite(result.optimize_result.list[0]["fval"])
+        assert result.optimize_result.list[0]["x"] is not None
 
 
 def test_trim_results(problem):
@@ -305,7 +319,7 @@ def test_trim_results(problem):
         report_hess=False, report_sres=False
     )
     prob = pypesto.Problem(
-        objective=rosen_for_sensi(max_sensi_order=2)['obj'],
+        objective=rosen_for_sensi(max_sensi_order=2)["obj"],
         lb=0 * np.ones((1, 2)),
         ub=1 * np.ones((1, 2)),
     )
@@ -316,19 +330,17 @@ def test_trim_results(problem):
         problem=prob,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         progress_bar=False,
     )
     assert result.optimize_result.list[0].hess is None
 
     # sres
-    optimizer = optimize.ScipyOptimizer(method='ls_trf')
+    optimizer = optimize.ScipyOptimizer(method="ls_trf")
     result = optimize.minimize(
         problem=prob,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         progress_bar=False,
     )
@@ -343,21 +355,21 @@ def test_mpipoolengine():
         # get the path to this file:
         path = os.path.dirname(__file__)
         # run the example file.
-        subprocess.check_call(  # noqa: S603,S607
-            [
-                'mpiexec',
-                '--oversubscribe',
-                '-np',
-                '2',
-                'python',
-                '-m',
-                'mpi4py.futures',
-                f'{path}/../../doc/example/example_MPIPool.py',
+        subprocess.check_call(
+            [  # noqa: S603,S607
+                "mpiexec",
+                "--oversubscribe",
+                "-np",
+                "2",
+                "python",
+                "-m",
+                "mpi4py.futures",
+                f"{path}/../../doc/example/example_MPIPool.py",
             ]
         )
 
         # read results
-        result1 = read_result('temp_result.h5', problem=True, optimize=True)
+        result1 = read_result("temp_result.h5", problem=True, optimize=True)
         # set optimizer
         optimizer = optimize.FidesOptimizer(verbose=40)
         # initialize problem with x_guesses and objective
@@ -367,7 +379,7 @@ def test_mpipoolengine():
             hess=sp.optimize.rosen_hess,
         )
         x_guesses = np.array(
-            [result1.optimize_result.list[i]['x0'] for i in range(2)]
+            [result1.optimize_result.list[i]["x0"] for i in range(2)]
         )
         problem = pypesto.Problem(
             objective=objective,
@@ -385,16 +397,16 @@ def test_mpipoolengine():
 
         for ix in range(2):
             assert_almost_equal(
-                result1.optimize_result.list[ix]['x'],
-                result2.optimize_result.list[ix]['x'],
-                err_msg='The final parameter values '
-                'do not agree for the engines.',
+                result1.optimize_result.list[ix]["x"],
+                result2.optimize_result.list[ix]["x"],
+                err_msg="The final parameter values "
+                "do not agree for the engines.",
             )
 
     finally:
-        if os.path.exists('temp_result.h5'):
+        if os.path.exists("temp_result.h5"):
             # delete data
-            os.remove('temp_result.h5')
+            os.remove("temp_result.h5")
 
 
 def test_history_beats_optimizer():
@@ -424,34 +436,33 @@ def test_history_beats_optimizer():
 
     for result in (result_hist, result_opt):
         # number of function evaluations
-        assert result.optimize_result.list[0]['n_fval'] <= max_fval + 1
+        assert result.optimize_result.list[0]["n_fval"] <= max_fval + 1
         # optimal value in bounds
-        assert np.all(problem.lb <= result.optimize_result.list[0]['x'])
-        assert np.all(problem.ub >= result.optimize_result.list[0]['x'])
+        assert np.all(problem.lb <= result.optimize_result.list[0]["x"])
+        assert np.all(problem.ub >= result.optimize_result.list[0]["x"])
         # entries filled
-        for key in ('fval', 'x', 'grad'):
+        for key in ("fval", "x", "grad"):
             val = result.optimize_result.list[0][key]
             assert val is not None and np.all(np.isfinite(val))
 
     # TNC funnily reports the last value if not converged
     #  (this may break if their implementation is changed at some point ...)
     assert (
-        result_hist.optimize_result.list[0]['fval']
-        < result_opt.optimize_result.list[0]['fval']
+        result_hist.optimize_result.list[0]["fval"]
+        < result_opt.optimize_result.list[0]["fval"]
     )
 
 
-@pytest.mark.parametrize("ess_type", ["ess", "cess", "sacess"])
-@pytest.mark.parametrize("local_optimizer", [None, optimize.FidesOptimizer()])
+@pytest.mark.filterwarnings(
+    "ignore:Passing `startpoint_method` directly is deprecated.*:DeprecationWarning"
+)
+@pytest.mark.parametrize("ess_type", ["ess", "sacess"])
+@pytest.mark.parametrize(
+    "local_optimizer",
+    [None, optimize.FidesOptimizer(), SacessFidesFactory()],
+)
 @pytest.mark.flaky(reruns=3)
 def test_ess(problem, local_optimizer, ess_type, request):
-    from pypesto.optimize.ess import (
-        CESSOptimizer,
-        ESSOptimizer,
-        SacessOptimizer,
-        get_default_ess_options,
-    )
-
     if ess_type == "ess":
         ess = ESSOptimizer(
             dim_refset=10,
@@ -462,54 +473,46 @@ def test_ess(problem, local_optimizer, ess_type, request):
             n_threads=2,
             balance=0.5,
         )
-    elif ess_type == "cess":
-        if (
-            'cr' in request.node.callspec.id
-            or 'integrated' in request.node.callspec.id
-        ):
-            # Not pickleable - incompatible with CESS
-            pytest.skip()
-        # CESS with 4 processes
-        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
-        for x in ess_init_args:
-            x['local_optimizer'] = local_optimizer
-        ess = CESSOptimizer(
-            ess_init_args=ess_init_args,
-            max_iter=5,
-            max_walltime_s=10,
-        )
     elif ess_type == "sacess":
         if (
-            'cr' in request.node.callspec.id
-            or 'integrated' in request.node.callspec.id
+            "cr" in request.node.callspec.id
+            or "integrated" in request.node.callspec.id
         ):
             # Not pickleable - incompatible with CESS
             pytest.skip()
-        # SACESS with 4 processes
-        ess_init_args = get_default_ess_options(num_workers=4, dim=problem.dim)
+        # SACESS with 12 processes
+        #  We use a higher number than reasonable to be more likely to trigger
+        #  any potential race conditions (gh-1204)
+        ess_init_args = get_default_ess_options(
+            num_workers=12, dim=problem.dim
+        )
         for x in ess_init_args:
-            x['local_optimizer'] = local_optimizer
+            x["local_optimizer"] = local_optimizer
         ess = SacessOptimizer(
             max_walltime_s=1,
             sacess_loglevel=logging.DEBUG,
             ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
+            options=SacessOptions(
+                adaptation_min_evals=500,
+                adaptation_sent_offset=10,
+                adaptation_sent_coeff=5,
+            ),
         )
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")
 
     res = ess.minimize(
         problem=problem,
-        startpoint_method=pypesto.startpoint.UniformStartpoints(),
     )
     print("ESS result: ", res.summary())
 
     # best values roughly: cr: 4.701; rosen 7.592e-10
-    if 'rosen' in request.node.callspec.id:
+    if "rosen" in request.node.callspec.id:
         if local_optimizer:
             assert res.optimize_result[0].fval < 1e-4
         assert res.optimize_result[0].fval < 1
-    elif 'cr' in request.node.callspec.id:
+    elif "cr" in request.node.callspec.id:
         if local_optimizer:
             assert res.optimize_result[0].fval < 5
         assert res.optimize_result[0].fval < 20
@@ -519,17 +522,37 @@ def test_ess(problem, local_optimizer, ess_type, request):
 
 def test_ess_multiprocess(problem, request):
     if (
-        'cr' in request.node.callspec.id
-        or 'integrated' in request.node.callspec.id
+        "cr" in request.node.callspec.id
+        or "integrated" in request.node.callspec.id
     ):
         # Not pickleable - incompatible with CESS
         pytest.skip()
 
-    from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
+    from fides.constants import Options as FidesOptions
+
+    # augment objective with parameter prior to check it's copyable
+    #  https://github.com/ICB-DCM/pyPESTO/issues/1465
+    #  https://github.com/ICB-DCM/pyPESTO/pull/1467
+    problem.objective = pypesto.objective.AggregatedObjective(
+        [
+            problem.objective,
+            pypesto.objective.NegLogParameterPriors(
+                [
+                    pypesto.objective.get_parameter_prior_dict(
+                        0, "uniform", [0, 1], "lin"
+                    )
+                ]
+            ),
+        ]
+    )
 
     ess = ESSOptimizer(
         max_iter=20,
-        local_optimizer=optimize.FidesOptimizer(),
+        # also test passing a callable as local_optimizer
+        local_optimizer=lambda max_walltime_s,
+        **kwargs: optimize.FidesOptimizer(
+            options={FidesOptions.MAXTIME: max_walltime_s}
+        ),
     )
     refset = RefSet(
         dim=10,
@@ -546,28 +569,74 @@ def test_ess_multiprocess(problem, request):
     print("ESS result: ", res.summary())
 
 
+def test_ess_refset_repr():
+    assert RefSet(10, None).__repr__() == "RefSet(dim=10)"
+    assert (
+        RefSet(10, None, x=np.zeros(10), fx=np.arange(10)).__repr__()
+        == "RefSet(dim=10, fx=[0 ... 9])"
+    )
+
+
 def test_scipy_integrated_grad():
     integrated = True
-    obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)['obj']
+    obj = rosen_for_sensi(max_sensi_order=2, integrated=integrated)["obj"]
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     x_guesses = [[0.5, 0.5]]
     problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
-    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
+    optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    with pytest.warns(UserWarning, match="fun and hess as one func"):
+        result = optimize.minimize(
+            problem=problem,
+            optimizer=optimizer,
+            n_starts=1,
+            options=optimize_options,
+            history_options=history_options,
+            progress_bar=False,
+        )
+    assert (
+        len(result.optimize_result.history[0].get_fval_trace())
+        == result.optimize_result.history[0].n_fval
+    )
+
+
+def test_ipopt_approx_grad():
+    integrated = False
+    obj = rosen_for_sensi(max_sensi_order=0, integrated=integrated)["obj"]
+    lb = 0 * np.ones((1, 2))
+    ub = 1 * np.ones((1, 2))
+    x_guesses = [[0.5, 0.5]]
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    optimizer = optimize.IpoptOptimizer(
+        options={"maxiter": 10, "approx_grad": True}
+    )
     optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
     history_options = pypesto.HistoryOptions(trace_record=True)
     result = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=pypesto.startpoint.uniform,
         options=optimize_options,
         history_options=history_options,
         progress_bar=False,
     )
-    assert (
-        len(result.optimize_result.history[0].get_fval_trace())
-        == result.optimize_result.history[0].n_fval
+    obj2 = rosen_for_sensi(max_sensi_order=1, integrated=integrated)["obj"]
+    problem2 = pypesto.Problem(
+        objective=obj2, lb=lb, ub=ub, x_guesses=x_guesses
+    )
+    optimizer2 = optimize.IpoptOptimizer(options={"maxiter": 10})
+    result2 = optimize.minimize(
+        problem=problem2,
+        optimizer=optimizer2,
+        n_starts=1,
+        options=optimize_options,
+        history_options=history_options,
+        progress_bar=False,
+    )
+    np.testing.assert_array_almost_equal(
+        result.optimize_result[0].x, result2.optimize_result[0].x, decimal=4
     )
 
 
@@ -575,8 +644,8 @@ def test_correct_startpoint_usage(optimizer):
     """
     Test that the startpoint is correctly used in all optimizers.
     """
-    # cmaes supports x0, but samples from this initial guess, therefore return
-    if optimizer == ('cmaes', ''):
+    # cma supports x0, but samples from this initial guess, therefore return
+    if optimizer == ("cma", ""):
         return
 
     opt = get_optimizer(*optimizer)

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import numpy as np
-import petab
+import petab.v1 as petab
 
 import pypesto
 import pypesto.logging
@@ -16,22 +16,17 @@ from pypesto.C import (
     STANDARD,
     InnerParameterType,
 )
-from pypesto.hierarchical.optimal_scaling import (
-    OptimalScalingInnerSolver,
-    OptimalScalingProblem,
-)
-from pypesto.hierarchical.optimal_scaling.parameter import (
-    OptimalScalingParameter,
-)
+from pypesto.hierarchical.ordinal import OrdinalInnerSolver, OrdinalProblem
+from pypesto.hierarchical.ordinal.parameter import OrdinalParameter
 
 example_censored_yaml = (
     Path(__file__).parent
-    / '..'
-    / '..'
-    / 'doc'
-    / 'example'
-    / 'example_censored'
-    / 'example_censored.yaml'
+    / ".."
+    / ".."
+    / "doc"
+    / "example"
+    / "example_censored"
+    / "example_censored.yaml"
 )
 
 
@@ -40,36 +35,32 @@ def test_optimization():
     petab_problem = petab.Problem.from_yaml(example_censored_yaml)
 
     optimizer = pypesto.optimize.ScipyOptimizer(
-        method='L-BFGS-B', options={'maxiter': 10}
+        method="L-BFGS-B", options={"maxiter": 10}
     )
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    importer.create_model()
-
-    objective = importer.create_objective()
-    problem = importer.create_problem(objective)
+    problem = importer.create_problem()
 
     result = pypesto.optimize.minimize(
         problem=problem, n_starts=1, optimizer=optimizer
     )
     # Check that optimization finished without infinite or nan values.
-    assert np.isfinite(result.optimize_result.list[0]['fval'])
-    assert np.all(np.isfinite(result.optimize_result.list[0]['x']))
-    assert np.all(np.isfinite(result.optimize_result.list[0]['grad'][2:]))
+    assert np.isfinite(result.optimize_result.list[0]["fval"])
+    assert np.all(np.isfinite(result.optimize_result.list[0]["x"]))
+    assert np.all(np.isfinite(result.optimize_result.list[0]["grad"][2:]))
     # Check that optimization finished with a lower objective value.
     assert (
-        result.optimize_result.list[0]['fval']
-        < result.optimize_result.list[0]['fval0']
+        result.optimize_result.list[0]["fval"]
+        < result.optimize_result.list[0]["fval0"]
     )
 
 
-def test_optimal_scaling_calculator_and_objective():
-    """Test the optimal scaling calculation of objective and gradient values."""
+def test_ordinal_calculator_and_objective():
+    """Test the ordinal calculation of objective and gradient values."""
     petab_problem = petab.Problem.from_yaml(example_censored_yaml)
 
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
-    objective = importer.create_objective()
-    problem = importer.create_problem(objective)
+    problem = importer.create_problem()
 
     def calculate(problem, x_dct):
         return problem.objective.calculator(
@@ -93,7 +84,7 @@ def test_optimal_scaling_calculator_and_objective():
         problem.objective,
     )
     finite_differences_results = finite_differences(
-        petab_problem.x_nominal_scaled,
+        petab_problem.x_nominal_free_scaled,
         (
             0,
             1,
@@ -105,7 +96,7 @@ def test_optimal_scaling_calculator_and_objective():
     # with finite differences.
     assert np.allclose(
         finite_differences_results[1],
-        calculator_result['grad'],
+        calculator_result["grad"][petab_problem.x_free_indices],
     )
 
 
@@ -116,11 +107,11 @@ def _inner_problem_exp():
     data = np.full(simulation.shape, np.nan)
     data[4:6] = [5, 6]
 
-    par_types = ['cat_lb', 'cat_ub']
+    par_types = ["cat_lb", "cat_ub"]
 
     categories = [1, 2, 4, 5, 1, 2, 4, 5]
     inner_parameter_ids = [
-        f'{par_type}_{category}'
+        f"{par_type}_{category}"
         for par_type in par_types
         for category in set(categories)
     ]
@@ -145,9 +136,9 @@ def _inner_problem_exp():
 
     # Construct inner parameters
     inner_parameters = [
-        OptimalScalingParameter(
+        OrdinalParameter(
             inner_parameter_id=inner_parameter_id,
-            inner_parameter_type=InnerParameterType.OPTIMAL_SCALING,
+            inner_parameter_type=InnerParameterType.ORDINAL,
             scale=LIN,
             lb=-np.inf,
             ub=np.inf,
@@ -170,15 +161,15 @@ def _inner_problem_exp():
     expected_values = np.asarray([0, 2, 2, 4, 6, 8, 8, np.inf])
 
     # Construct inner problem
-    inner_problem = OptimalScalingProblem(
-        xs=inner_parameters, data=[data], method=STANDARD
+    inner_problem = OrdinalProblem(
+        xs=inner_parameters, data=[data], edatas=None, method=STANDARD
     )
 
     return inner_problem, expected_values, simulation
 
 
-def test_optimal_scaling_solver():
-    """Test the Optimal scaling solver."""
+def test_ordinal_solver():
+    """Test the ordinal solver."""
     (
         inner_problem,
         expected_values,
@@ -187,7 +178,7 @@ def test_optimal_scaling_solver():
 
     rtol = 1e-3
 
-    solver = OptimalScalingInnerSolver()
+    solver = OrdinalInnerSolver()
 
     result = solver.solve(
         problem=inner_problem,
@@ -195,6 +186,6 @@ def test_optimal_scaling_solver():
         sigma=[np.full(len(simulation), 1 / np.sqrt(np.pi * 2))],
     )[0]
 
-    assert result['success'] is True
-    assert np.allclose(np.asarray(result['x']), expected_values, rtol=rtol)
-    assert np.allclose(result['fun'], 0, rtol=rtol)
+    assert result["success"] is True
+    assert np.allclose(np.asarray(result["x"]), expected_values, rtol=rtol)
+    assert np.allclose(result["fun"], 0, rtol=rtol)

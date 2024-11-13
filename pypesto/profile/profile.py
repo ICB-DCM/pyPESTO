@@ -1,6 +1,7 @@
 import copy
 import logging
-from typing import Callable, Iterable, Union
+from collections.abc import Iterable
+from typing import Callable, Union
 
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer
@@ -23,14 +24,14 @@ def parameter_profile(
     profile_index: Iterable[int] = None,
     profile_list: int = None,
     result_index: int = 0,
-    next_guess_method: Union[Callable, str] = 'adaptive_step_regression',
+    next_guess_method: Union[Callable, str] = "adaptive_step_order_1",
     profile_options: ProfileOptions = None,
-    progress_bar: bool = True,
+    progress_bar: bool = None,
     filename: Union[str, Callable, None] = None,
     overwrite: bool = False,
 ) -> Result:
     """
-    Call to do parameter profiling.
+    Compute parameter profiles.
 
     Parameters
     ----------
@@ -45,6 +46,7 @@ def parameter_profile(
         The optimizer to be used along each profile.
     engine:
         The engine to be used.
+        Defaults to :class:`pypesto.engine.SingleCoreEngine`.
     profile_index:
         List with the parameter indices to be profiled
         (by default all free indices).
@@ -61,12 +63,13 @@ def parameter_profile(
         :func:`pypesto.profile.profile_next_guess.next_guess`.
     profile_options:
         Various options applied to the profile optimization.
+        See :class:`pypesto.profile.options.ProfileOptions`.
     progress_bar:
         Whether to display a progress bar.
     filename:
         Name of the hdf5 file, where the result will be saved. Default is
         None, which deactivates automatic saving. If set to
-        "Auto" it will automatically generate a file named
+        ``Auto`` it will automatically generate a file named
         ``year_month_day_profiling_result.hdf5``.
         Optionally a method, see docs for :func:`pypesto.store.auto.autosave`.
     overwrite:
@@ -75,8 +78,7 @@ def parameter_profile(
 
     Returns
     -------
-    result:
-        The profile results are filled into `result.profile_result`.
+    The profile results are filled into `result.profile_result`.
     """
     # Copy the problem to avoid side effects
     problem = copy.deepcopy(problem)
@@ -91,7 +93,9 @@ def parameter_profile(
     profile_options = ProfileOptions.create_instance(profile_options)
     profile_options.validate()
 
-    # create a function handle that will be called later to get the next point
+    # Create a function handle that will be called later to get the next point.
+    # This function will be used to generate the initial points of optimization
+    # steps in profiling in `walk_along_profile.py`
     if isinstance(next_guess_method, str):
 
         def create_next_guess(
@@ -102,6 +106,8 @@ def parameter_profile(
             current_profile_,
             problem_,
             global_opt_,
+            min_step_increase_factor_,
+            max_step_reduce_factor_,
         ):
             return next_guess(
                 x,
@@ -112,15 +118,17 @@ def parameter_profile(
                 current_profile_,
                 problem_,
                 global_opt_,
+                min_step_increase_factor_,
+                max_step_reduce_factor_,
             )
 
     elif callable(next_guess_method):
         raise NotImplementedError(
-            'Passing function handles for computation of next '
-            'profiling point is not yet supported.'
+            "Passing function handles for computation of next "
+            "profiling point is not yet supported."
         )
     else:
-        raise ValueError('Unsupported input for next_guess_method.')
+        raise ValueError("Unsupported input for next_guess_method.")
 
     # create the profile result object (retrieve global optimum) or append to
     # existing list of profiles
@@ -165,8 +173,8 @@ def parameter_profile(
     # fill in the ProfilerResults at the right index
     for indexed_profile in indexed_profiles:
         result.profile_result.list[-1][
-            indexed_profile['index']
-        ] = indexed_profile['profile']
+            indexed_profile["index"]
+        ] = indexed_profile["profile"]
 
     autosave(
         filename=filename,

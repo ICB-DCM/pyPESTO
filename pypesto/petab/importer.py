@@ -1,94 +1,85 @@
 """Contains the PetabImporter class."""
+
 from __future__ import annotations
 
-import importlib
 import logging
 import os
-import shutil
-import sys
 import tempfile
 import warnings
-from dataclasses import dataclass
-from functools import partial
+from collections.abc import Callable, Iterable, Sequence
+from importlib.metadata import version
 from typing import (
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
 )
 
-import numpy as np
 import pandas as pd
+import petab.v1 as petab
+
+try:
+    import roadrunner
+except ImportError:
+    roadrunner = None
 
 from ..C import (
+    AMICI,
     CENSORED,
-    CENSORING_TYPES,
-    CONDITION_SEP,
-    MEASUREMENT_TYPE,
-    MODE_FUN,
-    MODE_RES,
-    NONLINEAR_MONOTONE,
-    OPTIMAL_SCALING_OPTIONS,
     ORDINAL,
+    ORDINAL_OPTIONS,
+    PETAB,
+    ROADRUNNER,
+    SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
 )
-from ..hierarchical.calculator import HierarchicalAmiciCalculator
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
-from ..hierarchical.problem import InnerProblem
-from ..objective import AggregatedObjective, AmiciObjective
-from ..objective.amici import AmiciObjectBuilder
+from ..objective import AggregatedObjective, AmiciObjective, ObjectiveBase
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
-from ..problem import Problem
+from ..problem import HierarchicalProblem, Problem
 from ..result import PredictionResult
-from ..startpoint import CheckedStartpoints, StartpointMethod
+from ..startpoint import StartpointMethod
+from .objective_creator import (
+    AmiciObjectiveCreator,
+    ObjectiveCreator,
+    PetabSimulatorObjectiveCreator,
+    RoadRunnerObjectiveCreator,
+)
+from .util import PetabStartpoints, get_petab_non_quantitative_data_types
 
 try:
     import amici
-    import amici.parameter_mapping
-    import amici.petab_import
-    import amici.petab_objective
-    import petab
-    from petab.C import (
-        ESTIMATE,
-        PREEQUILIBRATION_CONDITION_ID,
-        SIMULATION_CONDITION_ID,
-    )
-    from petab.models import MODEL_TYPE_SBML
+    import amici.petab.simulations
 except ImportError:
-    pass
+    amici = None
 
 logger = logging.getLogger(__name__)
 
 
-class PetabImporter(AmiciObjectBuilder):
+class PetabImporter:
     """
     Importer for PEtab files.
 
-    Create an `amici.Model`, an `objective.AmiciObjective` or a
-    `pypesto.Problem` from PEtab files. The created objective function is a
+    Create an :class:`amici.amici.Model`, an :class:`pypesto.objective.AmiciObjective` or a
+    :class:`pypesto.problem.Problem` from PEtab files. The created objective function is a
     negative log-likelihood function and can thus be negative. The actual
     form of the likelihood depends on the noise model specified in the provided PEtab problem.
-    For more information, see
-    [the PEtab documentation](https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions)
+    For more information, see the
+    `PEtab documentation <https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions>`_.
     """  # noqa
 
-    MODEL_BASE_DIR = "amici_models"
+    MODEL_BASE_DIR = f"amici_models/{version('amici') if amici else ''}"
 
     def __init__(
         self,
         petab_problem: petab.Problem,
-        output_folder: str = None,
-        model_name: str = None,
+        output_folder: str | None = None,
+        model_name: str | None = None,
         validate_petab: bool = True,
         validate_petab_hierarchical: bool = True,
         hierarchical: bool = False,
-        inner_options: Dict = None,
+        inner_options: dict | None = None,
+        simulator_type: str = AMICI,
+        simulator: petab.Simulator | None = None,
+        rr: roadrunner.RoadRunner | None = None,
     ):
         """Initialize importer.
 
@@ -111,10 +102,17 @@ class PetabImporter(AmiciObjectBuilder):
             Whether to use hierarchical optimization or not, in case the
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
-            parameter table). Required for ordinal, censored and nonlinear-monotone data.
+            parameter table). Required for ordinal, censored and semiquantitative data.
         inner_options:
             Options for the inner problems and solvers.
             If not provided, default options will be used.
+        simulator_type:
+            The type of simulator to use. Depending on this different kinds
+            of objectives will be created. Allowed types are 'amici', 'petab',
+            and 'roadrunner'.
+        simulator:
+            In case of a ``simulator_type == 'petab'``, the simulator object
+            has to be provided. Otherwise, the argument is not used.
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
@@ -123,9 +121,23 @@ class PetabImporter(AmiciObjectBuilder):
             get_petab_non_quantitative_data_types(petab_problem)
         )
 
-        if self._non_quantitative_data_types and not self._hierarchical:
+        if self._non_quantitative_data_types is None and hierarchical:
             raise ValueError(
-                "Ordinal, censored and nonlinear-monotone data require "
+                "Hierarchical optimization enabled, but no non-quantitative "
+                "data types specified. Specify non-quantitative data types "
+                "or disable hierarchical optimization."
+            )
+
+        if (
+            self._non_quantitative_data_types is not None
+            and any(
+                data_type in self._non_quantitative_data_types
+                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+            )
+            and not self._hierarchical
+        ):
+            raise ValueError(
+                "Ordinal, censored and semiquantitative data require "
                 "hierarchical optimization to be enabled.",
             )
 
@@ -157,11 +169,21 @@ class PetabImporter(AmiciObjectBuilder):
             model_name = _find_model_name(self.output_folder)
         self.model_name = model_name
 
+        self.simulator_type = simulator_type
+        self.simulator = simulator
+        if simulator_type == PETAB and simulator is None:
+            raise ValueError(
+                "A petab simulator object must be provided if the simulator "
+                "type is 'petab'."
+            )
+        self.roadrunner_instance = rr
+
     @staticmethod
     def from_yaml(
-        yaml_config: Union[dict, str],
+        yaml_config: dict | str,
         output_folder: str = None,
         model_name: str = None,
+        simulator_type: str = AMICI,
     ) -> PetabImporter:
         """Simplified constructor using a petab yaml file."""
         petab_problem = petab.Problem.from_yaml(yaml_config)
@@ -170,15 +192,13 @@ class PetabImporter(AmiciObjectBuilder):
             petab_problem=petab_problem,
             output_folder=output_folder,
             model_name=model_name,
+            simulator_type=simulator_type,
         )
 
     def validate_inner_options(self):
         """Validate the inner options."""
         for key in self.inner_options:
-            if (
-                key
-                not in OPTIMAL_SCALING_OPTIONS + SPLINE_APPROXIMATION_OPTIONS
-            ):
+            if key not in ORDINAL_OPTIONS + SPLINE_APPROXIMATION_OPTIONS:
                 raise ValueError(f"Unknown inner option {key}.")
 
     def check_gradients(
@@ -186,7 +206,7 @@ class PetabImporter(AmiciObjectBuilder):
         *args,
         rtol: float = 1e-2,
         atol: float = 1e-3,
-        mode: Union[str, List[str]] = None,
+        mode: str | list[str] = None,
         multi_eps=None,
         **kwargs,
     ) -> bool:
@@ -206,410 +226,12 @@ class PetabImporter(AmiciObjectBuilder):
         -------
         match: Whether gradients match FDs (True) or not (False)
         """
-        par = np.asarray(self.petab_problem.x_nominal_scaled)
-        problem = self.create_problem()
-        objective = problem.objective
-        free_indices = par[problem.x_free_indices]
-        dfs = []
-        modes = []
-
-        if mode is None:
-            modes = [MODE_FUN, MODE_RES]
-        else:
-            modes = [mode]
-
-        if multi_eps is None:
-            multi_eps = np.array([10 ** (-i) for i in range(3, 9)])
-
-        for mode in modes:
-            try:
-                dfs.append(
-                    objective.check_grad_multi_eps(
-                        free_indices,
-                        *args,
-                        **kwargs,
-                        mode=mode,
-                        multi_eps=multi_eps,
-                    )
-                )
-            except (RuntimeError, ValueError):
-                # Might happen in case PEtab problem not well defined or
-                # fails for specified tolerances in forward sensitivities
-                return False
-
-        return all(
-            any(
-                [
-                    np.all(
-                        (mode_df.rel_err.values < rtol)
-                        | (mode_df.abs_err.values < atol)
-                    ),
-                ]
-            )
-            for mode_df in dfs
+        raise NotImplementedError(
+            "This function has been removed. "
+            "Please use `objective.check_gradients_match_finite_differences`."
         )
 
-    def create_model(
-        self,
-        force_compile: bool = False,
-        **kwargs,
-    ) -> amici.Model:
-        """
-        Import amici model.
-
-        Parameters
-        ----------
-        force_compile:
-            If False, the model is compiled only if the output folder does not
-            exist yet. If True, the output folder is deleted and the model
-            (re-)compiled in either case.
-
-            .. warning::
-                If `force_compile`, then an existing folder of that name will
-                be deleted.
-
-        kwargs: Extra arguments passed to amici.SbmlImporter.sbml2amici
-        """
-        # courtesy check whether target is folder
-        if os.path.exists(self.output_folder) and not os.path.isdir(
-            self.output_folder
-        ):
-            raise AssertionError(
-                f"Refusing to remove {self.output_folder} for model "
-                f"compilation: Not a folder."
-            )
-
-        # add module to path
-        if self.output_folder not in sys.path:
-            sys.path.insert(0, self.output_folder)
-
-        # compile
-        if self._must_compile(force_compile):
-            logger.info(
-                f"Compiling amici model to folder " f"{self.output_folder}."
-            )
-            if self.petab_problem.model.type_id == MODEL_TYPE_SBML:
-                self.compile_model(
-                    validate=self.validate_petab,
-                    **kwargs,
-                )
-            else:
-                self.compile_model(**kwargs)
-        else:
-            logger.debug(
-                f"Using existing amici model in folder "
-                f"{self.output_folder}."
-            )
-
-        return self._create_model()
-
-    def _create_model(self) -> amici.Model:
-        """Load model module and return the model, no checks/compilation."""
-        # load moduĺe
-        module = amici.import_model_module(
-            module_name=self.model_name, module_path=self.output_folder
-        )
-        model = module.getModel()
-        amici.petab_import.check_model(
-            amici_model=model,
-            petab_problem=self.petab_problem,
-        )
-
-        return model
-
-    def _must_compile(self, force_compile: bool):
-        """Check whether the model needs to be compiled first."""
-        # asked by user
-        if force_compile:
-            return True
-
-        # folder does not exist
-        if not os.path.exists(self.output_folder) or not os.listdir(
-            self.output_folder
-        ):
-            return True
-
-        # try to import (in particular checks version)
-        try:
-            # importing will already raise an exception if version wrong
-            importlib.import_module(self.model_name)
-        except ModuleNotFoundError:
-            return True
-        except amici.AmiciVersionError as e:
-            logger.info(
-                "amici model will be re-imported due to version "
-                f"mismatch: {e}"
-            )
-            return True
-
-        # no need to (re-)compile
-        return False
-
-    def compile_model(self, **kwargs):
-        """
-        Compile the model.
-
-        If the output folder exists already, it is first deleted.
-
-        Parameters
-        ----------
-        kwargs:
-            Extra arguments passed to :meth:`amici.SbmlImporter.sbml2amici`
-            or :meth:`amici.pysb_import.pysb2amici`.
-        """
-        # delete output directory
-        if os.path.exists(self.output_folder):
-            shutil.rmtree(self.output_folder)
-
-        amici.petab_import.import_petab_problem(
-            petab_problem=self.petab_problem,
-            model_name=self.model_name,
-            model_output_dir=self.output_folder,
-            **kwargs,
-        )
-
-    def create_solver(self, model: amici.Model = None) -> amici.Solver:
-        """Return model solver."""
-        # create model
-        if model is None:
-            model = self.create_model()
-
-        solver = model.getSolver()
-        return solver
-
-    def create_edatas(
-        self, model: amici.Model = None, simulation_conditions=None
-    ) -> List[amici.ExpData]:
-        """Create list of amici.ExpData objects."""
-        # create model
-        if model is None:
-            model = self.create_model()
-
-        return amici.petab_objective.create_edatas(
-            amici_model=model,
-            petab_problem=self.petab_problem,
-            simulation_conditions=simulation_conditions,
-        )
-
-    def create_objective(
-        self,
-        model: amici.Model = None,
-        solver: amici.Solver = None,
-        edatas: Sequence[amici.ExpData] = None,
-        force_compile: bool = False,
-        **kwargs,
-    ) -> AmiciObjective:
-        """Create a :class:`pypesto.AmiciObjective`.
-
-        Parameters
-        ----------
-        model:
-            The AMICI model.
-        solver:
-            The AMICI solver.
-        edatas:
-            The experimental data in AMICI format.
-        force_compile:
-            Whether to force-compile the model if not passed.
-        **kwargs:
-            Additional arguments passed on to the objective. In case of ordinal
-            or nonlinear-monotone measurements, ``inner_options`` can optionally
-            be passed here. If none are given, ``inner_options`` given to the
-            importer constructor (or inner defaults) will be chosen.
-
-        Returns
-        -------
-        objective:
-            A :class:`pypesto.AmiciObjective` for the model and the data.
-        """
-        # get simulation conditions
-        simulation_conditions = petab.get_simulation_conditions(
-            self.petab_problem.measurement_df
-        )
-
-        # create model
-        if model is None:
-            model = self.create_model(force_compile=force_compile)
-        # create solver
-        if solver is None:
-            solver = self.create_solver(model)
-        # create conditions and edatas from measurement data
-        if edatas is None:
-            edatas = self.create_edatas(
-                model=model, simulation_conditions=simulation_conditions
-            )
-
-        parameter_mapping = amici.petab_objective.create_parameter_mapping(
-            petab_problem=self.petab_problem,
-            simulation_conditions=simulation_conditions,
-            scaled_parameters=True,
-            amici_model=model,
-            fill_fixed_parameters=False,
-        )
-
-        par_ids = self.petab_problem.x_ids
-
-        # fill in dummy parameters (this is needed since some objective
-        #  initialization e.g. checks for preeq parameters)
-        problem_parameters = dict(
-            zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
-        )
-        amici.parameter_mapping.fill_in_parameters(
-            edatas=edatas,
-            problem_parameters=problem_parameters,
-            scaled_parameters=True,
-            parameter_mapping=parameter_mapping,
-            amici_model=model,
-        )
-
-        calculator = None
-        amici_reporting = None
-
-        if self._non_quantitative_data_types and self._hierarchical:
-            inner_options = kwargs.pop('inner_options', None)
-            inner_options = (
-                inner_options
-                if inner_options is not None
-                else self.inner_options
-            )
-            calculator = InnerCalculatorCollector(
-                self._non_quantitative_data_types,
-                self.petab_problem,
-                model,
-                edatas,
-                inner_options,
-            )
-            amici_reporting = amici.RDataReporting.residuals
-
-        elif self._hierarchical:
-            inner_problem = InnerProblem.from_petab_amici(
-                self.petab_problem, model, edatas
-            )
-            calculator = HierarchicalAmiciCalculator(inner_problem)
-            amici_reporting = amici.RDataReporting.full
-
-        if self._hierarchical:
-            # FIXME: currently not supported with hierarchical
-            if 'guess_steadystate' in kwargs and kwargs['guess_steadystate']:
-                warnings.warn(
-                    "`guess_steadystate` not supported with hierarchical optimization. Disabling `guess_steadystate`."
-                )
-            kwargs['guess_steadystate'] = False
-            inner_parameter_ids = calculator.get_inner_parameter_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
-
-        # create objective
-        obj = AmiciObjective(
-            amici_model=model,
-            amici_solver=solver,
-            edatas=edatas,
-            x_ids=par_ids,
-            x_names=par_ids,
-            parameter_mapping=parameter_mapping,
-            amici_object_builder=self,
-            calculator=calculator,
-            amici_reporting=amici_reporting,
-            **kwargs,
-        )
-
-        return obj
-
-    def create_predictor(
-        self,
-        objective: AmiciObjective = None,
-        amici_output_fields: Sequence[str] = None,
-        post_processor: Union[Callable, None] = None,
-        post_processor_sensi: Union[Callable, None] = None,
-        post_processor_time: Union[Callable, None] = None,
-        max_chunk_size: Union[int, None] = None,
-        output_ids: Sequence[str] = None,
-        condition_ids: Sequence[str] = None,
-    ) -> AmiciPredictor:
-        """Create a :class:`pypesto.predict.AmiciPredictor`.
-
-        The `AmiciPredictor` facilitates generation of predictions from
-        parameter vectors.
-
-        Parameters
-        ----------
-        objective:
-            An objective object, which will be used to get model simulations
-        amici_output_fields:
-            keys that exist in the return data object from AMICI, which should
-            be available for the post-processors
-        post_processor:
-            A callable function which applies postprocessing to the simulation
-            results. Default are the observables of the AMICI model.
-            This method takes a list of ndarrays (as returned in the field
-            ['y'] of amici ReturnData objects) as input.
-        post_processor_sensi:
-            A callable function which applies postprocessing to the
-            sensitivities of the simulation results. Default are the
-            observable sensitivities of the AMICI model.
-            This method takes two lists of ndarrays (as returned in the
-            fields ['y'] and ['sy'] of amici ReturnData objects) as input.
-        post_processor_time:
-            A callable function which applies postprocessing to the timepoints
-            of the simulations. Default are the timepoints of the amici model.
-            This method takes a list of ndarrays (as returned in the field
-            ['t'] of amici ReturnData objects) as input.
-        max_chunk_size:
-            In some cases, we don't want to compute all predictions at once
-            when calling the prediction function, as this might not fit into
-            the memory for large datasets and models.
-            Here, the user can specify a maximum number of conditions, which
-            should be simulated at a time.
-            Default is 0 meaning that all conditions will be simulated.
-            Other values are only applicable, if an output file is specified.
-        output_ids:
-            IDs of outputs, if post-processing is used
-        condition_ids:
-            IDs of conditions, if post-processing is used
-
-        Returns
-        -------
-        predictor:
-            A :class:`pypesto.predict.AmiciPredictor` for the model, using
-            the outputs of the AMICI model and the timepoints from the
-            PEtab data
-        """
-        # if the user didn't pass an objective function, we create it first
-        if objective is None:
-            objective = self.create_objective()
-
-        # create a identifiers of preequilibration and simulation condition ids
-        # which can then be stored in the prediction result
-        edata_conditions = (
-            objective.amici_object_builder.petab_problem.get_simulation_conditions_from_measurement_df()
-        )
-        if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
-            preeq_dummy = [''] * edata_conditions.shape[0]
-            edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
-        edata_conditions.drop_duplicates(inplace=True)
-
-        if condition_ids is None:
-            condition_ids = [
-                edata_conditions.loc[id, PREEQUILIBRATION_CONDITION_ID]
-                + CONDITION_SEP
-                + edata_conditions.loc[id, SIMULATION_CONDITION_ID]
-                for id in edata_conditions.index
-            ]
-
-        # wrap around AmiciPredictor
-        predictor = AmiciPredictor(
-            amici_objective=objective,
-            amici_output_fields=amici_output_fields,
-            post_processor=post_processor,
-            post_processor_sensi=post_processor_sensi,
-            post_processor_time=post_processor_time,
-            max_chunk_size=max_chunk_size,
-            output_ids=output_ids,
-            condition_ids=condition_ids,
-        )
-
-        return predictor
-
-    def create_prior(self) -> Union[NegLogParameterPriors, None]:
+    def create_prior(self) -> NegLogParameterPriors | None:
         """
         Create a prior from the parameter table.
 
@@ -627,11 +249,18 @@ class PetabImporter(AmiciObjectBuilder):
                     isinstance(prior_type_entry, str)
                     and prior_type_entry != petab.PARAMETER_SCALE_UNIFORM
                 ):
+                    # check if parameter for which prior is defined is a fixed parameter
+                    if x_id in self.petab_problem.x_fixed_ids:
+                        logger.warning(
+                            f"Parameter {x_id} is marked as fixed but has a "
+                            f"prior defined. This might be unintended."
+                        )
+
                     prior_params = [
                         float(param)
                         for param in self.petab_problem.parameter_df.loc[
                             x_id, petab.OBJECTIVE_PRIOR_PARAMETERS
-                        ].split(';')
+                        ].split(";")
                     ]
 
                     scale = self.petab_problem.parameter_df.loc[
@@ -660,26 +289,63 @@ class PetabImporter(AmiciObjectBuilder):
         """
         return PetabStartpoints(petab_problem=self.petab_problem, **kwargs)
 
+    def create_objective_creator(
+        self,
+        simulator_type: str = AMICI,
+        simulator: petab.Simulator | None = None,
+    ) -> ObjectiveCreator:
+        """Choose :class:`ObjectiveCreator` depending on the simulator type.
+
+        Parameters
+        ----------
+        simulator_type:
+            The type of simulator to use. Depending on this different kinds
+            of objectives will be created. Allowed types are 'amici', 'petab',
+            and 'roadrunner'.
+        simulator:
+            In case of a ``simulator_type == 'petab'``, the simulator object
+            has to be provided. Otherwise the argument is not used.
+
+        """
+        if simulator_type == AMICI:
+            return AmiciObjectiveCreator(
+                petab_problem=self.petab_problem,
+                output_folder=self.output_folder,
+                model_name=self.model_name,
+                hierarchical=self._hierarchical,
+                inner_options=self.inner_options,
+                non_quantitative_data_types=self._non_quantitative_data_types,
+                validate_petab=self.validate_petab,
+            )
+        elif simulator_type == PETAB:
+            return PetabSimulatorObjectiveCreator(
+                petab_problem=self.petab_problem, simulator=simulator
+            )
+        elif simulator_type == ROADRUNNER:
+            return RoadRunnerObjectiveCreator(
+                petab_problem=self.petab_problem, rr=self.roadrunner_instance
+            )
+
     def create_problem(
         self,
-        objective: AmiciObjective = None,
-        x_guesses: Optional[Iterable[float]] = None,
-        problem_kwargs: Dict[str, Any] = None,
-        startpoint_kwargs: Dict[str, Any] = None,
+        objective: ObjectiveBase = None,
+        x_guesses: Iterable[float] | None = None,
+        problem_kwargs: dict[str, Any] = None,
+        startpoint_kwargs: dict[str, Any] = None,
         **kwargs,
     ) -> Problem:
-        """Create a :class:`pypesto.Problem`.
+        """Create a :class:`pypesto.problem.Problem`.
 
         Parameters
         ----------
         objective:
-            Objective as created by `create_objective`.
+            Objective as created by :meth:`create_objective`.
         x_guesses:
             Guesses for the parameter values, shape (g, dim), where g denotes
             the number of guesses. These are used as start points in the
             optimization.
         problem_kwargs:
-            Passed to the `pypesto.Problem` constructor.
+            Passed to :meth:`pypesto.problem.Problem.__init__`.
         startpoint_kwargs:
             Keyword arguments forwarded to
             :meth:`PetabImporter.create_startpoint_method`.
@@ -689,11 +355,14 @@ class PetabImporter(AmiciObjectBuilder):
 
         Returns
         -------
-        problem:
-            A :class:`pypesto.Problem` for the objective.
+        A :class:`pypesto.problem.Problem` for the objective.
         """
         if objective is None:
-            objective = self.create_objective(**kwargs)
+            self.objective_constructor = self.create_objective_creator(
+                kwargs.pop("simulator_type", self.simulator_type),
+                kwargs.pop("simulator", self.simulator),
+            )
+            objective = self.objective_constructor.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
         x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
@@ -702,25 +371,16 @@ class PetabImporter(AmiciObjectBuilder):
         ub = self.petab_problem.ub_scaled
 
         # Raise error if the correct calculator is not used.
-
-        if self._non_quantitative_data_types:
+        if self._hierarchical:
             if not isinstance(objective.calculator, InnerCalculatorCollector):
                 raise AssertionError(
-                    f"If there are ordinal, censored or nonlinear-monotone measurements, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
+                    f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
-        elif self._hierarchical:
-            if not isinstance(
-                objective.calculator, HierarchicalAmiciCalculator
-            ):
-                raise AssertionError(
-                    f"If hierarchical optimization of relative data is enabled, the `calculator` attribute of the `objective` has to be {HierarchicalAmiciCalculator} and not {objective.calculator}."
-                )
+
         # In case of hierarchical optimization, parameters estimated in the
         # inner subproblem are removed from the outer problem
         if self._hierarchical:
-            inner_parameter_ids = (
-                objective.calculator.get_inner_parameter_ids()
-            )
+            inner_parameter_ids = objective.calculator.get_inner_par_ids()
             lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
             ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]
             x_ids = [x for x in x_ids if x not in inner_parameter_ids]
@@ -749,7 +409,12 @@ class PetabImporter(AmiciObjectBuilder):
                 )
             objective = AggregatedObjective([objective, prior])
 
-        problem = Problem(
+        if self._hierarchical:
+            problem_class = HierarchicalProblem
+        else:
+            problem_class = Problem
+
+        problem = problem_class(
             objective=objective,
             lb=lb,
             ub=ub,
@@ -767,36 +432,99 @@ class PetabImporter(AmiciObjectBuilder):
 
         return problem
 
+    def create_model(
+        self,
+        force_compile: bool = False,
+        verbose: bool = True,
+        **kwargs,
+    ) -> amici.Model:
+        """See :meth:`AmiciObjectiveCreator.create_model`."""
+        warnings.warn(
+            "This function has been moved to `AmiciObjectiveCreator`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        objective_constructor = self.create_objective_creator(
+            kwargs.pop("simulator_type", self.simulator_type),
+            kwargs.pop("simulator", self.simulator),
+        )
+        return objective_constructor.create_model(
+            force_compile=force_compile,
+            verbose=verbose,
+            **kwargs,
+        )
+
+    def create_objective(
+        self,
+        model: amici.Model = None,
+        solver: amici.Solver = None,
+        edatas: Sequence[amici.ExpData] = None,
+        force_compile: bool = False,
+        verbose: bool = True,
+        **kwargs,
+    ) -> ObjectiveBase:
+        """See :meth:`AmiciObjectiveCreator.create_objective`."""
+        warnings.warn(
+            "This function has been moved to `AmiciObjectiveCreator`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        objective_constructor = self.create_objective_creator(
+            kwargs.pop("simulator_type", self.simulator_type),
+            kwargs.pop("simulator", self.simulator),
+        )
+        return objective_constructor.create_objective(
+            model=model,
+            solver=solver,
+            edatas=edatas,
+            force_compile=force_compile,
+            verbose=verbose,
+            **kwargs,
+        )
+
+    def create_predictor(
+        self,
+        objective: AmiciObjective = None,
+        amici_output_fields: Sequence[str] = None,
+        post_processor: Callable | None = None,
+        post_processor_sensi: Callable | None = None,
+        post_processor_time: Callable | None = None,
+        max_chunk_size: int | None = None,
+        output_ids: Sequence[str] = None,
+        condition_ids: Sequence[str] = None,
+    ) -> AmiciPredictor:
+        """See :meth:`AmiciObjectiveCreator.create_predictor`."""
+        if self.simulator_type != AMICI:
+            raise ValueError(
+                "Predictor can only be created for amici models and is "
+                "supposed to be created from the AmiciObjectiveCreator."
+            )
+        warnings.warn(
+            "This function has been moved to `AmiciObjectiveCreator`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        objective_constructor = self.create_objective_creator()
+        return objective_constructor.create_predictor(
+            objective=objective,
+            amici_output_fields=amici_output_fields,
+            post_processor=post_processor,
+            post_processor_sensi=post_processor_sensi,
+            post_processor_time=post_processor_time,
+            max_chunk_size=max_chunk_size,
+            output_ids=output_ids,
+            condition_ids=condition_ids,
+        )
+
     def rdatas_to_measurement_df(
         self,
         rdatas: Sequence[amici.ReturnData],
         model: amici.Model = None,
+        verbose: bool = True,
     ) -> pd.DataFrame:
-        """
-        Create a measurement dataframe in the petab format.
-
-        Parameters
-        ----------
-        rdatas:
-            A list of rdatas as produced by
-            pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas'].
-        model:
-            The amici model.
-
-        Returns
-        -------
-        measurement_df:
-            A dataframe built from the rdatas in the format as in
-            self.petab_problem.measurement_df.
-        """
-        # create model
-        if model is None:
-            model = self.create_model()
-
-        measurement_df = self.petab_problem.measurement_df
-
-        return amici.petab_objective.rdatas_to_measurement_df(
-            rdatas, model, measurement_df
+        """See :meth:`AmiciObjectiveCreator.rdatas_to_measurement_df`."""
+        raise NotImplementedError(
+            "This function has been moved to `AmiciObjectiveCreator`."
         )
 
     def rdatas_to_simulation_df(
@@ -805,13 +533,13 @@ class PetabImporter(AmiciObjectBuilder):
         model: amici.Model = None,
     ) -> pd.DataFrame:
         """
-        See `rdatas_to_measurement_df`.
+        See :meth:`rdatas_to_measurement_df`.
 
-        Execpt a petab simulation dataframe is created, i.e. the measurement
+        Except a petab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
         """
-        return self.rdatas_to_measurement_df(rdatas, model).rename(
-            columns={petab.MEASUREMENT: petab.SIMULATION}
+        raise NotImplementedError(
+            "This function has been moved to `AmiciObjectiveCreator`."
         )
 
     def prediction_to_petab_measurement_df(
@@ -828,34 +556,18 @@ class PetabImporter(AmiciObjectBuilder):
         Parameters
         ----------
         prediction:
-            A prediction result as produced by an AmiciPredictor
+            A prediction result as produced by an :class:`pypesto.predict.AmiciPredictor`.
         predictor:
-            The AmiciPredictor function
+            The :class:`pypesto.predict.AmiciPredictor` instance.
 
         Returns
         -------
-        measurement_df:
-            A dataframe built from the rdatas in the format as in
-            self.petab_problem.measurement_df.
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
         """
-
-        # create rdata-like dicts from the prediction result
-        @dataclass
-        class FakeRData:
-            ts: np.ndarray
-            y: np.ndarray
-
-        rdatas = [
-            FakeRData(ts=condition.timepoints, y=condition.output)
-            for condition in prediction.conditions
-        ]
-
-        # add an AMICI model, if possible
-        model = None
-        if predictor is not None:
-            model = predictor.amici_objective.amici_model
-
-        return self.rdatas_to_measurement_df(rdatas, model)
+        raise NotImplementedError(
+            "This function has been moved to `AmiciObjectiveCreator`."
+        )
 
     def prediction_to_petab_simulation_df(
         self,
@@ -863,14 +575,14 @@ class PetabImporter(AmiciObjectBuilder):
         predictor: AmiciPredictor = None,
     ) -> pd.DataFrame:
         """
-        See `prediction_to_petab_measurement_df`.
+        See :meth:`prediction_to_petab_measurement_df`.
 
         Except a PEtab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
         """
-        return self.prediction_to_petab_measurement_df(
-            prediction, predictor
-        ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+        raise NotImplementedError(
+            "This function has been moved to `AmiciObjectiveCreator`."
+        )
 
 
 def _find_output_folder_name(
@@ -883,7 +595,7 @@ def _find_output_folder_name(
     If available, use the model name from the ``petab_problem`` or the
     provided ``model_name`` (latter is given priority), otherwise create a
     unique name. The folder will be located in the
-    ``PetabImporter.MODEL_BASE_DIR`` subdirectory of the current directory.
+    :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(
@@ -918,114 +630,3 @@ def _find_output_folder_name(
 def _find_model_name(output_folder: str) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
-
-
-def get_petab_non_quantitative_data_types(
-    petab_problem: petab.Problem,
-) -> List[str]:
-    """
-    Get the data types from the PEtab problem.
-
-    Parameters
-    ----------
-    petab_problem:
-        The PEtab problem.
-
-    Returns
-    -------
-    data_types:
-        A list of the data types.
-    """
-    non_quantitative_data_types = []
-    if MEASUREMENT_TYPE in petab_problem.measurement_df.columns:
-        petab_data_types = petab_problem.measurement_df[
-            MEASUREMENT_TYPE
-        ].unique()
-        if ORDINAL in petab_data_types:
-            non_quantitative_data_types.append(ORDINAL)
-        if any(
-            censoring_type in petab_data_types
-            for censoring_type in CENSORING_TYPES
-        ):
-            non_quantitative_data_types.append(CENSORED)
-        if NONLINEAR_MONOTONE in petab_data_types:
-            non_quantitative_data_types.append(NONLINEAR_MONOTONE)
-
-    if len(non_quantitative_data_types) == 0:
-        return None
-    return non_quantitative_data_types
-
-
-class PetabStartpoints(CheckedStartpoints):
-    """Startpoint method for PEtab problems.
-
-    Samples optimization startpoints from the distributions defined in the
-    provided PEtab problem. The PEtab-problem is copied.
-    """
-
-    def __init__(self, petab_problem: petab.Problem, **kwargs):
-        super().__init__(**kwargs)
-        self._parameter_df = petab_problem.parameter_df.copy()
-        self._priors: Optional[List[Tuple]] = None
-        self._free_ids: Optional[List[str]] = None
-
-    def _setup(
-        self,
-        pypesto_problem: Problem,
-    ):
-        """Update priors if necessary.
-
-        Check if ``problem.x_free_indices`` changed since last call, and if so,
-        get the corresponding priors from PEtab.
-        """
-        current_free_ids = np.asarray(pypesto_problem.x_names)[
-            pypesto_problem.x_free_indices
-        ]
-
-        if (
-            self._priors is not None
-            and len(current_free_ids) == len(self._free_ids)
-            and np.all(current_free_ids == self._free_ids)
-        ):
-            # no need to update
-            return
-
-        # update priors
-        self._free_ids = current_free_ids
-        id_to_prior = dict(
-            zip(
-                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
-                petab.parameters.get_priors_from_df(
-                    self._parameter_df, mode=petab.INITIALIZATION
-                ),
-            )
-        )
-
-        self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
-
-    def __call__(
-        self,
-        n_starts: int,
-        problem: Problem,
-    ) -> np.ndarray:
-        """Call the startpoint method."""
-        # Update the list of priors if needed
-        self._setup(pypesto_problem=problem)
-
-        return super().__call__(n_starts, problem)
-
-    def sample(
-        self,
-        n_starts: int,
-        lb: np.ndarray,
-        ub: np.ndarray,
-    ) -> np.ndarray:
-        """Actual startpoint sampling.
-
-        Must only be called through `self.__call__` to ensure that the list of priors
-        matches the currently free parameters in the :class:`pypesto.Problem`.
-        """
-        sampler = partial(petab.sample_from_prior, n_starts=n_starts)
-        startpoints = list(map(sampler, self._priors))
-
-        return np.array(startpoints).T

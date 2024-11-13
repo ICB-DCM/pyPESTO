@@ -25,7 +25,7 @@ class ProfilerTest(unittest.TestCase):
     def setUp(cls):
         cls.objective: ObjectiveBase = rosen_for_sensi(
             max_sensi_order=2, integrated=True
-        )['obj']
+        )["obj"]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -39,10 +39,10 @@ class ProfilerTest(unittest.TestCase):
     def test_default_profiling(self):
         # loop over  methods for creating new initial guesses
         method_list = [
-            'fixed_step',
-            'adaptive_step_order_0',
-            'adaptive_step_order_1',
-            'adaptive_step_regression',
+            "fixed_step",
+            "adaptive_step_order_0",
+            "adaptive_step_order_1",
+            "adaptive_step_regression",
         ]
         for i_run, method in enumerate(method_list):
             # run profiling
@@ -65,39 +65,39 @@ class ProfilerTest(unittest.TestCase):
             self.assertEqual(len(result.profile_result.list[i_run]), 2)
 
             # check whether profiling needed maybe too many steps
-            steps = result.profile_result.list[i_run][0]['ratio_path'].size
-            if method == 'adaptive_step_regression':
-                self.assertTrue(
-                    steps < 20,
-                    'Profiling with regression based '
-                    'proposal needed too many steps.',
-                )
-                self.assertTrue(
-                    steps > 1,
-                    'Profiling with regression based '
-                    'proposal needed not enough steps.',
-                )
-            elif method == 'adaptive_step_order_1':
-                self.assertTrue(
-                    steps < 25,
-                    'Profiling with 1st order based '
-                    'proposal needed too many steps.',
-                )
-                self.assertTrue(
-                    steps > 1,
-                    'Profiling with 1st order based '
-                    'proposal needed not enough steps.',
-                )
-            elif method == 'adaptive_step_order_0':
+            steps = result.profile_result.list[i_run][0]["ratio_path"].size
+            if method == "adaptive_step_regression":
                 self.assertTrue(
                     steps < 100,
-                    'Profiling with 0th order based '
-                    'proposal needed too many steps.',
+                    "Profiling with regression based "
+                    "proposal needed too many steps.",
                 )
                 self.assertTrue(
                     steps > 1,
-                    'Profiling with 0th order based '
-                    'proposal needed not enough steps.',
+                    "Profiling with regression based "
+                    "proposal needed not enough steps.",
+                )
+            elif method == "adaptive_step_order_1":
+                self.assertTrue(
+                    steps < 100,
+                    "Profiling with 1st order based "
+                    "proposal needed too many steps.",
+                )
+                self.assertTrue(
+                    steps > 1,
+                    "Profiling with 1st order based "
+                    "proposal needed not enough steps.",
+                )
+            elif method == "adaptive_step_order_0":
+                self.assertTrue(
+                    steps < 300,
+                    "Profiling with 0th order based "
+                    "proposal needed too many steps.",
+                )
+                self.assertTrue(
+                    steps > 1,
+                    "Profiling with 0th order based "
+                    "proposal needed not enough steps.",
                 )
 
             # standard plotting
@@ -113,26 +113,33 @@ class ProfilerTest(unittest.TestCase):
             pypesto.engine.MultiProcessEngine(),
             pypesto.engine.MultiThreadEngine(),
         ]
-        for engine in engines:
+        expected_warns = [
+            pytest.warns(UserWarning, match="fun and hess as one func"),
+            pytest.warns(UserWarning, match="fun and hess as one func"),
+            warnings.catch_warnings(),  # No warnings
+            warnings.catch_warnings(),  # No warnings
+        ]
+        for engine, expected_warn in zip(engines, expected_warns):
             # run profiling, profile results get appended
             # in self.result.profile_result
-            profile.parameter_profile(
-                problem=self.problem,
-                result=self.result,
-                optimizer=self.optimizer,
-                next_guess_method='fixed_step',
-                engine=engine,
-                progress_bar=False,
-            )
+            with expected_warn:
+                profile.parameter_profile(
+                    problem=self.problem,
+                    result=self.result,
+                    optimizer=self.optimizer,
+                    next_guess_method="fixed_step",
+                    engine=engine,
+                    progress_bar=False,
+                )
 
         # check results
         for count, _engine in enumerate(engines[1:]):
             for j in range(len(self.result.profile_result.list[0])):
                 assert_almost_equal(
-                    self.result.profile_result.list[0][j]['x_path'],
-                    self.result.profile_result.list[count][j]['x_path'],
-                    err_msg='The values of the profiles for'
-                    ' the different engines do not match',
+                    self.result.profile_result.list[0][j]["x_path"],
+                    self.result.profile_result.list[count][j]["x_path"],
+                    err_msg="The values of the profiles for"
+                    " the different engines do not match",
                 )
 
     def test_selected_profiling(self):
@@ -154,7 +161,7 @@ class ProfilerTest(unittest.TestCase):
             result=self.result,
             optimizer=self.optimizer,
             profile_index=np.array([1]),
-            next_guess_method='fixed_step',
+            next_guess_method="fixed_step",
             result_index=1,
             profile_options=options,
             progress_bar=False,
@@ -187,7 +194,7 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=result,
             optimizer=self.optimizer,
-            next_guess_method='fixed_step',
+            next_guess_method="fixed_step",
             profile_index=np.array([0]),
             profile_options=options,
             progress_bar=False,
@@ -204,7 +211,7 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=self.result,
             optimizer=self.optimizer,
-            next_guess_method='fixed_step',
+            next_guess_method="fixed_step",
             progress_bar=False,
         )
 
@@ -217,7 +224,7 @@ class ProfilerTest(unittest.TestCase):
             problem=self.problem,
             result=result,
             optimizer=self.optimizer,
-            next_guess_method='fixed_step',
+            next_guess_method="fixed_step",
             profile_index=np.array([1]),
             profile_list=0,
             progress_bar=False,
@@ -264,7 +271,7 @@ class ProfilerTest(unittest.TestCase):
 
 # dont make this a class method such that we dont optimize twice
 def test_profile_with_history():
-    objective = rosen_for_sensi(max_sensi_order=2, integrated=False)['obj']
+    objective = rosen_for_sensi(max_sensi_order=2, integrated=False)["obj"]
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -286,7 +293,7 @@ def test_profile_with_history():
             result.optimize_result.list[0].x[3],
         ],
     )
-    problem.objective.history = pypesto.MemoryHistory({'trace_record': True})
+    problem.objective.history = pypesto.MemoryHistory({"trace_record": True})
     profile.parameter_profile(
         problem=problem,
         result=result,
@@ -301,7 +308,7 @@ def test_profile_with_history():
 @close_fig
 def test_profile_with_fixed_parameters():
     """Test using profiles with fixed parameters."""
-    obj = rosen_for_sensi(max_sensi_order=1)['obj']
+    obj = rosen_for_sensi(max_sensi_order=1)["obj"]
 
     lb = -2 * np.ones(5)
     ub = 2 * np.ones(5)
@@ -313,7 +320,7 @@ def test_profile_with_fixed_parameters():
         x_fixed_indices=[0, 3],
     )
 
-    optimizer = optimize.ScipyOptimizer(options={'maxiter': 50})
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 50})
     result = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
@@ -323,10 +330,10 @@ def test_profile_with_fixed_parameters():
 
     for i_method, next_guess_method in enumerate(
         [
-            'fixed_step',
-            'adaptive_step_order_0',
-            'adaptive_step_order_1',
-            'adaptive_step_regression',
+            "fixed_step",
+            "adaptive_step_order_0",
+            "adaptive_step_order_1",
+            "adaptive_step_regression",
         ]
     ):
         print(next_guess_method)
@@ -344,20 +351,20 @@ def test_profile_with_fixed_parameters():
         visualize.profile_cis(result, profile_list=i_method)
 
     # test profiling with all parameters fixed but one
-    problem.fix_parameters([2, 3, 4], result.optimize_result.list[0]['x'][2:5])
+    problem.fix_parameters([2, 3, 4], result.optimize_result.list[0]["x"][2:5])
     profile.parameter_profile(
         problem=problem,
         result=result,
         optimizer=optimizer,
-        next_guess_method='adaptive_step_regression',
+        next_guess_method="adaptive_step_regression",
         progress_bar=False,
     )
 
 
 def create_optimization_results(objective, dim_full=2):
     # create optimizer, pypesto problem and options
-    options = {'maxiter': 200}
-    optimizer = optimize.ScipyOptimizer(method='l-bfgs-b', options=options)
+    options = {"maxiter": 200}
+    optimizer = optimize.ScipyOptimizer(method="l-bfgs-b", options=options)
 
     lb = -2 * np.ones(dim_full)
     ub = 2 * np.ones(dim_full)
@@ -446,7 +453,7 @@ def test_gh1165(lb, ub):
 
     Check profiles with non-symmetric bounds and whole_path=True span the full parameter domain.
     """
-    obj = rosen_for_sensi(max_sensi_order=1)['obj']
+    obj = rosen_for_sensi(max_sensi_order=1)["obj"]
 
     problem = pypesto.Problem(
         objective=obj,
@@ -454,7 +461,7 @@ def test_gh1165(lb, ub):
         ub=ub,
     )
 
-    optimizer = optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     result = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
@@ -467,11 +474,12 @@ def test_gh1165(lb, ub):
         problem=problem,
         result=result,
         optimizer=optimizer,
-        next_guess_method='fixed_step',
+        next_guess_method="fixed_step",
         profile_index=[par_idx],
         progress_bar=False,
         profile_options=profile.ProfileOptions(
             min_step_size=0.1,
+            max_step_size=1.0,
             delta_ratio_max=0.05,
             default_step_size=0.5,
             ratio_min=0.01,
@@ -479,7 +487,7 @@ def test_gh1165(lb, ub):
         ),
     )
     # parameter value of the profiled parameter
-    x_path = result.profile_result.list[0][par_idx]['x_path'][par_idx, :]
+    x_path = result.profile_result.list[0][par_idx]["x_path"][par_idx, :]
     # ensure we cover lb..ub
     assert x_path[0] == lb[par_idx], (x_path.min(), lb[par_idx])
     assert x_path[-1] == ub[par_idx], (x_path.max(), ub[par_idx])

@@ -29,11 +29,11 @@ def test_basic():
 
 def _test_basic(engine):
     # set up problem
-    objective = rosen_for_sensi(max_sensi_order=2)['obj']
+    objective = rosen_for_sensi(max_sensi_order=2)["obj"]
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     problem = pypesto.Problem(objective, lb, ub)
-    optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    optimizer = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
     result = pypesto.optimize.minimize(
         problem=problem,
         n_starts=2,
@@ -64,9 +64,8 @@ def _test_petab(engine):
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    objective = petab_importer.create_objective()
-    problem = petab_importer.create_problem(objective)
-    optimizer = pypesto.optimize.ScipyOptimizer(options={'maxiter': 10})
+    problem = petab_importer.create_problem()
+    optimizer = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
     result = pypesto.optimize.minimize(
         problem=problem,
         n_starts=3,
@@ -86,7 +85,8 @@ def test_deepcopy_objective():
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    objective = petab_importer.create_objective()
+    factory = petab_importer.create_objective_creator()
+    objective = factory.create_objective()
 
     objective.amici_solver.setSensitivityMethod(
         amici.SensitivityMethod_adjoint
@@ -123,7 +123,8 @@ def test_pickle_objective():
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    objective = petab_importer.create_objective()
+    factory = petab_importer.create_objective_creator()
+    objective = factory.create_objective()
 
     objective.amici_solver.setSensitivityMethod(
         amici.SensitivityMethod_adjoint

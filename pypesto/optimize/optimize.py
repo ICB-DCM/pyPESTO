@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, Iterable, Union
+from collections.abc import Iterable
+from typing import Callable, Union
 from warnings import warn
 
 from ..engine import Engine, SingleCoreEngine
@@ -29,7 +30,7 @@ def minimize(
     startpoint_method: Union[StartpointMethod, Callable, bool] = None,
     result: Result = None,
     engine: Engine = None,
-    progress_bar: bool = True,
+    progress_bar: bool = None,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
     filename: Union[str, Callable, None] = None,
@@ -43,22 +44,22 @@ def minimize(
     problem:
         The problem to be solved.
     optimizer:
-        The optimizer to be used n_starts times.
+        The optimizer to be used `n_starts` times.
     n_starts:
         Number of starts of the optimizer.
     ids:
         Ids assigned to the startpoints.
     startpoint_method:
-        Method for how to choose start points. False means the optimizer does
-        not require start points, e.g. for the 'PyswarmOptimizer'.
+        Method for how to choose start points. ``False`` means the optimizer does
+        not require start points, e.g. for the :class:`pypesto.optimize.PyswarmOptimizer`.
         **Deprecated. Use ``problem.startpoint_method`` instead.**
     result:
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
         a new object is created.
     engine:
-        Parallelization engine. Defaults to sequential execution on a
-        SingleCoreEngine.
+        Parallelization engine. Defaults to sequential execution using
+        :class:`pypesto.engine.SingleCoreEngine`.
     progress_bar:
         Whether to display a progress bar.
     options:
@@ -68,18 +69,17 @@ def minimize(
     filename:
         Name of the hdf5 file, where the result will be saved. Default is
         None, which deactivates automatic saving. If set to
-        "Auto" it will automatically generate a file named
-        `year_month_day_profiling_result.hdf5`.
-        Optionally a method, see docs for `pypesto.store.auto.autosave`.
+        ``Auto`` it will automatically generate a file named
+        ``year_month_day_profiling_result.hdf5``.
+        Optionally a method, see docs for :func:`pypesto.store.auto.autosave`.
     overwrite:
         Whether to overwrite `result/optimization` in the autosave file
         if it already exists.
 
     Returns
     -------
-    result:
-        Result object containing the results of all multistarts in
-        `result.optimize_result`.
+    Result object containing the results of all multistarts in
+    `result.optimize_result`.
     """
     # optimizer
     if optimizer is None:
@@ -96,8 +96,10 @@ def minimize(
             startpoint_method = problem.startpoint_method
     else:
         warn(
-            "Passing `startpoint_method` directly is deprecated, use `problem.startpoint_method` instead.",
+            "Passing `startpoint_method` directly is deprecated, "
+            "use `problem.startpoint_method` instead.",
             DeprecationWarning,
+            stacklevel=2,
         )
 
     # convert startpoint method to class instance

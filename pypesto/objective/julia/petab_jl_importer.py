@@ -1,9 +1,10 @@
 """Contains the PetabJlImporter class."""
+
 from __future__ import annotations
 
 import logging
 import os.path
-from typing import Iterable, List, Optional, Tuple, Union
+from collections.abc import Iterable
 
 import numpy as np
 
@@ -50,12 +51,12 @@ class PetabJlImporter:
     @staticmethod
     def from_yaml(
         yaml_file: str,
-        ode_solver_options: Optional[dict] = None,
-        gradient_method: Optional[str] = None,
-        hessian_method: Optional[str] = None,
-        sparse_jacobian: Optional[bool] = None,
-        verbose: Optional[bool] = None,
-        directory: Optional[str] = None,
+        ode_solver_options: dict | None = None,
+        gradient_method: str | None = None,
+        hessian_method: str | None = None,
+        sparse_jacobian: bool | None = None,
+        verbose: bool | None = None,
+        directory: str | None = None,
     ) -> PetabJlImporter:
         """
         Create a `PetabJlImporter` from a yaml file.
@@ -99,7 +100,7 @@ class PetabJlImporter:
         )
 
     def create_objective(
-        self, precompile: Optional[bool] = True
+        self, precompile: bool | None = True
     ) -> PEtabJlObjective:
         """
         Create a `pypesto.objective.PEtabJlObjective` from the PEtab.jl problem.
@@ -112,7 +113,6 @@ class PetabJlImporter:
         precompile:
             Whether to precompile the julia module for speed up in
             multistart optimization.
-
         """
         # lazy imports
         try:
@@ -121,7 +121,7 @@ class PetabJlImporter:
             raise ImportError(
                 "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
-            )
+            ) from None
         if self.source_file is None:
             self.source_file = f"{self.module}.jl"
 
@@ -144,10 +144,10 @@ class PetabJlImporter:
 
     def create_problem(
         self,
-        x_guesses: Optional[Iterable[float]] = None,
-        lb_init: Union[np.ndarray, List[float], None] = None,
-        ub_init: Union[np.ndarray, List[float], None] = None,
-        precompile: Optional[bool] = True,
+        x_guesses: Iterable[float] | None = None,
+        lb_init: np.ndarray | list[float] | None = None,
+        ub_init: np.ndarray | list[float] | None = None,
+        precompile: bool | None = True,
     ) -> Problem:
         """
         Create a `pypesto.Problem` from the PEtab.jl problem.
@@ -181,11 +181,11 @@ class PetabJlImporter:
 
 
 def _get_default_options(
-    ode_solver_options: Union[dict, None] = None,
-    gradient_method: Union[str, None] = None,
-    hessian_method: Union[str, None] = None,
-    sparse_jacobian: Union[str, None] = None,
-    verbose: Union[str, None] = None,
+    ode_solver_options: dict | None = None,
+    gradient_method: str | None = None,
+    hessian_method: str | None = None,
+    sparse_jacobian: str | None = None,
+    verbose: str | None = None,
 ) -> dict:
     """
     If values are not specified, get default values for the options.
@@ -263,7 +263,7 @@ def _get_default_options(
 
 def _write_julia_file(
     yaml_file: str, options: dict, directory: str
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """
     Write the Julia file.
 
@@ -309,7 +309,7 @@ def _write_julia_file(
         f"found at {link_to_options}\n"
         f"petabProblem = PEtabODEProblem(\n\t"
         f"petabModel,\n\t"
-        f"ode_solver=ODESolver({odeSolvOpt_str}),\n\t"
+        f"odesolver=ODESolver({odeSolvOpt_str}),\n\t"
         f"gradient_method=:{options['gradient_method']},\n\t"
         f"hessian_method=:{options['hessian_method']},\n\t"
         f"sparse_jacobian={options['sparse_jacobian']},\n\t"

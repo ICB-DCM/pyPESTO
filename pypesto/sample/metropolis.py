@@ -1,12 +1,13 @@
-from typing import Dict, Sequence, Union
+from collections.abc import Sequence
+from typing import Union
 
 import numpy as np
-from tqdm import tqdm
 
 from ..history import NoHistory
 from ..objective import NegLogPriors, ObjectiveBase
 from ..problem import Problem
 from ..result import McmcPtResult
+from ..util import tqdm
 from .sampler import InternalSample, InternalSampler
 
 
@@ -36,7 +37,7 @@ class MetropolisSampler(InternalSampler):
     * https://github.com/ICB-DCM/PESTO/blob/master/private/performPT.m
     """
 
-    def __init__(self, options: Dict = None):
+    def __init__(self, options: dict = None):
         super().__init__(options)
         self.problem: Union[Problem, None] = None
         self.neglogpost: Union[ObjectiveBase, None] = None
@@ -50,8 +51,8 @@ class MetropolisSampler(InternalSampler):
     def default_options(cls):
         """Return the default options for the sampler."""
         return {
-            'std': 1.0,  # the proposal standard deviation
-            'show_progress': True,  # whether to show the progress
+            "std": 1.0,  # the proposal standard deviation
+            "show_progress": None,  # whether to show the progress
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -73,10 +74,10 @@ class MetropolisSampler(InternalSampler):
         lpost = -self.trace_neglogpost[-1]
         lprior = -self.trace_neglogprior[-1]
 
-        show_progress = self.options['show_progress']
+        show_progress = self.options.get("show_progress", None)
 
         # loop over iterations
-        for _ in tqdm(range(int(n_samples)), disable=not show_progress):
+        for _ in tqdm(range(int(n_samples)), enable=show_progress):
             # perform step
             x, lpost, lprior = self._perform_step(
                 x=x, lpost=lpost, lprior=lprior, beta=beta
@@ -98,7 +99,7 @@ class MetropolisSampler(InternalSampler):
         temper_lpost:
             Whether to temperate the posterior or only the likelihood.
         """
-        self.options['show_progress'] = False
+        self.options["show_progress"] = False
         self.temper_lpost = temper_lpost
 
     def _perform_step(
@@ -127,6 +128,14 @@ class MetropolisSampler(InternalSampler):
 
         # compute log prior
         lprior_new = -self.neglogprior(x_new)
+
+        # if lpost_new is -inf, x_new will not be accepted
+        if lpost_new == -np.inf:
+            # update proposal
+            self._update_proposal(
+                x, lpost, -np.inf, len(self.trace_neglogpost) + 1
+            )
+            return x, lpost, lprior
 
         if not self.temper_lpost:
             # extract current log likelihood value
@@ -161,7 +170,7 @@ class MetropolisSampler(InternalSampler):
 
     def _propose_parameter(self, x: np.ndarray):
         """Propose a step."""
-        x_new: np.ndarray = x + self.options['std'] * np.random.randn(len(x))
+        x_new: np.ndarray = x + self.options["std"] * np.random.randn(len(x))
         return x_new
 
     def _update_proposal(

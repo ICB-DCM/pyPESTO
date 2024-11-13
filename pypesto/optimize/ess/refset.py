@@ -1,6 +1,6 @@
 """ReferenceSet functionality for scatter search."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -65,7 +65,15 @@ class RefSet:
             self.fx = fx
 
         self.n_stuck = np.zeros(shape=[dim])
-        self.attributes: Dict[Any, np.array] = {}
+        self.attributes: dict[Any, np.array] = {}
+
+    def __repr__(self):
+        fx = (
+            f", fx=[{np.min(self.fx)} ... {np.max(self.fx)}]"
+            if self.fx is not None and len(self.fx) >= 2
+            else ""
+        )
+        return f"RefSet(dim={self.dim}{fx})"
 
     def sort(self):
         """Sort RefSet by quality."""
@@ -80,7 +88,7 @@ class RefSet:
         self,
         n_diverse: int,
     ):
-        """Create initial reference set from random parameters.
+        """Create an initial reference set from random parameters.
 
         Sample ``n_diverse`` random points, populate half of the RefSet using
         the best solutions and fill the rest with random points.
@@ -90,7 +98,7 @@ class RefSet:
         self.initialize_from_array(x_diverse=x_diverse, fx_diverse=fx_diverse)
 
     def initialize_from_array(self, x_diverse: np.array, fx_diverse: np.array):
-        """Create initial reference set using the provided points.
+        """Create an initial reference set using the provided points.
 
         Populate half of the RefSet using the best given solutions and fill the
         rest with a random selection from the remaining points.
@@ -131,14 +139,29 @@ class RefSet:
 
         Assumes RefSet is sorted.
         """
+        # Compare [PenasGon2007]
+        #  Note that the main text states that distance between the two points
+        #  is normalized to the bounds of the search space. However,
+        #  Algorithm 1, line 9 normalizes to x_j instead. The accompanying
+        #  code does normalize to max(abs(x_i), abs(x_j)).
+        # Normalizing to the bounds of the search space seems more reasonable.
+        #  Otherwise, for a parameter with bounds [lb, ub],
+        #  where (ub-lb)/ub < proximity_threshold, we would never find an
+        #  admissible point.
         x = self.x
+        ub, lb = self.evaluator.problem.ub, self.evaluator.problem.lb
+
+        def normalize(x):
+            """Normalize parameter vector to the bounds of the search space."""
+            return (x - lb) / (ub - lb)
+
         for i in range(self.dim):
             for j in range(i + 1, self.dim):
                 # check proximity
                 # zero-division may occur here
-                with np.errstate(divide='ignore', invalid='ignore'):
+                with np.errstate(divide="ignore", invalid="ignore"):
                     while (
-                        np.max(np.abs((x[i] - x[j]) / x[j]))
+                        np.max(np.abs(normalize(x[i]) - normalize(x[j])))
                         <= self.proximity_threshold
                     ):
                         # too close. replace x_j.
@@ -160,6 +183,47 @@ class RefSet:
         """
         Add an attribute array to the refset members.
 
+        An attribute can be any 1D array of the same length as the refset.
         The added array will be sorted together with the refset members.
         """
+        if len(values) != self.dim:
+            raise ValueError("Attribute length does not match refset length.")
         self.attributes[name] = values
+
+    def resize(self, new_dim: int):
+        """
+        Resize the refset.
+
+        If the dimension does not change, do nothing.
+        If size is decreased, drop entries from the end (i.e., the worst
+        values, assuming it is sorted). If size is increased, the new
+        entries are filled with randomly sampled parameters and the refset is
+        sorted.
+
+        NOTE: Any attributes are just truncated or filled with zeros.
+        """
+        if new_dim == self.dim:
+            return
+
+        if new_dim < self.dim:
+            # shrink
+            self.fx = self.fx[:new_dim]
+            self.x = self.x[:new_dim]
+            self.n_stuck = self.n_stuck[:new_dim]
+            for attribute_name, attribute_values in self.attributes.items():
+                self.attributes[attribute_name] = attribute_values[:new_dim]
+            self.dim = new_dim
+        else:
+            # grow
+            new_x, new_fx = self.evaluator.multiple_random(new_dim - self.dim)
+            self.fx = np.append(self.fx, new_fx)
+            self.x = np.vstack((self.x, new_x))
+            self.n_stuck = np.append(
+                self.n_stuck, np.zeros(shape=(new_dim - self.dim))
+            )
+            for attribute_name, attribute_values in self.attributes.items():
+                self.attributes[attribute_name] = np.append(
+                    attribute_values, np.zeros(shape=(new_dim - self.dim))
+                )
+            self.dim = new_dim
+            self.sort()

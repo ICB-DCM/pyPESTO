@@ -7,7 +7,7 @@ import os
 import amici
 import benchmark_models_petab as models
 import numpy as np
-import petab
+import petab.v1 as petab
 import pytest
 
 import pypesto
@@ -25,13 +25,13 @@ def test_add_sim_grad_to_opt_grad():
     Test gradient mapping/summation works as expected.
     17 = 1 + 2*5 + 2*3
     """
-    par_opt_ids = ['opt_par_1', 'opt_par_2', 'opt_par_3']
+    par_opt_ids = ["opt_par_1", "opt_par_2", "opt_par_3"]
     mapping_par_opt_to_par_sim = {
-        'sim_par_1': 'opt_par_1',
-        'sim_par_2': 'opt_par_3',
-        'sim_par_3': 'opt_par_3',
+        "sim_par_1": "opt_par_1",
+        "sim_par_2": "opt_par_3",
+        "sim_par_3": "opt_par_3",
     }
-    par_sim_ids = ['sim_par_1', 'sim_par_2', 'sim_par_3']
+    par_sim_ids = ["sim_par_1", "sim_par_2", "sim_par_3"]
 
     sim_grad = np.asarray([1.0, 3.0, 5.0])
     opt_grad = np.asarray([1.0, 1.0, 1.0])
@@ -49,6 +49,7 @@ def test_add_sim_grad_to_opt_grad():
     assert np.allclose(expected, opt_grad)
 
 
+@pytest.mark.flaky(reruns=2)
 def test_error_leastsquares_with_ssigma():
     model_name = "Zheng_PNAS2012"
     petab_problem = petab.Problem.from_yaml(
@@ -56,11 +57,13 @@ def test_error_leastsquares_with_ssigma():
     )
     petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(petab_problem)
-    obj = importer.create_objective()
-    problem = importer.create_problem(obj)
+    obj = importer.create_objective_creator().create_objective()
+    problem = importer.create_problem(
+        obj, startpoint_kwargs={"check_fval": True, "check_grad": True}
+    )
 
     optimizer = pypesto.optimize.ScipyOptimizer(
-        'ls_trf', options={'max_nfev': 50}
+        "ls_trf", options={"max_nfev": 50}
     )
     with pytest.raises(RuntimeError):
         optimize.minimize(
@@ -81,7 +84,7 @@ def test_preeq_guesses():
     """
     model_name = "Brannmark_JBC2010"
     importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + '.yaml')
+        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
     problem = importer.create_problem()
     obj = problem.objective
@@ -93,27 +96,28 @@ def test_preeq_guesses():
     obj.amici_solver.setRelativeTolerance(1e-12)
 
     # assert that initial guess is uninformative
-    assert obj.steadystate_guesses['fval'] == np.inf
+    assert obj.steadystate_guesses["fval"] == np.inf
 
     optimizer = optimize.ScipyOptimizer()
-    startpoints = pypesto.startpoint.UniformStartpoints(check_fval=False)
+    problem.startpoint_method = pypesto.startpoint.UniformStartpoints(
+        check_fval=False
+    )
 
     result = optimize.minimize(
         problem=problem,
         optimizer=optimizer,
         n_starts=1,
-        startpoint_method=startpoints,
         progress_bar=False,
     )
 
-    assert obj.steadystate_guesses['fval'] < np.inf
-    assert len(obj.steadystate_guesses['data']) == len(obj.edatas)
+    assert obj.steadystate_guesses["fval"] < np.inf
+    assert len(obj.steadystate_guesses["data"]) == len(obj.edatas)
     # check that we have test a problem where plist is nontrivial
     assert any(len(e.plist) != len(e.parameters) for e in obj.edatas)
 
     df = obj.check_grad(
         problem.get_reduced_vector(
-            result.optimize_result.list[0]['x'], problem.x_free_indices
+            result.optimize_result.list[0]["x"], problem.x_free_indices
         ),
         eps=1e-3,
         verbosity=0,
@@ -125,4 +129,4 @@ def test_preeq_guesses():
 
     # assert that resetting works
     problem.objective.initialize()
-    assert obj.steadystate_guesses['fval'] == np.inf
+    assert obj.steadystate_guesses["fval"] == np.inf

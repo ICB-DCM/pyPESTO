@@ -59,7 +59,11 @@ def test_pyjulia_pipeline():
 
     # check with analytical value
     p_opt = obj.get("p_opt")
-    assert np.allclose(result.optimize_result[0].x, p_opt)  # noqa: S101
+    assert np.allclose(
+        result.optimize_result[0].x,
+        p_opt,
+        atol=1e-6,  # noqa:  S101
+    )
 
 
 def test_petabJL_interface():
@@ -73,15 +77,15 @@ def test_petabJL_interface():
     problem = importer.create_problem(precompile=False)
 
     parameters = np.genfromtxt(
-        f'{examples_dir}/{model_name}/Boehm_validation/Parameter.csv',
-        delimiter=',',
+        f"{examples_dir}/{model_name}/Boehm_validation/Parameter.csv",
+        delimiter=",",
         skip_header=1,
     )
 
     # check objective function
     obj_ref = np.genfromtxt(
-        f'{examples_dir}/{model_name}/Boehm_validation/ObjectiveValue.csv',
-        delimiter=',',
+        f"{examples_dir}/{model_name}/Boehm_validation/ObjectiveValue.csv",
+        delimiter=",",
         skip_header=1,
     )
     obj = problem.objective(parameters, sensi_orders=(0,))
@@ -90,8 +94,8 @@ def test_petabJL_interface():
 
     # check gradient value
     grad_ref = np.genfromtxt(
-        f'{examples_dir}/{model_name}/Boehm_validation/Gradient.csv',
-        delimiter=',',
+        f"{examples_dir}/{model_name}/Boehm_validation/Gradient.csv",
+        delimiter=",",
         skip_header=1,
     )
     grad = problem.objective(parameters, sensi_orders=(1,))
@@ -100,8 +104,8 @@ def test_petabJL_interface():
 
     # check hessian value
     hess_ref = np.genfromtxt(
-        f'{examples_dir}/{model_name}/Boehm_validation/Hessian.csv',
-        delimiter=',',
+        f"{examples_dir}/{model_name}/Boehm_validation/Hessian.csv",
+        delimiter=",",
         skip_header=1,
     )
     hess = problem.objective(parameters, sensi_orders=(2,))

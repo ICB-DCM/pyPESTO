@@ -19,14 +19,18 @@ nbs_1=(
   'amici.ipynb'
   'conversion_reaction.ipynb'
   'fixed_parameters.ipynb'
+  'history_usage.ipynb'
   'petab_import.ipynb'
   'prior_definition.ipynb'
   'custom_objective_function.ipynb'
   'store.ipynb'
   'synthetic_data.ipynb'
-  'hierarchical.ipynb'
-  'example_ordinal.ipynb'
-  'example_nonlinear_monotone.ipynb'
+  'relative_data.ipynb'
+  'ordinal_data.ipynb'
+  'censored_data.ipynb'
+  'semiquantitative_data.ipynb'
+  'getting_started.ipynb'
+  'roadrunner.ipynb'
 )
 
 # Sampling notebooks
@@ -34,6 +38,7 @@ nbs_2=(
   'sampler_study.ipynb'
   'sampling_diagnostics.ipynb'
   'model_selection.ipynb'
+  'model_evidence_and_bayes_factors.ipynb'
 )
 
 # All tested notebooks
@@ -52,7 +57,7 @@ fi
 
 run_notebook () {
   # Run a notebook
-  tempfile=$(tempfile)
+  tempfile=$(mktemp)
   jupyter nbconvert \
     --ExecutePreprocessor.timeout=-1 --debug --stdout --execute \
     --to markdown $@ &> $tempfile

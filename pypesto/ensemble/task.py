@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, List
+from typing import Any, Callable
 
 import numpy as np
 
@@ -32,9 +32,9 @@ class EnsembleTask(Task):
         self.vectors = vectors
         self.id = id
 
-    def execute(self) -> List[Any]:
+    def execute(self) -> list[Any]:
         """Execute the task."""
-        logger.info(f"Executing task {self.id}.")
+        logger.debug(f"Executing task {self.id}.")
         results = []
         for index in range(self.vectors.shape[1]):
             results.append(self.method(self.vectors[:, index]))

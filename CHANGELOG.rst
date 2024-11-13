@@ -2,6 +2,235 @@ Release notes
 =============
 
 
+0.5 series
+..........
+
+
+0.5.4 (2024-10-19)
+-------------------
+
+- **Breaking Changes**
+    - Remove Aesara support (#1453, #1455)
+- General
+    - CI improvements (#1436, #1437, #1438, #1439, #1440, #1443, #1473, #1484, #1486, #1490, #1485)
+    - Update references/documentation (#1404, #1456, #1474, #1479, #1483, #1470, #1498)
+- Profile
+    - Improve Profiling Code (#1447)
+- Visualize
+    - allow log and/or linear scale for visualization (#1435)
+    - More informative error message for start indices. (#1472)
+- Optimization
+    - SacessOptimizer: Fix acceptance threshold for objective improvement (#1457)
+    - SacessOptimizer: expose more hyperparameters + minor fixes (#1459, #1476)
+    - SacessOptimizer, ESSOptimizer: Bound-normalize parameters for proximity check (#1462)
+    - ESSOptimizer: Fix bug in recombination and go-beyond (#1477, #1480)
+- Objective
+    - FD-objective correctly working with fixed parameters (#1446)
+    - Petab Importer reforge (#1442, #1502)
+    - Use cloudpickle for serializing NegLogParameterPriors (#1467)
+    - Update PEtab.jl integration to match version 3.X (#1489)
+- Sampling
+    - Bayes Factor Tutorial (#1444)
+- Ensemble
+    - Added HPD calculation to ensemble (#1431)
+
+
+0.5.3 (2024-08-01)
+-------------------
+
+* General
+	* Notebook on history usage and comparison of multiple results. (#1389)
+	* GHA/test improvements (#1423, #1408, #1430)
+	* Numpy 2.0 compatibility (#1420, #1433)
+* PEtab
+	* Issue a warning if a fixed parameter has a prior defined (#1413)
+	* Update to libpetab 0.4.0 (#1422)
+* Optimize
+    * Added a Result object with lazy hdf5 loading (#1421)
+* RoadRunner
+	* Roadrunner handling of petab issue 0019 (#1419)
+	* Disentangle amici and roadrunner (#1429)
+* Amici
+	* Require `return_dict` in `ObjectiveBase.call_unprocessed` (fixes AMICI posterior RData) (#1424)
+* Hierarchical
+	* Visualize: visualization of estimated observable mapping (#1409)
+	* Hierarchical: avoid recomputing inner parameters if simulation failed (#1426)
+* Visualization
+	* Fixing Aggregated Objective Visualisations (#1411)
+
+
+0.5.2 (2024-05-27)
+-------------------
+
+* **New Feature**: Variational inference with PyMC (#1306)
+* PEtab
+    * Import of petab independent of amici (#1355)
+* Problem
+    * Added option to sample startpoints for a problem, from the problem directly. (#1364)
+    * More detailed defaults for problem.get_full_vector (#1393)
+    * Save pypesto and python version to the problem. (#1382)
+* Objective
+    * Fix calling priors in sampling with fixed parameters (#1378)
+    * Fix JaxObjective (#1400)
+* Optimize
+    * ESS optimizers: suppress divide-by-zero warnings; report n_eval (#1380)
+    * SacessOptimizer: collect worker stats (#1381)
+    * Add load method to Hdf5AmiciHistory (#1370)
+* Hierarchical
+    * Relative: fix log of zero for default 0 sigma values (#1377)
+* Sample
+    * Fix pypesto.sample.geweke_test.spectrum for nfft<=3 (#1388)
+* Visualize
+    * Handle correlation plot with nans (#1365)
+* General
+    * Remove scipy requirement from pypesto[pymc] (#1376)
+    * Require and test python >=3.10 according to NEP 29 (#1379)
+    * Fix various warnings (#1384)
+    * Small changes to GHA actions and tests (#1386, #1387, #1402, #1385)
+    * Improve Documentation (#1394, #1391, #1399, #1292, #1390)
+
+
+0.5.0 (2024-04-10)
+-------------------
+
+* General
+    * Include pymc in the documentation. (#1305)
+    * Ruff Codechecks (#1307)
+    * Support RoadRunner as simulator for PEtab problems (#1336, #1347, #1348, #1363)
+* Hierarchical
+   * Semiquant: Fix spline knot initialization (#1313, #1323)
+   * Semiquant: Add spline knots to the optimization result (#1314)
+   * Semiquant: fix inner opt tolerance (#1330)
+   * Relative: Fix return of relative calculator if sim fails (#1315)
+   * Relative: Hierarchical optimization: fix unnecessary simulation (#1327)
+   * Relative: Fix return of inner parameters on objective call (#1333)
+* Optimize
+   * Support ipopt with gradient approximation (#1310)
+   * Deprecate CmaesOptimizer in favor of CmaOptimizer (#1311)
+   * ESSOptimizer: Respect local_n2 in case of failed initial local search (#1328)
+   * Remove CESSOptimizer (#1320)
+   * SacessOptimizer: use 'spawn' start method for multiprocessing (#1353)
+* PEtab
+   * Fix unwanted amici model recompilation in PEtab importer (#1319)
+* Sample
+   * Adding Thermodynamic Integration (#1326, #1361)
+   * Dynesty warnings added (#1324)
+   * Dynesty: method to save raw results (#1331)
+* Ensembles
+   * Ensembles: don't expect OptimizerResult.id to be convertible to `int` (#1351)
+* Misc
+   * Updated Code to match dependency updates (#1316, #1344, #1346, #1345)
+   * Ignore code formatting in git blame (#1317)
+   * Updated deployment method (#1341, #1371, #1373)
+   * add pyupgrade to codechecks (#1352)
+   * Temporarily require scipy<1.13.0 for pypesto[pymc] (#1360)
+
+
+0.4 series
+..........
+
+
+0.4.2 (2024-01-30)
+-------------------
+
+* General
+    * Stabilize tests (#1240, #1254, #1300, #1302, #1303)
+    * Update type annotations and documentations (#1239, #1248, #1255, #1258, #1251, #1268, #1275)
+    * GHA/Codeowner changes (#1260, #1261, #1259, #1262, #1285)
+    * Update utility functions (#1243)
+    * Refactor progress bars (#1272)
+    * Clear Notebook output(#1246, #1277, #1274, #1271, #1276, #1278)
+* Optimize
+    * (Sac)ESSOptimizer: History of best objective values (#1212)
+    * Fix missing fixed parameters in scatter search results (#1265)
+    * Fix TypeError in pypesto.result.optimize.OptimizerResult.summary if x0 is None (#1266)
+    * ESSOptimizer: Include results for local searches in OptimizeResult (#1270)
+* **New Feature**: Spline Approximation (#1222)
+* Select
+    * Allow for hierarchical problems (#1241)
+    * custom minimize method (#1264)
+    * Set estimated parameters in petab_select.Models (#1287)
+* Hierarchical
+    * Log space startpoint sampling (#1242)
+    * Support for box constraints on offset and scaling parameters (#1238)
+    * restructuring and add relative to InnerCalculatorCollector (#1245)
+    * Semiquantitative: Robust regularization calculation (#1297)
+* History
+    * Support pathlib.Path for result/history files (#1247)
+    * Extended Amici history (#1263)
+* Visualize
+    * Fix time trajectories for hierarchical problems (#1213)
+    * Fix hierarchical parameter plotting for all optimizers (#1244)
+    * Sacess history plot (#1250)
+* Objective
+    * Fix PEtab.jl version to before 2.5.0 (temporarily) (#1256)
+* PEtab
+    * Enable Importer passing verbose to create_model (#1269)
+    * PetabImporter: version-specific amici model directories (#1283)
+* Problem
+    * Problem: add inner problem names, bounds and hierarchical flag (#1282)
+    * Use warnings.warn instead of logging.warn when loading Problem from HDF5 without an Objective (#1253)
+* Ensemble
+    * EnsemblePrediction: remove "no predictor" warning (#1293)
+
+
+0.4.1 (2023-12-05)
+-------------------
+
+* General
+    * Documentation (#1214, #1227, #1223, #1230, #1229)
+    * Update code to avoid deprecations and warnings (#1217, #1219)
+    * Updated codeownership (#1232, #1233)
+    * Update Citation (#1221)
+    * Improved Testing (#1218, #1216, #1231)
+* History:
+    * Enable converting MemoryHistory to Hdf5History (#1211)
+* Profile:
+    * Code simplification and other clean up (#1225)
+    * Fix incorrect indexing in `pypesto.profile.profile_next_guess.get_reg_polynomial` (#1226)
+* Optimize
+    * Warnings for scipy together with laplace prior (#1228)
+* Visualization:
+    * Skip the history trace, if trace is empty. Occurs for infinite initial values. (#1234)
+* Ensemble
+    * Fix Ensemble.from_optimization_endpoints (#1237)
+
+
+0.4.0 (2023-11-22)
+-------------------
+
+* General
+    * Documentation (#1140, #1146, #1152, #1149, #1192)
+    * Updated Jupyter Notebooks (#1141)
+    * Update code to avoid deprecations/warnings (#1158, #1184)
+    * Updated maintainers and codeownership (#1171, #1170)
+    * Improve tests and GHA (#1178, #1185, #1188, #1190, #1193, #1199, #1198, #1197, #1208)
+* Profile:
+    * Fix problem overwrite of profiling (#1153)
+    * Add warning, trying to profile fixed parameter (#1155)
+    * ProfileOptions: add some basic integrity checking (#1163)
+    * Fix pypesto.profile.parameter_profile incorrectly assuming symmetric bounds (#1166)
+    * Improve pypesto/profile/profile_next_guess.py (#1167)
+    * Parameter profile: retry optimization in case of failure (#1168)
+    * Fix incorrect types in pypesto.result.profile.ProfilerResult (#1210)
+* Problem:
+    * Add/forward startpoint_kwargs in PetabImporter.create_problem (#1135)
+    * Support valid AMICI noise distributions that are invalid in PEtab (#1157)
+    * Fix startpoint sampling for PEtab-derived problems with fixed parameters (#1169)
+* Optimize
+    * Log traceback in case of exceptions during optimizations (#1156)
+    * Saccess optimizer improvements (#1177, #1187, #1194, #1195, #1201, #1202, #1204)
+    * ESS optimizer improvements (#1176, #1181, #1182)
+    * Fix check for allow_failed_starts (#1180)
+    * Handle message and exitflag in histories (#1203)
+    * Fix indexing error for 0-dimensional HDF5 datasets (#1206)
+* Hierarchical:
+    * Fix HierarchicalAmiciCalculator.__call__ not setting 'hess' in result (#1161)
+* Visualization:
+    * Fix legend argument checking for waterfall/parameter/history plots (#1139)
+    * Fix waterfall start indices for multiple results (#1200)
+
+
 0.3 series
 ..........
 
