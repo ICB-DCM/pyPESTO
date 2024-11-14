@@ -41,8 +41,10 @@ logger = logging.getLogger(__name__)
 class SacessOptimizer:
     """SACESS optimizer.
 
-    A shared-memory-based implementation of the SaCeSS algorithm presented in
-    :footcite:t:`PenasGon2017`. Multiple processes (`workers`) run
+    A shared-memory-based implementation of the
+    `Self-Adaptive Cooperative Enhanced Scatter Search` (SaCeSS) algorithm
+    presented in :footcite:t:`PenasGon2017`. This is a meta-heuristic for
+    global optimization. Multiple processes (`workers`) run
     :class:`enhanced scatter searches (ESSs) <ESSOptimizer>` in parallel.
     After each ESS iteration, depending on the outcome, there is a chance
     of exchanging good parameters, and changing ESS hyperparameters to those of
@@ -50,6 +52,39 @@ class SacessOptimizer:
 
     :class:`SacessOptimizer` can be used with or without a local optimizer, but
     it is highly recommended to use one.
+
+    A basic example using :class:`SacessOptimizer` to minimize the Rosenbrock
+    function:
+
+    >>> from pypesto.optimize import SacessOptimizer
+    >>> from pypesto.problem import Problem
+    >>> from pypesto.objective import Objective
+    >>> import scipy as sp
+    >>> import numpy as np
+    >>> import logging
+    >>> # Define some test Problem
+    >>> objective = Objective(
+    ...     fun=sp.optimize.rosen,
+    ...     grad=sp.optimize.rosen_der,
+    ...     hess=sp.optimize.rosen_hess,
+    ... )
+    >>> dim = 6
+    >>> problem = Problem(
+    ...     objective=objective,
+    ...     lb=-5 * np.ones((dim, 1)),
+    ...     ub=5 * np.ones((dim, 1)),
+    ... )
+    >>> # Create and run the optimizer
+    >>> sacess = SacessOptimizer(
+    ...     num_workers=2,
+    ...     max_walltime_s=5,
+    ...     sacess_loglevel=logging.WARNING
+    ... )
+    >>> result = sacess.minimize(problem)
+
+    .. seealso::
+
+    :class:`pypesto.optimize.ess.ess.ESSOptimizer`
 
     .. footbibliography::
 
@@ -83,11 +118,25 @@ class SacessOptimizer:
             process. I.e., the length of this list is the number of ESSs.
             Ideally, this list contains some more conservative and some more
             aggressive configurations.
-            Resource limits such as ``max_eval`` apply to a single CESS
+            Resource limits such as ``max_eval`` apply to a single ESS
             iteration, not to the full search.
             Mutually exclusive with ``num_workers``.
+
             Recommended default settings can be obtained from
-            :func:`get_default_ess_options`.
+            :func:`get_default_ess_options`. For example, to run
+            :class:`SacessOptimizer` without a local optimizer, use:
+
+            >>> from pypesto.optimize.ess import get_default_ess_options
+            >>> ess_init_args = get_default_ess_options(
+            ...     num_workers=12,
+            ...     dim=10, # usually problem.dim
+            ...     local_optimizer=False,
+            ... )
+            >>> ess_init_args  # doctest: +ELLIPSIS, +NORMALIZE_WHITESPACE
+            [{'dim_refset': 5, 'balance': 0.0, 'local_n1': 1, 'local_n2': 1},
+            ...
+             {'dim_refset': 7, 'balance': 1.0, 'local_n1': 4, 'local_n2': 4}]
+
         num_workers:
             Number of workers to be used. If this argument is given,
             (different) default ESS settings will be used for each worker.
@@ -112,9 +161,10 @@ class SacessOptimizer:
             parallel have a unique `tmpdir`.
         mp_start_method:
             The start method for the multiprocessing context.
-            See :mod:`multiprocessing` for details.
+            See :mod:`multiprocessing` for details. Running `SacessOptimizer`
+            under Jupyter may require ``mp_start_method="fork"``.
         options:
-            Further optimizer hyperparameters.
+            Further optimizer hyperparameters, see :class:`SacessOptions`.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -178,11 +228,12 @@ class SacessOptimizer:
 
         Returns
         -------
-        Result object with optimized parameters in
-        :attr:`pypesto.Result.optimize_result`.
-        Results are sorted by objective. At least the best parameters are
-        included. Additional results may be included - this is subject to
-        change.
+        _:
+            Result object with optimized parameters in
+            :attr:`pypesto.Result.optimize_result`.
+            Results are sorted by objective. At least the best parameters are
+            included. Additional results may be included - this is subject to
+            change.
         """
         if startpoint_method is not None:
             warn(
@@ -392,10 +443,10 @@ class SacessManager:
         self._logger = logging.getLogger()
         self._result_queue = shmem_manager.Queue()
 
-    def get_best_solution(self) -> tuple[np.array, float]:
+    def get_best_solution(self) -> tuple[np.ndarray, float]:
         """Get the best objective value and corresponding parameters."""
         with self._lock:
-            return np.array(self._best_known_x), self._best_known_fx.value
+            return np.ndarray(self._best_known_x), self._best_known_fx.value
 
     def reconfigure_worker(self, worker_idx: int) -> dict:
         """Reconfigure the given worker.
@@ -416,7 +467,7 @@ class SacessManager:
 
     def submit_solution(
         self,
-        x: np.array,
+        x: np.ndarray,
         fx: float,
         sender_idx: int,
         elapsed_time_s: float,
@@ -703,7 +754,7 @@ class SacessWorker:
                 f"neval: {self._neval} <= {problem.dim * self._options.adaptation_min_evals}."
             )
 
-    def maybe_update_best(self, x: np.array, fx: float):
+    def maybe_update_best(self, x: np.ndarray, fx: float):
         """Maybe update the best known solution and send it to the manager."""
         rel_change = (
             abs((fx - self._best_known_fx) / fx) if fx != 0 else np.nan
@@ -743,7 +794,7 @@ class SacessWorker:
             )
 
     @staticmethod
-    def replace_solution(refset: RefSet, x: np.array, fx: float):
+    def replace_solution(refset: RefSet, x: np.ndarray, fx: float):
         """Replace the global refset member by the given solution."""
         # [PenasGon2017]_ page 8, top
         if "cooperative_solution" not in refset.attributes:
@@ -841,6 +892,11 @@ def get_default_ess_options(
         or a :obj:`Callable` returning an optimizer instance.
         The latter can be used to propagate walltime limits to the local
         optimizers. See :meth:`SacessFidesFactory.__call__` for an example.
+        The current default optimizer assumes that the optimized objective
+        function can provide its gradient. If this is not the case, the user
+        should provide a different local optimizer or consider using
+        :class:`pypesto.objective.finite_difference.FD` to approximate the
+        gradient using finite differences.
     """
     min_dimrefset = 5
 
@@ -1086,7 +1142,7 @@ class SacessWorkerResult:
         Exit flag of the optimization process.
     """
 
-    x: np.array
+    x: np.ndarray
     fx: float
     n_eval: int
     n_iter: int
