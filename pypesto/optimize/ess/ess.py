@@ -67,8 +67,9 @@ class ESSOptimizer:
 
     The basic steps of ESS are:
 
-    * Initialization: Generate a diverse set of points in the parameter space.
-    * Recombination: Generate new points by recombining the RefSet.
+    * Initialization: Generate a diverse set of points (RefSet) in the
+      parameter space.
+    * Recombination: Generate new points by recombining the RefSet points.
     * Improvement: Improve the RefSet by replacing points with better ones.
 
     The steps are repeated until a stopping criterion is met.
@@ -122,7 +123,7 @@ class ESSOptimizer:
         local_n1: int = 1,
         local_n2: int = 10,
         balance: float = 0.5,
-        local_optimizer: pypesto.optimize.Optimizer | OptimizerFactory = None,
+        local_optimizer: pypesto.optimize.Optimizer | OptimizerFactory | None = None,
         max_eval=None,
         n_diverse: int = None,
         n_procs=None,
@@ -167,8 +168,9 @@ class ESSOptimizer:
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search.
         balance:
-            Quality vs. diversity balancing factor [0, 1]; 0 = only quality;
-            1 = only diversity.
+            Quality vs. diversity balancing factor with
+            :math:`0 \leq balance \leq 1`; ``0`` = only quality,
+            ``1`` = only diversity.
             Affects the choice of starting points for local searches. I.e.,
             whether local optimization should focus on improving the best
             solutions found so far (quality), or on exploring new regions of
