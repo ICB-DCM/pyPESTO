@@ -58,6 +58,7 @@ class AmiciCalculator:
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
+        ensure_fixed_values: dict[str, float] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -86,8 +87,13 @@ class AmiciCalculator:
         fim_for_hess:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
+        ensure_fixed_values:
+            Ensure fixed parameters take a certain value. Keys are parameter
+            IDs, values are the fixed parameter values.
         """
         import amici.petab.conditions
+
+        ensure_fixed_values = ensure_fixed_values or {}
 
         # set order in solver
         sensi_order = 0
@@ -108,6 +114,16 @@ class AmiciCalculator:
             parameter_mapping=parameter_mapping,
             amici_model=amici_model,
         )
+
+        for par_id, val0 in ensure_fixed_values.items():
+            par_idx = amici_model.getParameterIds().index(par_id)
+            for edata in edatas:
+                if (val1 := edata.parameters[par_idx]) != val0:
+                    raise ValueError(
+                        "Unexpected error. The parameter `{par_id}` is "
+                        f"expected to be fixed to {val0}, but is `{val1},"
+                        f"in AMICI edata: {edata}"
+                    )
 
         # run amici simulation
         rdatas = amici.runAmiciSimulations(

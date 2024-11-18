@@ -479,12 +479,13 @@ class AmiciObjective(ObjectiveBase):
             edatas = self.edatas
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
+        # Some parameters may appear estimated in the original compiled model,
+        # but then are fixed during parameter estimation. These can be
+        # removed from the parameter vector.
+        x_dct_free = x_dct.copy()
+        x_dct_fixed = {k: x_dct_free.pop(k) for k in self._fixed_parameter_ids}
         ret = self.calculator(
-            x_dct={
-                par_id: val
-                for par_id, val in x_dct.items()
-                if par_id not in self._fixed_parameter_ids
-            },
+            x_dct=x_dct_free,
             sensi_orders=sensi_orders,
             mode=mode,
             amici_model=self.amici_model,
@@ -494,6 +495,7 @@ class AmiciObjective(ObjectiveBase):
             x_ids=self.x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=self.fim_for_hess,
+            ensure_fixed_values=x_dct_fixed,
         )
 
         nllh = ret[FVAL]
