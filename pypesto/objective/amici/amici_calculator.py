@@ -119,10 +119,10 @@ class AmiciCalculator:
             par_idx = amici_model.getParameterIds().index(par_id)
             for edata in edatas:
                 if (val1 := edata.parameters[par_idx]) != val0:
-                    raise ValueError(
+                    raise AssertionError(
                         f"Unexpected error. The parameter `{par_id}` is "
-                        f"expected to be fixed to {val0}, but is `{val1},"
-                        f"in AMICI edata: {edata}"
+                        f"expected to be fixed to `{val0}`, but is `{val1}`, "
+                        f"in AMICI edata: {edata.id}."
                     )
 
         # run amici simulation
