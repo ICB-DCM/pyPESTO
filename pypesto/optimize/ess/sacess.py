@@ -84,7 +84,7 @@ class SacessOptimizer:
 
     .. seealso::
 
-    :class:`pypesto.optimize.ess.ess.ESSOptimizer`
+       :class:`pypesto.optimize.ess.ess.ESSOptimizer`
 
     References
     ----------
@@ -448,7 +448,7 @@ class SacessManager:
     def get_best_solution(self) -> tuple[np.ndarray, float]:
         """Get the best objective value and corresponding parameters."""
         with self._lock:
-            return np.ndarray(self._best_known_x), self._best_known_fx.value
+            return np.array(self._best_known_x), self._best_known_fx.value
 
     def reconfigure_worker(self, worker_idx: int) -> dict:
         """Reconfigure the given worker.

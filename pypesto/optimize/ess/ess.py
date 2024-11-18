@@ -109,7 +109,7 @@ class ESSOptimizer:
 
     .. seealso::
 
-    :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
+       :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
 
     .. footbibliography::
     """
