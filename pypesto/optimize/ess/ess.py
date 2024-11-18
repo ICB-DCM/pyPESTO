@@ -73,8 +73,16 @@ class ESSOptimizer:
 
     The steps are repeated until a stopping criterion is met.
 
-    ESS is gradient-free, unless a gradient-based local optimizer is used.
+    ESS is gradient-free, unless a gradient-based local optimizer is used
+    (`local_optimizer`).
 
+    Hyperparameters
+    ---------------
+
+    Various hyperparameters control the behavior of ESS.
+    Initialization is controlled by `dim_refset` and `n_diverse`.
+    Local optimizations are controlled by `local_optimizer`, `local_n1`,
+    `local_n2`, and `balance`.
 
     Exit criteria
     -------------
@@ -135,10 +143,11 @@ class ESSOptimizer:
             Maximum number of ESS iterations.
         local_n1:
             Minimum number of iterations before first local search.
+            Ignored if ``local_optimizer=None``.
         local_n2:
             Minimum number of iterations between consecutive local
             searches. Maximally one local search per performed in each
-            iteration.
+            iteration. Ignored if ``local_optimizer=None``.
         local_optimizer:
             Local optimizer for refinement, or a callable that creates an
             :class:`pypesto.optimize.Optimizer` or ``None`` to skip local searches.
@@ -158,8 +167,13 @@ class ESSOptimizer:
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search.
         balance:
-            Quality vs diversity balancing factor [0, 1];
-            0 = only quality; 1 = only diversity
+            Quality vs. diversity balancing factor [0, 1]; 0 = only quality;
+            1 = only diversity.
+            Affects the choice of starting points for local searches. I.e.,
+            whether local optimization should focus on improving the best
+            solutions found so far (quality), or on exploring new regions of
+            the parameter space (diversity).
+            Ignored if ``local_optimizer=None``.
         n_procs:
             Number of parallel processes to use for parallel function
             evaluation. Mutually exclusive with `n_threads`.

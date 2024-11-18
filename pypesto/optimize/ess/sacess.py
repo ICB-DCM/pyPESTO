@@ -86,6 +86,8 @@ class SacessOptimizer:
 
     :class:`pypesto.optimize.ess.ess.ESSOptimizer`
 
+    References
+    ----------
     .. footbibliography::
 
     Attributes
