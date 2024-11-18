@@ -184,6 +184,7 @@ class AmiciObjective(ObjectiveBase):
         self.parameter_mapping = parameter_mapping
         # parameter mapping independent of fixed parameters
         self._parameter_mapping_full = copy.deepcopy(parameter_mapping)
+        self._fixed_parameter_ids = []
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
         if (
@@ -479,7 +480,11 @@ class AmiciObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         ret = self.calculator(
-            x_dct=x_dct,
+            x_dct={
+                par_id: val
+                for par_id, val in x_dct.items()
+                if par_id not in self._fixed_parameter_ids
+            },
             sensi_orders=sensi_orders,
             mode=mode,
             amici_model=self.amici_model,
@@ -679,6 +684,7 @@ class AmiciObjective(ObjectiveBase):
         #  and replace the IDs of all fixed parameters by their respective
         #  values.
         self.parameter_mapping = copy.deepcopy(self._parameter_mapping_full)
+        self._fixed_parameter_ids = [self.x_ids[i] for i in x_fixed_indices]
         if not len(x_fixed_indices):
             return
 
