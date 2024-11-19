@@ -183,8 +183,12 @@ class AmiciObjective(ObjectiveBase):
         #  (relevant for setting ``plist`` in ExpData later on)
         self.parameter_mapping = parameter_mapping
         # parameter mapping independent of fixed parameters
+        #  (i.e., all objective parameters are included as parameter IDs,
+        #  not as their values)
         self._parameter_mapping_full = copy.deepcopy(parameter_mapping)
+        # IDs of fixed `Problem` parameters
         self._fixed_parameter_ids = []
+
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
         if (
@@ -480,10 +484,13 @@ class AmiciObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         # Some parameters may appear estimated in the original compiled model,
-        # but then are fixed during parameter estimation. These can be
-        # removed from the parameter vector.
-        x_dct_free = x_dct.copy()
-        x_dct_fixed = {k: x_dct_free.pop(k) for k in self._fixed_parameter_ids}
+        # but then are fixed during parameter estimation. These are removed
+        # from the parameter vector to avoid warnings about unused parameters.
+        x_dct_free = {
+            par_id: val
+            for par_id, val in x_dct.items()
+            if par_id not in self._fixed_parameter_ids
+        }
         ret = self.calculator(
             x_dct=x_dct_free,
             sensi_orders=sensi_orders,
@@ -495,7 +502,6 @@ class AmiciObjective(ObjectiveBase):
             x_ids=self.x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=self.fim_for_hess,
-            ensure_fixed_values=x_dct_fixed,
         )
 
         nllh = ret[FVAL]
