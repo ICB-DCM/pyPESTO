@@ -75,25 +75,25 @@ class ESSOptimizer:
     The steps are repeated until a stopping criterion is met.
 
     ESS is gradient-free, unless a gradient-based local optimizer is used
-    (`local_optimizer`).
+    (``local_optimizer``).
 
     Hyperparameters
     ---------------
 
     Various hyperparameters control the behavior of ESS.
-    Initialization is controlled by `dim_refset` and `n_diverse`.
-    Local optimizations are controlled by `local_optimizer`, `local_n1`,
-    `local_n2`, and `balance`.
+    Initialization is controlled by ``dim_refset`` and ``n_diverse``.
+    Local optimizations are controlled by ``local_optimizer``, ``local_n1``,
+    ``local_n2``, and ``balance``.
 
     Exit criteria
     -------------
 
-    The optimization stops if any of the following criteria is met:
+    The optimization stops if any of the following criteria are met:
 
-    * The maximum number of iterations is reached (`max_iter`).
+    * The maximum number of iterations is reached (``max_iter``).
     * The maximum number of objective function evaluations is reached
-      (`max_eval`).
-    * The maximum wall-time is reached (`max_walltime_s`).
+      (``max_eval``).
+    * The maximum wall-time is reached (``max_walltime_s``).
 
     One of these criteria needs to be provided.
     Note that the wall-time and function evaluation criteria are not checked
@@ -105,7 +105,7 @@ class ESSOptimizer:
 
     Objective function evaluations inside :class:`ESSOptimizer` can be
     parallelized using multiprocessing or multithreading by passing a value
-    >1 for `n_procs` or `n_threads`, respectively.
+    >1 for ``n_procs`` or ``n_threads``, respectively.
 
 
     .. seealso::
