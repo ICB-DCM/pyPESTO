@@ -559,19 +559,25 @@ class ESSOptimizer:
             quality_order = np.argsort(fx_best_children)
             # compute minimal distance between the best children and all local
             #  optima found so far
-            min_distances = np.fromiter(
-                (
-                    min(
-                        np.linalg.norm(
-                            y_i
-                            - optimizer_result.x[optimizer_result.free_indices]
+            min_distances = (
+                np.fromiter(
+                    (
+                        min(
+                            np.linalg.norm(
+                                y_i
+                                - optimizer_result.x[
+                                    optimizer_result.free_indices
+                                ]
+                            )
+                            for optimizer_result in self.local_solutions
                         )
-                        for optimizer_result in self.local_solutions
-                    )
-                    for y_i in x_best_children
-                ),
-                dtype=np.float64,
-                count=len(x_best_children),
+                        for y_i in x_best_children
+                    ),
+                    dtype=np.float64,
+                    count=len(x_best_children),
+                )
+                if len(self.local_solutions)
+                else np.zeros(len(x_best_children))
             )
             # sort by furthest distance to existing local optima
             diversity_order = np.argsort(min_distances)[::-1]
