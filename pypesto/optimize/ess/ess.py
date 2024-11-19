@@ -123,7 +123,9 @@ class ESSOptimizer:
         local_n1: int = 1,
         local_n2: int = 10,
         balance: float = 0.5,
-        local_optimizer: pypesto.optimize.Optimizer | OptimizerFactory | None = None,
+        local_optimizer: pypesto.optimize.Optimizer
+        | OptimizerFactory
+        | None = None,
         max_eval=None,
         n_diverse: int = None,
         n_procs=None,
@@ -131,7 +133,7 @@ class ESSOptimizer:
         max_walltime_s=None,
         result_includes_refset: bool = False,
     ):
-        """Construct new ESS instance.
+        r"""Construct new ESS instance.
 
         For plausible values of hyperparameters, see :footcite:t:`VillaverdeEge2012`.
 
