@@ -713,3 +713,9 @@ class AmiciObjective(ObjectiveBase):
             ) in condition_mapping.map_sim_fix.items():
                 if (val := id_to_val.get(mapped_to_par)) is not None:
                     condition_mapping.map_sim_fix[model_par] = val
+            for (
+                model_par,
+                mapped_to_par,
+            ) in condition_mapping.map_preeq_fix.items():
+                if (val := id_to_val.get(mapped_to_par)) is not None:
+                    condition_mapping.map_preeq_fix[model_par] = val
