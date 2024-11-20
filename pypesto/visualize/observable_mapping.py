@@ -129,8 +129,11 @@ def visualize_estimated_observable_mapping(
         n_axes = n_relative_observables + n_semiquant_observables
         n_rows = int(np.ceil(np.sqrt(n_axes)))
         n_cols = int(np.ceil(n_axes / n_rows))
-        _, axes = plt.subplots(n_rows, n_cols, **kwargs)
-        axes = axes.flatten()
+        fig, axes = plt.subplots(n_rows, n_cols, **kwargs)
+        if n_rows * n_cols > 1:
+            axes = axes.flatten()
+        else:
+            axes = np.array([axes])
 
     # Plot the estimated observable mapping for relative observables.
     if n_relative_observables > 0:
