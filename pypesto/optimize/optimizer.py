@@ -1169,7 +1169,7 @@ class NLoptOptimizer(Optimizer):
         if self.options is not None:
             rep += f" options={self.options}"
         if self.local_options is not None:
-            rep += f" local_options={self.local_methods}"
+            rep += f" local_options={self.local_options}"
         return rep + ">"
 
     @minimize_decorator_collection
