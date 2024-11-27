@@ -37,6 +37,8 @@ class ESSExitFlag(int, enum.Enum):
     MAX_EVAL = -2
     # Exited after exhausting wall-time budget
     MAX_TIME = -3
+    # Termination because for other reason than exit criteria
+    ERROR = -99
 
 
 class OptimizerFactory(Protocol):
