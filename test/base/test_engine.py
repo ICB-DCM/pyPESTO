@@ -86,7 +86,14 @@ def test_deepcopy_objective():
         )
     )
     factory = petab_importer.create_objective_creator()
-    objective = factory.create_objective()
+    amici_model = factory.create_model()
+    amici_model.setSteadyStateSensitivityMode(
+        amici.SteadyStateSensitivityMode.integrateIfNewtonFails
+    )
+    amici_model.setSteadyStateComputationMode(
+        amici.SteadyStateComputationMode.integrateIfNewtonFails
+    )
+    objective = factory.create_objective(model=amici_model)
 
     objective.amici_solver.setSensitivityMethod(
         amici.SensitivityMethod_adjoint
