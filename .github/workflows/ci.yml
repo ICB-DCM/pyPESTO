@@ -157,7 +157,7 @@ jobs:
 
     - name: Run tests
       timeout-minutes: 35
-      run: tox -e petab
+      run: tox -e petab && tox e -e petab -- pip uninstall -y amici
       env:
         CC: clang
         CXX: clang++
