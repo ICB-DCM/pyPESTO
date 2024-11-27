@@ -7,6 +7,7 @@ import logging.handlers
 import multiprocessing
 import os
 import time
+from contextlib import suppress
 from dataclasses import dataclass
 from math import ceil, sqrt
 from multiprocessing import get_context
@@ -20,6 +21,7 @@ import numpy as np
 
 import pypesto
 
+from ... import MemoryHistory
 from ...startpoint import StartpointMethod
 from ...store.read_from_hdf5 import read_result
 from ...store.save_to_hdf5 import write_result
@@ -331,12 +333,18 @@ class SacessOptimizer:
         n_eval_total = sum(
             worker_result.n_eval for worker_result in self.worker_results
         )
-        logger.info(
-            f"{self.__class__.__name__} stopped after {walltime:3g}s "
-            f"and {n_eval_total} objective evaluations "
-            f"with global best {result.optimize_result[0].fval}."
-        )
-
+        if len(result.optimize_result):
+            logger.info(
+                f"{self.__class__.__name__} stopped after {walltime:3g}s "
+                f"and {n_eval_total} objective evaluations "
+                f"with global best {result.optimize_result[0].fval}."
+            )
+        else:
+            logger.error(
+                f"{self.__class__.__name__} stopped after {walltime:3g}s "
+                f"and {n_eval_total} objective evaluations without producing "
+                "a result."
+            )
         return result
 
     def _create_result(self, problem: Problem) -> pypesto.Result:
@@ -345,25 +353,40 @@ class SacessOptimizer:
         Creates an overall Result object from the results saved by the workers.
         """
         # gather results from workers and delete temporary result files
-        result = None
+        result = pypesto.Result()
+        retry_after_sleep = True
         for worker_idx in range(self.num_workers):
             tmp_result_filename = SacessWorker.get_temp_result_filename(
                 worker_idx, self._tmpdir
             )
+            tmp_result = None
             try:
                 tmp_result = read_result(
                     tmp_result_filename, problem=False, optimize=True
                 )
             except FileNotFoundError:
                 # wait and retry, maybe the file wasn't found due to some filesystem latency issues
-                time.sleep(5)
-                tmp_result = read_result(
-                    tmp_result_filename, problem=False, optimize=True
-                )
+                if retry_after_sleep:
+                    time.sleep(5)
+                    # waiting once is enough - don't wait for every worker
+                    retry_after_sleep = False
 
-            if result is None:
-                result = tmp_result
-            else:
+                    try:
+                        tmp_result = read_result(
+                            tmp_result_filename, problem=False, optimize=True
+                        )
+                    except FileNotFoundError:
+                        logger.error(
+                            f"Worker {worker_idx} did not produce a result."
+                        )
+                        continue
+                else:
+                    logger.error(
+                        f"Worker {worker_idx} did not produce a result."
+                    )
+                    continue
+
+            if tmp_result:
                 result.optimize_result.append(
                     tmp_result.optimize_result,
                     sort=False,
@@ -375,7 +398,8 @@ class SacessOptimizer:
             filename = SacessWorker.get_temp_result_filename(
                 worker_idx, self._tmpdir
             )
-            os.remove(filename)
+            with suppress(FileNotFoundError):
+                os.remove(filename)
         # delete tmpdir if empty
         try:
             self._tmpdir.rmdir()
@@ -397,6 +421,7 @@ class SacessManager:
 
     Attributes
     ----------
+    _dim: Dimension of the optimization problem
     _num_workers: Number of workers
     _ess_options: ESS options for each worker
     _best_known_fx: Best objective value encountered so far
@@ -410,6 +435,7 @@ class SacessManager:
     _rejection_threshold: Threshold for relative objective improvements that
         incoming solutions have to pass to be accepted
     _lock: Lock for accessing shared state.
+    _terminate: Flag to signal termination of the SACESS run to workers
     _logger: A logger instance
     _options: Further optimizer hyperparameters.
     """
@@ -421,6 +447,7 @@ class SacessManager:
         dim: int,
         options: SacessOptions = None,
     ):
+        self._dim = dim
         self._options = options or SacessOptions()
         self._num_workers = len(ess_options)
         self._ess_options = [shmem_manager.dict(o) for o in ess_options]
@@ -440,6 +467,7 @@ class SacessManager:
         self._worker_scores = shmem_manager.Array(
             "d", range(self._num_workers)
         )
+        self._terminate = shmem_manager.Value("b", False)
         self._worker_comms = shmem_manager.Array("i", [0] * self._num_workers)
         self._lock = shmem_manager.RLock()
         self._logger = logging.getLogger()
@@ -550,6 +578,16 @@ class SacessManager:
                     )
                     self._rejections.value = 0
 
+    def abort(self):
+        """Abort the SACESS run."""
+        with self._lock:
+            self._terminate.value = True
+
+    def aborted(self) -> bool:
+        """Whether this run was aborted."""
+        with self._lock:
+            return self._terminate.value
+
 
 class SacessWorker:
     """A SACESS worker.
@@ -641,7 +679,7 @@ class SacessWorker:
         ess = self._setup_ess(startpoint_method)
 
         # run ESS until exit criteria are met, but start at least one iteration
-        while self._keep_going() or ess.n_iter == 0:
+        while self._keep_going(ess) or ess.n_iter == 0:
             # perform one ESS iteration
             ess._do_iteration()
 
@@ -667,19 +705,42 @@ class SacessWorker:
                 f"(best: {self._best_known_fx}, "
                 f"n_eval: {ess.evaluator.n_eval})."
             )
+        self._finalize(ess)
 
-        ess.history.finalize(exitflag=ess.exit_flag.name)
-        worker_result = SacessWorkerResult(
-            x=ess.x_best,
-            fx=ess.fx_best,
-            history=ess.history,
-            n_eval=ess.evaluator.n_eval,
-            n_iter=ess.n_iter,
-            exit_flag=ess.exit_flag,
-        )
+    def _finalize(self, ess: ESSOptimizer = None):
+        """Finalize the worker."""
+        # Whatever happens here, we need to put something to the queue before
+        # returning to avoid deadlocks.
+        worker_result = None
+        if ess is not None:
+            try:
+                ess.history.finalize(exitflag=ess.exit_flag.name)
+                ess._report_final()
+                worker_result = SacessWorkerResult(
+                    x=ess.x_best,
+                    fx=ess.fx_best,
+                    history=ess.history,
+                    n_eval=ess.evaluator.n_eval,
+                    n_iter=ess.n_iter,
+                    exit_flag=ess.exit_flag,
+                )
+            except Exception as e:
+                self._logger.exception(
+                    f"Worker {self._worker_idx} failed to finalize: {e}"
+                )
+        if worker_result is None:
+            # Create some dummy result
+            worker_result = SacessWorkerResult(
+                x=np.full(self._manager._dim, np.nan),
+                fx=np.nan,
+                history=MemoryHistory(),
+                n_eval=0,
+                n_iter=0,
+                exit_flag=ESSExitFlag.ERROR,
+            )
         self._manager._result_queue.put(worker_result)
+
         self._logger.debug(f"Final configuration: {self._ess_kwargs}")
-        ess._report_final()
 
     def _setup_ess(self, startpoint_method: StartpointMethod) -> ESSOptimizer:
         """Run ESS."""
@@ -821,7 +882,7 @@ class SacessWorker:
             fx=fx,
         )
 
-    def _keep_going(self):
+    def _keep_going(self, ess: ESSOptimizer) -> bool:
         """Check exit criteria.
 
         Returns
@@ -830,13 +891,25 @@ class SacessWorker:
         """
         # elapsed time
         if time.time() - self._start_time >= self._max_walltime_s:
-            self.exit_flag = ESSExitFlag.MAX_TIME
+            ess.exit_flag = ESSExitFlag.MAX_TIME
             self._logger.debug(
                 f"Max walltime ({self._max_walltime_s}s) exceeded."
             )
             return False
-
+        # other reasons for termination (some worker failed, ...)
+        if self._manager.aborted():
+            ess.exit_flag = ESSExitFlag.ERROR
+            self._logger.debug("Manager requested termination.")
+            return False
         return True
+
+    def abort(self):
+        """Send signal to abort."""
+        self._logger.error(f"Worker {self._worker_idx} aborting.")
+        # signal to manager
+        self._manager.abort()
+
+        self._finalize(None)
 
     @staticmethod
     def get_temp_result_filename(worker_idx: int, tmpdir: str | Path) -> str:
@@ -853,15 +926,24 @@ def _run_worker(
 
     Helper function as entrypoint for sacess worker processes.
     """
-    # different random seeds per process
-    np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
+    try:
+        # different random seeds per process
+        np.random.seed((os.getpid() * int(time.time() * 1000)) % 2**32)
 
-    # Forward log messages to the logging process
-    h = logging.handlers.QueueHandler(log_process_queue)
-    worker._logger = logging.getLogger(multiprocessing.current_process().name)
-    worker._logger.addHandler(h)
+        # Forward log messages to the logging process
+        h = logging.handlers.QueueHandler(log_process_queue)
+        worker._logger = logging.getLogger(
+            multiprocessing.current_process().name
+        )
+        worker._logger.addHandler(h)
 
-    return worker.run(problem=problem, startpoint_method=startpoint_method)
+        return worker.run(problem=problem, startpoint_method=startpoint_method)
+    except Exception as e:
+        with suppress(Exception):
+            worker._logger.exception(
+                f"Worker {worker._worker_idx} failed: {e}"
+            )
+        worker.abort()
 
 
 def get_default_ess_options(
