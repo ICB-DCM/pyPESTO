@@ -308,6 +308,7 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
     ]:
         assert np.isfinite(result.optimize_result.list[0]["fval"])
         assert result.optimize_result.list[0]["x"] is not None
+        assert result.optimize_result.list[0]["optimizer"] is not None
 
 
 def test_trim_results(problem):
