@@ -202,7 +202,27 @@ class SemiquantInnerSolver(InnerSolver):
         -------
         The gradients with respect to the outer parameters.
         """
-        already_calculated = set()
+        already_calculated_per_group = [set() for _ in range(len(x_inner_opt))]
+        already_calculated_for_maps = set()
+
+        sy_for_outer_parameter_map = {}
+        ssigma_for_outer_parameter_map = {}
+
+        # Change par_edatas_indices to a list of dictionaries with
+        # keys being the value in par_edatas_indices and the values being the
+        # indices of the corresponding values -- for O(1) lookup of the indices.
+        par_edatas_indices = [
+            {par_edata_idx: idx for idx, par_edata_idx in enumerate(par_edata)}
+            for par_edata in par_edatas_indices
+        ]
+
+        # Do same for par_sim_ids and par_opt_ids
+        par_sim_ids = {
+            par_sim_id: idx for idx, par_sim_id in enumerate(par_sim_ids)
+        }
+        par_opt_ids = {
+            par_opt_id: idx for idx, par_opt_id in enumerate(par_opt_ids)
+        }
 
         for condition_map_sim_var in [
             cond_par_map.map_sim_var for cond_par_map in parameter_mapping
@@ -210,20 +230,19 @@ class SemiquantInnerSolver(InnerSolver):
             for par_sim, par_opt in condition_map_sim_var.items():
                 if (
                     not isinstance(par_opt, str)
-                    or par_opt in already_calculated
+                    or par_opt in already_calculated_for_maps
                 ):
                     continue
                 elif par_opt not in par_opt_ids:
                     continue
                 else:
-                    already_calculated.add(par_opt)
-                par_sim_idx = par_sim_ids.index(par_sim)
-                par_opt_idx = par_opt_ids.index(par_opt)
-                grad = 0.0
+                    already_calculated_for_maps.add(par_opt)
+                par_sim_idx = par_sim_ids[par_sim]
+                par_opt_idx = par_opt_ids[par_opt]
 
                 sy_for_outer_parameter = [
                     (
-                        sy_cond[:, par_edata_indices.index(par_sim_idx), :]
+                        sy_cond[:, par_edata_indices[par_sim_idx], :]
                         if par_sim_idx in par_edata_indices
                         else np.zeros(sy_cond[:, 0, :].shape)
                     )
@@ -231,9 +250,10 @@ class SemiquantInnerSolver(InnerSolver):
                         sy, par_edatas_indices
                     )
                 ]
+
                 ssigma_for_outer_parameter = [
                     (
-                        ssigma_cond[:, par_edata_indices.index(par_sim_idx), :]
+                        ssigma_cond[:, par_edata_indices[par_sim_idx], :]
                         if par_sim_idx in par_edata_indices
                         else np.zeros(ssigma_cond[:, 0, :].shape)
                     )
@@ -241,19 +261,63 @@ class SemiquantInnerSolver(InnerSolver):
                         amici_ssigma, par_edatas_indices
                     )
                 ]
+                sy_for_outer_parameter_map[par_opt] = sy_for_outer_parameter
+                ssigma_for_outer_parameter_map[
+                    par_opt
+                ] = ssigma_for_outer_parameter
 
-                for group_idx, group in enumerate(
-                    problem.get_groups_for_xs(InnerParameterType.SPLINE)
-                ):
-                    # Get the reformulated spline parameters
-                    s = np.asarray(x_inner_opt[group_idx][SCIPY_X])
-                    group_dict = problem.groups[group]
+        for group_idx, group in enumerate(
+            problem.get_groups_for_xs(InnerParameterType.SPLINE)
+        ):
+            already_calculated = already_calculated_per_group[group_idx]
+            # Get the reformulated spline parameters
+            s = np.asarray(x_inner_opt[group_idx][SCIPY_X])
+            group_dict = problem.groups[group]
 
-                    measurements = group_dict[DATAPOINTS]
-                    sigma = group_dict[INNER_NOISE_PARS]
-                    sim_all = group_dict[CURRENT_SIMULATION]
-                    N = group_dict[N_SPLINE_PARS]
-                    K = group_dict[NUM_DATAPOINTS]
+            measurements = group_dict[DATAPOINTS]
+            sigma = group_dict[INNER_NOISE_PARS]
+            sim_all = group_dict[CURRENT_SIMULATION]
+            N = group_dict[N_SPLINE_PARS]
+            K = group_dict[NUM_DATAPOINTS]
+
+            delta_c, c, n = self._rescale_spline_bases(
+                sim_all=sim_all, N=N, K=K
+            )
+
+            if not group_dict[OPTIMIZE_NOISE]:
+                residual_squared = _calculate_residuals_for_group(
+                    s=s,
+                    sim_all=sim_all,
+                    measurements=measurements,
+                    N=N,
+                    delta_c=delta_c,
+                    c=c,
+                    n=n,
+                )
+                dJ_dsigma2 = K / (2 * sigma**2) - residual_squared / sigma**4
+
+            for condition_map_sim_var in [
+                cond_par_map.map_sim_var for cond_par_map in parameter_mapping
+            ]:
+                for _, par_opt in condition_map_sim_var.items():
+                    if (
+                        not isinstance(par_opt, str)
+                        or par_opt in already_calculated
+                    ):
+                        continue
+                    elif par_opt not in par_opt_ids:
+                        continue
+                    else:
+                        already_calculated.add(par_opt)
+
+                    par_opt_idx = par_opt_ids[par_opt]
+
+                    sy_for_outer_parameter = sy_for_outer_parameter_map[
+                        par_opt
+                    ]
+                    ssigma_for_outer_parameter = (
+                        ssigma_for_outer_parameter_map[par_opt]
+                    )
 
                     sy_all = extract_expdata_using_mask(
                         expdata=sy_for_outer_parameter,
@@ -263,51 +327,8 @@ class SemiquantInnerSolver(InnerSolver):
                         expdata=ssigma_for_outer_parameter,
                         mask=group_dict[EXPDATA_MASK],
                     )
-
-                    delta_c, c, n = self._rescale_spline_bases(
-                        sim_all=sim_all, N=N, K=K
-                    )
                     delta_c_dot, c_dot = calculate_spline_bases_gradient(
                         sim_all=sim_all, sy_all=sy_all, N=N
-                    )
-
-                    # For the reformulated problem, mu can be calculated
-                    # as the inner gradient at the optimal point s.
-                    mu = _calculate_nllh_gradient_for_group(
-                        s=s,
-                        sim_all=sim_all,
-                        measurements=measurements,
-                        N=N,
-                        delta_c=delta_c,
-                        c=c,
-                        n=n,
-                        regularization_factor=self.options[
-                            REGULARIZATION_FACTOR
-                        ],
-                        regularize_spline=self.options[REGULARIZE_SPLINE],
-                        group_dict=group_dict,
-                    )
-                    min_meas = group_dict[MIN_DATAPOINT]
-                    max_meas = group_dict[MAX_DATAPOINT]
-                    min_diff = self._get_minimal_difference(
-                        measurement_range=max_meas - min_meas,
-                        N=N,
-                        min_diff_factor=self.options[MIN_DIFF_FACTOR],
-                    )
-
-                    # If the spline parameter is at its boundary, the
-                    # corresponding Lagrangian multiplier mu is set to 0.
-                    min_diff_all = np.full(N, min_diff)
-                    min_diff_all[0] = 0.0
-                    mu = np.asarray(
-                        [
-                            (
-                                mu[i]
-                                if np.isclose(s[i] - min_diff_all[i], 0)
-                                else 0
-                            )
-                            for i in range(len(s))
-                        ]
                     )
 
                     # Calculate the (dJ_dy * dy_dtheta) term:
@@ -326,18 +347,6 @@ class SemiquantInnerSolver(InnerSolver):
 
                     # Calculate the (dJ_dsigma^2 * dsigma^2_dtheta) term:
                     if not group_dict[OPTIMIZE_NOISE]:
-                        residual_squared = _calculate_residuals_for_group(
-                            s=s,
-                            sim_all=sim_all,
-                            measurements=measurements,
-                            N=N,
-                            delta_c=delta_c,
-                            c=c,
-                            n=n,
-                        )
-                        dJ_dsigma2 = (
-                            K / (2 * sigma**2) - residual_squared / sigma**4
-                        )
                         dsigma2_dtheta = ssigma_all[0] * sigma
                         dsigma_grad_term = dJ_dsigma2 * dsigma2_dtheta
                     # If we optimize the noise hierarchically,
@@ -347,9 +356,9 @@ class SemiquantInnerSolver(InnerSolver):
                         dsigma_grad_term = 0.0
 
                     # Combine all terms to get the complete gradient contribution
-                    grad += dy_grad_term / sigma**2 + dsigma_grad_term
-
-                snllh[par_opt_idx] = grad
+                    snllh[par_opt_idx] += (
+                        dy_grad_term / sigma**2 + dsigma_grad_term
+                    )
 
         return snllh
 
@@ -494,8 +503,8 @@ class SemiquantInnerSolver(InnerSolver):
             # Set the n(k) values for the simulations
             for i in range(len(sim_all)):
                 n[i] = np.ceil((sim_all[i] - c[0]) / delta_c) + 1
-                if n[i] > N:
-                    n[i] = N
+                if n[i] > N + 1:
+                    n[i] = N + 1
                     warnings.warn(
                         "Interval for a simulation has been set to a larger "
                         "value than the number of spline parameters.",
@@ -507,12 +516,12 @@ class SemiquantInnerSolver(InnerSolver):
             c = np.linspace(min_all, max_all, N)
             for i in range(len(sim_all)):
                 if i == max_idx:
-                    n[i] = N
+                    n[i] = N + 1
                 elif i == min_idx:
                     n[i] = 1
                 else:
                     n[i] = np.ceil((sim_all[i] - c[0]) / delta_c) + 1
-                if n[i] > N:
+                if n[i] > N + 1:
                     n[i] = N
 
         n = n.astype(int)
@@ -649,7 +658,7 @@ def _calculate_nllh_for_group(
     if group_dict[OPTIMIZE_NOISE]:
         sigma = _calculate_sigma_for_group(
             residuals_squared=residuals_squared,
-            n_datapoints=N,
+            n_datapoints=K,
         )
         group_dict[INNER_NOISE_PARS] = sigma
     else:
@@ -729,6 +738,7 @@ def _calculate_nllh_gradient_for_group(
         c=c,
         n=n,
     )
+    K = len(sim_all)
 
     # Calculate sigma
     if group_dict[OPTIMIZE_NOISE]:
@@ -743,7 +753,7 @@ def _calculate_nllh_gradient_for_group(
         )
         sigma = _calculate_sigma_for_group(
             residuals_squared=residuals_squared,
-            n_datapoints=N,
+            n_datapoints=K,
         )
         group_dict[INNER_NOISE_PARS] = sigma
     else:
@@ -766,6 +776,7 @@ def _calculate_nllh_gradient_for_group(
     nllh_gradient = (
         residuals_squared_gradient / (sigma**2) + regularization_term_gradient
     )
+
     return nllh_gradient
 
 
@@ -783,6 +794,15 @@ def _calculate_sigma_for_group(
         The number of datapoints.
     """
     sigma = np.sqrt(2 * residuals_squared / n_datapoints)
+
+    # For numerical stability, set sigma to a minimum value of 1e-16
+    if sigma < 1e-6:
+        warnings.warn(
+            "The calculated sigma is smaller than 1e-6. "
+            "Setting sigma to 1e-6.",
+            stacklevel=2,
+        )
+    sigma = np.maximum(sigma, 1e-6)
 
     return sigma
 
@@ -836,17 +856,11 @@ def _calculate_residuals_gradient_for_group(
         if i == 0:
             gradient[i] += s[i] - z_k
         elif i == N:
-            gradient[:i] += np.full(i, sum_s - z_k)
+            gradient[:i] += sum_s - z_k
         else:
-            gradient[i] += (
-                ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
-                * (y_k - c[i - 1])
-                / delta_c
-            )
-            gradient[:i] += np.full(
-                i,
-                (y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k,
-            )
+            common_term = (y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k
+            gradient[i] += common_term * (y_k - c[i - 1]) / delta_c
+            gradient[:i] += common_term
     return gradient
 
 
@@ -958,8 +972,10 @@ def get_spline_mapped_simulations(
 
     for y_k, n_k, index in zip(sim_all, n, range(len(sim_all))):
         interval_index = n_k - 1
-        if interval_index == 0 or interval_index == N:
+        if interval_index == 0:
             mapped_simulations[index] = xi[interval_index]
+        elif interval_index == N:
+            mapped_simulations[index] = xi[interval_index - 1]
         else:
             mapped_simulations[index] = (y_k - c[interval_index - 1]) * (
                 xi[interval_index] - xi[interval_index - 1]
@@ -1011,22 +1027,38 @@ def calculate_dy_term(
 ):
     """Calculate the derivative of the objective function for one group with respect to the simulations."""
     df_dy = 0
+    scaled_delta_c_dot = delta_c_dot / delta_c**2
 
-    for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
-        i = n_k - 1
-        sum_s = np.sum(s[:i])
-        if i > 0 and i < N:
-            df_dy += (
-                ((y_k - c[i - 1]) * s[i] / delta_c + sum_s - z_k)
-                * s[i]
-                * (
-                    (y_dot_k - c_dot[i - 1]) * delta_c
-                    - (y_k - c[i - 1]) * delta_c_dot
-                )
-                / delta_c**2
+    # Determine the interval for each simulation
+    n_indices = n - 1  # Adjust for zero-indexing
+    valid_indices = (n_indices > 0) & (n_indices < N)
+    unique_intervals = np.unique(n_indices[valid_indices])
+
+    # Loop over intervals instead of simulations
+    for i in unique_intervals:
+        # Get all simulations in the current interval
+        mask = n_indices == i
+        if not np.any(
+            mask
+        ):  # Skip the interval if no simulations belong to it
+            continue
+
+        y_k_group = sim_all[mask]
+        z_k_group = measurements[mask]
+        y_dot_k_group = sy_all[mask]
+
+        sum_s = np.sum(s[:i])  # Precompute for the interval
+        y_c_diff = y_k_group - c[i - 1]
+
+        # Vectorized computation for all simulations in the interval
+        df_dy += np.sum(
+            (y_c_diff * s[i] / delta_c + sum_s - z_k_group)
+            * s[i]
+            * (
+                (y_dot_k_group - c_dot[i - 1]) / delta_c
+                - y_c_diff * scaled_delta_c_dot
             )
-        # There is no i==0 case, because in this case
-        # c[0] == y_k and so the derivative is zero.
+        )
     return df_dy
 
 
