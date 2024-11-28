@@ -361,7 +361,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             == amici.SensitivityMethod_adjoint
             and any(
                 data_type in self.data_types
-                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+                for data_type in [ORDINAL, CENSORED]
             )
         ):
             raise NotImplementedError(
@@ -374,8 +374,14 @@ class InnerCalculatorCollector(AmiciCalculator):
         # non-quantitative data type is relative data. In this case, we
         # use the relative calculator directly.
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
+            (
+                amici_solver.getSensitivityMethod()
+                == amici.SensitivityMethod_adjoint
+                and not any(
+                    data_type in self.data_types
+                    for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+                )
+            )
             or 2 in sensi_orders
             or mode == MODE_RES
         ):
