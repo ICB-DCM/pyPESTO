@@ -449,64 +449,6 @@ class SemiquantInnerSolver(InnerSolver):
             **inner_options,
         )
 
-        # if not results.success:
-        #     # Plot the estimated spline and the data
-        #     import matplotlib.pyplot as plt
-
-        #     # Get spline heights at knots xi from their differences s
-        #     # By summing up the differences, we get the spline heights
-        #     xi = np.cumsum(results.x)
-
-        #     # Plot the spline, it's knot points are the c values
-        #     plt.plot(spline_bases, xi, label="Spline")
-
-        #     # Plot the data, it is between the sim_all values and measurements
-        #     plt.plot(group_dict[CURRENT_SIMULATION], group_dict[DATAPOINTS], "o")
-        #     plt.plot(spline_bases, xi, "*", label="Knot points")
-        #     plt.show()
-
-        #     # Run gradient checks for the inner_gradient_wrapper.
-        #     # It is implemented to be the gradient of the objective_function_wrapper.
-        #     from scipy.optimize import check_grad
-
-        #     # Check the gradient of the objective function
-        #     grad_diff = check_grad(
-        #         objective_function_wrapper,
-        #         inner_gradient_wrapper,
-        #         results.x,
-        #     )
-        #     print(f"Gradient difference: {grad_diff}")
-        #     # Print the gradient evaluated with finite differences and the analytical gradient
-        #     # Use scipy to get the finite difference gradient
-        #     from scipy.optimize import approx_fprime
-        #     finite_diff_grad = approx_fprime(
-        #         results.x, objective_function_wrapper, 1e-8
-        #     )
-        #     analytical_grad = inner_gradient_wrapper(results.x)
-        #     print(f"Finite difference gradient: {finite_diff_grad}")
-        #     print(f"Analytical gradient: {inner_gradient_wrapper(results.x)}")
-        #     breakpoint()
-
-        #     # Check the gradient by plotting the analytical and finite difference gradient value
-        #     # on a scatter plot for a HUGE amount of points
-        #     import matplotlib.pyplot as plt
-        #     from scipy.optimize import approx_fprime
-
-        #     # sample a milion points
-        #     all_samples_of_x = np.random.uniform(0, 1, (10000, len(results.x)))
-        #     all_analytical_values = np.array([inner_gradient_wrapper(x) for x in all_samples_of_x]).flatten()
-        #     all_finite_diff_values = np.array([approx_fprime(x, objective_function_wrapper, 1e-8) for x in all_samples_of_x]).flatten()
-
-        #     # Add to the values the values for the current x
-        #     all_analytical_values = np.concatenate([all_analytical_values, analytical_grad])
-        #     all_finite_diff_values = np.concatenate([all_finite_diff_values, finite_diff_grad])
-
-        #     plt.scatter(all_analytical_values, all_finite_diff_values)
-        #     plt.xlabel('Analytical gradient')
-        #     plt.ylabel('Finite difference gradient')
-        #     plt.show()
-        #     breakpoint()
-
         return results
 
     @staticmethod
