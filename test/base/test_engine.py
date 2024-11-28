@@ -64,8 +64,7 @@ def _test_petab(engine):
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    objective = petab_importer.create_objective()
-    problem = petab_importer.create_problem(objective)
+    problem = petab_importer.create_problem()
     optimizer = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
     result = pypesto.optimize.minimize(
         problem=problem,
@@ -86,7 +85,15 @@ def test_deepcopy_objective():
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    objective = petab_importer.create_objective()
+    factory = petab_importer.create_objective_creator()
+    amici_model = factory.create_model()
+    amici_model.setSteadyStateSensitivityMode(
+        amici.SteadyStateSensitivityMode.integrateIfNewtonFails
+    )
+    amici_model.setSteadyStateComputationMode(
+        amici.SteadyStateComputationMode.integrateIfNewtonFails
+    )
+    objective = factory.create_objective(model=amici_model)
 
     objective.amici_solver.setSensitivityMethod(
         amici.SensitivityMethod_adjoint
@@ -123,7 +130,8 @@ def test_pickle_objective():
             "Boehm_JProteomeRes2014.yaml",
         )
     )
-    objective = petab_importer.create_objective()
+    factory = petab_importer.create_objective_creator()
+    objective = factory.create_objective()
 
     objective.amici_solver.setSensitivityMethod(
         amici.SensitivityMethod_adjoint

@@ -18,10 +18,14 @@ from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
+from pypesto import Objective
 from pypesto.optimize.ess import (
     ESSOptimizer,
+    FunctionEvaluatorMP,
+    RefSet,
     SacessFidesFactory,
     SacessOptimizer,
+    SacessOptions,
     get_default_ess_options,
 )
 from pypesto.optimize.util import (
@@ -305,6 +309,7 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
     ]:
         assert np.isfinite(result.optimize_result.list[0]["fval"])
         assert result.optimize_result.list[0]["x"] is not None
+        assert result.optimize_result.list[0]["optimizer"] is not None
 
 
 def test_trim_results(problem):
@@ -490,6 +495,11 @@ def test_ess(problem, local_optimizer, ess_type, request):
             sacess_loglevel=logging.DEBUG,
             ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
+            options=SacessOptions(
+                adaptation_min_evals=500,
+                adaptation_sent_offset=10,
+                adaptation_sent_coeff=5,
+            ),
         )
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")
@@ -522,7 +532,21 @@ def test_ess_multiprocess(problem, request):
 
     from fides.constants import Options as FidesOptions
 
-    from pypesto.optimize.ess import ESSOptimizer, FunctionEvaluatorMP, RefSet
+    # augment objective with parameter prior to check it's copyable
+    #  https://github.com/ICB-DCM/pyPESTO/issues/1465
+    #  https://github.com/ICB-DCM/pyPESTO/pull/1467
+    problem.objective = pypesto.objective.AggregatedObjective(
+        [
+            problem.objective,
+            pypesto.objective.NegLogParameterPriors(
+                [
+                    pypesto.objective.get_parameter_prior_dict(
+                        0, "uniform", [0, 1], "lin"
+                    )
+                ]
+            ),
+        ]
+    )
 
     ess = ESSOptimizer(
         max_iter=20,
@@ -545,6 +569,48 @@ def test_ess_multiprocess(problem, request):
         refset=refset,
     )
     print("ESS result: ", res.summary())
+
+
+def test_ess_refset_repr():
+    assert RefSet(10, None).__repr__() == "RefSet(dim=10)"
+    assert (
+        RefSet(10, None, x=np.zeros(10), fx=np.arange(10)).__repr__()
+        == "RefSet(dim=10, fx=[0 ... 9])"
+    )
+
+
+class FunctionOrError:
+    """Callable that raises an error every nth invocation."""
+
+    def __init__(self, fun, error_frequency=100):
+        self.counter = 0
+        self.error_frequency = error_frequency
+        self.fun = fun
+
+    def __call__(self, *args, **kwargs):
+        self.counter += 1
+        if self.counter % self.error_frequency == 0:
+            raise RuntimeError("Intentional error.")
+        return self.fun(*args, **kwargs)
+
+
+def test_sacess_worker_error(capsys):
+    """Check that SacessOptimizer does not hang if an error occurs on a worker."""
+    objective = Objective(
+        fun=FunctionOrError(sp.optimize.rosen), grad=sp.optimize.rosen_der
+    )
+    problem = pypesto.Problem(
+        objective=objective, lb=0 * np.ones((1, 2)), ub=1 * np.ones((1, 2))
+    )
+    sacess = SacessOptimizer(
+        num_workers=2,
+        max_walltime_s=2,
+        sacess_loglevel=logging.DEBUG,
+        ess_loglevel=logging.DEBUG,
+    )
+    res = sacess.minimize(problem)
+    assert isinstance(res, pypesto.Result)
+    assert "Intentional error." in capsys.readouterr().err
 
 
 def test_scipy_integrated_grad():

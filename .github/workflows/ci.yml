@@ -8,6 +8,7 @@ on:
     - develop
   pull_request:
   workflow_dispatch:
+  merge_group:
   schedule:
     # run Monday and Thursday at 03:42 UTC
     - cron: '42 3 * * MON,THU'
@@ -156,7 +157,7 @@ jobs:
 
     - name: Run tests
       timeout-minutes: 35
-      run: tox -e petab
+      run: tox -e petab && tox e -e petab -- pip uninstall -y amici
       env:
         CC: clang
         CXX: clang++
@@ -198,17 +199,14 @@ jobs:
     - name: Install julia
       uses: julia-actions/setup-julia@v2
       with:
-        version: 1.9
-
-    - name: Cache Julia
-      uses: julia-actions/cache@v2
+        version: 1.11
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh
 
     - name: Install PEtabJL dependencies
       run: >
-        julia -e 'using Pkg; Pkg.add(Pkg.PackageSpec(;name="PEtab", version="2.5.0"));
+        julia -e 'using Pkg; Pkg.add("PEtab");
         Pkg.add("OrdinaryDiffEq"); Pkg.add("Sundials")'
 
     - name: Run tests

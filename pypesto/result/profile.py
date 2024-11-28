@@ -38,6 +38,13 @@ class ProfilerResult(dict):
         Number of gradient evaluations.
     n_hess:
         Number of Hessian evaluations.
+    color_path:
+        The color of the profile path. Signifies types of steps made.
+        Red indicates a step for which min_step_size was reduced, blue
+        indicates a step for which max_step_size was increased, and green
+        indicates a step for which the profiler had to resample the parameter
+        vector due to optimization failure of the previous two. Black
+        indicates a step for which none of the above was necessary.
     message:
         Textual comment on the profile result.
 
@@ -55,6 +62,7 @@ class ProfilerResult(dict):
         gradnorm_path: np.ndarray = None,
         exitflag_path: np.ndarray = None,
         time_path: np.ndarray = None,
+        color_path: np.ndarray = None,
         time_total: float = 0.0,
         n_fval: int = 0,
         n_grad: int = 0,
@@ -85,6 +93,13 @@ class ProfilerResult(dict):
             self.time_path = np.full(x_path.shape[1], np.nan)
         else:
             self.time_path = time_path.copy()
+
+        if color_path is None:
+            self.color_path = np.full(
+                (x_path.shape[1], 4), np.array([1, 0, 0, 0.3])
+            )
+        else:
+            self.color_path = color_path.copy()
 
         if (
             not self.x_path.shape[1]
@@ -122,6 +137,7 @@ class ProfilerResult(dict):
         ratio: float,
         gradnorm: float = np.nan,
         time: float = np.nan,
+        color: np.ndarray = np.nan,
         exitflag: float = np.nan,
         n_fval: int = 0,
         n_grad: int = 0,
@@ -143,6 +159,8 @@ class ProfilerResult(dict):
             The gradient norm at `x`.
         time:
             The computation time to find `x`.
+        color:
+            The color of the profile path. Signifies types of steps made.
         exitflag:
             The exitflag of the optimizer (useful if an optimization was
             performed to find `x`).
@@ -159,6 +177,7 @@ class ProfilerResult(dict):
         self.gradnorm_path = np.hstack((self.gradnorm_path, gradnorm))
         self.exitflag_path = np.hstack((self.exitflag_path, exitflag))
         self.time_path = np.hstack((self.time_path, time))
+        self.color_path = np.vstack((self.color_path, color))
 
         # increment the time and f_eval counters
         self.time_total += time
@@ -180,6 +199,7 @@ class ProfilerResult(dict):
         self.gradnorm_path = np.flip(self.gradnorm_path)
         self.exitflag_path = np.flip(self.exitflag_path)
         self.time_path = np.flip(self.time_path)
+        self.color_path = np.flip(self.color_path, axis=0)
 
 
 class ProfileResult:

@@ -57,7 +57,7 @@ def test_error_leastsquares_with_ssigma():
     )
     petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(petab_problem)
-    obj = importer.create_objective()
+    obj = importer.create_objective_creator().create_objective()
     problem = importer.create_problem(
         obj, startpoint_kwargs={"check_fval": True, "check_grad": True}
     )
@@ -86,12 +86,21 @@ def test_preeq_guesses():
     importer = pypesto.petab.PetabImporter.from_yaml(
         os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
     )
-    problem = importer.create_problem()
-    obj = problem.objective
-    obj.amici_solver.setNewtonMaxSteps(0)
+    obj_creator = importer.create_objective_creator()
+    amici_model = obj_creator.create_model()
+    amici_model.setSteadyStateComputationMode(
+        amici.SteadyStateComputationMode.integrateIfNewtonFails
+    )
+    amici_model.setSteadyStateSensitivityMode(
+        amici.SteadyStateSensitivityMode.integrateIfNewtonFails
+    )
+    obj = obj_creator.create_objective(model=amici_model)
+    problem = importer.create_problem(objective=obj)
     obj.amici_model.setSteadyStateSensitivityMode(
         amici.SteadyStateSensitivityMode.integrationOnly
     )
+    obj = problem.objective
+    obj.amici_solver.setNewtonMaxSteps(0)
     obj.amici_solver.setAbsoluteTolerance(1e-12)
     obj.amici_solver.setRelativeTolerance(1e-12)
 

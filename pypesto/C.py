@@ -84,12 +84,15 @@ X = "x"
 X0 = "x0"
 ID = "id"
 
+AMICI = "amici"
+ROADRUNNER = "roadrunner"
+PETAB = "petab"
+
 
 ###############################################################################
 # HIERARCHICAL SCALING + OFFSET
 
 INNER_PARAMETERS = "inner_parameters"
-INNER_RDATAS = "inner_rdatas"
 PARAMETER_TYPE = "parameterType"
 RELATIVE = "relative"
 

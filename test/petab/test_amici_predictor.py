@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import sys
 
 import amici
 import libsbml
@@ -34,13 +33,10 @@ def conversion_reaction_model():
 
     # try to import the exisiting model, if possible
     try:
-        sys.path.insert(0, os.path.abspath(model_output_dir))
         model_module = amici.import_model_module(model_name, model_output_dir)
         model = model_module.getModel()
     except ValueError:
         # read in and adapt the sbml slightly
-        if os.path.abspath(model_output_dir) in sys.path:
-            sys.path.remove(os.path.abspath(model_output_dir))
         sbml_importer = amici.SbmlImporter(sbml_file)
 
         # add observables to sbml model
@@ -95,7 +91,6 @@ def conversion_reaction_model():
         )
 
         # Importing the module and loading the model
-        sys.path.insert(0, os.path.abspath(model_output_dir))
         model_module = amici.import_model_module(model_name, model_output_dir)
         model = model_module.getModel()
     except RuntimeError as err:
@@ -107,7 +102,6 @@ def conversion_reaction_model():
             "Delete the conversion_reaction_enhanced model from your python "
             "path and retry. Your python path is currently:"
         )
-        print(sys.path)
         print("Original error message:")
         raise err
 
@@ -365,7 +359,8 @@ def test_petab_prediction():
     petab_problem.model_name = f"{model_name}_petab"
     importer = pypesto.petab.PetabImporter(petab_problem)
     # create prediction via PEtab
-    predictor = importer.create_predictor()
+    factory = importer.create_objective_creator()
+    predictor = factory.create_predictor()
 
     # ===== run test for prediction ===========================================
     p = predictor(
@@ -373,8 +368,8 @@ def test_petab_prediction():
     )
     check_outputs(p, out=(0, 1), n_cond=1, n_timepoints=10, n_obs=1, n_par=2)
     # check outputs for simulation and measurement dataframes
-    importer.prediction_to_petab_measurement_df(p, predictor)
-    importer.prediction_to_petab_simulation_df(p, predictor)
+    factory.prediction_to_petab_measurement_df(p, predictor)
+    factory.prediction_to_petab_simulation_df(p, predictor)
 
     # ===== run test for ensemble prediction ==================================
     # read a set of ensemble vectors from the csv

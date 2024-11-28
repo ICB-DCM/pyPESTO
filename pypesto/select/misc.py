@@ -2,6 +2,7 @@
 
 import logging
 from collections.abc import Iterable
+from pathlib import Path
 
 import pandas as pd
 import petab.v1 as petab
@@ -10,7 +11,13 @@ from petab.v1.C import ESTIMATE, NOMINAL_VALUE
 from petab_select import Model, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
 
+from ..history import Hdf5History
 from ..objective import Objective
+from ..optimize import Optimizer
+from ..optimize.ess import (
+    SacessOptimizer,
+    get_default_ess_options,
+)
 from ..petab import PetabImporter
 from ..problem import Problem
 
@@ -62,10 +69,11 @@ def model_to_pypesto_problem(
         hierarchical=hierarchical,
     )
     if objective is None:
-        amici_model = importer.create_model(
+        factory = importer.create_objective_creator()
+        amici_model = factory.create_model(
             non_estimated_parameters_as_constants=False,
         )
-        objective = importer.create_objective(
+        objective = factory.create_objective(
             model=amici_model,
         )
     pypesto_problem = importer.create_problem(
@@ -163,3 +171,78 @@ def correct_x_guesses(
                 corrected_x_guess.append(corrected_value)
             corrected_x_guesses.append(corrected_x_guess)
     return corrected_x_guesses
+
+
+class SacessMinimizeMethod:
+    """Create a minimize method for SaCeSS that adapts to each problem.
+
+    When a pyPESTO SaCeSS optimizer is created, it takes the problem
+    dimension as input. Hence, an optimizer needs to be constructed for
+    each problem. Objects of this class act like a minimize method for model
+    selection, but a new problem-specific SaCeSS optimizer will be created
+    every time a model is minimized.
+
+    Instance attributes correspond to pyPESTO's SaCeSS optimizer, and are
+    documented there. Extra keyword arguments supplied to the constructor
+    will be passed on to the constructor of the SaCeSS optimizer, for example,
+    `max_walltime_s` can be specified in this way. If specified, `tmpdir` will
+    be treated as a parent directory.
+    """
+
+    def __init__(
+        self,
+        num_workers: int,
+        local_optimizer: Optimizer = None,
+        tmpdir: str | Path | None = None,
+        save_history: bool = False,
+        **optimizer_kwargs,
+    ):
+        """Construct a minimize-like object."""
+        self.num_workers = num_workers
+        self.local_optimizer = local_optimizer
+        self.optimizer_kwargs = optimizer_kwargs
+        self.save_history = save_history
+
+        self.tmpdir = tmpdir
+        if self.tmpdir is not None:
+            self.tmpdir = Path(self.tmpdir)
+
+        if self.save_history and self.tmpdir is None:
+            self.tmpdir = Path.cwd() / "sacess_tmpdir"
+
+    def __call__(self, problem: Problem, model_hash: str, **minimize_options):
+        """Create then run a problem-specific sacess optimizer."""
+        # create optimizer
+        ess_init_args = get_default_ess_options(
+            num_workers=self.num_workers,
+            dim=problem.dim,
+        )
+        for x in ess_init_args:
+            x["local_optimizer"] = self.local_optimizer
+        model_tmpdir = None
+        if self.tmpdir is not None:
+            model_tmpdir = self.tmpdir / model_hash
+            model_tmpdir.mkdir(exist_ok=False, parents=True)
+
+        ess = SacessOptimizer(
+            ess_init_args=ess_init_args,
+            tmpdir=model_tmpdir,
+            **self.optimizer_kwargs,
+        )
+
+        # optimize
+        result = ess.minimize(
+            problem=problem,
+            **minimize_options,
+        )
+
+        if self.save_history:
+            history_dir = model_tmpdir / "history"
+            history_dir.mkdir(exist_ok=False, parents=True)
+            for history_index, history in enumerate(ess.histories):
+                Hdf5History.from_history(
+                    other=history,
+                    file=history_dir / (str(history_index) + ".hdf5"),
+                    id_=history_index,
+                )
+        return result
