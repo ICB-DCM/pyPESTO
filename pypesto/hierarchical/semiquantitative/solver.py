@@ -796,11 +796,12 @@ def _calculate_sigma_for_group(
     sigma = np.sqrt(2 * residuals_squared / n_datapoints)
 
     # For numerical stability, set sigma to a minimum value of 1e-16
-    # if sigma < 1e-6:
-    #     warnings.warn(
-    #         "The calculated sigma is smaller than 1e-6. "
-    #         "Setting sigma to 1e-6.",
-    #     )
+    if sigma < 1e-6:
+        warnings.warn(
+            "The calculated sigma is smaller than 1e-6. "
+            "Setting sigma to 1e-6.",
+            stacklevel=2,
+        )
     sigma = np.maximum(sigma, 1e-6)
 
     return sigma
