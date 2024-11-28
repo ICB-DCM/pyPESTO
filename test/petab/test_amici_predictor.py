@@ -2,7 +2,6 @@
 
 import os
 import shutil
-import sys
 
 import amici
 import libsbml
@@ -34,13 +33,10 @@ def conversion_reaction_model():
 
     # try to import the exisiting model, if possible
     try:
-        sys.path.insert(0, os.path.abspath(model_output_dir))
         model_module = amici.import_model_module(model_name, model_output_dir)
         model = model_module.getModel()
     except ValueError:
         # read in and adapt the sbml slightly
-        if os.path.abspath(model_output_dir) in sys.path:
-            sys.path.remove(os.path.abspath(model_output_dir))
         sbml_importer = amici.SbmlImporter(sbml_file)
 
         # add observables to sbml model
@@ -95,7 +91,6 @@ def conversion_reaction_model():
         )
 
         # Importing the module and loading the model
-        sys.path.insert(0, os.path.abspath(model_output_dir))
         model_module = amici.import_model_module(model_name, model_output_dir)
         model = model_module.getModel()
     except RuntimeError as err:
@@ -107,7 +102,6 @@ def conversion_reaction_model():
             "Delete the conversion_reaction_enhanced model from your python "
             "path and retry. Your python path is currently:"
         )
-        print(sys.path)
         print("Original error message:")
         raise err
 
