@@ -17,6 +17,7 @@ from petab_select import (
     Criterion,
     Method,
     Model,
+    Models,
 )
 
 from ..problem import Problem
@@ -206,8 +207,7 @@ class MethodCaller:
         example, in `ForwardSelector`, test models are compared to the
         previously selected model.
     calibrated_models:
-        The calibrated models of the model selection, as a `dict` where keys
-        are model hashes and values are models.
+        All calibrated models of the model selection.
     limit:
         Limit the number of calibrated models. NB: the number of accepted
         models may (likely) be fewer.
@@ -233,7 +233,7 @@ class MethodCaller:
     def __init__(
         self,
         petab_select_problem: petab_select.Problem,
-        calibrated_models: dict[str, Model],
+        calibrated_models: Models,
         # Arguments/attributes that can simply take the default value here.
         criterion_threshold: float = 0.0,
         limit: int = np.inf,
@@ -266,11 +266,9 @@ class MethodCaller:
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
 
-        self.user_calibrated_models = {}
+        self.user_calibrated_models = Models()
         if user_calibrated_models is not None:
-            self.user_calibrated_models = {
-                model.get_hash(): model for model in user_calibrated_models
-            }
+            self.user_calibrated_models = user_calibrated_models
 
         self.logger = MethodLogger()
 
@@ -351,7 +349,7 @@ class MethodCaller:
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
-    def __call__(self) -> tuple[list[Model], dict[str, Model]]:
+    def __call__(self) -> tuple[Model, Models]:
         """Run a single iteration of the model selection method.
 
         A single iteration here refers to calibration of all candidate models.
@@ -365,8 +363,7 @@ class MethodCaller:
         A 2-tuple, with the following values:
 
            1. the predecessor model for the newly calibrated models; and
-           2. the newly calibrated models, as a `dict` where keys are model
-              hashes and values are models.
+           2. the newly calibrated models.
         """
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
@@ -384,7 +381,7 @@ class MethodCaller:
 
         # TODO parallelize calibration (maybe not sensible if
         #      `self.select_first_improvement`)
-        calibrated_models = {}
+        calibrated_models = Models()
         for model in iteration[UNCALIBRATED_MODELS]:
             if (
                 model.get_criterion(
@@ -405,7 +402,7 @@ class MethodCaller:
             else:
                 self.new_model_problem(model=model)
 
-            calibrated_models[model.get_hash()] = model
+            calibrated_models.append(model)
             method_signal = self.handle_calibrated_model(
                 model=model,
                 predecessor_model=iteration[PREDECESSOR_MODEL],
@@ -418,9 +415,9 @@ class MethodCaller:
             calibrated_models=calibrated_models,
         )
 
-        self.calibrated_models.update(iteration_results[MODELS])
+        self.calibrated_models += iteration_results[MODELS]
 
-        return iteration[PREDECESSOR_MODEL], iteration_results[MODELS]
+        return iteration_results[MODELS]
 
     def handle_calibrated_model(
         self,
@@ -544,6 +541,7 @@ class MethodCaller:
         x_guess = None
         if (
             self.startpoint_latest_mle
+            and model.predecessor_model_hash is not None
             and model.predecessor_model_hash in self.calibrated_models
         ):
             predecessor_model = self.calibrated_models[

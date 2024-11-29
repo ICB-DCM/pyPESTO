@@ -1,11 +1,10 @@
 """Manage all components of a pyPESTO model selection problem."""
 
 import warnings
-from collections.abc import Iterable
 from typing import Any, Optional
 
 import petab_select
-from petab_select import Model
+from petab_select import Model, Models
 
 from .method import MethodCaller
 from .model_problem import TYPE_POSTPROCESSOR, ModelProblem  # noqa: F401
@@ -21,11 +20,10 @@ class Problem:
     Attributes
     ----------
     calibrated_models:
-        Storage for all calibrated models. A dictionary, where keys are
-        model hashes, and values are :class:`petab_select.Model` objects.
+        All calibrated models.
     newly_calibrated_models:
-        Storage for models that were calibrated in the previous iteration of
-        model selection. Same type as ``calibrated_models``.
+        All models that were calibrated in the latest iteration of model
+        selection.
     method_caller:
         A :class:`MethodCaller`, used to run a single iteration of a model
         selection method.
@@ -60,8 +58,8 @@ class Problem:
             self.model_problem_options["postprocessor"] = model_postprocessor
 
         self.set_state(
-            calibrated_models={},
-            newly_calibrated_models={},
+            calibrated_models=Models(),
+            newly_calibrated_models=Models(),
         )
 
         # TODO default caller, based on petab_select.Problem
@@ -90,8 +88,8 @@ class Problem:
 
     def set_state(
         self,
-        calibrated_models: dict[str, Model],
-        newly_calibrated_models: dict[str, Model],
+        calibrated_models: Models,
+        newly_calibrated_models: Models,
     ) -> None:
         """Set the state of the problem.
 
@@ -102,7 +100,7 @@ class Problem:
 
     def update_with_newly_calibrated_models(
         self,
-        newly_calibrated_models: Optional[dict[str, Model]] = None,
+        newly_calibrated_models: Optional[Models] = None,
     ) -> None:
         """Update the state of the problem with newly calibrated models.
 
@@ -111,7 +109,7 @@ class Problem:
                 See attributes of :class:`Problem`.
         """
         self.newly_calibrated_models = newly_calibrated_models
-        self.calibrated_models.update(self.newly_calibrated_models)
+        self.calibrated_models += self.newly_calibrated_models
 
     def handle_select_kwargs(
         self,
@@ -164,7 +162,7 @@ class Problem:
 
         best_model = petab_select.ui.get_best(
             problem=self.petab_select_problem,
-            models=self.newly_calibrated_models.values(),
+            models=self.newly_calibrated_models,
             criterion=method_caller.criterion,
         )
 
@@ -176,44 +174,36 @@ class Problem:
     def select_to_completion(
         self,
         **kwargs,
-    ) -> list[Model]:
-        """Run an algorithm until an exception `StopIteration` is raised.
+    ) -> Models:
+        """Perform model selection until the method terminates.
 
         ``kwargs`` are passed to the :class:`MethodCaller` constructor.
 
-        An exception ``StopIteration`` is raised by
-        :meth:`pypesto.select.method.MethodCaller.__call__` when no candidate models
-        are found.
-
         Returns
         -------
-        The best models (the best model at each iteration).
+        All models.
         """
-        best_models = []
+        calibrated_models = Models(problem=self.petab_select_problem)
         self.handle_select_kwargs(kwargs)
         method_caller = self.create_method_caller(**kwargs)
 
         while True:
             try:
-                previous_best_model, newly_calibrated_models = method_caller()
+                iteration_calibrated_models = method_caller()
                 self.update_with_newly_calibrated_models(
-                    newly_calibrated_models=newly_calibrated_models,
+                    newly_calibrated_models=iteration_calibrated_models,
                 )
-                best_models.append(previous_best_model)
+                calibrated_models += iteration_calibrated_models
             except StopIteration:
-                previous_best_model = (
-                    method_caller.candidate_space.predecessor_model
-                )
-                best_models.append(previous_best_model)
                 break
 
-        return best_models
+        return calibrated_models
 
     # TODO method that automatically generates initial models, for a specific
     # number of starts. TODO parallelise?
     def multistart_select(
         self,
-        predecessor_models: Iterable[Model] = None,
+        predecessor_models: Models = None,
         **kwargs,
     ) -> tuple[Model, list[Model]]:
         """Run an algorithm multiple times, with different predecessor models.
@@ -248,9 +238,9 @@ class Problem:
                 **(kwargs | {"predecessor_model": predecessor_model})
             )
             (best_model, models) = method_caller()
-            self.calibrated_models |= models
+            self.calibrated_models += models
 
-            model_lists.append(list(models.values()))
+            model_lists.append(models)
             method_caller.candidate_space.reset()
 
         best_model = petab_select.ui.get_best(
