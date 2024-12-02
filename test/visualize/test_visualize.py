@@ -1258,7 +1258,7 @@ def test_plot_ordinal_categories():
     # Set seed for reproducibility.
     np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
-        method="L-BFGS-B", options={"maxiter": 10}
+        method="L-BFGS-B", options={"maxiter": 1}
     )
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
     problem = importer.create_problem()
@@ -1284,7 +1284,12 @@ def test_visualize_estimated_observable_mapping():
     np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",
-        options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
+        options={
+            "disp": None,
+            "ftol": 2.220446049250313e-09,
+            "gtol": 1e-5,
+            "maxiter": 1,
+        },
     )
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
     problem = importer.create_problem()
