@@ -164,7 +164,7 @@ def plot_calibrated_models_digraph(
 
     G = nx.DiGraph()
     edges = []
-    for model in calibrated_models.values():
+    for model in calibrated_models:
         predecessor_model_hash = model.predecessor_model_hash
         if predecessor_model_hash is not None:
             from_ = labels.get(predecessor_model_hash, predecessor_model_hash)

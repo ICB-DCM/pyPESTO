@@ -15,6 +15,7 @@ from petab_select import (
     Criterion,
     Method,
     Model,
+    get_best_by_iteration,
 )
 
 import pypesto.engine
@@ -183,7 +184,7 @@ def test_problem_select_to_completion(pypesto_select_problem):
             method=Method.FORWARD
         )
     )
-    best_models = pypesto_select_problem.select_to_completion(
+    models = pypesto_select_problem.select_to_completion(
         criterion=Criterion.BIC,
         select_first_improvement=True,
         startpoint_latest_mle=True,
@@ -191,63 +192,53 @@ def test_problem_select_to_completion(pypesto_select_problem):
         candidate_space=candidate_space,
     )
 
-    expected_calibrated_models_subspace_ids = {
+    expected_calibrated_ids = {
         "M1_0",
         "M1_1",
         "M1_4",
         "M1_5",
         "M1_7",
     }
-    test_calibrated_models_subspace_ids = {
-        model.model_subspace_id
-        for model in pypesto_select_problem.calibrated_models.values()
-    }
+    test_calibrated_ids = {model.model_subspace_id for model in models}
     # Expected models were calibrated during the search.
-    assert (
-        test_calibrated_models_subspace_ids
-        == expected_calibrated_models_subspace_ids
+    assert test_calibrated_ids == expected_calibrated_ids
+
+    best_by_iteration = get_best_by_iteration(
+        models=models, criterion=Criterion.BIC
     )
 
-    expected_best_model_subspace_ids = [
-        # The first iteration is from a virtual model, which will appear
-        # as the best model for that iteration.
-        VIRTUAL_INITIAL_MODEL,
+    expected_best_by_iteration = [
         "M1_0",
         "M1_1",
-        # This iteration with models `{'M1_4', 'M1_5'}` didn't have a better
-        # model than the previous iteration.
-        "M1_1",
+        "M1_5",
         "M1_7",
     ]
-    test_best_model_subspace_ids = [
-        (model.model_subspace_id if model != VIRTUAL_INITIAL_MODEL else model)
-        for model in best_models
+    test_best_by_iteration = [
+        model.model_subspace_id for model in best_by_iteration.values()
     ]
     # Expected best models were found.
-    assert test_best_model_subspace_ids == expected_best_model_subspace_ids
+    assert test_best_by_iteration == expected_best_by_iteration
 
-    expected_best_model_criterion_values = [
-        # VIRTUAL_INITIAL_MODEL
-        np.inf,
+    expected_best_values = [
         36.767,
         -4.592,
         # This iteration with models `{'M1_4', 'M1_5'}` didn't have a better
         # model than the previous iteration.
-        -4.592,
+        -3.330,
         -4.889,
     ]
-    test_best_model_criterion_values = [
+    test_best_values = [
         (
             model.get_criterion(Criterion.BIC)
             if model != VIRTUAL_INITIAL_MODEL
             else np.inf
         )
-        for model in best_models
+        for model in best_by_iteration.values()
     ]
     # The best models have the expected criterion values.
     assert np.isclose(
-        test_best_model_criterion_values,
-        expected_best_model_criterion_values,
+        test_best_values,
+        expected_best_values,
         **tolerances,
     ).all()
 
@@ -305,7 +296,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     }
     test_predecessor_model_hashes = {
         model.model_subspace_id: model.predecessor_model_hash
-        for model in pypesto_select_problem.calibrated_models.values()
+        for model in pypesto_select_problem.calibrated_models
     }
     # All calibrated models have the expected predecessor model.
     assert test_predecessor_model_hashes == expected_predecessor_model_hashes
@@ -344,7 +335,7 @@ def test_postprocessors(petab_select_problem):
 
     expected_newly_calibrated_models_subspace_ids = ["M1_0"]
     test_newly_calibrated_models_subspace_ids = [
-        model.model_subspace_id for model in newly_calibrated_models_1.values()
+        model.model_subspace_id for model in newly_calibrated_models_1
     ]
     # The expected "forward" models were found.
     assert (
@@ -410,7 +401,7 @@ def test_vis(pypesto_select_problem):
     )
     labels = {
         model.get_hash(): model.model_subspace_id
-        for model in pypesto_select_problem.calibrated_models.values()
+        for model in pypesto_select_problem.calibrated_models
     }
     pypesto.visualize.select.plot_selected_models(
         selected_models=best_models,

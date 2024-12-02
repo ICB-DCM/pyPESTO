@@ -130,7 +130,7 @@ class Problem:
     def select(
         self,
         **kwargs,
-    ) -> tuple[Model, dict[str, Model], dict[str, Model]]:
+    ) -> tuple[Model, Models]:
         """Run a single iteration of a model selection algorithm.
 
         The result is the selected model for the current run, independent of
@@ -140,21 +140,14 @@ class Problem:
 
         Returns
         -------
-        A 3-tuple, with the following values:
+        A 3-tuple, with the following values from this iteration:
 
-           1. the best model;
-           2. all candidate models in this iteration, as a `dict` with
-              model hashes as keys and models as values; and
-           3. all candidate models from all iterations, as a `dict` with
-              model hashes as keys and models as values.
+           1. the best model; and
+           2. all models.
         """
-        # TODO move some options to PEtab Select? e.g.:
-        # - startpoint_latest_mle
-        # - select_first_improvement
         self.handle_select_kwargs(kwargs)
-        # TODO handle bidirectional
         method_caller = self.create_method_caller(**kwargs)
-        previous_best_model, newly_calibrated_models = method_caller()
+        newly_calibrated_models = method_caller()
 
         self.update_with_newly_calibrated_models(
             newly_calibrated_models=newly_calibrated_models,
@@ -166,9 +159,6 @@ class Problem:
             criterion=method_caller.criterion,
         )
 
-        # TODO: Reconsider return value. `result` could be stored in attribute,
-        # then no values need to be returned, and users can request values
-        # manually.
         return best_model, newly_calibrated_models
 
     def select_to_completion(
@@ -237,7 +227,7 @@ class Problem:
             method_caller = self.create_method_caller(
                 **(kwargs | {"predecessor_model": predecessor_model})
             )
-            (best_model, models) = method_caller()
+            models = method_caller()
             self.calibrated_models += models
 
             model_lists.append(models)
