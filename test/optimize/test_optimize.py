@@ -25,6 +25,7 @@ from pypesto.optimize.ess import (
     FunctionEvaluatorMP,
     RefSet,
     SacessFidesFactory,
+    SacessIpoptFactory,
     SacessOptimizer,
     SacessOptions,
     get_default_ess_options,
@@ -468,6 +469,7 @@ def test_history_beats_optimizer():
         optimize.FidesOptimizer(),
         SacessFidesFactory(),
         SacessCmaFactory(),
+        SacessIpoptFactory(),
     ],
 )
 @pytest.mark.flaky(reruns=3)
