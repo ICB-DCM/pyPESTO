@@ -129,7 +129,7 @@ def visualize_estimated_observable_mapping(
         n_axes = n_relative_observables + n_semiquant_observables
         n_rows = int(np.ceil(np.sqrt(n_axes)))
         n_cols = int(np.ceil(n_axes / n_rows))
-        _, axes = plt.subplots(n_rows, n_cols, **kwargs)
+        _, axes = plt.subplots(n_rows, n_cols, squeeze=False, **kwargs)
         axes = axes.flatten()
 
     # Plot the estimated observable mapping for relative observables.
@@ -246,8 +246,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
             n_cols = int(np.ceil(n_relative_observables / n_rows))
 
             # Make as many subplots as there are relative observables
-            _, axes = plt.subplots(n_rows, n_cols, **kwargs)
-
+            _, axes = plt.subplots(n_rows, n_cols, squeeze=False, **kwargs)
             # Flatten the axes array
             axes = axes.flatten()
 
@@ -590,8 +589,7 @@ def plot_splines_from_inner_result(
             n_cols = int(np.ceil(n_groups / n_rows))
 
             # Make as many subplots as there are groups
-            _, axes = plt.subplots(n_rows, n_cols, **kwargs)
-
+            _, axes = plt.subplots(n_rows, n_cols, squeeze=False, **kwargs)
             # Flatten the axes array
             axes = axes.flatten()
 
