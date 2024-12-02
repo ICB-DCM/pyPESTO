@@ -9,6 +9,7 @@ from .function_evaluator import (
 from .refset import RefSet
 from .sacess import (
     SacessFidesFactory,
+    SacessIpoptFactory,
     SacessOptimizer,
     SacessOptions,
     get_default_ess_options,
