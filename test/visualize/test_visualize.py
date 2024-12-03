@@ -1220,7 +1220,7 @@ def test_time_trajectory_model():
 @close_fig
 def test_sacess_history():
     """Test pypesto.visualize.optimizer_history.sacess_history"""
-    from pypesto.optimize.ess.sacess import SacessOptimizer
+    from pypesto.optimize.ess.sacess import ESSExitFlag, SacessOptimizer
     from pypesto.visualize.optimizer_history import sacess_history
 
     problem = create_problem()
@@ -1228,6 +1228,7 @@ def test_sacess_history():
         max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
     )
     sacess.minimize(problem)
+    assert sacess.exit_flag == ESSExitFlag.MAX_TIME
     sacess_history(sacess.histories)
 
 

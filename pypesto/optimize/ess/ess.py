@@ -27,17 +27,21 @@ __all__ = ["ESSOptimizer", "ESSExitFlag"]
 
 
 class ESSExitFlag(int, enum.Enum):
-    """Exit flags used by :class:`ESSOptimizer`."""
+    """Scatter search exit flags.
+
+    Exit flags used by :class:`pypesto.ess.ESSOptimizer` and
+    :class:`pypesto.ess.SacessOptimizer`.
+    """
 
     # ESS did not run/finish yet
     DID_NOT_RUN = 0
-    # Exited after reaching maximum number of iterations
+    # Exited after reaching the maximum number of iterations
     MAX_ITER = -1
     # Exited after exhausting function evaluation budget
     MAX_EVAL = -2
     # Exited after exhausting wall-time budget
     MAX_TIME = -3
-    # Termination because for other reason than exit criteria
+    # Termination because of other reasons than exit criteria
     ERROR = -99
 
 
@@ -242,6 +246,8 @@ class ESSOptimizer:
         # Overall best function value found so far
         self.fx_best: float = np.inf
         # Results from local searches (only those with finite fval)
+        # (there is potential to save memory here by only keeping the
+        # parameters in memory and not the full result)
         self.local_solutions: list[OptimizerResult] = []
         # Index of current iteration
         self.n_iter: int = 0
