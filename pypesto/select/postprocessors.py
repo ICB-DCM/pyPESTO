@@ -1,10 +1,11 @@
 """Process a model selection :class:`ModelProblem` after calibration."""
 
+import warnings
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from petab_select.constants import ESTIMATE, TYPE_PATH, Criterion
+from petab_select.constants import TYPE_PATH, Criterion
 
 from .. import store, visualize
 from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
@@ -109,10 +110,15 @@ def model_id_binary_postprocessor(problem: ModelProblem):
     problem:
         A model selection :class:`ModelProblem` that has been optimized.
     """
-    model_id = "M_"
-    for parameter_value in problem.model.parameters.values():
-        model_id += "1" if parameter_value == ESTIMATE else "0"
-    problem.model.model_id = model_id
+    warnings.warn(
+        (
+            "This is obsolete. Model IDs are by default the model hash, which "
+            "is now similar to the binary string."
+        ),
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    problem.model.model_id = problem.model.get_hash()
 
 
 def report_postprocessor(
