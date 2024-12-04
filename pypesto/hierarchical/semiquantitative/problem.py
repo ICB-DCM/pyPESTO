@@ -373,6 +373,11 @@ def spline_inner_parameters_from_measurement_df(
         df_for_group = df[df[OBSERVABLE_ID] == observable_id]
 
         n_spline_parameters = int(np.ceil(len(df_for_group) * spline_ratio))
+        if n_spline_parameters < 2:
+            raise ValueError(
+                "The number of spline parameters must be at least 2."
+                " Please adjust the spline ratio."
+            )
 
         # Create n_spline_parameters number of spline inner parameters.
         for par_index in range(n_spline_parameters):
