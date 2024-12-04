@@ -260,13 +260,36 @@ def get_sensitivities_from_adjoint_gradient(
     y_sensitivities:
         List of sensitivities for each timepoint.
     """
-    y = np.array([rdata[AMICI_Y][0][0] for rdata in rdatas])
+    n_observables = rdatas[0].y.shape[1]
+    n_conditions = len(rdatas)
+    n_parameters = len(rdatas[0].sllh)
+    obs_idx_per_cond = np.array(
+        [
+            np.where(
+                ~np.isnan(amici.numpy.ExpDataView(edata)["observedData"][0])
+            )[0][0]
+            for edata in edatas
+        ]
+    )
+
+    y = np.array(
+        [
+            rdata[AMICI_Y][0][obs_idx]
+            for rdata, obs_idx in zip(rdatas, obs_idx_per_cond)
+        ]
+    )
     wrong_grad = -np.array([rdata["sllh"] for rdata in rdatas])
-    sigma_y = np.array([rdata[AMICI_SIGMAY][0][0] for rdata in rdatas])
+    sigma_y = np.array(
+        [
+            rdata[AMICI_SIGMAY][0][obs_idx]
+            for rdata, obs_idx in zip(rdatas, obs_idx_per_cond)
+        ]
+    )
+
     data = np.array(
         [
-            amici.numpy.ExpDataView(edata)["observedData"][0][0]
-            for edata in edatas
+            amici.numpy.ExpDataView(edata)["observedData"][0][obs_idx]
+            for edata, obs_idx in zip(edatas, obs_idx_per_cond)
         ]
     )
 
@@ -277,8 +300,11 @@ def get_sensitivities_from_adjoint_gradient(
     y_sensitivities = np.divide(wrong_grad, residual[:, np.newaxis])
 
     # reshape to AMICI rdata.sy shape
-    y_sensitivities = [
-        y_sensitivities[:, np.newaxis, :, np.newaxis][i]
-        for i in range(y_sensitivities.shape[0])
-    ]
-    return y_sensitivities
+    y_sensitivities_correct_dim = np.full(
+        (n_conditions, 1, n_parameters, n_observables), np.nan
+    )
+
+    y_sensitivities_correct_dim[
+        np.arange(n_conditions), 0, :, obs_idx_per_cond
+    ] = y_sensitivities
+    return y_sensitivities_correct_dim
