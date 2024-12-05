@@ -984,6 +984,48 @@ def get_spline_mapped_simulations(
     return mapped_simulations
 
 
+def apply_all_splines_to_rdatas_sim(
+    inner_problem: SemiquantProblem,
+    x_inner_opt: list[dict],
+    sim: list[np.ndarray],
+):
+    """Return model simulations mapped using the approximation spline for all groups."""
+    import copy
+
+    output_format = [copy.deepcopy(sim[i]) for i in range(len(sim))]
+
+    for group in inner_problem.get_groups_for_xs(InnerParameterType.SPLINE):
+        group_dict = inner_problem.groups[group]
+        group_dict[CURRENT_SIMULATION] = extract_expdata_using_mask(
+            expdata=sim, mask=group_dict[EXPDATA_MASK]
+        )
+        s = np.asarray(x_inner_opt[group - 1][SCIPY_X])
+        N = group_dict[N_SPLINE_PARS]
+        K = group_dict[NUM_DATAPOINTS]
+        delta_c, c, n = SemiquantInnerSolver._rescale_spline_bases(
+            sim_all=group_dict[CURRENT_SIMULATION], N=N, K=K
+        )
+        spline_mapped_sim_all = get_spline_mapped_simulations(
+            s=s,
+            sim_all=group_dict[CURRENT_SIMULATION],
+            N=group_dict[N_SPLINE_PARS],
+            delta_c=delta_c,
+            c=c,
+            n=n,
+        )
+        current_index = 0
+        # Fill in the mapped simulations in the output format
+        for i, mask in enumerate(group_dict[EXPDATA_MASK]):
+            # Count the number of True values in the mask
+            n_true = np.sum(mask)
+            output_format[i][mask] = spline_mapped_sim_all[
+                current_index : current_index + n_true
+            ]
+            current_index += n_true
+
+    return output_format
+
+
 def calculate_inner_hessian(
     s: np.ndarray,
     sim_all: np.ndarray,
