@@ -1,6 +1,6 @@
 """Enhanced Scatter Search."""
 
-from .ess import ESSOptimizer
+from .ess import ESSExitFlag, ESSOptimizer
 from .function_evaluator import (
     FunctionEvaluator,
     FunctionEvaluatorMP,

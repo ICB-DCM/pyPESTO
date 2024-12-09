@@ -24,7 +24,10 @@ import pypesto
 from ... import MemoryHistory
 from ...startpoint import StartpointMethod
 from ...store.read_from_hdf5 import read_result
-from ...store.save_to_hdf5 import write_result
+from ...store.save_to_hdf5 import (
+    OptimizationResultHDF5Writer,
+    ProblemHDF5Writer,
+)
 from ..optimize import Problem
 from .ess import ESSExitFlag, ESSOptimizer
 from .function_evaluator import create_function_evaluator
@@ -162,7 +165,7 @@ class SacessOptimizer:
             Directory for temporary files. This defaults to a directory in the
             current working directory named ``SacessOptimizerTemp-{random suffix}``.
             When setting this option, make sure any optimizers running in
-            parallel have a unique `tmpdir`.
+            parallel have a unique `tmpdir`. Expected to be empty.
         mp_start_method:
             The start method for the multiprocessing context.
             See :mod:`multiprocessing` for details. Running `SacessOptimizer`
@@ -326,7 +329,9 @@ class SacessOptimizer:
         self.histories = [
             worker_result.history for worker_result in self.worker_results
         ]
-
+        self.exit_flag = min(
+            worker_result.exit_flag for worker_result in self.worker_results
+        )
         result = self._create_result(problem)
 
         walltime = time.time() - start_time
@@ -649,6 +654,10 @@ class SacessWorker:
     ):
         self._start_time = time.time()
 
+        # index of the local solution in ESSOptimizer.local_solutions
+        #  that was most recently saved by _autosave
+        last_saved_local_solution = -1
+
         self._logger.setLevel(self._loglevel)
         # Set the manager logger to one created within the current process
         self._manager._logger = self._logger
@@ -683,19 +692,13 @@ class SacessWorker:
             # perform one ESS iteration
             ess._do_iteration()
 
-            if self._tmp_result_file:
-                # TODO maybe not in every iteration?
-                ess_results = ess._create_result()
-                write_result(
-                    ess_results,
-                    self._tmp_result_file,
-                    overwrite=True,
-                    optimize=True,
-                )
             # check if the best solution of the last local ESS is sufficiently
             # better than the sacess-wide best solution
             self.maybe_update_best(ess.x_best, ess.fx_best)
             self._best_known_fx = min(ess.fx_best, self._best_known_fx)
+
+            self._autosave(ess, last_saved_local_solution)
+            last_saved_local_solution = len(ess.local_solutions) - 1
 
             self._cooperate()
             self._maybe_adapt(problem)
@@ -910,6 +913,49 @@ class SacessWorker:
         self._manager.abort()
 
         self._finalize(None)
+
+    def _autosave(self, ess: ESSOptimizer, last_saved_local_solution: int):
+        """Save intermediate results.
+
+        If a temporary result file is set, save the (part of) the current state
+        of the ESS to that file.
+
+        We save the current best solution and the local optimizer results.
+        """
+        if not self._tmp_result_file:
+            return
+
+        # save problem in first iteration
+        if ess.n_iter == 1:
+            pypesto_problem_writer = ProblemHDF5Writer(self._tmp_result_file)
+            pypesto_problem_writer.write(
+                ess.evaluator.problem, overwrite=False
+            )
+
+        opt_res_writer = OptimizationResultHDF5Writer(self._tmp_result_file)
+        for i in range(
+            last_saved_local_solution + 1, len(ess.local_solutions)
+        ):
+            optimizer_result = ess.local_solutions[i]
+            optimizer_result.id = str(i + ess.n_iter)
+            opt_res_writer.write_optimizer_result(
+                optimizer_result, overwrite=False
+            )
+
+        # save the current best solution
+        optimizer_result = pypesto.OptimizerResult(
+            id=str(len(ess.local_solutions) + ess.n_iter),
+            x=ess.x_best,
+            fval=ess.fx_best,
+            message=f"Global best (iteration {ess.n_iter})",
+            time=time.time() - ess.starttime,
+            n_fval=ess.evaluator.n_eval,
+            optimizer=str(ess),
+        )
+        optimizer_result.update_to_full(ess.evaluator.problem)
+        opt_res_writer.write_optimizer_result(
+            optimizer_result, overwrite=False
+        )
 
     @staticmethod
     def get_temp_result_filename(worker_idx: int, tmpdir: str | Path) -> str:
