@@ -20,6 +20,7 @@ import pypesto
 import pypesto.optimize as optimize
 from pypesto import Objective
 from pypesto.optimize.ess import (
+    ESSExitFlag,
     ESSOptimizer,
     FunctionEvaluatorMP,
     RefSet,
@@ -501,12 +502,14 @@ def test_ess(problem, local_optimizer, ess_type, request):
                 adaptation_sent_coeff=5,
             ),
         )
+
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")
 
     res = ess.minimize(
         problem=problem,
     )
+    assert ess.exit_flag in (ESSExitFlag.MAX_TIME, ESSExitFlag.MAX_ITER)
     print("ESS result: ", res.summary())
 
     # best values roughly: cr: 4.701; rosen 7.592e-10
