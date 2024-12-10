@@ -1325,7 +1325,7 @@ class SacessIpoptFactory:
         """Create a :class:`IpoptOptimizer` instance."""
 
         options = self._ipopt_options.copy()
-        if np.isfinite(max_eval):
+        if np.isfinite(max_walltime_s):
             options["max_wall_time"] = max_walltime_s
 
         # only accepts int
