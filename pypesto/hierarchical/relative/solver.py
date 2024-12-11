@@ -238,6 +238,8 @@ class RelativeInnerSolver(InnerSolver):
         """
         sim = [rdata["y"] for rdata in rdatas]
         sigma = [rdata["sigmay"] for rdata in rdatas]
+        inner_parameters = copy.deepcopy(inner_parameters)
+        inner_parameters = scale_back_value_dict(inner_parameters, problem)
 
         # apply offsets, scalings and sigmas
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
