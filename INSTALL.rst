@@ -53,6 +53,12 @@ and then install from the local repository via::
     cd pypesto
     pip3 install .
 
+Install from Docker
+-------------------
+
+.. include:: containers.rst
+
+
 
 Upgrade
 -------
