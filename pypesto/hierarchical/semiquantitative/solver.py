@@ -1068,39 +1068,31 @@ def calculate_dy_term(
     n: np.ndarray,
 ):
     """Calculate the derivative of the objective function for one group with respect to the simulations."""
-    df_dy = 0
-    scaled_delta_c_dot = delta_c_dot / delta_c**2
+    # Adjust interval indices for zero-indexing
+    n_indices = n - 1
 
-    # Determine the interval for each simulation
-    n_indices = n - 1  # Adjust for zero-indexing
+    # Mask invalid indices outside [1, N-1]
+    # The derivative is zero for the first and last interval
     valid_indices = (n_indices > 0) & (n_indices < N)
-    unique_intervals = np.unique(n_indices[valid_indices])
+    valid_n_indices = n_indices[valid_indices]
 
-    # Loop over intervals instead of simulations
-    for i in unique_intervals:
-        # Get all simulations in the current interval
-        mask = n_indices == i
-        if not np.any(
-            mask
-        ):  # Skip the interval if no simulations belong to it
-            continue
+    # Prepare common pre-computed terms
+    y_c_diff = sim_all[valid_indices] - c[valid_n_indices - 1]
+    s_values = s[valid_n_indices]
+    sum_s = np.cumsum(s[:-1])[valid_n_indices - 1]
+    y_dot_valid = sy_all[valid_indices]
+    c_dot_valid = c_dot[valid_n_indices - 1]
 
-        y_k_group = sim_all[mask]
-        z_k_group = measurements[mask]
-        y_dot_k_group = sy_all[mask]
+    # Vectorized term computation
+    scaled_delta_c_dot = delta_c_dot / delta_c**2
+    term1 = y_c_diff * s_values / delta_c + sum_s - measurements[valid_indices]
+    term2 = s_values * (
+        (y_dot_valid - c_dot_valid) / delta_c - y_c_diff * scaled_delta_c_dot
+    )
 
-        sum_s = np.sum(s[:i])  # Precompute for the interval
-        y_c_diff = y_k_group - c[i - 1]
+    # Final aggregated gradient term
+    df_dy = np.sum(term1 * term2)
 
-        # Vectorized computation for all simulations in the interval
-        df_dy += np.sum(
-            (y_c_diff * s[i] / delta_c + sum_s - z_k_group)
-            * s[i]
-            * (
-                (y_dot_k_group - c_dot[i - 1]) / delta_c
-                - y_c_diff * scaled_delta_c_dot
-            )
-        )
     return df_dy
 
 
