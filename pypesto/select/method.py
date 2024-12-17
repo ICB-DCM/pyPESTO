@@ -3,7 +3,7 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 import petab_select
@@ -422,7 +422,7 @@ class MethodCaller:
     def handle_calibrated_model(
         self,
         model: Model,
-        predecessor_model: Optional[Model],
+        predecessor_model: Model,
     ) -> MethodSignal:
         """Handle the model selection method, given a new calibrated model.
 
@@ -451,8 +451,7 @@ class MethodCaller:
 
         # Reject the model if it doesn't improve on the predecessor model.
         if (
-            predecessor_model is not None
-            and predecessor_model != VIRTUAL_INITIAL_MODEL
+            predecessor_model.hash != VIRTUAL_INITIAL_MODEL.hash
             and not self.model1_gt_model0(
                 model1=model, model0=predecessor_model
             )
@@ -541,13 +540,14 @@ class MethodCaller:
         x_guess = None
         if (
             self.startpoint_latest_mle
-            and model.predecessor_model_hash is not None
             and model.predecessor_model_hash in self.calibrated_models
         ):
             predecessor_model = self.calibrated_models[
                 model.predecessor_model_hash
             ]
-            if str(model.petab_yaml) != str(predecessor_model.petab_yaml):
+            if str(model.model_subspace_petab_yaml) != str(
+                predecessor_model.model_subspace_petab_yaml
+            ):
                 raise NotImplementedError(
                     "The PEtab YAML files differ between the model and its "
                     "predecessor model. This may imply different (fixed union "
