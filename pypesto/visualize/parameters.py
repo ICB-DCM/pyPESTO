@@ -464,7 +464,9 @@ def handle_inputs(
 
     # If all the scales are the same, put it in the x_axis_label
     if len({x_scale for _, x_scale in x_labels}) == 1:
-        x_axis_label = "Parameter value (" + x_labels[0][1].decode('utf-8') + ")"
+        x_axis_label = "Parameter value (" 
+        x_axis_label += isinstance(x_labels[0][1], bytes) and x_labels[0][1].decode('utf-8') or x_labels[0][1]
+        x_axis_label += ")"
         x_labels = [x_name for x_name, _ in x_labels]
     else:
         x_axis_label = "Parameter value"
