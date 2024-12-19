@@ -7,7 +7,7 @@ We provide a pyPESTO container image in the OCI format through `docker.io/stepha
 
 Develop versions are pushed as tag ``latest``.
 
-Docker image can also be build manually by the users using the Dockerfile: https://github.com/ICB-DCM/pyPESTO/tree/main/docker
+The image can also be built using the provided `Dockerfile <https://github.com/ICB-DCM/pyPESTO/blob/main/docker/Dockerfile>`_.
 
 If you manually build your container and need to convert to Apptainer, first export your docker image to `.tar` by:
 `docker save -o pypesto.tar pypesto:latest` and pull the image before from docker.io by `docker pull docker.io/stephanmg/pypesto:latest`.
