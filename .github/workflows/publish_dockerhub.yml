@@ -3,7 +3,7 @@ name: Build and Push Docker Image
 on:
   push:
     branches:
-      - main
+      - develop
     paths:
       - 'docker/**'
       - '.github/workflows/docker-publish.yml'
@@ -25,8 +25,8 @@ jobs:
 
       - name: Build and tag the Docker image
         run: |
-          docker build -t ICB_DCM/pypesto:latest -f docker/Dockerfile .
+          docker build -t stephanmg/pypesto:latest -f docker/Dockerfile .
 
       - name: Push the Docker image to Docker Hub
         run: |
-          docker push ICB_DCM/pypesto:latest
+          docker push stephanmg/pypesto:latest
