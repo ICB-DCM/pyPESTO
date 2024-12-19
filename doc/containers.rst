@@ -3,7 +3,7 @@
 Containers
 ==========
 
-We provide a pyPESTO docker image in OCI format through `docker.io/stephanmg/pypesto`.
+We provide a pyPESTO container image in the OCI format through `docker.io/stephanmg/pypesto` (https://hub.docker.com/r/stephanmg/pypesto).
 
 Develop versions are pushed as tag ``latest``.
 
