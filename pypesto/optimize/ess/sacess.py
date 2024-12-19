@@ -1320,13 +1320,14 @@ class SacessIpoptFactory:
         self._ipopt_options = ipopt_options
 
     def __call__(
-        self, max_walltime_s: int, max_eval: int
+        self, max_walltime_s: float, max_eval: float
     ) -> pypesto.optimize.IpoptOptimizer:
         """Create a :class:`IpoptOptimizer` instance."""
 
         options = self._ipopt_options.copy()
+        # only accepts int
         if np.isfinite(max_walltime_s):
-            options["max_wall_time"] = max_walltime_s
+            options["max_wall_time"] = int(max_walltime_s)
 
         # only accepts int
         if np.isfinite(max_eval):
