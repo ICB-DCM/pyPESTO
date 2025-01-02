@@ -20,7 +20,7 @@ from petab_select import (
 import pypesto.engine
 import pypesto.select
 import pypesto.visualize.select
-from pypesto.select import model_problem
+from pypesto.select import SacessMinimizeMethod, model_problem
 from pypesto.select.misc import correct_x_guesses
 
 model_problem_options = {
@@ -279,6 +279,8 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
         "M1_3": -4.705,
         # 'M1_7': -4.056,  # skipped -- reproducibility requires many starts
     }
+    # As M1_7 criterion comparison is skipped, at least ensure it is present
+    assert {m.model_subspace_id for m in best_models} == {"M1_3", "M1_7"}
     test_best_models_criterion_values = {
         model.model_subspace_id: model.get_criterion(Criterion.AIC)
         for model in best_models
@@ -494,3 +496,31 @@ def test_custom_objective(petab_problem_yaml):
     # The custom objective and gradient were returned.
     assert test_fun == expected_fun
     assert np.isclose(test_grad, expected_grad).all()
+
+
+def test_sacess_minimize_method(pypesto_select_problem, initial_models):
+    """Test `SacessMinimizeMethod`.
+
+    Only ensures that the pipeline runs.
+    """
+    predecessor_model = initial_models[1]
+
+    minimize_method = SacessMinimizeMethod(
+        num_workers=2,
+        max_walltime_s=1,
+    )
+
+    minimize_options = {
+        "startpoint_method": pypesto.startpoint.UniformStartpoints(),
+    }
+
+    model_problem_options = {
+        "minimize_method": minimize_method,
+        "minimize_options": minimize_options,
+    }
+
+    pypesto_select_problem.select_to_completion(
+        model_problem_options=model_problem_options,
+        method=petab_select.Method.FORWARD,
+        predecessor_model=predecessor_model,
+    )

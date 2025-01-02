@@ -1,23 +1,22 @@
 """Include functions for saving various results to hdf5."""
+from __future__ import annotations
 
 import logging
 import os
 from numbers import Integral
 from pathlib import Path
-from typing import Union
 
 import h5py
 import numpy as np
 
+from .. import OptimizeResult, OptimizerResult
 from ..result import ProfilerResult, Result, SampleResult
 from .hdf5 import write_array, write_float_array
 
 logger = logging.getLogger(__name__)
 
 
-def check_overwrite(
-    f: Union[h5py.File, h5py.Group], overwrite: bool, target: str
-):
+def check_overwrite(f: h5py.File | h5py.Group, overwrite: bool, target: str):
     """
     Check whether target already exists.
 
@@ -36,7 +35,7 @@ def check_overwrite(
             del f[target]
         else:
             raise RuntimeError(
-                f"File `{f.filename}` already exists and contains "
+                f"File `{f.file.filename}` already exists and contains "
                 f"information about {target} result. "
                 f"If you wish to overwrite the file, set "
                 f"`overwrite=True`."
@@ -53,7 +52,7 @@ class ProblemHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: str | Path):
         """
         Initialize writer.
 
@@ -106,7 +105,7 @@ class OptimizationResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: str | Path):
         """
         Initialize Writer.
 
@@ -117,32 +116,76 @@ class OptimizationResultHDF5Writer:
         """
         self.storage_filename = str(storage_filename)
 
-    def write(self, result: Result, overwrite=False):
-        """Write HDF5 result file from pyPESTO result object."""
-        # Create destination directory
-        if isinstance(self.storage_filename, str):
-            basedir = os.path.dirname(self.storage_filename)
-            if basedir:
-                os.makedirs(basedir, exist_ok=True)
+    def write(
+        self,
+        result: Result
+        | OptimizeResult
+        | OptimizerResult
+        | list[OptimizerResult],
+        overwrite=False,
+    ):
+        """Write HDF5 result file from pyPESTO result object.
+
+        Parameters
+        ----------
+        result: Result to be saved.
+        overwrite: Boolean, whether already existing results should be
+            overwritten. This applies to the whole list of results, not only to
+            individual results. See :meth:`write_optimizer_result` for
+            incrementally writing a sequence of `OptimizerResult`.
+        """
+        Path(self.storage_filename).parent.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(result, Result):
+            results = result.optimize_result.list
+        elif isinstance(result, OptimizeResult):
+            results = result.list
+        elif isinstance(result, list):
+            results = result
+        elif isinstance(result, OptimizerResult):
+            results = [result]
+        else:
+            raise ValueError(f"Unsupported type for `result`: {type(result)}.")
 
         with h5py.File(self.storage_filename, "a") as f:
             check_overwrite(f, overwrite, "optimization")
             optimization_grp = f.require_group("optimization")
-            # settings =
-            # optimization_grp.create_dataset("settings", settings, dtype=)
             results_grp = optimization_grp.require_group("results")
 
-            for start in result.optimize_result.list:
-                start_id = start["id"]
-                start_grp = results_grp.require_group(start_id)
-                for key in start.keys():
-                    if key == "history":
-                        continue
-                    if isinstance(start[key], np.ndarray):
-                        write_array(start_grp, key, start[key])
-                    elif start[key] is not None:
-                        start_grp.attrs[key] = start[key]
-                f.flush()
+            for start in results:
+                self._do_write_optimizer_result(start, results_grp, overwrite)
+
+    def write_optimizer_result(
+        self, result: OptimizerResult, overwrite: bool = False
+    ):
+        """Write HDF5 result file from pyPESTO result object.
+
+        Parameters
+        ----------
+        result: Result to be saved.
+        overwrite: Boolean, whether already existing results with the same ID
+            should be overwritten.s
+        """
+        Path(self.storage_filename).parent.mkdir(parents=True, exist_ok=True)
+
+        with h5py.File(self.storage_filename, "a") as f:
+            results_grp = f.require_group("optimization/results")
+            self._do_write_optimizer_result(result, results_grp, overwrite)
+
+    def _do_write_optimizer_result(
+        self, result: OptimizerResult, g: h5py.Group = None, overwrite=False
+    ):
+        """Write an OptimizerResult to the given group."""
+        sub_group_id = result["id"]
+        check_overwrite(g, overwrite, sub_group_id)
+        start_grp = g.require_group(sub_group_id)
+        for key in result.keys():
+            if key == "history":
+                continue
+            if isinstance(result[key], np.ndarray):
+                write_array(start_grp, key, result[key])
+            elif result[key] is not None:
+                start_grp.attrs[key] = result[key]
 
 
 class SamplingResultHDF5Writer:
@@ -155,7 +198,7 @@ class SamplingResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: str | Path):
         """
         Initialize Writer.
 
@@ -208,7 +251,7 @@ class ProfileResultHDF5Writer:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: str | Path):
         """
         Initialize Writer.
 
@@ -241,7 +284,7 @@ class ProfileResultHDF5Writer:
 
     @staticmethod
     def _write_profiler_result(
-        parameter_profile: Union[ProfilerResult, None], result_grp: h5py.Group
+        parameter_profile: ProfilerResult | None, result_grp: h5py.Group
     ) -> None:
         """Write a single ProfilerResult to hdf5.
 
@@ -267,7 +310,7 @@ class ProfileResultHDF5Writer:
 
 def write_result(
     result: Result,
-    filename: Union[str, Path],
+    filename: str | Path,
     overwrite: bool = False,
     problem: bool = True,
     optimize: bool = False,

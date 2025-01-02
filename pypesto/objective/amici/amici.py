@@ -178,7 +178,16 @@ class AmiciObjective(ObjectiveBase):
             parameter_mapping = create_identity_parameter_mapping(
                 amici_model, len(edatas)
             )
+        # parameter mapping where IDs of the currently fixed parameters
+        #  have been replaced by their respective values
+        #  (relevant for setting ``plist`` in ExpData later on)
         self.parameter_mapping = parameter_mapping
+        # parameter mapping independent of fixed parameters
+        #  (i.e., all objective parameters are included as parameter IDs,
+        #  not as their values)
+        self._parameter_mapping_full = copy.deepcopy(parameter_mapping)
+        # IDs of fixed `Problem` parameters
+        self._fixed_parameter_ids = []
 
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
@@ -474,8 +483,16 @@ class AmiciObjective(ObjectiveBase):
             edatas = self.edatas
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
+        # Some parameters may appear estimated in the original compiled model,
+        # but then are fixed during parameter estimation. These are removed
+        # from the parameter vector to avoid warnings about unused parameters.
+        x_dct_free = {
+            par_id: val
+            for par_id, val in x_dct.items()
+            if par_id not in self._fixed_parameter_ids
+        }
         ret = self.calculator(
-            x_dct=x_dct,
+            x_dct=x_dct_free,
             sensi_orders=sensi_orders,
             mode=mode,
             amici_model=self.amici_model,
@@ -656,3 +673,51 @@ class AmiciObjective(ObjectiveBase):
         return super().check_gradients_match_finite_differences(
             *args, x=x, **kwargs
         )
+
+    def update_from_problem(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ):
+        """Handle fixed parameters."""
+        super().update_from_problem(
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals,
+        )
+
+        # To make amici aware of fixed parameters, and thus, avoid computing
+        #  unnecessary sensitivities, we need to update the parameter mapping
+        #  and replace the IDs of all fixed parameters by their respective
+        #  values.
+        self.parameter_mapping = copy.deepcopy(self._parameter_mapping_full)
+        self._fixed_parameter_ids = [self.x_ids[i] for i in x_fixed_indices]
+        if not len(x_fixed_indices):
+            return
+
+        id_to_val = {
+            self.x_ids[x_idx]: x_val
+            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals)
+        }
+        for condition_mapping in self.parameter_mapping:
+            for (
+                model_par,
+                mapped_to_par,
+            ) in condition_mapping.map_sim_var.items():
+                if (val := id_to_val.get(mapped_to_par)) is not None:
+                    condition_mapping.map_sim_var[model_par] = val
+            for (
+                model_par,
+                mapped_to_par,
+            ) in condition_mapping.map_sim_fix.items():
+                if (val := id_to_val.get(mapped_to_par)) is not None:
+                    condition_mapping.map_sim_fix[model_par] = val
+            for (
+                model_par,
+                mapped_to_par,
+            ) in condition_mapping.map_preeq_fix.items():
+                if (val := id_to_val.get(mapped_to_par)) is not None:
+                    condition_mapping.map_preeq_fix[model_par] = val
