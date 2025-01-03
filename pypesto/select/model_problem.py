@@ -15,6 +15,9 @@ OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
 TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
 
 
+__all__ = ["ModelProblem"]
+
+
 class ModelProblem:
     """Handles all required calibration tasks on a model.
 
