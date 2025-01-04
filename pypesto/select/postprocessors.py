@@ -49,7 +49,7 @@ def waterfall_plot_postprocessor(
     See :meth:`save_postprocessor` for usage hints and argument documentation.
     """
     visualize.waterfall(problem.minimize_result)
-    plot_output_path = Path(output_path) / (problem.model.model_hash + ".png")
+    plot_output_path = Path(output_path) / (str(problem.model.hash) + ".png")
     plt.savefig(str(plot_output_path))
 
 
@@ -86,7 +86,7 @@ def save_postprocessor(
     """
     stem = problem.model.model_id
     if use_model_hash:
-        stem = problem.model.get_hash()
+        stem = str(problem.model.hash)
     store.write_result(
         problem.minimize_result,
         Path(output_path) / (stem + ".hdf5"),
@@ -118,7 +118,7 @@ def model_id_binary_postprocessor(problem: ModelProblem):
         DeprecationWarning,
         stacklevel=2,
     )
-    problem.model.model_id = problem.model.get_hash()
+    problem.model.model_id = str(problem.model.hash)
 
 
 def report_postprocessor(
