@@ -55,10 +55,10 @@ jobs:
         CXX: clang++
 
     - name: Coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   mac:
     runs-on: macos-13  # TODO: change to macos-latest after the next release
@@ -91,10 +91,10 @@ jobs:
       run: ulimit -n 65536 65536 && tox -e base
 
     - name: Coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   windows:
     runs-on: windows-latest
@@ -163,10 +163,10 @@ jobs:
         CXX: clang++
 
     - name: Coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   julia:
     runs-on: ubuntu-latest
@@ -214,10 +214,10 @@ jobs:
       run: tox -e julia
 
     - name: Coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   optimize:
     runs-on: ubuntu-latest
@@ -250,10 +250,10 @@ jobs:
       run: tox -e optimize
 
     - name: Coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   hierarchical:
     runs-on: ubuntu-latest
@@ -286,10 +286,10 @@ jobs:
       run: tox -e hierarchical
 
     - name: Coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   select:
     runs-on: ubuntu-latest
@@ -322,10 +322,10 @@ jobs:
       run: tox -e select
 
     - name: Coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
-        file: ./coverage.xml
+        files: ./coverage.xml
 
   quality:
     runs-on: ubuntu-latest
