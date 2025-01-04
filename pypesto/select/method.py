@@ -411,6 +411,7 @@ class MethodCaller:
                 break
 
         iteration_results = petab_select.ui.end_iteration(
+            problem=self.petab_select_problem,
             candidate_space=iteration[CANDIDATE_SPACE],
             calibrated_models=calibrated_models,
         )
