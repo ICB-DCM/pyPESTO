@@ -152,7 +152,7 @@ class ModelProblem:
         if isinstance(self.minimize_method, SacessMinimizeMethod):
             return self.minimize_method(
                 self.pypesto_problem,
-                model_hash=self.model.get_hash(),
+                model_hash=self.model.hash,
                 **self.minimize_options,
             )
         return self.minimize_method(

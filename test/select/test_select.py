@@ -81,7 +81,9 @@ def initial_models(petab_problem_yaml) -> list[Model]:
     """Models that can be used to initialize a search."""
     initial_model_1 = Model(
         model_id="myModel1",
-        petab_yaml=petab_problem_yaml,
+        model_subspace_id="dummy",
+        model_subspace_indices=[],
+        model_subspace_petab_yaml=petab_problem_yaml,
         parameters={
             "k1": 0,
             "k2": 0,
@@ -91,7 +93,9 @@ def initial_models(petab_problem_yaml) -> list[Model]:
     )
     initial_model_2 = Model(
         model_id="myModel2",
-        petab_yaml=petab_problem_yaml,
+        model_subspace_id="dummy",
+        model_subspace_indices=[],
+        model_subspace_petab_yaml=petab_problem_yaml,
         parameters={
             "k1": ESTIMATE,
             "k2": ESTIMATE,
@@ -259,7 +263,8 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     assert test_best_model_subspace_id == expected_best_model_subspace_id
 
     best_models = [
-        pypesto_select_problem.petab_select_problem.get_best(
+        petab_select.ui.get_best(
+            problem=pypesto_select_problem.petab_select_problem,
             models=models,
             criterion=criterion,
         )
@@ -285,7 +290,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     )
 
     initial_model_id_hash_map = {
-        initial_model.model_id: initial_model.get_hash()
+        initial_model.model_id: initial_model.hash
         for initial_model in initial_models
     }
     expected_predecessor_model_hashes = {
@@ -354,8 +359,8 @@ def test_postprocessors(petab_select_problem):
     )
     # End Iteration 1 #########################################################
 
-    expected_png_file = output_path / (best_model_1.model_hash + ".png")
-    expected_hdf5_file = output_path / (best_model_1.model_hash + ".hdf5")
+    expected_png_file = output_path / f"{best_model_1.hash}.png"
+    expected_hdf5_file = output_path / f"{best_model_1.hash}.hdf5"
 
     # The expected files exist.
     assert expected_png_file.is_file()
@@ -400,7 +405,7 @@ def test_vis(pypesto_select_problem):
         model_problem_options=model_problem_options,
     )
     labels = {
-        model.get_hash(): model.model_subspace_id
+        model.hash: model.model_subspace_id
         for model in pypesto_select_problem.calibrated_models
     }
     pypesto.visualize.select.plot_selected_models(
@@ -436,7 +441,12 @@ def test_custom_objective(petab_problem_yaml):
         grad=True,
     )
 
-    model = Model(petab_yaml=petab_problem_yaml)
+    model = Model(
+        model_subspace_id="dummy",
+        model_subspace_indices=[],
+        model_subspace_petab_yaml=petab_problem_yaml,
+        parameters={},
+    )
 
     def get_pypesto_problem(model, objective, petab_problem, x_guesses):
         corrected_x_guesses = correct_x_guesses(
@@ -501,13 +511,8 @@ def test_sacess_minimize_method(pypesto_select_problem, initial_models):
         max_walltime_s=1,
     )
 
-    minimize_options = {
-        "startpoint_method": pypesto.startpoint.UniformStartpoints(),
-    }
-
     model_problem_options = {
         "minimize_method": minimize_method,
-        "minimize_options": minimize_options,
     }
 
     pypesto_select_problem.select_to_completion(

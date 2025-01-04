@@ -3,8 +3,7 @@
 
 import matplotlib.pyplot as plt
 import networkx as nx
-from petab_select import Model
-from petab_select.constants import VIRTUAL_INITIAL_MODEL, Criterion
+from petab_select import VIRTUAL_INITIAL_MODEL, Criterion, Model
 
 from .. import select as pypesto_select
 
@@ -14,7 +13,7 @@ RELATIVE_LABEL_FONTSIZE = -2
 
 def default_label_maker(model: Model) -> str:
     """Create a model label, for plotting."""
-    return model.model_hash[:4]
+    return str(model.hash)[:4]
 
 
 # FIXME supply the problem to automatically detect the correct criterion?
@@ -73,7 +72,7 @@ def plot_selected_models(
 
     criterion_values = {
         labels.get(
-            model.get_hash(), default_label_maker(model)
+            model.hash, default_label_maker(model)
         ): model.get_criterion(criterion) - zero
         for model in selected_models
     }
@@ -173,7 +172,7 @@ def plot_calibrated_models_digraph(
             if predecessor_model_hash in calibrated_models:
                 predecessor_model = calibrated_models[predecessor_model_hash]
                 from_ = labels.get(
-                    predecessor_model.get_hash(),
+                    predecessor_model.hash,
                     default_label_maker(predecessor_model),
                 )
         else:
@@ -182,7 +181,7 @@ def plot_calibrated_models_digraph(
                 "not yet implemented."
             )
             from_ = "None"
-        to = labels.get(model.get_hash(), default_label_maker(model))
+        to = labels.get(model.hash, default_label_maker(model))
         edges.append((from_, to))
 
     G.add_edges_from(edges)
