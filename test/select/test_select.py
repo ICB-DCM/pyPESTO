@@ -396,33 +396,6 @@ def test_model_problem_fake_result():
     assert test_fval == expected_fval
 
 
-def test_vis(pypesto_select_problem):
-    """Test plotting routines."""
-    criterion = Criterion.AIC
-    best_models = pypesto_select_problem.select_to_completion(
-        method=Method.FORWARD,
-        criterion=criterion,
-        model_problem_options=model_problem_options,
-    )
-    labels = {
-        model.hash: model.model_subspace_id
-        for model in pypesto_select_problem.calibrated_models
-    }
-    pypesto.visualize.select.plot_selected_models(
-        selected_models=best_models,
-        criterion=criterion,
-        labels=labels,
-    )
-    # import matplotlib.pyplot as plt
-    # plt.savefig('output/selected.png')
-    pypesto.visualize.select.plot_calibrated_models_digraph(
-        problem=pypesto_select_problem,
-        criterion=criterion,
-        labels=labels,
-    )
-    # plt.savefig('output/digraph.png')
-
-
 def test_custom_objective(petab_problem_yaml):
     parameters = {
         "k2": 0.333,
