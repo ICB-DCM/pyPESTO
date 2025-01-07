@@ -66,9 +66,11 @@ model_problem_options = {
 )
 def test_pypesto(test_case_path_stem):
     """Run all test cases with pyPESTO."""
+    print(test_cases, test_case_path_stem)
     if test_cases and test_case_path_stem not in test_cases:
         pytest.skip("Test excluded from subset selected for debugging.")
 
+    print(skip_test_cases, test_case_path_stem)
     if test_case_path_stem in skip_test_cases:
         pytest.skip("Test marked to be skipped.")
 
