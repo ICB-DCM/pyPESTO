@@ -29,11 +29,15 @@ test_cases = [
 skip_test_cases = [
     "0009",
 ]
+print("1##")
 
 # Download test cases from GitHub
 test_cases_path = Path("petab_select") / "test_cases"
+print("2##")
 if not test_cases_path.exists():
+    print("3##")
     subprocess.run([Path(__file__).parent / "get_test_cases.sh"])  # noqa: S603
+print("4##")
 
 # Reduce runtime but with high reproducibility
 minimize_options = {
