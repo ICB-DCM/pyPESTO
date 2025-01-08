@@ -14,32 +14,29 @@ Release notes
     - Improve CI (#1521, #1523, #1532, #1536, #1508)
     - Update references/documentation (#1506, #1491, #1516)
     - **Docker Image** (#1083, #1538)
-- Ensemble
 - Hierarchical
     - Fix no error if inner observable parameter in noise formula & viceversa (#1504)
     - Remove inner datas from relative calculator (#1505)
 - Optimization
     - ESSOptimizer: Fix priority for local search startpoints (#1503)
     - Fix NLoptOptimizer.__repr__ (#1518)
-- Improve exception-handling in SacessOptimizer (#1517)
-- Fix ESSOptimizer min of empty sequence (#1510)
-- Don't modify sys.path for amici model imports (#1522)
-- Set OptimizerResult.optimizer in Optimizer.minimize (#1525)
-- SacessOptimizer: More efficient saving of intermediate results (#1529)
+    - Improve exception-handling in SacessOptimizer (#1517)
+    - Fix ESSOptimizer min of empty sequence (#1510)
+    - Don't modify sys.path for amici model imports (#1522)
+    - Set OptimizerResult.optimizer in Optimizer.minimize (#1525)
+    - SacessOptimizer: More efficient saving of intermediate results (#1529)
 - Objective
     - AmiciObjective/PEtab import: Fix plist (#1493)
-- PEtab: Fix warning from fill_in_parameters with fixed parameters (#1509)
-- Amici: Fix handling of PEtab fixed parameters (#1514)
-- Fix get_parameter_prior_dict docstring (#1537)
-- Profile
-- Sampling
+    - PEtab: Fix warning from fill_in_parameters with fixed parameters (#1509)
+    - Amici: Fix handling of PEtab fixed parameters (#1514)
+    - Fix get_parameter_prior_dict docstring (#1537)
 - Select
-- Support user-provided calibration results (#1338)
-- Problem-specific minimize method for SaCeSS (#1339)
+    - Support user-provided calibration results (#1338)
+    - Problem-specific minimize method for SaCeSS (#1339)
 - Storage
-- Enable writing Optimize(r)Result directly in Writer (#1528)
+    - Enable writing Optimize(r)Result directly in Writer (#1528)
 - Visualize
-- Fix flatten of observable mapping with one observable (#1515)
+    - Fix flatten of observable mapping with one observable (#1515)
 
 
 0.5.4 (2024-10-19)
