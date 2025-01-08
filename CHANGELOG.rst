@@ -11,7 +11,7 @@ Release notes
 
 - General
     - Exclude nlopt==2.9.0 from setup (#1519)
-    - Improve CI (#1521, #1523, #1532, #1536, #1508)
+    - Improve CI (#1521, #1523, #1532, #1536, #1508, #1544)
     - Update references/documentation (#1506, #1491, #1516)
     - **Docker Image** (#1083, #1538)
 - Hierarchical
