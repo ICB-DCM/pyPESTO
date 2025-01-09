@@ -29,15 +29,11 @@ test_cases = [
 skip_test_cases = [
     "0009",
 ]
-print("1##")
 
 # Download test cases from GitHub
 test_cases_path = Path("petab_select") / "test_cases"
-print("2##")
 if not test_cases_path.exists():
-    print("3##")
     subprocess.run([Path(__file__).parent / "get_test_cases.sh"])  # noqa: S603
-print("4##")
 
 # Reduce runtime but with high reproducibility
 minimize_options = {
@@ -58,65 +54,62 @@ model_problem_options = {
 }
 
 
-# @pytest.mark.parametrize(
-#     "test_case_path_stem",
-#     sorted(
-#         [test_case_path.stem for test_case_path in test_cases_path.glob("*")]
-#     ),
-# )
-# def test_pypesto(test_case_path_stem):
-#     """Run all test cases with pyPESTO."""
-#     print(test_cases, test_case_path_stem)
-#     if test_cases and test_case_path_stem not in test_cases:
-#         pytest.skip("Test excluded from subset selected for debugging.")
-#         return
-# 
-#     print(skip_test_cases, test_case_path_stem)
-#     if test_case_path_stem in skip_test_cases:
-#         print(f"SKIPPING {test_case_path_stem}")
-#         pytest.skip("Test marked to be skipped.")
-#         return
-# 
-#     test_case_path = test_cases_path / test_case_path_stem
-#     expected_model_yaml = test_case_path / "expected.yaml"
-#     # Setup the pyPESTO model selector instance.
-#     petab_select_problem = petab_select.Problem.from_yaml(
-#         test_case_path / "petab_select_problem.yaml",
-#     )
-#     pypesto_select_problem = pypesto.select.Problem(
-#         petab_select_problem=petab_select_problem
-#     )
-# 
-#     # Run the selection process until "exhausted".
-#     pypesto_select_problem.select_to_completion(
-#         model_problem_options=model_problem_options,
-#     )
-# 
-#     # Get the best model
-#     best_model = petab_select.analyze.get_best(
-#         models=pypesto_select_problem.calibrated_models,
-#         criterion=petab_select_problem.criterion,
-#         compare=petab_select_problem.compare,
-#     )
-# 
-#     # Load the expected model.
-#     expected_model = Model.from_yaml(expected_model_yaml)
-# 
-#     def get_series(model, dict_attribute) -> pd.Series:
-#         return pd.Series(
-#             getattr(model, dict_attribute),
-#             dtype=np.float64,
-#         ).sort_index()
-# 
-#     # The estimated parameters and criteria values are as expected.
-#     for dict_attribute in [CRITERIA, ESTIMATED_PARAMETERS]:
-#         pd.testing.assert_series_equal(
-#             get_series(expected_model, dict_attribute),
-#             get_series(best_model, dict_attribute),
-#             rtol=1e-2,
-#         )
-#     # FIXME ensure `current model criterion` trajectory also matches, in summary.tsv file,
-#     #       for test case 0009, after summary format is revised
+@pytest.mark.parametrize(
+    "test_case_path_stem",
+    sorted(
+        [test_case_path.stem for test_case_path in test_cases_path.glob("*")]
+    ),
+)
+def test_pypesto(test_case_path_stem):
+    """Run all test cases with pyPESTO."""
+    if test_cases and test_case_path_stem not in test_cases:
+        pytest.skip("Test excluded from subset selected for debugging.")
+        return
+
+    if test_case_path_stem in skip_test_cases:
+        pytest.skip("Test marked to be skipped.")
+        return
+
+    test_case_path = test_cases_path / test_case_path_stem
+    expected_model_yaml = test_case_path / "expected.yaml"
+    # Setup the pyPESTO model selector instance.
+    petab_select_problem = petab_select.Problem.from_yaml(
+        test_case_path / "petab_select_problem.yaml",
+    )
+    pypesto_select_problem = pypesto.select.Problem(
+        petab_select_problem=petab_select_problem
+    )
+
+    # Run the selection process until "exhausted".
+    pypesto_select_problem.select_to_completion(
+        model_problem_options=model_problem_options,
+    )
+
+    # Get the best model
+    best_model = petab_select.analyze.get_best(
+        models=pypesto_select_problem.calibrated_models,
+        criterion=petab_select_problem.criterion,
+        compare=petab_select_problem.compare,
+    )
+
+    # Load the expected model.
+    expected_model = Model.from_yaml(expected_model_yaml)
+
+    def get_series(model, dict_attribute) -> pd.Series:
+        return pd.Series(
+            getattr(model, dict_attribute),
+            dtype=np.float64,
+        ).sort_index()
+
+    # The estimated parameters and criteria values are as expected.
+    for dict_attribute in [CRITERIA, ESTIMATED_PARAMETERS]:
+        pd.testing.assert_series_equal(
+            get_series(expected_model, dict_attribute),
+            get_series(best_model, dict_attribute),
+            rtol=1e-2,
+        )
+    # FIXME ensure `current model criterion` trajectory also matches, in summary.tsv file,
+    #       for test case 0009, after summary format is revised
 
 
 @pytest.mark.skipif(
@@ -125,14 +118,6 @@ model_problem_options = {
 )
 def test_famos_cli():
     """Run test case 0009 with pyPESTO and the CLI interface."""
-    print('#'*80)
-    gha = os.getenv("GITHUB_ACTIONS")
-    gci = os.getenv("CI")
-    print(gha, type(gha), gha == "true")
-    print(gci, type(gci), gci == "true")
-    print('#'*80)
-    return
-    assert False
     test_case_path = test_cases_path / "0009"
     expected_model_yaml = test_case_path / "expected.yaml"
     problem_yaml = test_case_path / "petab_select_problem.yaml"
