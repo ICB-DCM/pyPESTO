@@ -69,10 +69,13 @@ def test_pypesto(test_case_path_stem):
     print(test_cases, test_case_path_stem)
     if test_cases and test_case_path_stem not in test_cases:
         pytest.skip("Test excluded from subset selected for debugging.")
+        return
 
     print(skip_test_cases, test_case_path_stem)
     if test_case_path_stem in skip_test_cases:
+        print(f"SKIPPING {test_case_path_stem}")
         pytest.skip("Test marked to be skipped.")
+        return
 
     test_case_path = test_cases_path / test_case_path_stem
     expected_model_yaml = test_case_path / "expected.yaml"
