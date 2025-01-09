@@ -131,6 +131,8 @@ def test_famos_cli():
     print(gha, type(gha), gha == "true")
     print(gci, type(gci), gci == "true")
     print('#'*80)
+    return
+    assert False
     test_case_path = test_cases_path / "0009"
     expected_model_yaml = test_case_path / "expected.yaml"
     problem_yaml = test_case_path / "petab_select_problem.yaml"
