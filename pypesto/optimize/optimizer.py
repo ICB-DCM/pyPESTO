@@ -549,7 +549,7 @@ class ScipyOptimizer(Optimizer):
 
 
 class IpoptOptimizer(Optimizer):
-    """Use IpOpt (https://pypi.org/project/ipopt/) for optimization."""
+    """Use Ipopt (https://pypi.org/project/cyipopt/) for optimization."""
 
     def __init__(self, options: dict = None):
         """
@@ -560,6 +560,9 @@ class IpoptOptimizer(Optimizer):
         options:
             Options are directly passed on to `cyipopt.minimize_ipopt`, except
             for the `approx_grad` option, which is handled separately.
+
+            For a list of available options, see the Ipopt documentation
+            (https://coin-or.github.io/Ipopt/OPTIONS.html).
         """
         super().__init__()
         self.approx_grad = False
@@ -599,7 +602,7 @@ class IpoptOptimizer(Optimizer):
             jac = objective.get_grad
         else:
             raise ValueError(
-                "For IPOPT, the objective must either be able to return "
+                "For Ipopt, the objective must either be able to return "
                 "gradients or the `approx_grad` must be set to True."
             )
 
