@@ -19,17 +19,17 @@ class Problem:
 
     Attributes
     ----------
-    calibrated_models:
+    calibrated_models : petab_select.Models
         All calibrated models.
-    newly_calibrated_models:
+    newly_calibrated_models : petab_select.Models
         All models that were calibrated in the latest iteration of model
         selection.
-    method_caller:
-        A :class:`MethodCaller`, used to run a single iteration of a model
+    method_caller : MethodCaller
+        Used to run a single iteration of a model
         selection method.
-    model_problem_options:
-        Passed to the constructor of :class:``ModelProblem``.
-    petab_select_problem:
+    model_problem_options : dict[str, Any]
+        Passed to the constructor of :class:`ModelProblem`.
+    petab_select_problem : petab_select.Problem
         A PEtab Select problem.
     """
 
