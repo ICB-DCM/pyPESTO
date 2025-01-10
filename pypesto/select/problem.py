@@ -140,7 +140,7 @@ class Problem:
 
         Returns
         -------
-        A 3-tuple, with the following values from this iteration:
+        A 2-tuple, with the following values from this iteration:
 
            1. the best model; and
            2. all models.
