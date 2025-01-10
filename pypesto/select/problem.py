@@ -24,11 +24,12 @@ class Problem:
     newly_calibrated_models : petab_select.Models
         All models that were calibrated in the latest iteration of model
         selection.
-    method_caller : MethodCaller
+    method_caller : pypesto.select.method.MethodCaller
         Used to run a single iteration of a model
         selection method.
-    model_problem_options : dict[str, Any]
-        Passed to the constructor of :class:`ModelProblem`.
+    model_problem_options : dict[str, typing.Any]
+        Keyword arguments, passed to the constructor of
+        :class:`ModelProblem`.
     petab_select_problem : petab_select.Problem
         A PEtab Select problem.
     """
