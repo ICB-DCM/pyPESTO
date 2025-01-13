@@ -40,7 +40,7 @@ Release notes
 - Select
     - Support user-provided calibration results (#1338)
     - Problem-specific minimize method for SaCeSS (#1339)
-    - Update for the latest PEtab Select version; see example notebook or the PEtab Select repo
+    - Update for the latest PEtab Select version; see example notebook or the PEtab Select repo (#1530)
 - Storage
     - Enable writing Optimize(r)Result directly in Writer (#1528)
     - Update parameter scale storage (#1542
