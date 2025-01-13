@@ -9,6 +9,12 @@ Release notes
 0.5.5 (2025-01-10)
 -------------------
 
+- **Breaking Changes**
+    - PETab select: there are some deprecated things that you will see as warnings. In addition, the plotting methods
+    ignores some arguments, which you will need to reimplement with the newer approach that uses plotting methods from
+    the PEtab Select library instead -- see the model selection notebook for examples. All objects containing multiple
+    models (e.g. dictionaries or lists) are now replaced by the petab_select.Models, which supports dict and list
+    methods. To convert your old list of models: petab_select.Models(list_of_Model).
 - General
     - Exclude nlopt==2.9.0 from setup (#1519)
     - Improve CI (#1521, #1523, #1532, #1536, #1508, #1544, #1531)
@@ -17,6 +23,7 @@ Release notes
 - Hierarchical
     - Fix no error if inner observable parameter in noise formula & viceversa (#1504)
     - Remove inner datas from relative calculator (#1505)
+    - Fix not scaling inner pars when applying to rdatas (#1534)
 - Optimization
     - ESSOptimizer: Fix priority for local search startpoints (#1503)
     - Fix NLoptOptimizer.__repr__ (#1518)
@@ -33,8 +40,10 @@ Release notes
 - Select
     - Support user-provided calibration results (#1338)
     - Problem-specific minimize method for SaCeSS (#1339)
+    - Update for the latest PEtab Select version; see example notebook or the PEtab Select repo
 - Storage
     - Enable writing Optimize(r)Result directly in Writer (#1528)
+    - Update parameter scale storage (#1542
 - Visualize
     - Fix flatten of observable mapping with one observable (#1515)
 
