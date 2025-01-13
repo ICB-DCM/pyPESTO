@@ -15,6 +15,7 @@ from petab_select import (
     Criterion,
     Method,
     Model,
+    get_best_by_iteration,
 )
 
 import pypesto.engine
@@ -80,7 +81,9 @@ def initial_models(petab_problem_yaml) -> list[Model]:
     """Models that can be used to initialize a search."""
     initial_model_1 = Model(
         model_id="myModel1",
-        petab_yaml=petab_problem_yaml,
+        model_subspace_id="dummy",
+        model_subspace_indices=[],
+        model_subspace_petab_yaml=petab_problem_yaml,
         parameters={
             "k1": 0,
             "k2": 0,
@@ -90,7 +93,9 @@ def initial_models(petab_problem_yaml) -> list[Model]:
     )
     initial_model_2 = Model(
         model_id="myModel2",
-        petab_yaml=petab_problem_yaml,
+        model_subspace_id="dummy",
+        model_subspace_indices=[],
+        model_subspace_petab_yaml=petab_problem_yaml,
         parameters={
             "k1": ESTIMATE,
             "k2": ESTIMATE,
@@ -183,7 +188,7 @@ def test_problem_select_to_completion(pypesto_select_problem):
             method=Method.FORWARD
         )
     )
-    best_models = pypesto_select_problem.select_to_completion(
+    models = pypesto_select_problem.select_to_completion(
         criterion=Criterion.BIC,
         select_first_improvement=True,
         startpoint_latest_mle=True,
@@ -191,63 +196,53 @@ def test_problem_select_to_completion(pypesto_select_problem):
         candidate_space=candidate_space,
     )
 
-    expected_calibrated_models_subspace_ids = {
+    expected_calibrated_ids = {
         "M1_0",
         "M1_1",
         "M1_4",
         "M1_5",
         "M1_7",
     }
-    test_calibrated_models_subspace_ids = {
-        model.model_subspace_id
-        for model in pypesto_select_problem.calibrated_models.values()
-    }
+    test_calibrated_ids = {model.model_subspace_id for model in models}
     # Expected models were calibrated during the search.
-    assert (
-        test_calibrated_models_subspace_ids
-        == expected_calibrated_models_subspace_ids
+    assert test_calibrated_ids == expected_calibrated_ids
+
+    best_by_iteration = get_best_by_iteration(
+        models=models, criterion=Criterion.BIC
     )
 
-    expected_best_model_subspace_ids = [
-        # The first iteration is from a virtual model, which will appear
-        # as the best model for that iteration.
-        VIRTUAL_INITIAL_MODEL,
+    expected_best_by_iteration = [
         "M1_0",
         "M1_1",
-        # This iteration with models `{'M1_4', 'M1_5'}` didn't have a better
-        # model than the previous iteration.
-        "M1_1",
+        "M1_5",
         "M1_7",
     ]
-    test_best_model_subspace_ids = [
-        (model.model_subspace_id if model != VIRTUAL_INITIAL_MODEL else model)
-        for model in best_models
+    test_best_by_iteration = [
+        model.model_subspace_id for model in best_by_iteration.values()
     ]
     # Expected best models were found.
-    assert test_best_model_subspace_ids == expected_best_model_subspace_ids
+    assert test_best_by_iteration == expected_best_by_iteration
 
-    expected_best_model_criterion_values = [
-        # VIRTUAL_INITIAL_MODEL
-        np.inf,
+    expected_best_values = [
         36.767,
         -4.592,
         # This iteration with models `{'M1_4', 'M1_5'}` didn't have a better
         # model than the previous iteration.
-        -4.592,
+        -3.330,
         -4.889,
     ]
-    test_best_model_criterion_values = [
+    test_best_values = [
         (
             model.get_criterion(Criterion.BIC)
             if model != VIRTUAL_INITIAL_MODEL
             else np.inf
         )
-        for model in best_models
+        for model in best_by_iteration.values()
     ]
     # The best models have the expected criterion values.
     assert np.isclose(
-        test_best_model_criterion_values,
-        expected_best_model_criterion_values,
+        test_best_values,
+        expected_best_values,
         **tolerances,
     ).all()
 
@@ -268,7 +263,8 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     assert test_best_model_subspace_id == expected_best_model_subspace_id
 
     best_models = [
-        pypesto_select_problem.petab_select_problem.get_best(
+        petab_select.ui.get_best(
+            problem=pypesto_select_problem.petab_select_problem,
             models=models,
             criterion=criterion,
         )
@@ -294,7 +290,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     )
 
     initial_model_id_hash_map = {
-        initial_model.model_id: initial_model.get_hash()
+        initial_model.model_id: initial_model.hash
         for initial_model in initial_models
     }
     expected_predecessor_model_hashes = {
@@ -305,7 +301,7 @@ def test_problem_multistart_select(pypesto_select_problem, initial_models):
     }
     test_predecessor_model_hashes = {
         model.model_subspace_id: model.predecessor_model_hash
-        for model in pypesto_select_problem.calibrated_models.values()
+        for model in pypesto_select_problem.calibrated_models
     }
     # All calibrated models have the expected predecessor model.
     assert test_predecessor_model_hashes == expected_predecessor_model_hashes
@@ -344,7 +340,7 @@ def test_postprocessors(petab_select_problem):
 
     expected_newly_calibrated_models_subspace_ids = ["M1_0"]
     test_newly_calibrated_models_subspace_ids = [
-        model.model_subspace_id for model in newly_calibrated_models_1.values()
+        model.model_subspace_id for model in newly_calibrated_models_1
     ]
     # The expected "forward" models were found.
     assert (
@@ -363,8 +359,8 @@ def test_postprocessors(petab_select_problem):
     )
     # End Iteration 1 #########################################################
 
-    expected_png_file = output_path / (best_model_1.model_hash + ".png")
-    expected_hdf5_file = output_path / (best_model_1.model_hash + ".hdf5")
+    expected_png_file = output_path / f"{best_model_1.hash}.png"
+    expected_hdf5_file = output_path / f"{best_model_1.hash}.hdf5"
 
     # The expected files exist.
     assert expected_png_file.is_file()
@@ -400,33 +396,6 @@ def test_model_problem_fake_result():
     assert test_fval == expected_fval
 
 
-def test_vis(pypesto_select_problem):
-    """Test plotting routines."""
-    criterion = Criterion.AIC
-    best_models = pypesto_select_problem.select_to_completion(
-        method=Method.FORWARD,
-        criterion=criterion,
-        model_problem_options=model_problem_options,
-    )
-    labels = {
-        model.get_hash(): model.model_subspace_id
-        for model in pypesto_select_problem.calibrated_models.values()
-    }
-    pypesto.visualize.select.plot_selected_models(
-        selected_models=best_models,
-        criterion=criterion,
-        labels=labels,
-    )
-    # import matplotlib.pyplot as plt
-    # plt.savefig('output/selected.png')
-    pypesto.visualize.select.plot_calibrated_models_digraph(
-        problem=pypesto_select_problem,
-        criterion=criterion,
-        labels=labels,
-    )
-    # plt.savefig('output/digraph.png')
-
-
 def test_custom_objective(petab_problem_yaml):
     parameters = {
         "k2": 0.333,
@@ -445,7 +414,12 @@ def test_custom_objective(petab_problem_yaml):
         grad=True,
     )
 
-    model = Model(petab_yaml=petab_problem_yaml)
+    model = Model(
+        model_subspace_id="dummy",
+        model_subspace_indices=[],
+        model_subspace_petab_yaml=petab_problem_yaml,
+        parameters={},
+    )
 
     def get_pypesto_problem(model, objective, petab_problem, x_guesses):
         corrected_x_guesses = correct_x_guesses(
@@ -510,13 +484,8 @@ def test_sacess_minimize_method(pypesto_select_problem, initial_models):
         max_walltime_s=1,
     )
 
-    minimize_options = {
-        "startpoint_method": pypesto.startpoint.UniformStartpoints(),
-    }
-
     model_problem_options = {
         "minimize_method": minimize_method,
-        "minimize_options": minimize_options,
     }
 
     pypesto_select_problem.select_to_completion(

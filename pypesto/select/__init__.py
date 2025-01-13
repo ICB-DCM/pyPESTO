@@ -8,6 +8,7 @@ Perform model selection with a
 
 from . import postprocessors
 from .misc import SacessMinimizeMethod, model_to_pypesto_problem
+from .model_problem import ModelProblem
 from .problem import Problem
 
 try:
