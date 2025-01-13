@@ -40,6 +40,8 @@ def obj_for_sensi(fun, grad, hess, max_sensi_order, integrated, x):
     ret: dict
         With fields obj, max_sensi_order, x, fval, grad, hess.
     """
+    x = np.asarray(x)
+
     if integrated:
         if max_sensi_order == 2:
 

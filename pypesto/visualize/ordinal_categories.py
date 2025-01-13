@@ -612,26 +612,18 @@ def _get_data_for_plotting(
 
 def _get_default_axes(n_groups, **kwargs):
     """Return a list of axes with the default layout."""
-    # If there is only one group, make a figure with only one plot
-    if n_groups == 1:
-        # Make figure with only one plot
-        fig, ax = plt.subplots(1, 1, **kwargs)
+    # Choose number of rows and columns to be used for the subplots
+    n_rows = int(np.ceil(np.sqrt(n_groups)))
+    n_cols = int(np.ceil(n_groups / n_rows))
 
-        axes = [ax]
-    # If there are multiple groups, make a figure with multiple plots
-    else:
-        # Choose number of rows and columns to be used for the subplots
-        n_rows = int(np.ceil(np.sqrt(n_groups)))
-        n_cols = int(np.ceil(n_groups / n_rows))
+    # Make as many subplots as there are groups
+    fig, axes = plt.subplots(n_rows, n_cols, squeeze=False, **kwargs)
 
-        # Make as many subplots as there are groups
-        fig, axes = plt.subplots(n_rows, n_cols, **kwargs)
+    # Increase the spacing between the subplots
+    fig.subplots_adjust(hspace=0.35, wspace=0.25)
 
-        # Increase the spacing between the subplots
-        fig.subplots_adjust(hspace=0.35, wspace=0.25)
-
-        # Flatten the axes array
-        axes = axes.flatten()
+    # Flatten the axes array
+    axes = axes.flatten()
     return axes
 
 

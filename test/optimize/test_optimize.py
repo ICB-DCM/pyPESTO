@@ -18,7 +18,9 @@ from numpy.testing import assert_almost_equal
 
 import pypesto
 import pypesto.optimize as optimize
+from pypesto import Objective
 from pypesto.optimize.ess import (
+    ESSExitFlag,
     ESSOptimizer,
     FunctionEvaluatorMP,
     RefSet,
@@ -308,6 +310,7 @@ def check_minimize(problem, library, solver, allow_failed_starts=False):
     ]:
         assert np.isfinite(result.optimize_result.list[0]["fval"])
         assert result.optimize_result.list[0]["x"] is not None
+        assert result.optimize_result.list[0]["optimizer"] is not None
 
 
 def test_trim_results(problem):
@@ -499,12 +502,14 @@ def test_ess(problem, local_optimizer, ess_type, request):
                 adaptation_sent_coeff=5,
             ),
         )
+
     else:
         raise ValueError(f"Unsupported ESS type {ess_type}.")
 
     res = ess.minimize(
         problem=problem,
     )
+    assert ess.exit_flag in (ESSExitFlag.MAX_TIME, ESSExitFlag.MAX_ITER)
     print("ESS result: ", res.summary())
 
     # best values roughly: cr: 4.701; rosen 7.592e-10
@@ -575,6 +580,40 @@ def test_ess_refset_repr():
         RefSet(10, None, x=np.zeros(10), fx=np.arange(10)).__repr__()
         == "RefSet(dim=10, fx=[0 ... 9])"
     )
+
+
+class FunctionOrError:
+    """Callable that raises an error every nth invocation."""
+
+    def __init__(self, fun, error_frequency=100):
+        self.counter = 0
+        self.error_frequency = error_frequency
+        self.fun = fun
+
+    def __call__(self, *args, **kwargs):
+        self.counter += 1
+        if self.counter % self.error_frequency == 0:
+            raise RuntimeError("Intentional error.")
+        return self.fun(*args, **kwargs)
+
+
+def test_sacess_worker_error(capsys):
+    """Check that SacessOptimizer does not hang if an error occurs on a worker."""
+    objective = Objective(
+        fun=FunctionOrError(sp.optimize.rosen), grad=sp.optimize.rosen_der
+    )
+    problem = pypesto.Problem(
+        objective=objective, lb=0 * np.ones((1, 2)), ub=1 * np.ones((1, 2))
+    )
+    sacess = SacessOptimizer(
+        num_workers=2,
+        max_walltime_s=2,
+        sacess_loglevel=logging.DEBUG,
+        ess_loglevel=logging.DEBUG,
+    )
+    res = sacess.minimize(problem)
+    assert isinstance(res, pypesto.Result)
+    assert "Intentional error." in capsys.readouterr().err
 
 
 def test_scipy_integrated_grad():

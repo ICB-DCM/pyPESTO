@@ -1,9 +1,11 @@
 """Test the `pypesto.store` module."""
 
 import os
-import tempfile
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
+import pytest
 import scipy.optimize as so
 
 import pypesto
@@ -52,7 +54,7 @@ from ..visualize import (
 
 def test_storage_opt_result():
     minimize_result = create_optimization_result()
-    with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
+    with TemporaryDirectory(dir=".") as tmpdirname:
         result_file_name = os.path.join(tmpdirname, "a", "b", "result.h5")
         opt_result_writer = OptimizationResultHDF5Writer(result_file_name)
         opt_result_writer.write(minimize_result)
@@ -87,6 +89,27 @@ def test_storage_opt_result_update(hdf5_file):
                 )
             else:
                 assert opt_res[key] == read_result.optimize_result[i][key]
+
+
+def test_write_optimizer_results_incrementally():
+    """Test writing optimizer results incrementally to the same file."""
+    res = create_optimization_result()
+    res1, res2 = res.optimize_result.list[:2]
+
+    with TemporaryDirectory() as tmp_dir:
+        result_path = Path(tmp_dir, "result.h5")
+        writer = OptimizationResultHDF5Writer(result_path)
+        writer.write_optimizer_result(res1)
+        writer.write_optimizer_result(res2)
+        reader = OptimizationResultHDF5Reader(result_path)
+        read_res = reader.read()
+        assert len(read_res.optimize_result) == 2
+
+        # overwriting works
+        writer.write_optimizer_result(res1, overwrite=True)
+        # overwriting attempt fails without overwrite=True
+        with pytest.raises(RuntimeError):
+            writer.write_optimizer_result(res1)
 
 
 def test_storage_problem(hdf5_file):

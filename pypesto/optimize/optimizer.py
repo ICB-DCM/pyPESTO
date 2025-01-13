@@ -39,7 +39,7 @@ class OptimizerImportError(ImportError):
 def hierarchical_decorator(minimize):
     """Add inner parameters to the optimizer result.
 
-    Default decorator for the minimize() method.
+    Default decorator for the :meth:`Optimizer.minimize` method.
     """
 
     @wraps(minimize)
@@ -81,7 +81,7 @@ def hierarchical_decorator(minimize):
 def history_decorator(minimize):
     """Initialize and extract information stored in the history.
 
-    Default decorator for the minimize() method.
+    Default decorator for the :meth:`Optimizer.minimize` method.
     """
 
     @wraps(minimize)
@@ -140,7 +140,11 @@ def history_decorator(minimize):
 
                 logger.error(f"start {id} failed:\n{trace}")
                 result = OptimizerResult(
-                    x0=x0, exitflag=-1, message=str(err), id=id
+                    x0=x0,
+                    exitflag=-1,
+                    message=str(err),
+                    id=id,
+                    optimizer=str(self),
                 )
             else:
                 raise
@@ -163,7 +167,7 @@ def history_decorator(minimize):
 def time_decorator(minimize):
     """Measure time of optimization.
 
-    Default decorator for the minimize() method to take time.
+    Default decorator for the :meth:`Optimizer.minimize` method to take time.
     Currently, the method time.time() is used, which measures
     the wall-clock time.
     """
@@ -196,8 +200,8 @@ def time_decorator(minimize):
 def fix_decorator(minimize):
     """Include also fixed parameters in the result arrays of minimize().
 
-    Default decorator for the minimize() method (nans will be inserted in the
-    derivatives).
+    Default decorator for the :meth:`Optimizer.minimize` method (nans will be
+    inserted in the derivatives).
     """
 
     @wraps(minimize)
@@ -523,6 +527,7 @@ class ScipyOptimizer(Optimizer):
             hess=getattr(res, "hess", None),
             exitflag=res.status,
             message=res.message,
+            optimizer=str(self),
         )
 
         return optimizer_result
@@ -544,7 +549,7 @@ class ScipyOptimizer(Optimizer):
 
 
 class IpoptOptimizer(Optimizer):
-    """Use IpOpt (https://pypi.org/project/ipopt/) for optimization."""
+    """Use Ipopt (https://pypi.org/project/cyipopt/) for optimization."""
 
     def __init__(self, options: dict = None):
         """
@@ -555,6 +560,9 @@ class IpoptOptimizer(Optimizer):
         options:
             Options are directly passed on to `cyipopt.minimize_ipopt`, except
             for the `approx_grad` option, which is handled separately.
+
+            For a list of available options, see the Ipopt documentation
+            (https://coin-or.github.io/Ipopt/OPTIONS.html).
         """
         super().__init__()
         self.approx_grad = False
@@ -594,7 +602,7 @@ class IpoptOptimizer(Optimizer):
             jac = objective.get_grad
         else:
             raise ValueError(
-                "For IPOPT, the objective must either be able to return "
+                "For Ipopt, the objective must either be able to return "
                 "gradients or the `approx_grad` must be set to True."
             )
 
@@ -612,7 +620,10 @@ class IpoptOptimizer(Optimizer):
 
         # the ipopt return object is a scipy.optimize.OptimizeResult
         return OptimizerResult(
-            x=ret.x, exitflag=ret.status, message=ret.message
+            x=ret.x,
+            exitflag=ret.status,
+            message=ret.message,
+            optimizer=str(self),
         )
 
     def is_least_squares(self):
@@ -630,7 +641,7 @@ class DlibOptimizer(Optimizer):
         if self.options is None:
             self.options = DlibOptimizer.get_default_options(self)
         elif "maxiter" not in self.options:
-            raise KeyError("Dlib options are missing the key word " "maxiter.")
+            raise KeyError("Dlib options are missing the keyword maxiter.")
 
     def __repr__(self) -> str:
         rep = f"<{self.__class__.__name__}"
@@ -677,7 +688,7 @@ class DlibOptimizer(Optimizer):
             0.002,
         )
 
-        optimizer_result = OptimizerResult()
+        optimizer_result = OptimizerResult(optimizer=str(self))
 
         return optimizer_result
 
@@ -737,7 +748,9 @@ class PyswarmOptimizer(Optimizer):
             problem.objective.get_fval, lb, ub, **self.options
         )
 
-        optimizer_result = OptimizerResult(x=np.array(xopt), fval=fopt)
+        optimizer_result = OptimizerResult(
+            x=np.array(xopt), fval=fopt, optimizer=str(self)
+        )
 
         return optimizer_result
 
@@ -821,7 +834,7 @@ class CmaOptimizer(Optimizer):
         )
 
         optimizer_result = OptimizerResult(
-            x=np.array(result[0]), fval=result[1]
+            x=np.array(result[0]), fval=result[1], optimizer=str(self)
         )
 
         return optimizer_result
@@ -901,7 +914,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         )
 
         optimizer_result = OptimizerResult(
-            x=np.array(result.x), fval=result.fun
+            x=np.array(result.x), fval=result.fun, optimizer=str(self)
         )
 
         return optimizer_result
@@ -1019,6 +1032,7 @@ class PyswarmsOptimizer(Optimizer):
         optimizer_result = OptimizerResult(
             x=pos,
             fval=float(cost),
+            optimizer=str(self),
         )
 
         return optimizer_result
@@ -1169,7 +1183,7 @@ class NLoptOptimizer(Optimizer):
         if self.options is not None:
             rep += f" options={self.options}"
         if self.local_options is not None:
-            rep += f" local_options={self.local_methods}"
+            rep += f" local_options={self.local_options}"
         return rep + ">"
 
     @minimize_decorator_collection
@@ -1249,6 +1263,7 @@ class NLoptOptimizer(Optimizer):
             fval=opt.last_optimum_value(),
             message=msg,
             exitflag=opt.last_optimize_result(),
+            optimizer=str(self),
         )
 
         return optimizer_result
@@ -1433,6 +1448,7 @@ class FidesOptimizer(Optimizer):
             hess=opt.hess,
             message=msg,
             exitflag=opt.exitflag,
+            optimizer=str(self),
         )
 
         return optimizer_result

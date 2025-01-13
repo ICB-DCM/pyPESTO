@@ -29,8 +29,8 @@ class RefSet:
         self,
         dim: int,
         evaluator: FunctionEvaluator,
-        x: Optional[np.array] = None,
-        fx: Optional[np.array] = None,
+        x: Optional[np.ndarray] = None,
+        fx: Optional[np.ndarray] = None,
     ):
         """Construct.
 
@@ -65,7 +65,7 @@ class RefSet:
             self.fx = fx
 
         self.n_stuck = np.zeros(shape=[dim])
-        self.attributes: dict[Any, np.array] = {}
+        self.attributes: dict[Any, np.ndarray] = {}
 
     def __repr__(self):
         fx = (
@@ -97,7 +97,9 @@ class RefSet:
         x_diverse, fx_diverse = self.evaluator.multiple_random(n_diverse)
         self.initialize_from_array(x_diverse=x_diverse, fx_diverse=fx_diverse)
 
-    def initialize_from_array(self, x_diverse: np.array, fx_diverse: np.array):
+    def initialize_from_array(
+        self, x_diverse: np.ndarray, fx_diverse: np.ndarray
+    ):
         """Create an initial reference set using the provided points.
 
         Populate half of the RefSet using the best given solutions and fill the
@@ -168,7 +170,7 @@ class RefSet:
                         x[j], self.fx[j] = self.evaluator.single_random()
                         self.sort()
 
-    def update(self, i: int, x: np.array, fx: float):
+    def update(self, i: int, x: np.ndarray, fx: float):
         """Update a RefSet entry."""
         self.x[i] = x
         self.fx[i] = fx
@@ -179,7 +181,7 @@ class RefSet:
         self.x[i], self.fx[i] = self.evaluator.single_random()
         self.n_stuck[i] = 0
 
-    def add_attribute(self, name: str, values: np.array):
+    def add_attribute(self, name: str, values: np.ndarray):
         """
         Add an attribute array to the refset members.
 
