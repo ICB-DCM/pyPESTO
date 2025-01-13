@@ -15,6 +15,9 @@ OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
 TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
 
 
+__all__ = ["ModelProblem"]
+
+
 class ModelProblem:
     """Handles all required calibration tasks on a model.
 
@@ -149,7 +152,7 @@ class ModelProblem:
         if isinstance(self.minimize_method, SacessMinimizeMethod):
             return self.minimize_method(
                 self.pypesto_problem,
-                model_hash=self.model.get_hash(),
+                model_hash=self.model.hash,
                 **self.minimize_options,
             )
         return self.minimize_method(
