@@ -10,11 +10,19 @@ Release notes
 -------------------
 
 - **Breaking Changes**
-    - PETab select: there are some deprecated things that you will see as warnings. In addition, the plotting methods
-    ignores some arguments, which you will need to reimplement with the newer approach that uses plotting methods from
-    the PEtab Select library instead -- see the model selection notebook for examples. All objects containing multiple
-    models (e.g. dictionaries or lists) are now replaced by the petab_select.Models, which supports dict and list
-    methods. To convert your old list of models: petab_select.Models(list_of_Model).
+  - **PETab select**: There are some deprecated features that will show up as warnings. In addition:
+
+    - The plotting methods ignore some arguments. You will need to reimplement these with the newer approach, which uses
+      plotting methods from the PEtab Select library instead. See the model selection notebook for examples.
+
+    - All objects containing multiple models (e.g., dictionaries or lists) are now replaced by `petab_select.Models`,
+      which supports dictionary and list methods.
+
+      To convert your old list of models:
+
+      ```python
+      petab_select.Models(list_of_Model)
+      ```
 - General
     - Exclude nlopt==2.9.0 from setup (#1519)
     - Improve CI (#1521, #1523, #1532, #1536, #1508, #1544, #1531)
