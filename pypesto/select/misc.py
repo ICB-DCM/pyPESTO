@@ -8,7 +8,7 @@ import pandas as pd
 import petab.v1 as petab
 import petab_select.ui
 from petab.v1.C import ESTIMATE, NOMINAL_VALUE
-from petab_select import Model, parameter_string_to_value
+from petab_select import Model, ModelHash, parameter_string_to_value
 from petab_select.constants import PETAB_PROBLEM
 
 from ..history import Hdf5History
@@ -210,8 +210,24 @@ class SacessMinimizeMethod:
         if self.save_history and self.tmpdir is None:
             self.tmpdir = Path.cwd() / "sacess_tmpdir"
 
-    def __call__(self, problem: Problem, model_hash: str, **minimize_options):
-        """Create then run a problem-specific sacess optimizer."""
+    def __call__(
+        self, problem: Problem, model_hash: ModelHash, **minimize_options
+    ):
+        """Create then run a problem-specific sacess optimizer.
+
+        Parameters
+        ----------
+        problem:
+            The pyPESTO problem for the model.
+        model_hash:
+            The model hash.
+        minimize_options:
+            Passed to :meth:`SacessOptimizer.minimize`.
+
+        Returns
+        -------
+        The output from :meth:`SacessOptimizer.minimize`.
+        """
         # create optimizer
         ess_init_args = get_default_ess_options(
             num_workers=self.num_workers,
@@ -221,7 +237,7 @@ class SacessMinimizeMethod:
             x["local_optimizer"] = self.local_optimizer
         model_tmpdir = None
         if self.tmpdir is not None:
-            model_tmpdir = self.tmpdir / model_hash
+            model_tmpdir = self.tmpdir / str(model_hash)
             model_tmpdir.mkdir(exist_ok=False, parents=True)
 
         ess = SacessOptimizer(
