@@ -495,6 +495,13 @@ class Problem:
                     ],
                     "lb_full": self.lb_full,
                     "ub_full": self.ub_full,
+                    "scale": self.x_scales,
+                    "fixedVal (scaled)": [
+                        self.get_full_vector(np.zeros(self.dim))[idx]
+                        if idx in self.x_fixed_indices
+                        else "-"
+                        for idx in range(self.dim_full)
+                    ],
                 },
             )
         )
