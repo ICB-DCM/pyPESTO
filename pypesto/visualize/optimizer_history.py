@@ -1,4 +1,5 @@
 import logging
+import warnings
 from collections.abc import Iterable
 from typing import Optional, Union
 
@@ -501,6 +502,8 @@ def sacess_history(
     The plot axes. `ax` or a new axes if `ax` was `None`.
     """
     ax = ax or plt.subplot()
+    if len(histories) == 0:
+        warnings.warn("No histories to plot.", stacklevel=2)
 
     # plot overall minimum
     # merge results
@@ -530,6 +533,9 @@ def sacess_history(
     # plot steps of individual workers
     for worker_idx, history in enumerate(histories):
         x, y = history.get_time_trace(), history.get_fval_trace()
+        if len(x) == 0:
+            warnings.warn(f"No trace for worker #{worker_idx}.", stacklevel=2)
+            continue
         # extend from last decrease to last timepoint
         x = np.append(x, [np.max(t)])
         y = np.append(y, [np.min(y)])

@@ -9,10 +9,13 @@ from ..objective import ObjectiveBase
 from ..optimize import minimize
 from ..problem import Problem
 from ..result import OptimizerResult, Result
-from .misc import model_to_pypesto_problem
+from .misc import SacessMinimizeMethod, model_to_pypesto_problem
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
 TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
+
+
+__all__ = ["ModelProblem"]
 
 
 class ModelProblem:
@@ -142,9 +145,16 @@ class ModelProblem:
     def minimize(self) -> Result:
         """Optimize the model.
 
-        Returns:
+        Returns
+        -------
             The optimization result.
         """
+        if isinstance(self.minimize_method, SacessMinimizeMethod):
+            return self.minimize_method(
+                self.pypesto_problem,
+                model_hash=self.model.hash,
+                **self.minimize_options,
+            )
         return self.minimize_method(
             self.pypesto_problem,
             **self.minimize_options,
@@ -195,6 +205,12 @@ def create_fake_pypesto_result_from_fval(
     ----------
     fval:
         The objective function value.
+    evaluation_time:
+        CPU time taken to compute the objective function value.
+
+    Returns
+    -------
+    The dummy result.
     """
     result = Result()
 
