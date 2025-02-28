@@ -3,11 +3,12 @@
 See papers on ESS :footcite:p:`EgeaBal2009,EgeaMar2010`,
 CESS :footcite:p:`VillaverdeEge2012`, and saCeSS :footcite:p:`PenasGon2017`.
 """
+from __future__ import annotations
 
 import enum
 import logging
 import time
-from typing import Callable, Optional, Union
+from typing import Protocol
 from warnings import warn
 
 import numpy as np
@@ -26,27 +27,98 @@ __all__ = ["ESSOptimizer", "ESSExitFlag"]
 
 
 class ESSExitFlag(int, enum.Enum):
-    """Exit flags used by :class:`ESSOptimizer`."""
+    """Scatter search exit flags.
+
+    Exit flags used by :class:`pypesto.ess.ESSOptimizer` and
+    :class:`pypesto.ess.SacessOptimizer`.
+    """
 
     # ESS did not run/finish yet
     DID_NOT_RUN = 0
-    # Exited after reaching maximum number of iterations
+    # Exited after reaching the maximum number of iterations
     MAX_ITER = -1
     # Exited after exhausting function evaluation budget
     MAX_EVAL = -2
     # Exited after exhausting wall-time budget
     MAX_TIME = -3
+    # Termination because of other reasons than exit criteria
+    ERROR = -99
+
+
+class OptimizerFactory(Protocol):
+    def __call__(
+        self, max_eval: float, max_walltime_s: float
+    ) -> pypesto.optimize.Optimizer:
+        """Create a new optimizer instance.
+
+        Parameters
+        ----------
+        max_eval:
+            Maximum number of objective functions allowed.
+        max_walltime_s:
+            Maximum walltime in seconds.
+        """
+        ...
 
 
 class ESSOptimizer:
     """Enhanced Scatter Search (ESS) global optimization.
 
-    See papers on ESS :footcite:p:`EgeaBal2009,EgeaMar2010`,
-    CESS :footcite:p:`VillaverdeEge2012`, and saCeSS :footcite:p:`PenasGon2017`.
+    Scatter search is a meta-heuristic for global optimization. A set of points
+    (the reference set, RefSet) is iteratively adapted to explore the parameter
+    space and to follow promising directions.
+
+    This implementation is based on :footcite:p:`EgeaBal2009,EgeaMar2010`,
+    but does not implement any constraint handling beyond box constraints.
+
+    The basic steps of ESS are:
+
+    * Initialization: Generate a diverse set of points (RefSet) in the
+      parameter space.
+    * Recombination: Generate new points by recombining the RefSet points.
+    * Improvement: Improve the RefSet by replacing points with better ones.
+
+    The steps are repeated until a stopping criterion is met.
+
+    ESS is gradient-free, unless a gradient-based local optimizer is used
+    (``local_optimizer``).
+
+    Hyperparameters
+    ---------------
+
+    Various hyperparameters control the behavior of ESS.
+    Initialization is controlled by ``dim_refset`` and ``n_diverse``.
+    Local optimizations are controlled by ``local_optimizer``, ``local_n1``,
+    ``local_n2``, and ``balance``.
+
+    Exit criteria
+    -------------
+
+    The optimization stops if any of the following criteria are met:
+
+    * The maximum number of iterations is reached (``max_iter``).
+    * The maximum number of objective function evaluations is reached
+      (``max_eval``).
+    * The maximum wall-time is reached (``max_walltime_s``).
+
+    One of these criteria needs to be provided.
+    Note that the wall-time and function evaluation criteria are not checked
+    after every single function evaluation, and thus, the actual number of
+    function evaluations may slightly exceed the given value.
+
+    Parallelization
+    ---------------
+
+    Objective function evaluations inside :class:`ESSOptimizer` can be
+    parallelized using multiprocessing or multithreading by passing a value
+    >1 for ``n_procs`` or ``n_threads``, respectively.
+
+
+    .. seealso::
+
+       :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
 
     .. footbibliography::
-
-    .. note: Does not implement any constraint handling beyond box constraints
     """
 
     def __init__(
@@ -57,10 +129,9 @@ class ESSOptimizer:
         local_n1: int = 1,
         local_n2: int = 10,
         balance: float = 0.5,
-        local_optimizer: Union[
-            "pypesto.optimize.Optimizer",
-            Callable[..., "pypesto.optimize.Optimizer"],
-        ] = None,
+        local_optimizer: pypesto.optimize.Optimizer
+        | OptimizerFactory
+        | None = None,
         max_eval=None,
         n_diverse: int = None,
         n_procs=None,
@@ -68,7 +139,7 @@ class ESSOptimizer:
         max_walltime_s=None,
         result_includes_refset: bool = False,
     ):
-        """Construct new ESS instance.
+        r"""Construct new ESS instance.
 
         For plausible values of hyperparameters, see :footcite:t:`VillaverdeEge2012`.
 
@@ -81,10 +152,11 @@ class ESSOptimizer:
             Maximum number of ESS iterations.
         local_n1:
             Minimum number of iterations before first local search.
+            Ignored if ``local_optimizer=None``.
         local_n2:
             Minimum number of iterations between consecutive local
             searches. Maximally one local search per performed in each
-            iteration.
+            iteration. Ignored if ``local_optimizer=None``.
         local_optimizer:
             Local optimizer for refinement, or a callable that creates an
             :class:`pypesto.optimize.Optimizer` or ``None`` to skip local searches.
@@ -104,8 +176,14 @@ class ESSOptimizer:
             optimizations and other simulations, and thus, may be exceeded by
             the duration of a local search.
         balance:
-            Quality vs diversity balancing factor [0, 1];
-            0 = only quality; 1 = only diversity
+            Quality vs. diversity balancing factor with
+            :math:`0 \leq balance \leq 1`; ``0`` = only quality,
+            ``1`` = only diversity.
+            Affects the choice of starting points for local searches. I.e.,
+            whether local optimization should focus on improving the best
+            solutions found so far (quality), or on exploring new regions of
+            the parameter space (diversity).
+            Ignored if ``local_optimizer=None``.
         n_procs:
             Number of parallel processes to use for parallel function
             evaluation. Mutually exclusive with `n_threads`.
@@ -144,8 +222,8 @@ class ESSOptimizer:
             raise ValueError(
                 "`n_procs` and `n_threads` are mutually exclusive."
             )
-        self.n_procs: Optional[int] = n_procs
-        self.n_threads: Optional[int] = n_threads
+        self.n_procs: int | None = n_procs
+        self.n_threads: int | None = n_threads
         self.balance: float = balance
         # After how many iterations a stagnated solution is to be replaced by
         #  a random one. Default value taken from [EgeaMar2010]_
@@ -162,12 +240,14 @@ class ESSOptimizer:
     def _initialize(self):
         """(Re-)Initialize."""
         # RefSet
-        self.refset: Optional[RefSet] = None
+        self.refset: RefSet | None = None
         # Overall best parameters found so far
-        self.x_best: Optional[np.array] = None
+        self.x_best: np.ndarray | None = None
         # Overall best function value found so far
         self.fx_best: float = np.inf
         # Results from local searches (only those with finite fval)
+        # (there is potential to save memory here by only keeping the
+        # parameters in memory and not the full result)
         self.local_solutions: list[OptimizerResult] = []
         # Index of current iteration
         self.n_iter: int = 0
@@ -177,15 +257,15 @@ class ESSOptimizer:
         # Whether self.x_best has changed in the current iteration
         self.x_best_has_changed: bool = False
         self.exit_flag: ESSExitFlag = ESSExitFlag.DID_NOT_RUN
-        self.evaluator: Optional[FunctionEvaluator] = None
-        self.starttime: Optional[float] = None
+        self.evaluator: FunctionEvaluator | None = None
+        self.starttime: float | None = None
         self.history: MemoryHistory = MemoryHistory()
 
     def _initialize_minimize(
         self,
         problem: Problem = None,
         startpoint_method: StartpointMethod = None,
-        refset: Optional[RefSet] = None,
+        refset: RefSet | None = None,
     ):
         """Initialize for optimizations.
 
@@ -242,7 +322,7 @@ class ESSOptimizer:
         self,
         problem: Problem = None,
         startpoint_method: StartpointMethod = None,
-        refset: Optional[RefSet] = None,
+        refset: RefSet | None = None,
     ) -> pypesto.Result:
         """Minimize the given objective.
 
@@ -329,7 +409,6 @@ class ESSOptimizer:
         for i, optimizer_result in enumerate(self.local_solutions):
             i_result += 1
             optimizer_result.id = f"Local solution {i}"
-            optimizer_result.optimizer = str(self.local_optimizer)
             result.optimize_result.append(optimizer_result)
 
         if self._result_includes_refset:
@@ -384,7 +463,7 @@ class ESSOptimizer:
             return np.inf
         return self.max_eval - self.evaluator.n_eval
 
-    def _combine_solutions(self) -> tuple[np.array, np.array]:
+    def _combine_solutions(self) -> tuple[np.ndarray, np.ndarray]:
         """Combine solutions and evaluate.
 
         Creates the next generation from the RefSet by pair-wise combination
@@ -418,7 +497,7 @@ class ESSOptimizer:
                 break
         return y, fy
 
-    def _combine(self, i, j) -> np.array:
+    def _combine(self, i, j) -> np.ndarray:
         """Combine RefSet members ``i`` and ``j``.
 
         Samples a new point from a biased hyper-rectangle derived from the
@@ -463,7 +542,7 @@ class ESSOptimizer:
         )
 
     def _do_local_search(
-        self, x_best_children: np.array, fx_best_children: np.array
+        self, x_best_children: np.ndarray, fx_best_children: np.ndarray
     ) -> None:
         """
         Perform a local search to refine the next generation.
@@ -487,14 +566,25 @@ class ESSOptimizer:
             quality_order = np.argsort(fx_best_children)
             # compute minimal distance between the best children and all local
             #  optima found so far
-            min_distances = np.array(
-                np.min(
-                    np.linalg.norm(
-                        y_i - optimizer_result.x[optimizer_result.free_indices]
-                    )
-                    for optimizer_result in self.local_solutions
+            min_distances = (
+                np.fromiter(
+                    (
+                        min(
+                            np.linalg.norm(
+                                y_i
+                                - optimizer_result.x[
+                                    optimizer_result.free_indices
+                                ]
+                            )
+                            for optimizer_result in self.local_solutions
+                        )
+                        for y_i in x_best_children
+                    ),
+                    dtype=np.float64,
+                    count=len(x_best_children),
                 )
-                for y_i in x_best_children
+                if len(self.local_solutions)
+                else np.zeros(len(x_best_children))
             )
             # sort by furthest distance to existing local optima
             diversity_order = np.argsort(min_distances)[::-1]

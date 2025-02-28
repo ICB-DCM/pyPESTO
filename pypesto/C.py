@@ -93,7 +93,6 @@ PETAB = "petab"
 # HIERARCHICAL SCALING + OFFSET
 
 INNER_PARAMETERS = "inner_parameters"
-INNER_RDATAS = "inner_rdatas"
 PARAMETER_TYPE = "parameterType"
 RELATIVE = "relative"
 
