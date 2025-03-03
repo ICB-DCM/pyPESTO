@@ -1,6 +1,4 @@
-.. _containers:
-
-Docker
+Containers
 ==========
 
 We provide a pyPESTO docker image in OCI format through the Docker.io registry `docker.io/stephanmg/pypesto:latest`.
