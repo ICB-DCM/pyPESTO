@@ -42,6 +42,7 @@
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
+/pypesto/visualize/ @stephanmg
 
 # Tests
 /test/base/ @PaulJonasJost @vwiela

@@ -3,16 +3,21 @@
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import numpy as np
 import petab_select
 from petab_select import (
+    CANDIDATE_SPACE,
+    MODELS,
+    PREDECESSOR_MODEL,
+    UNCALIBRATED_MODELS,
     VIRTUAL_INITIAL_MODEL,
     CandidateSpace,
     Criterion,
     Method,
     Model,
+    Models,
 )
 
 from ..problem import Problem
@@ -202,8 +207,7 @@ class MethodCaller:
         example, in `ForwardSelector`, test models are compared to the
         previously selected model.
     calibrated_models:
-        The calibrated models of the model selection, as a `dict` where keys
-        are model hashes and values are models.
+        All calibrated models of the model selection.
     limit:
         Limit the number of calibrated models. NB: the number of accepted
         models may (likely) be fewer.
@@ -213,6 +217,11 @@ class MethodCaller:
         Specify the predecessor (initial) model for the model selection
         algorithm. If ``None``, then the algorithm will generate an initial
         predecessor model if required.
+    user_calibrated_models:
+        Supply calibration results for models yourself, as a list of models.
+        If a model with the same hash is encountered in the current model
+        selection run, and the user-supplied calibrated model has the
+        `criterion` value set, the model will not be calibrated again.
     select_first_improvement:
         If ``True``, model selection will terminate as soon as a better model
         is found. If `False`, all candidate models will be tested.
@@ -224,7 +233,7 @@ class MethodCaller:
     def __init__(
         self,
         petab_select_problem: petab_select.Problem,
-        calibrated_models: dict[str, Model],
+        calibrated_models: Models,
         # Arguments/attributes that can simply take the default value here.
         criterion_threshold: float = 0.0,
         limit: int = np.inf,
@@ -245,6 +254,7 @@ class MethodCaller:
         # TODO deprecated
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
         model_problem_options: dict = None,
+        user_calibrated_models: list[Model] = None,
     ):
         """Arguments are used in every `__call__`, unless overridden."""
         self.petab_select_problem = petab_select_problem
@@ -255,6 +265,10 @@ class MethodCaller:
         self.predecessor_model = predecessor_model
         self.select_first_improvement = select_first_improvement
         self.startpoint_latest_mle = startpoint_latest_mle
+
+        self.user_calibrated_models = Models()
+        if user_calibrated_models is not None:
+            self.user_calibrated_models = user_calibrated_models
 
         self.logger = MethodLogger()
 
@@ -335,10 +349,7 @@ class MethodCaller:
         # May have changed from `None` to `petab_select.VIRTUAL_INITIAL_MODEL`
         self.predecessor_model = self.candidate_space.get_predecessor_model()
 
-    def __call__(
-        self,
-        newly_calibrated_models: Optional[dict[str, Model]] = None,
-    ) -> tuple[list[Model], dict[str, Model]]:
+    def __call__(self) -> tuple[Model, Models]:
         """Run a single iteration of the model selection method.
 
         A single iteration here refers to calibration of all candidate models.
@@ -347,63 +358,72 @@ class MethodCaller:
         of all models that have both: the same 3 estimated parameters; and 1
         additional estimated parameter.
 
-        The input `newly_calibrated_models` is from the previous iteration. The
-        output `newly_calibrated_models` is from the current iteration.
-
-        Parameters
-        ----------
-        newly_calibrated_models:
-            The newly calibrated models from the previous iteration.
-
         Returns
         -------
         A 2-tuple, with the following values:
 
            1. the predecessor model for the newly calibrated models; and
-           2. the newly calibrated models, as a `dict` where keys are model
-              hashes and values are models.
+           2. the newly calibrated models.
         """
         # All calibrated models in this iteration (see second return value).
         self.logger.new_selection()
 
-        candidate_space = petab_select.ui.candidates(
+        iteration = petab_select.ui.start_iteration(
             problem=self.petab_select_problem,
             candidate_space=self.candidate_space,
             limit=self.limit,
-            calibrated_models=self.calibrated_models,
-            newly_calibrated_models=newly_calibrated_models,
-            excluded_model_hashes=self.calibrated_models.keys(),
             criterion=self.criterion,
+            user_calibrated_models=self.user_calibrated_models,
         )
-        predecessor_model = self.candidate_space.predecessor_model
 
-        if not candidate_space.models:
+        if not iteration[UNCALIBRATED_MODELS]:
             raise StopIteration("No valid models found.")
 
         # TODO parallelize calibration (maybe not sensible if
         #      `self.select_first_improvement`)
-        newly_calibrated_models = {}
-        for candidate_model in candidate_space.models:
-            # autoruns calibration
-            self.new_model_problem(model=candidate_model)
-            newly_calibrated_models[
-                candidate_model.get_hash()
-            ] = candidate_model
+        calibrated_models = Models()
+        for model in iteration[UNCALIBRATED_MODELS]:
+            if (
+                model.get_criterion(
+                    criterion=self.criterion,
+                    compute=True,
+                    raise_on_failure=False,
+                )
+                is not None
+            ):
+                self.logger.log(
+                    message=(
+                        "Unexpected calibration result already available for "
+                        f"model: `{model.get_hash()}`. Skipping "
+                        "calibration."
+                    ),
+                    level="warning",
+                )
+            else:
+                self.new_model_problem(model=model)
+
+            calibrated_models.append(model)
             method_signal = self.handle_calibrated_model(
-                model=candidate_model,
-                predecessor_model=predecessor_model,
+                model=model,
+                predecessor_model=iteration[PREDECESSOR_MODEL],
             )
             if method_signal.proceed == MethodSignalProceed.STOP:
                 break
 
-        self.calibrated_models.update(newly_calibrated_models)
+        iteration_results = petab_select.ui.end_iteration(
+            problem=self.petab_select_problem,
+            candidate_space=iteration[CANDIDATE_SPACE],
+            calibrated_models=calibrated_models,
+        )
 
-        return predecessor_model, newly_calibrated_models
+        self.calibrated_models += iteration_results[MODELS]
+
+        return iteration_results[MODELS]
 
     def handle_calibrated_model(
         self,
         model: Model,
-        predecessor_model: Optional[Model],
+        predecessor_model: Model,
     ) -> MethodSignal:
         """Handle the model selection method, given a new calibrated model.
 
@@ -432,8 +452,7 @@ class MethodCaller:
 
         # Reject the model if it doesn't improve on the predecessor model.
         if (
-            predecessor_model is not None
-            and predecessor_model != VIRTUAL_INITIAL_MODEL
+            predecessor_model.hash != VIRTUAL_INITIAL_MODEL.hash
             and not self.model1_gt_model0(
                 model1=model, model0=predecessor_model
             )
@@ -527,7 +546,9 @@ class MethodCaller:
             predecessor_model = self.calibrated_models[
                 model.predecessor_model_hash
             ]
-            if str(model.petab_yaml) != str(predecessor_model.petab_yaml):
+            if str(model.model_subspace_petab_yaml) != str(
+                predecessor_model.model_subspace_petab_yaml
+            ):
                 raise NotImplementedError(
                     "The PEtab YAML files differ between the model and its "
                     "predecessor model. This may imply different (fixed union "

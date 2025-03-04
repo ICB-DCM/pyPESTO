@@ -7,7 +7,6 @@ import numbers
 import os
 import re
 import shutil
-import sys
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
@@ -144,10 +143,6 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
                 f"Refusing to remove {self.output_folder} for model "
                 f"compilation: Not a folder."
             )
-
-        # add module to path
-        if self.output_folder not in sys.path:
-            sys.path.insert(0, self.output_folder)
 
         # compile
         if self._must_compile(force_compile):

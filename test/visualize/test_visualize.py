@@ -3,6 +3,7 @@ import logging
 import os
 from collections.abc import Sequence
 from functools import wraps
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1219,7 +1220,7 @@ def test_time_trajectory_model():
 @close_fig
 def test_sacess_history():
     """Test pypesto.visualize.optimizer_history.sacess_history"""
-    from pypesto.optimize.ess.sacess import SacessOptimizer
+    from pypesto.optimize.ess.sacess import ESSExitFlag, SacessOptimizer
     from pypesto.visualize.optimizer_history import sacess_history
 
     problem = create_problem()
@@ -1227,6 +1228,7 @@ def test_sacess_history():
         max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
     )
     sacess.minimize(problem)
+    assert sacess.exit_flag == ESSExitFlag.MAX_TIME
     sacess_history(sacess.histories)
 
 
@@ -1240,3 +1242,59 @@ def test_parameters_correlation_matrix(result_creation):
     result = result_creation()
 
     visualize.parameters_correlation_matrix(result)
+
+
+@close_fig
+def test_plot_ordinal_categories():
+    example_ordinal_yaml = (
+        Path(__file__).parent
+        / ".."
+        / ".."
+        / "doc"
+        / "example"
+        / "example_ordinal"
+        / "example_ordinal.yaml"
+    )
+    petab_problem = petab.Problem.from_yaml(example_ordinal_yaml)
+    # Set seed for reproducibility.
+    np.random.seed(0)
+    optimizer = pypesto.optimize.ScipyOptimizer(
+        method="L-BFGS-B", options={"maxiter": 1}
+    )
+    importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
+    problem = importer.create_problem()
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=1, optimizer=optimizer
+    )
+    visualize.plot_categories_from_pypesto_result(result)
+
+
+@close_fig
+def test_visualize_estimated_observable_mapping():
+    example_semiquantitative_yaml = (
+        Path(__file__).parent
+        / ".."
+        / ".."
+        / "doc"
+        / "example"
+        / "example_semiquantitative"
+        / "example_semiquantitative_linear.yaml"
+    )
+    petab_problem = petab.Problem.from_yaml(example_semiquantitative_yaml)
+    # Set seed for reproducibility.
+    np.random.seed(0)
+    optimizer = pypesto.optimize.ScipyOptimizer(
+        method="L-BFGS-B",
+        options={
+            "disp": None,
+            "ftol": 2.220446049250313e-09,
+            "gtol": 1e-5,
+            "maxiter": 1,
+        },
+    )
+    importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
+    problem = importer.create_problem()
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=1, optimizer=optimizer
+    )
+    visualize.visualize_estimated_observable_mapping(result, problem)
