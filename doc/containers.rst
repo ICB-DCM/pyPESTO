@@ -1,7 +1,7 @@
 Containers
 ==========
 
-We provide a pyPESTO docker image in OCI format through the Docker.io registry `docker.io/stephanmg/pypesto:latest`.
+We provide a `pyPESTO OCI image <https://hub.docker.com/r/stephanmg/pypesto>`__ through the Docker.io registry ``docker.io/stephanmg/pypesto:latest``.
 
 A docker image build is triggered on changes/commits in the `develop` branch of pyPESTO. The container is build and pushed via a GHA to the Docker.io registry with tag ``latest``.
 
