@@ -7,7 +7,7 @@ A docker image build is triggered on changes/commits in the `develop` branch of 
 
 The image can be used by using a pull from Docker.io registry: ``docker pull docker.io/stephanmg/pypesto:latest``
 
-Docker image can also be build manually by the users using the Dockerfile found here: https://github.com/ICB-DCM/pyPESTO/tree/main/docker
+The Docker image can also be built locally using the Dockerfile found here: https://github.com/ICB-DCM/pyPESTO/tree/main/docker
 
 If you require to transfer the docker image manually, build the container using the Dockerfile, then export your docker image to `.tar` by:
 `docker save -o pypesto.tar pypesto:latest`. The `.tar` file can then be transfered (e.g. with scp) to a remote location.
