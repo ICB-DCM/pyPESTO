@@ -42,6 +42,12 @@ for par in "$@"; do
 	build-essential \
         coinor-libipopt1v5 coinor-libipopt-dev \
         gfortran lcov pkg-config python3-dev zlib1g-dev
+      if [ ! -f /usr/lib/x86_64-linux-gnu/liblapack.so ]; then
+        sudo ln -s /usr/lib/x86_64-linux-gnu/liblapack.so.3 /usr/lib/x86_64-linux-gnu/liblapack.so
+      fi
+      if [ ! -f /usr/lib/x86_64-linux-gnu/libblas.so ]; then
+        sudo ln -s /usr/lib/x86_64-linux-gnu/libblas.so.3 /usr/lib/x86_64-linux-gnu/libblas.so
+      fi
     ;;
 
     pysb)
