@@ -20,4 +20,3 @@ To download / pull image: `docker pull docker.io/stephanmg/pypesto`.
 
 To run: `docker run --rm pypesto python3 -c 'import pypesto; print(f"PyPESTO version: {pypesto.__version__}")'`.
 
-Similar instructions for the Docker drop-in replacements Podman and Singularity/Apptainer.
