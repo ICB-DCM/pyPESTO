@@ -8,6 +8,7 @@ from .function_evaluator import (
 )
 from .refset import RefSet
 from .sacess import (
+    SacessCmaFactory,
     SacessFidesFactory,
     SacessOptimizer,
     SacessOptions,
