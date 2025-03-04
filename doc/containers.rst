@@ -5,7 +5,7 @@ We provide a `pyPESTO OCI image <https://hub.docker.com/r/stephanmg/pypesto>`__ 
 
 A docker image build is triggered on changes/commits in the `develop` branch of pyPESTO. The container is build and pushed via a GHA to the Docker.io registry with tag ``latest``.
 
-The image can be used by using a pull from Docker.io registry: `docker pull docker.io/stephanmg/pypesto:latest`
+The image can be used by using a pull from Docker.io registry: ``docker pull docker.io/stephanmg/pypesto:latest``
 
 Docker image can also be build manually by the users using the Dockerfile found here: https://github.com/ICB-DCM/pyPESTO/tree/main/docker
 
