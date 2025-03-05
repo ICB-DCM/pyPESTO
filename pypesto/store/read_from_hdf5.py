@@ -179,12 +179,13 @@ class OptimizationResultHDF5Reader:
     def read(self) -> Result:
         """Read HDF5 result file and return pyPESTO result object."""
         with h5py.File(self.storage_filename, "r") as f:
-            for opt_id in f["/optimization/results"]:
-                result = read_hdf5_optimization(
+            results = [
+                read_hdf5_optimization(
                     f, self.storage_filename, opt_id, lazy=self.lazy
                 )
-                self.results.optimize_result.append(result)
-            self.results.optimize_result.sort()
+                for opt_id in f["/optimization/results"]
+            ]
+            self.results.optimize_result.append(results, sort=True)
         return self.results
 
 
