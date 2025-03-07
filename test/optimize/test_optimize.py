@@ -574,6 +574,33 @@ def test_ess_multiprocess(problem, request):
     print("ESS result: ", res.summary())
 
 
+def test_sacess_adaptation(capsys):
+    """Test that adaptation step of the SACESS optimizer succeeds."""
+    obj = rosen_for_sensi(max_sensi_order=2, integrated=False)["obj"]
+    lb = 0 * np.ones((1, 10))
+    ub = 1 * np.ones((1, 10))
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub)
+
+    ess_init_args = get_default_ess_options(
+        num_workers=2, dim=problem.dim, local_optimizer=False
+    )
+    ess = SacessOptimizer(
+        max_walltime_s=2,
+        sacess_loglevel=logging.DEBUG,
+        ess_loglevel=logging.DEBUG,
+        ess_init_args=ess_init_args,
+        options=SacessOptions(
+            # trigger frequent adaptation
+            # - don't do that in production
+            adaptation_min_evals=0,
+            adaptation_sent_offset=0,
+            adaptation_sent_coeff=0,
+        ),
+    )
+    ess.minimize(problem)
+    assert "Updated settings on worker" in capsys.readouterr().err
+
+
 def test_ess_refset_repr():
     assert RefSet(10, None).__repr__() == "RefSet(dim=10)"
     assert (
