@@ -222,7 +222,7 @@ class SamplingResultHDF5Reader:
             self.results.sample_result = McmcPtResult(**sample_result)
         except TypeError:
             logger.warning(
-                "Warning: You tried loading a non-existent " "sampling result."
+                "Warning: You tried loading a non-existent sampling result."
             )
 
         return self.results
@@ -259,14 +259,14 @@ class ProfileResultHDF5Reader:
                     [None for _ in f[f"/profiling/{profile_id}"]]
                 )
                 for parameter_id in f[f"/profiling/{profile_id}"]:
-                    if f[f"/profiling/{profile_id}/" f"{parameter_id}"].attrs[
+                    if f[f"/profiling/{profile_id}/{parameter_id}"].attrs[
                         "IsNone"
                     ]:
                         continue
-                    profiling_list[int(profile_id)][
-                        int(parameter_id)
-                    ] = read_hdf5_profile(
-                        f, profile_id=profile_id, parameter_id=parameter_id
+                    profiling_list[int(profile_id)][int(parameter_id)] = (
+                        read_hdf5_profile(
+                            f, profile_id=profile_id, parameter_id=parameter_id
+                        )
                     )
             self.results.profile_result.list = profiling_list
         return self.results

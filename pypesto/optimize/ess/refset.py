@@ -48,7 +48,7 @@ class RefSet:
         """
         if (x is not None and fx is None) or (x is None and fx is not None):
             raise ValueError(
-                "Either both or neither of `x` and `fx` " "should be provided"
+                "Either both or neither of `x` and `fx` should be provided"
             )
 
         if dim < 3:
@@ -107,7 +107,7 @@ class RefSet:
         """
         if len(x_diverse) != len(fx_diverse):
             raise ValueError(
-                "Lengths of `x_diverse` and `fx_diverse` do " "not match."
+                "Lengths of `x_diverse` and `fx_diverse` do not match."
             )
         if self.dim > len(x_diverse):
             raise ValueError(

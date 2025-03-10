@@ -1248,8 +1248,7 @@ def calculate_cutoff(
     """
     if percentile > 100:
         raise ValueError(
-            f"percentile={percentile} is too large. Choose "
-            f"0<=percentile<=100."
+            f"percentile={percentile} is too large. Choose 0<=percentile<=100."
         )
     if cr_option not in [SIMULTANEOUS, POINTWISE]:
         raise ValueError(

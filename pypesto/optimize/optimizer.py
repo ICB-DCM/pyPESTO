@@ -1360,8 +1360,7 @@ class FidesOptimizer(Optimizer):
                 rep += f" hessian_update={self.hessian_update}"
             else:
                 rep += (
-                    f" hessian_update="
-                    f"{self.hessian_update.__class__.__name__}"
+                    f" hessian_update={self.hessian_update.__class__.__name__}"
                 )
         if self.verbose is not None:
             rep += f" verbose={self.verbose}"

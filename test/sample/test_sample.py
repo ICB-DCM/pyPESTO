@@ -1,6 +1,5 @@
 """Tests for `pypesto.sample` methods."""
 
-
 import numpy as np
 import pytest
 from scipy.integrate import quad

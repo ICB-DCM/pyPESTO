@@ -1163,9 +1163,9 @@ def test_visualize_optimized_model_fit_aggregated():
             petab_problem.parameter_df.upperBound,
         )
     ]
-    petab_problem.parameter_df[
-        "objectivePriorParameters"
-    ] = objectivePriorParameters
+    petab_problem.parameter_df["objectivePriorParameters"] = (
+        objectivePriorParameters
+    )
 
     # import to pypesto
     importer = pypesto.petab.PetabImporter(petab_problem)
