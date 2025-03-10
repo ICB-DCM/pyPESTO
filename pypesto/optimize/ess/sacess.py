@@ -37,6 +37,7 @@ __all__ = [
     "SacessOptimizer",
     "get_default_ess_options",
     "SacessFidesFactory",
+    "SacessCmaFactory",
     "SacessOptions",
 ]
 
@@ -838,7 +839,7 @@ class SacessWorker:
             or (self._best_known_fx == 0 and fx < 0)
             or (
                 fx < self._best_known_fx
-                and abs((self._best_known_fx - fx) / fx)
+                and abs((self._best_known_fx - fx) / self._best_known_fx)
                 > self._options.worker_acceptance_threshold
             )
         ):
@@ -1246,6 +1247,52 @@ class SacessFidesFactory:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(fides_options={self._fides_options}, fides_kwargs={self._fides_kwargs})"
+
+
+class SacessCmaFactory:
+    """Factory for :class:`CmaOptimizer` instances for use with :class:`SacessOptimizer`.
+
+    :meth:`__call__` will forward the walltime limit and function evaluation
+    limit imposed on :class:`SacessOptimizer` to :class:`CmaOptimizer`.
+    Besides that, default options are used.
+
+
+    Parameters
+    ----------
+    options:
+        Options as passed to :meth:`CmaOptimizer.__init__`.
+        See ``cma.CMAOptions()`` for available options.
+    """
+
+    def __init__(
+        self,
+        options: dict[str, Any] | None = None,
+    ):
+        if options is None:
+            options = {}
+
+        self._options = options
+
+        # Check if cma is installed
+        try:
+            import cma  # noqa F401
+        except ImportError:
+            from ..optimizer import OptimizerImportError
+
+            raise OptimizerImportError("cma") from None
+
+    def __call__(
+        self, max_walltime_s: int, max_eval: int
+    ) -> pypesto.optimize.CmaOptimizer:
+        """Create a :class:`CmaOptimizer` instance."""
+        options = self._options.copy()
+        options["timeout"] = max_walltime_s
+        options["maxfevals"] = max_eval
+
+        return pypesto.optimize.CmaOptimizer(options=options)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(options={self._options})"
 
 
 @dataclass
