@@ -839,7 +839,7 @@ class SacessWorker:
             or (self._best_known_fx == 0 and fx < 0)
             or (
                 fx < self._best_known_fx
-                and abs((self._best_known_fx - fx) / fx)
+                and abs((self._best_known_fx - fx) / self._best_known_fx)
                 > self._options.worker_acceptance_threshold
             )
         ):
