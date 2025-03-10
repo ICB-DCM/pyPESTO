@@ -1319,17 +1319,28 @@ class SacessIpoptFactory:
 
         self._ipopt_options = ipopt_options
 
+        import cyipopt
+
+        if cyipopt.IPOPT_VERSION < (3, 14, 0):
+            ver = ".".join(map(str, cyipopt.IPOPT_VERSION))
+            warn(
+                f"The currently installed Ipopt version {ver} "
+                "does not support the `max_wall_time` option. "
+                "At least Ipopt 3.14 is required. "
+                "The walltime limit will be ignored.",
+                stacklevel=2,
+            )
+
     def __call__(
         self, max_walltime_s: float, max_eval: float
     ) -> pypesto.optimize.IpoptOptimizer:
         """Create a :class:`IpoptOptimizer` instance."""
+        import cyipopt
 
         options = self._ipopt_options.copy()
-        # only accepts int
-        if np.isfinite(max_walltime_s):
-            options["max_wall_time"] = int(max_walltime_s)
+        if np.isfinite(max_walltime_s) and cyipopt.IPOPT_VERSION >= (3, 14, 0):
+            options["max_wall_time"] = max_walltime_s
 
-        # only accepts int
         if np.isfinite(max_eval):
             raise NotImplementedError(
                 "Ipopt does not support function evaluation limits."
@@ -1340,6 +1351,7 @@ class SacessIpoptFactory:
         return (
             f"{self.__class__.__name__}(ipopt_options={self._ipopt_options})"
         )
+
 
 @dataclass
 class SacessWorkerResult:

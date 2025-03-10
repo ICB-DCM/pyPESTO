@@ -631,8 +631,8 @@ class ESSOptimizer:
         max_walltime_s = self._get_remaining_time()
         max_eval = self._get_remaining_eval()
         # If we are out of budget, return a dummy result.
-        # This prevents issues with optimizer that fail on if the budget is 0,
-        # e.g., Ipopt.
+        # This prevents issues with optimizers that fail if there is no budget
+        # (E.g., Ipopt).
         if max_walltime_s < 1 or max_eval < 1:
             msg = "No time or function evaluations left for local search."
             self.logger.info(msg)
@@ -663,7 +663,7 @@ class ESSOptimizer:
             id="0",
         )
 
-        # add function evaluations during local search to our function
+        # add function evaluations during the local search to our function
         #  evaluation counter (NOTE: depending on the setup, we might neglect
         #  gradient evaluations).
         self.evaluator.n_eval += optimizer_result.n_fval
