@@ -191,6 +191,7 @@ html_theme = "sphinx_rtd_theme"
 html_theme_options = {
     "collapse_navigation": False,
     "navigation_depth": -1,
+    "logo_only": True,
 }
 
 # Title
@@ -202,6 +203,8 @@ html_short_title = "pyPESTO"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+html_logo = "logo/logo_wordmark.png"
 
 # Favicon
 html_favicon = "logo/logo_favicon.png"
