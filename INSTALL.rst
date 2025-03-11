@@ -53,8 +53,8 @@ and then install from the local repository via::
     cd pypesto
     pip3 install .
 
-Install and run pyPESTO docker
-------------------------------
+Install and run pyPESTO container
+---------------------------------
 
 .. include:: containers.rst
 
