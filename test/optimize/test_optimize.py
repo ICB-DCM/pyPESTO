@@ -25,6 +25,7 @@ from pypesto.optimize.ess import (
     FunctionEvaluatorMP,
     RefSet,
     SacessFidesFactory,
+    SacessIpoptFactory,
     SacessOptimizer,
     SacessOptions,
     get_default_ess_options,
@@ -468,6 +469,7 @@ def test_history_beats_optimizer():
         optimize.FidesOptimizer(),
         SacessFidesFactory(),
         SacessCmaFactory(),
+        SacessIpoptFactory(),
     ],
 )
 @pytest.mark.flaky(reruns=3)
@@ -498,7 +500,7 @@ def test_ess(problem, local_optimizer, ess_type, request):
         for x in ess_init_args:
             x["local_optimizer"] = local_optimizer
         ess = SacessOptimizer(
-            max_walltime_s=1,
+            max_walltime_s=4,
             sacess_loglevel=logging.DEBUG,
             ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
