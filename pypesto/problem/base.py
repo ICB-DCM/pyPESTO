@@ -292,7 +292,7 @@ class Problem:
         x_guesses_full = np.array(x_guesses)
         if x_guesses_full.shape[1] != self.dim_full:
             raise ValueError(
-                "The dimension of individual x_guesses must be " "dim_full."
+                "The dimension of individual x_guesses must be dim_full."
             )
         self.x_guesses_full = x_guesses_full
         self._check_x_guesses()

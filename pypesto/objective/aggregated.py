@@ -42,7 +42,7 @@ class AggregatedObjective(ObjectiveBase):
         # input typechecks
         if not isinstance(objectives, Sequence):
             raise TypeError(
-                f"Objectives must be a Sequence, " f"was {type(objectives)}."
+                f"Objectives must be a Sequence, was {type(objectives)}."
             )
 
         if not all(

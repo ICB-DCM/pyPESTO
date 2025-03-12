@@ -3,6 +3,7 @@
 See papers on ESS :footcite:p:`EgeaBal2009,EgeaMar2010`,
 CESS :footcite:p:`VillaverdeEge2012`, and saCeSS :footcite:p:`PenasGon2017`.
 """
+
 from __future__ import annotations
 
 import enum
@@ -753,7 +754,7 @@ class ESSOptimizer:
             edgeitems=5,
             threshold=8,
             linewidth=100000,
-            formatter={"float": lambda x: "%.3g" % x},
+            formatter={"float": lambda x: f"{x:.3g}"},
         ):
             self.logger.info(
                 f"{self.n_iter:4} | {self.fx_best:+.2E} | "
@@ -767,7 +768,7 @@ class ESSOptimizer:
             edgeitems=5,
             threshold=10,
             linewidth=100000,
-            formatter={"float": lambda x: "%.3g" % x},
+            formatter={"float": lambda x: f"{x:.3g}"},
         ):
             self.logger.info(
                 f"-- Final ESS fval after {self.n_iter} iterations, "

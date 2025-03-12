@@ -1,6 +1,5 @@
 """Utility functions and constants for tests. Mainly problem definitions."""
 
-
 import numpy as np
 import scipy.optimize as so
 from scipy.stats import multivariate_normal, norm, uniform

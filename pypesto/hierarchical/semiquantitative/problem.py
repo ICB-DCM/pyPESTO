@@ -376,7 +376,7 @@ def spline_inner_parameters_from_measurement_df(
 
         # Create n_spline_parameters number of spline inner parameters.
         for par_index in range(n_spline_parameters):
-            par_id = f"{par_type}_{observable_id}_{group}_{par_index+1}"
+            par_id = f"{par_type}_{observable_id}_{group}_{par_index + 1}"
             inner_parameters.append(
                 SplineInnerParameter(
                     inner_parameter_id=par_id,

@@ -1,4 +1,5 @@
 """Self-adaptive cooperative enhanced scatter search (SACESS)."""
+
 from __future__ import annotations
 
 import itertools
@@ -201,9 +202,9 @@ class SacessOptimizer:
                 self._tmpdir = Path(f"SacessOptimizerTemp-{str(uuid1())[:8]}")
         self._tmpdir = Path(self._tmpdir).absolute()
         self._tmpdir.mkdir(parents=True, exist_ok=True)
-        self.histories: list[
-            pypesto.history.memory.MemoryHistory
-        ] | None = None
+        self.histories: list[pypesto.history.memory.MemoryHistory] | None = (
+            None
+        )
         self.mp_ctx = get_context(mp_start_method)
         self.options = options or SacessOptions()
 

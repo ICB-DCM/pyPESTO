@@ -667,9 +667,9 @@ class AmiciObjective(ObjectiveBase):
         """
         if x is None and "petab_problem" in dir(self.amici_object_builder):
             x = self.amici_object_builder.petab_problem.x_nominal_scaled
-            kwargs[
-                "x_free"
-            ] = self.amici_object_builder.petab_problem.x_free_indices
+            kwargs["x_free"] = (
+                self.amici_object_builder.petab_problem.x_free_indices
+            )
         return super().check_gradients_match_finite_differences(
             *args, x=x, **kwargs
         )

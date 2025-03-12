@@ -1,4 +1,5 @@
 """Optimization result."""
+
 import logging
 import warnings
 from collections import Counter
@@ -308,8 +309,7 @@ class OptimizeResult:
             )
         if disp_worst:
             summary += (
-                f"\nA summary of the worst run:\n\n"
-                f"{self[-1].summary(full)}"
+                f"\nA summary of the worst run:\n\n{self[-1].summary(full)}"
             )
         return summary
 
