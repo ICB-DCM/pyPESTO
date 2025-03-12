@@ -546,7 +546,7 @@ class ESSOptimizer:
         self, x_best_children: np.ndarray, fx_best_children: np.ndarray
     ) -> None:
         """
-        Perform a local search to refine the next generation.
+        Perform local searches to refine the next generation.
 
         See [PenasGon2017]_ Algorithm 2.
         """
@@ -607,29 +607,8 @@ class ESSOptimizer:
             local_search_x0,
             local_search_fx0,
         ) in local_search_x0_fx0_candidates:
-            optimizer = (
-                self.local_optimizer
-                if isinstance(self.local_optimizer, pypesto.optimize.Optimizer)
-                else self.local_optimizer(
-                    max_eval=self._get_remaining_eval(),
-                    max_walltime_s=self._get_remaining_time(),
-                )
-            )
-            optimizer_result: OptimizerResult = optimizer.minimize(
-                problem=self.evaluator.problem,
-                x0=local_search_x0,
-                id="0",
-            )
-            # add function evaluations during local search to our function
-            #  evaluation counter (NOTE: depending on the setup, we might neglect
-            #  gradient evaluations).
-            self.evaluator.n_eval += optimizer_result.n_fval
-            self.evaluator.n_eval_round += optimizer_result.n_fval
-
-            self.logger.info(
-                f"Local search: {local_search_fx0} -> {optimizer_result.fval} "
-                f"took {optimizer_result.time:.3g}s, finished with "
-                f"{optimizer_result.exitflag}: {optimizer_result.message}"
+            optimizer_result = self._local_minimize(
+                x0=local_search_x0, fx0=local_search_fx0
             )
             if np.isfinite(optimizer_result.fval):
                 self.local_solutions.append(optimizer_result)
@@ -647,6 +626,56 @@ class ESSOptimizer:
 
         self.last_local_search_niter = self.n_iter
         self.evaluator.reset_round_counter()
+
+    def _local_minimize(self, x0: np.ndarray, fx0: float) -> OptimizerResult:
+        """Perform a local search from the given startpoint."""
+        max_walltime_s = self._get_remaining_time()
+        max_eval = self._get_remaining_eval()
+        # If we are out of budget, return a dummy result.
+        # This prevents issues with optimizers that fail if there is no budget
+        # (E.g., Ipopt).
+        if max_walltime_s < 1 or max_eval < 1:
+            msg = "No time or function evaluations left for local search."
+            self.logger.info(msg)
+            return OptimizerResult(
+                id="0",
+                x=x0,
+                fval=np.inf,
+                message=msg,
+                n_fval=0,
+                n_grad=0,
+                time=0,
+                history=None,
+            )
+
+        # create optimizer instance if necessary
+        optimizer = (
+            self.local_optimizer
+            if isinstance(self.local_optimizer, pypesto.optimize.Optimizer)
+            else self.local_optimizer(
+                max_eval=max_eval,
+                max_walltime_s=max_walltime_s,
+            )
+        )
+        # actual local search
+        optimizer_result: OptimizerResult = optimizer.minimize(
+            problem=self.evaluator.problem,
+            x0=x0,
+            id="0",
+        )
+
+        # add function evaluations during the local search to our function
+        #  evaluation counter (NOTE: depending on the setup, we might neglect
+        #  gradient evaluations).
+        self.evaluator.n_eval += optimizer_result.n_fval
+        self.evaluator.n_eval_round += optimizer_result.n_fval
+
+        self.logger.info(
+            f"Local search: {fx0} -> {optimizer_result.fval} "
+            f"took {optimizer_result.time:.3g}s, finished with "
+            f"{optimizer_result.exitflag}: {optimizer_result.message}"
+        )
+        return optimizer_result
 
     def _maybe_update_global_best(self, x, fx):
         """Update the global best value if the provided value is better."""

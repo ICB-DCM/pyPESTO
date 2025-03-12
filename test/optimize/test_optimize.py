@@ -25,6 +25,7 @@ from pypesto.optimize.ess import (
     FunctionEvaluatorMP,
     RefSet,
     SacessFidesFactory,
+    SacessIpoptFactory,
     SacessOptimizer,
     SacessOptions,
     get_default_ess_options,
@@ -468,6 +469,7 @@ def test_history_beats_optimizer():
         optimize.FidesOptimizer(),
         SacessFidesFactory(),
         SacessCmaFactory(),
+        SacessIpoptFactory(),
     ],
 )
 @pytest.mark.flaky(reruns=3)
@@ -498,7 +500,7 @@ def test_ess(problem, local_optimizer, ess_type, request):
         for x in ess_init_args:
             x["local_optimizer"] = local_optimizer
         ess = SacessOptimizer(
-            max_walltime_s=1,
+            max_walltime_s=4,
             sacess_loglevel=logging.DEBUG,
             ess_loglevel=logging.WARNING,
             ess_init_args=ess_init_args,
@@ -578,6 +580,33 @@ def test_ess_multiprocess(problem, request):
         refset=refset,
     )
     print("ESS result: ", res.summary())
+
+
+def test_sacess_adaptation(capsys):
+    """Test that adaptation step of the SACESS optimizer succeeds."""
+    obj = rosen_for_sensi(max_sensi_order=2, integrated=False)["obj"]
+    lb = 0 * np.ones((1, 10))
+    ub = 1 * np.ones((1, 10))
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub)
+
+    ess_init_args = get_default_ess_options(
+        num_workers=2, dim=problem.dim, local_optimizer=False
+    )
+    ess = SacessOptimizer(
+        max_walltime_s=2,
+        sacess_loglevel=logging.DEBUG,
+        ess_loglevel=logging.DEBUG,
+        ess_init_args=ess_init_args,
+        options=SacessOptions(
+            # trigger frequent adaptation
+            # - don't do that in production
+            adaptation_min_evals=0,
+            adaptation_sent_offset=0,
+            adaptation_sent_coeff=0,
+        ),
+    )
+    ess.minimize(problem)
+    assert "Updated settings on worker" in capsys.readouterr().err
 
 
 def test_ess_refset_repr():

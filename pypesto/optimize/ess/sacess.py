@@ -840,7 +840,7 @@ class SacessWorker:
             or (self._best_known_fx == 0 and fx < 0)
             or (
                 fx < self._best_known_fx
-                and abs((self._best_known_fx - fx) / fx)
+                and abs((self._best_known_fx - fx) / self._best_known_fx)
                 > self._options.worker_acceptance_threshold
             )
         ):
@@ -1294,6 +1294,64 @@ class SacessCmaFactory:
 
     def __repr__(self):
         return f"{self.__class__.__name__}(options={self._options})"
+
+
+class SacessIpoptFactory:
+    """Factory for :class:`IpoptOptimizer` instances for use with :class:`SacessOptimizer`.
+
+    :meth:`__call__` will forward the walltime limit and function evaluation
+    limit imposed on :class:`SacessOptimizer` to :class:`IpoptOptimizer`.
+    Besides that, default options are used.
+
+
+    Parameters
+    ----------
+    ipopt_options:
+        Options for the :class:`IpoptOptimizer`.
+        See https://coin-or.github.io/Ipopt/OPTIONS.html.
+    """
+
+    def __init__(
+        self,
+        ipopt_options: dict[str, Any] | None = None,
+    ):
+        if ipopt_options is None:
+            ipopt_options = {}
+
+        self._ipopt_options = ipopt_options
+
+        import cyipopt
+
+        if cyipopt.IPOPT_VERSION < (3, 14, 0):
+            ver = ".".join(map(str, cyipopt.IPOPT_VERSION))
+            warn(
+                f"The currently installed Ipopt version {ver} "
+                "does not support the `max_wall_time` option. "
+                "At least Ipopt 3.14 is required. "
+                "The walltime limit will be ignored.",
+                stacklevel=2,
+            )
+
+    def __call__(
+        self, max_walltime_s: float, max_eval: float
+    ) -> pypesto.optimize.IpoptOptimizer:
+        """Create a :class:`IpoptOptimizer` instance."""
+        import cyipopt
+
+        options = self._ipopt_options.copy()
+        if np.isfinite(max_walltime_s) and cyipopt.IPOPT_VERSION >= (3, 14, 0):
+            options["max_wall_time"] = max_walltime_s
+
+        if np.isfinite(max_eval):
+            raise NotImplementedError(
+                "Ipopt does not support function evaluation limits."
+            )
+        return pypesto.optimize.IpoptOptimizer(options=options)
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}(ipopt_options={self._ipopt_options})"
+        )
 
 
 @dataclass
