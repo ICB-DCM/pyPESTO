@@ -64,6 +64,7 @@ class PyPESTOExamplePEtab(PyPESTOExampleBase):
         github_repo: str,
         filenames: list[str],
         detailed_description: str | None = None,
+        hierarchical: bool = False,
     ):
         """
         Initialize the example.
@@ -80,8 +81,12 @@ class PyPESTOExamplePEtab(PyPESTOExampleBase):
             The filenames to download.
         detailed_description:
             A detailed description of the example.
+        hierarchical:
+            Whether the example is hierarchical problem.
+            Needs to be set for problem creation.
         """
         super().__init__(name, description, detailed_description)
+        self.hierarchical = hierarchical
         self.github_repo = github_repo
         self.filenames = filenames
         self.petab_yaml = next(
@@ -115,7 +120,9 @@ class PyPESTOExamplePEtab(PyPESTOExampleBase):
     def importer(self) -> PetabImporter:
         """Load the importer."""
         if self._importer is None:
-            self._importer = PetabImporter(self.petab_problem)
+            self._importer = PetabImporter(
+                self.petab_problem, hierarchical=self.hierarchical
+            )
         return self._importer
 
     @property

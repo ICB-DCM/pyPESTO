@@ -35,6 +35,7 @@ censored_data = PyPESTOExamplePEtab(
     "https://doi.org/10.1093/bioinformatics/btab512 and "
     "censoring was added to it. The PEtab problem was "
     "adjusted accordingly.",
+    hierarchical=True,
 )
 
 ordinal_data = PyPESTOExamplePEtab(
@@ -54,6 +55,7 @@ ordinal_data = PyPESTOExamplePEtab(
     detailed_description="This model was taken from "
     "https://doi.org/10.1093/bioinformatics/btab512 and "
     "The PEtab problem was slightly adjusted.",
+    hierarchical=True,
 )
 
 semiquantitative_data = PyPESTOExamplePEtab(
@@ -73,6 +75,7 @@ semiquantitative_data = PyPESTOExamplePEtab(
     detailed_description="This model was taken from "
     "https://doi.org/10.1093/bioinformatics/btab512 and "
     "the PEtab problem was adjusted.",
+    hierarchical=True,
 )
 
 semiquantitative_data_linear = PyPESTOExamplePEtab(
@@ -92,6 +95,7 @@ semiquantitative_data_linear = PyPESTOExamplePEtab(
     detailed_description="This model was taken from "
     "https://doi.org/10.1093/bioinformatics/btab512 and "
     "the PEtab problem was adjusted.",
+    hierarchical=True,
 )
 
 conversion_reaction = PyPESTOExamplePEtab(
