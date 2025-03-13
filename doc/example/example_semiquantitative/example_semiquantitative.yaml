@@ -1,5 +1,5 @@
 format_version: 1
-parameter_file: parameters_example_semiquantitative.tsv
+parameter_file: parameters_example_semiquantitative_noise.tsv
 problems:
 - condition_files:
   - experimentalCondition_example_semiquantitative.tsv
