@@ -1,4 +1,4 @@
-We provide a pyPESTO OCI image on through the Docker.io registry.
+We provide a pyPESTO OCI image through the Docker.io registry.
 
 A docker image build is triggered on changes/commits in the ``develop`` branch of pyPESTO. The container is build and pushed via a GHA to the Docker.io registry with the tag corresponding to ``latest``.
 
