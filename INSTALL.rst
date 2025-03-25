@@ -53,12 +53,6 @@ and then install from the local repository via::
     cd pypesto
     pip3 install .
 
-Install and run Docker container
---------------------------------
-
-.. include:: containers.rst
-
-
 
 Upgrade
 -------
@@ -89,6 +83,12 @@ Install optional packages and external dependencies
   `this shell script <https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
 
 .. _Python Support:
+
+Install and run Docker container
+--------------------------------
+
+.. include:: containers.rst
+
 
 Python support
 --------------
