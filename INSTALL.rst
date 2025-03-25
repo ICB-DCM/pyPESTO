@@ -82,13 +82,14 @@ Install optional packages and external dependencies
 * All external dependencies can be installed through
   `this shell script <https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
 
-.. _Python Support:
 
 Install and run Docker container
 --------------------------------
 
 .. include:: containers.rst
 
+
+.. _Python Support:
 
 Python support
 --------------
