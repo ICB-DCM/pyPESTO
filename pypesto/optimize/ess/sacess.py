@@ -116,6 +116,7 @@ class SacessOptimizer:
         tmpdir: Path | str = None,
         mp_start_method: str = "spawn",
         options: SacessOptions = None,
+        logging_filter: logging.Filter = None,
     ):
         """Construct.
 
@@ -174,6 +175,8 @@ class SacessOptimizer:
             under Jupyter may require ``mp_start_method="fork"``.
         options:
             Further optimizer hyperparameters, see :class:`SacessOptions`.
+        logging_filter:
+            Method that filters logging output.
         """
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
@@ -207,6 +210,7 @@ class SacessOptimizer:
         )
         self.mp_ctx = get_context(mp_start_method)
         self.options = options or SacessOptions()
+        self.logging_filter = logging_filter
 
     def minimize(
         self,
@@ -267,6 +271,8 @@ class SacessOptimizer:
                 "%(asctime)s %(name)s %(levelname)-8s %(message)s"
             )
         )
+        if self.logging_filter is not None:
+            logging_handler.addFilter(self.logging_filter)
         logging_thread = logging.handlers.QueueListener(
             self.mp_ctx.Queue(-1), logging_handler
         )
