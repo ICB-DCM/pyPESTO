@@ -335,6 +335,7 @@ class SacessOptimizer:
             worker_result.exit_flag for worker_result in self.worker_results
         )
         result = self._create_result(problem)
+        self._delete_tmpdir()
 
         walltime = time.time() - start_time
         n_eval_total = sum(
@@ -359,7 +360,7 @@ class SacessOptimizer:
 
         Creates an overall Result object from the results saved by the workers.
         """
-        # gather results from workers and delete temporary result files
+        # gather results from workers
         result = pypesto.Result()
         retry_after_sleep = True
         for worker_idx in range(self.num_workers):
@@ -400,24 +401,25 @@ class SacessOptimizer:
                     prefix=f"{worker_idx}-",
                 )
 
-        # delete temporary files only after successful consolidation
+        result.optimize_result.sort()
+        result.problem = problem
+
+        return result
+
+    def _delete_tmpdir(self):
+        """Delete the temporary files and the temporary directory if empty."""
         for worker_idx in range(self.num_workers):
             filename = SacessWorker.get_temp_result_filename(
                 worker_idx, self._tmpdir
             )
             with suppress(FileNotFoundError):
                 os.remove(filename)
+
         # delete tmpdir if empty
         try:
             self._tmpdir.rmdir()
         except OSError:
             pass
-
-        result.optimize_result.sort()
-
-        result.problem = problem
-
-        return result
 
 
 class SacessManager:
@@ -727,6 +729,7 @@ class SacessWorker:
                     history=ess.history,
                     n_eval=ess.evaluator.n_eval,
                     n_iter=ess.n_iter,
+                    n_local=len(ess.local_solutions),
                     exit_flag=ess.exit_flag,
                 )
             except Exception as e:
@@ -741,6 +744,7 @@ class SacessWorker:
                 history=MemoryHistory(),
                 n_eval=0,
                 n_iter=0,
+                n_local=0,
                 exit_flag=ESSExitFlag.ERROR,
             )
         self._manager._result_queue.put(worker_result)
@@ -927,6 +931,8 @@ class SacessWorker:
         if not self._tmp_result_file:
             return
 
+        t_start = time.time()
+
         # save problem in first iteration
         if ess.n_iter == 1:
             pypesto_problem_writer = ProblemHDF5Writer(self._tmp_result_file)
@@ -957,6 +963,12 @@ class SacessWorker:
         optimizer_result.update_to_full(ess.evaluator.problem)
         opt_res_writer.write_optimizer_result(
             optimizer_result, overwrite=False
+        )
+
+        t_save = time.time() - t_start
+        self._logger.debug(
+            f"Worker {self._worker_idx} autosave to {self._tmp_result_file} "
+            f"took {t_save:.2f}s."
         )
 
     @staticmethod
@@ -1372,6 +1384,8 @@ class SacessWorkerResult:
         Number of objective evaluations performed.
     n_iter:
         Number of scatter search iterations performed.
+    n_local:
+        Number of local searches performed.
     history:
         History object containing information about the optimization process.
     exit_flag:
@@ -1382,6 +1396,7 @@ class SacessWorkerResult:
     fx: float
     n_eval: int
     n_iter: int
+    n_local: int
     history: pypesto.history.memory.MemoryHistory
     exit_flag: ESSExitFlag
 
