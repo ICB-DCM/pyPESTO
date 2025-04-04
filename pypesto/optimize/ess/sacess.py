@@ -707,10 +707,12 @@ class SacessWorker:
             self._cooperate()
             self._maybe_adapt(problem)
 
+            t_left = self._max_walltime_s - (time.time() - self._start_time)
             self._logger.info(
                 f"sacess worker {self._worker_idx} iteration {ess.n_iter} "
                 f"(best: {self._best_known_fx}, "
-                f"n_eval: {ess.evaluator.n_eval})."
+                f"n_eval: {ess.evaluator.n_eval}, "
+                f"remaining wall time: {t_left}s)."
             )
         self._finalize(ess)
 
