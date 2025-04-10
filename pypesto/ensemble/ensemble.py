@@ -1264,7 +1264,7 @@ def calculate_cutoff(
         # degrees of freedom is equal to 1
         df = 1
 
-    range = chi2.ppf(q=percentile / 100, df=df)
+    range = chi2.ppf(q=percentile / 100, df=df) / 2
     return fval_opt + range
 
 
