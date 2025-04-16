@@ -413,3 +413,54 @@ def _create_patches(
         )
 
     return patches_both_hit, patches_lb_hit, patches_ub_hit, patches_none_hit
+
+
+def ensemble_parameters_plot(
+    ensemble: Ensemble,
+    ax: Optional[plt.Axes] = None,
+    size: Optional[tuple[float]] = (12, 6)
+):
+    """
+    Visualize parameter ensemble.
+
+    Parameters
+    ----------
+    ensemble:
+        ensemble of parameter vectors (from pypesto.ensemble)
+    ax:
+        Axes object to use.
+    size:
+        Figure size (width, height) in inches. Is only applied when no ax
+        object is specified.
+
+    Returns
+    -------
+    ax: matplotlib.Axes
+        The plot axes.
+    """
+    import seaborn as sns
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=size)
+
+    x = -0.4
+    w = 0.8 # rectangle width
+    rectangles = []
+    colors = [c + (0.8,) for c in sns.color_palette("husl", n_colors=ensemble.n_x)]
+
+    sns.stripplot(np.transpose(ensemble.x_vectors), color='dimgrey')
+
+    for i, par_values in enumerate(ensemble.x_vectors):
+        h = np.max(par_values) - np.min(par_values) # rectangle hight
+        rectangles.append(
+            Rectangle((x, np.min(par_values)), w, h))
+        x += w + 0.2
+    ax.add_collection(PatchCollection(rectangles, facecolors=colors, edgecolors='dimgrey'))
+
+    ax.plot(np.arange(ensemble.n_x), ensemble.lower_bound, '--', color='grey')
+    ax.plot(np.arange(ensemble.n_x), ensemble.upper_bound, '--', color='grey')
+    ax.set_ylim(np.min(ensemble.lower_bound) * 1.1, np.max(ensemble.upper_bound) * 1.1)
+    plt.xticks(np.arange(ensemble.n_x), ensemble.x_names, rotation='vertical')
+    plt.tight_layout()
+
+    return ax
