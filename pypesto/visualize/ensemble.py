@@ -3,6 +3,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib import colormaps
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 
@@ -438,7 +439,6 @@ def ensemble_parameters_plot(
     ax: matplotlib.Axes
         The plot axes.
     """
-    import seaborn as sns
 
     if ax is None:
         fig, ax = plt.subplots(figsize=size)
@@ -446,16 +446,22 @@ def ensemble_parameters_plot(
     x = -0.4
     w = 0.8 # rectangle width
     rectangles = []
-    colors = [c + (0.8,) for c in sns.color_palette("husl", n_colors=ensemble.n_x)]
-
-    sns.stripplot(np.transpose(ensemble.x_vectors), color='dimgrey')
+    cmap = colormaps['Greys']
+    colors = np.flip(cmap(np.linspace(0.3, 0.8, (ensemble.n_vectors-1))), axis=0)
+    colors = np.insert(colors, 0, [1.        , 0.        , 0.        , 1.        ], axis=0)
 
     for i, par_values in enumerate(ensemble.x_vectors):
-        h = np.max(par_values) - np.min(par_values) # rectangle hight
+        h = np.max(par_values) - np.min(par_values) # rectangle height
         rectangles.append(
             Rectangle((x, np.min(par_values)), w, h))
         x += w + 0.2
-    ax.add_collection(PatchCollection(rectangles, facecolors=colors, edgecolors='dimgrey'))
+    ax.add_collection(PatchCollection(rectangles, facecolors=[1, 1, 1, 1], edgecolors='dimgrey'))
+
+    for i, v in enumerate(ensemble.x_vectors):
+        ax.scatter(x=[i]*ensemble.n_vectors, y=v, s=40, color=colors, alpha=0.6)
+    # plot the best parameter values
+    ax.scatter(np.arange(ensemble.n_x), ensemble.x_vectors[:, 0], s=40,
+               color=[1.        , 0.        , 0.        , 1.        ])
 
     ax.plot(np.arange(ensemble.n_x), ensemble.lower_bound, '--', color='grey')
     ax.plot(np.arange(ensemble.n_x), ensemble.upper_bound, '--', color='grey')
