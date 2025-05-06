@@ -650,6 +650,7 @@ def test_ensemble_parameters_plot():
     )
 
     visualize.ensemble_parameters_plot(my_ensemble)
+    visualize.ensemble_parameters_plot(my_ensemble, parameter_ids=[0,5,8,13,17,33,45,76,82,88,90])
 
 
 @close_fig
