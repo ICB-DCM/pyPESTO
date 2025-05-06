@@ -420,7 +420,7 @@ def ensemble_parameters_plot(
     ensemble: Ensemble,
     ax: Optional[plt.Axes] = None,
     parameter_ids: Optional[list[int]] = None,
-    size: Optional[tuple[float]] = (12, 6)
+    size: Optional[tuple[float]] = (6, 12)
 ):
     """
     Visualize parameter ensemble.
@@ -454,30 +454,30 @@ def ensemble_parameters_plot(
         x_vectors = ensemble.x_vectors
         n_x = ensemble.n_x
 
-    x = -0.4
-    w = 0.8 # rectangle width
+    y_rect = -0.4
+    h_rect = 0.8 # rectangle height
     rectangles = []
     cmap = colormaps['Greys']
     colors = np.flip(cmap(np.linspace(0.3, 0.8, (ensemble.n_vectors-1))), axis=0)
     colors = np.insert(colors, 0, [1.        , 0.        , 0.        , 1.        ], axis=0)
 
     for i, par_values in enumerate(x_vectors):
-        h = np.max(par_values) - np.min(par_values) # rectangle height
+        w_rect = np.max(par_values) - np.min(par_values) # rectangle width
         rectangles.append(
-            Rectangle((x, np.min(par_values)), w, h))
-        x += w + 0.2
+            Rectangle((np.min(par_values), y_rect), w_rect, h_rect))
+        y_rect += h_rect + 0.2
     ax.add_collection(PatchCollection(rectangles, facecolors=[1, 1, 1, 1], edgecolors='dimgrey'))
 
     for i, v in enumerate(x_vectors):
-        ax.scatter(x=[i]*ensemble.n_vectors, y=v, s=40, color=colors, alpha=0.6)
+        ax.scatter(x=v, y=[i]*ensemble.n_vectors, s=40, color=colors, alpha=0.6)
     # plot the best parameter values
-    ax.scatter(np.arange(n_x), x_vectors[:, 0], s=40,
+    ax.scatter(x_vectors[:, 0], np.arange(n_x), s=40,
                color=[1.        , 0.        , 0.        , 1.        ])
 
-    ax.plot(np.arange(n_x), ensemble.lower_bound[parameter_ids], '--', color='grey')
-    ax.plot(np.arange(n_x), ensemble.upper_bound[parameter_ids], '--', color='grey')
-    ax.set_ylim(np.min(ensemble.lower_bound) * 1.1, np.max(ensemble.upper_bound) * 1.1)
-    plt.xticks(np.arange(n_x), np.asarray(ensemble.x_names)[parameter_ids], rotation='vertical')
+    ax.plot(ensemble.lower_bound[parameter_ids], np.arange(n_x), '--', color='grey')
+    ax.plot(ensemble.upper_bound[parameter_ids], np.arange(n_x), '--', color='grey')
+    ax.set_xlim(np.min(ensemble.lower_bound) * 1.1, np.max(ensemble.upper_bound) * 1.1)
+    plt.yticks(np.arange(n_x), np.asarray(ensemble.x_names)[parameter_ids])
     plt.tight_layout()
 
     return ax
