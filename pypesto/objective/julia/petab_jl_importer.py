@@ -303,7 +303,7 @@ def _write_julia_file(
         f"using OrdinaryDiffEq\n"
         f"using Sundials\n"
         f"using PEtab\n\n"
-        f"pathYaml = \"{yaml_file}\"\n"
+        f'pathYaml = "{yaml_file}"\n'
         f"petabModel = PEtabModel(pathYaml, verbose=true)\n\n"
         f"# A full list of options for PEtabODEProblem can be "
         f"found at {link_to_options}\n"

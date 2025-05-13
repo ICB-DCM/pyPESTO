@@ -63,7 +63,7 @@ def _execute_case(case, model_type, version):
 
     # unique folder for compiled amici model
     model_name = (
-        f'petab_test_case_{case}_{model_type}_{version.replace(".", "_" )}'
+        f"petab_test_case_{case}_{model_type}_{version.replace('.', '_')}"
     )
     output_folder = f"amici_models/{model_name}"
 
@@ -121,12 +121,11 @@ def _execute_case(case, model_type, version):
     # log matches
     logger.log(
         logging.INFO if chi2s_match else logging.ERROR,
-        f"CHI2: simulated: {chi2}, expected: {gt_chi2},"
-        f" match = {chi2s_match}",
+        f"CHI2: simulated: {chi2}, expected: {gt_chi2}, match = {chi2s_match}",
     )
     logger.log(
         logging.INFO if simulations_match else logging.ERROR,
-        f"LLH: simulated: {llh}, expected: {gt_llh}, " f"match = {llhs_match}",
+        f"LLH: simulated: {llh}, expected: {gt_llh}, match = {llhs_match}",
     )
     logger.log(
         logging.INFO if simulations_match else logging.ERROR,
@@ -136,7 +135,7 @@ def _execute_case(case, model_type, version):
     if not all([llhs_match, chi2s_match, simulations_match]):
         logger.error(f"Case {version}/{model_type}/{case} failed.")
         raise AssertionError(
-            f"Case {case}: Test results do not match " "expectations"
+            f"Case {case}: Test results do not match expectations"
         )
 
     logger.info(f"Case {version}/{model_type}/{case} passed.")

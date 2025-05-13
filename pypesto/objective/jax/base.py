@@ -193,7 +193,7 @@ class JaxObjective(ObjectiveBase):
 
         if not self.check_mode(mode):
             raise ValueError(
-                f"This Objective cannot be called with mode" f"={mode}."
+                f"This Objective cannot be called with mode={mode}."
             )
         if not self.check_sensi_orders(sensi_orders, mode):
             raise ValueError(

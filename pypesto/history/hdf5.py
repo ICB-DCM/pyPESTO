@@ -537,9 +537,9 @@ class Hdf5History(HistoryBase):
                 getter = getattr(other, f"get_{trace_key}_trace")
                 trace = getter()
                 for iteration, value in enumerate(trace):
-                    trace_group.require_group(str(iteration))[
-                        trace_key
-                    ] = value
+                    trace_group.require_group(str(iteration))[trace_key] = (
+                        value
+                    )
         finally:
             history._f.close()
             history._f = None

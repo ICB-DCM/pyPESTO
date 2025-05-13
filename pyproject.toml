@@ -22,7 +22,9 @@ lint.ignore = [
     "E501",
     "F403",
     "F405",
-    "D413"
+    "D413",
+    "S603", # `subprocess` call: check for execution of untrusted input
+    "E731", # Do not assign a `lambda` expression, use a `def`
 ]
 lint.select = [
     "F",  # Pyflakes

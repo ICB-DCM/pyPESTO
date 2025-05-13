@@ -3,6 +3,7 @@ This file serves as an example how to use MPIPoolEngine
 to optimize across nodes and also as a test for the
 MPIPoolEngine.
 """
+
 import numpy as np
 import scipy as sp
 

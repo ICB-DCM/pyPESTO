@@ -203,9 +203,9 @@ class SemiquantCalculator(AmiciCalculator):
         )
         inner_result[SPLINE_KNOTS] = self.inner_problem.get_spline_knots()
 
-        inner_result[
-            INNER_PARAMETERS
-        ] = self.inner_problem.get_inner_noise_parameters()
+        inner_result[INNER_PARAMETERS] = (
+            self.inner_problem.get_inner_noise_parameters()
+        )
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:
