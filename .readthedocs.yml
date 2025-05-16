@@ -19,7 +19,7 @@ python:
         - doc
 
 build:
-  os: "ubuntu-22.04"
+  os: "ubuntu-24.04"
   apt_packages:
     - clang
     - libatlas-base-dev
