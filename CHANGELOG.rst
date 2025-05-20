@@ -12,7 +12,7 @@ Release notes
 - General
     - GHA and CI improvements (#1560, #1554, #1571, #1573, #1577)
     - Documentation improvement (#1557, #1479, #1539, #1551)
-    - Require jax < 0.6.0 (#1572), see #1568
+    - Fix compatibility with jax 0.6.0 (#1580)
 - Optimization
     - SacessOptimizer: Minor updates (#1564)
     - Fix SacessOptimizer relative fval improvement check (#1558)
