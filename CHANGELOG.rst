@@ -6,6 +6,25 @@ Release notes
 ..........
 
 
+0.5.6 (2025-05-18)
+-------------------
+
+- General
+    - GHA and CI improvements (#1560, #1554, #1571, #1573, #1577)
+    - Documentation improvement (#1557, #1479, #1539, #1551)
+    - Require jax < 0.6.0 (#1572), see #1568
+- Optimization
+    - SacessOptimizer: Minor updates (#1564)
+    - Fix SacessOptimizer relative fval improvement check (#1558)
+    - Add Ipopt factory for use with SacessOptimizer (#1533)
+    - Make CmaOptimizer respect wall time limits and max evals under SacessOptimizer (#1555)
+    - Make print parameter summary nicer (#1549)
+- Select
+    - Fix model hash typing issue (#1548)
+- Store
+    - Speed up `read_hdf5_optimization` (#1570, #1556)
+
+
 0.5.5 (2025-01-10)
 -------------------
 
