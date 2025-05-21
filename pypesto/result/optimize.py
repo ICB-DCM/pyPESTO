@@ -309,14 +309,13 @@ class OptimizeResult:
             )
         if disp_worst:
             summary += (
-                f"\nA summary of the worst run:\n\n"
-                f"{self[-1].summary(full)}"
+                f"\nA summary of the worst run:\n\n{self[-1].summary(full)}"
             )
         return summary
 
     def append(
         self,
-        optimize_result: OptimizationResult,
+        optimize_result: OptimizationResult | list[OptimizerResult],
         sort: bool = True,
         prefix: str = "",
     ):
@@ -334,20 +333,30 @@ class OptimizeResult:
             The IDs for all appended results will be prefixed with this.
         """
         current_ids = set(self.id)
-        if isinstance(optimize_result, OptimizeResult):
+        if isinstance(optimize_result, OptimizeResult | list):
+            result_list = (
+                optimize_result.list
+                if isinstance(optimize_result, OptimizeResult)
+                else optimize_result
+            )
+            identifiers = [
+                optimizer_result.id for optimizer_result in result_list
+            ]
             new_ids = {
                 prefix + identifier
-                for identifier in optimize_result.id
+                for identifier in identifiers
                 if identifier is not None
             }
             if not current_ids.isdisjoint(new_ids):
                 raise ValueError(
-                    "Some id's you want to merge coincide with "
-                    f"the existing id's: {current_ids & new_ids}. "
+                    "Some IDs you want to merge coincide with "
+                    f"the existing IDs: {current_ids & new_ids}. "
                     "Please use an appropriate prefix such as 'run_2_'."
                 )
-            for optimizer_result in optimize_result.list:
-                self.append(optimizer_result, sort=False, prefix=prefix)
+            for optimizer_result in result_list:
+                if optimizer_result.id is not None:
+                    optimizer_result.id = prefix + optimizer_result.id
+            self.list.extend(result_list)
         elif isinstance(optimize_result, OptimizerResult):
             # if id is None, append without checking for duplicate ids
             if optimize_result.id is None:
@@ -374,7 +383,7 @@ class OptimizeResult:
         """Sort the optimizer results by function value fval (ascending)."""
 
         def get_fval(res):
-            return res.fval if not np.isnan(res.fval) else np.inf
+            return fval if not np.isnan(fval := res.fval) else np.inf
 
         self.list = sorted(self.list, key=get_fval)
 

@@ -1,6 +1,5 @@
 """Various methods for estimating the log evidence of a model."""
 
-
 import logging
 from typing import Optional, Union
 

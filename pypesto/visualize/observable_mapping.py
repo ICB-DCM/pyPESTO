@@ -652,7 +652,7 @@ def plot_splines_from_inner_result(
 
         axes[ax_index].legend()
         if observable_ids is not None:
-            axes[ax_index].set_title(f"Observable {observable_ids[group-1]}")
+            axes[ax_index].set_title(f"Observable {observable_ids[group - 1]}")
         else:
             axes[ax_index].set_title(f"Group {group}")
 

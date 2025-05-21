@@ -147,7 +147,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         # compile
         if self._must_compile(force_compile):
             logger.info(
-                f"Compiling amici model to folder " f"{self.output_folder}."
+                f"Compiling amici model to folder {self.output_folder}."
             )
             if self.petab_problem.model.type_id == MODEL_TYPE_SBML:
                 self.compile_model(
@@ -159,8 +159,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
                 self.compile_model(verbose=verbose, **kwargs)
         else:
             logger.debug(
-                f"Using existing amici model in folder "
-                f"{self.output_folder}."
+                f"Using existing amici model in folder {self.output_folder}."
             )
 
         return self._create_model()
@@ -199,8 +198,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
             return True
         except amici.AmiciVersionError as e:
             logger.info(
-                "amici model will be re-imported due to version "
-                f"mismatch: {e}"
+                f"amici model will be re-imported due to version mismatch: {e}"
             )
             return True
 
@@ -669,9 +667,9 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
         for i_edata, j_formula, obs_name in to_change:
             # assign new parameter, formula in RR and parameter into mapping
             original_formula = edatas[i_edata].noise_formulae[j_formula]
-            edatas[i_edata].noise_formulae[
-                j_formula
-            ] = f"noiseFormula_{obs_name}"
+            edatas[i_edata].noise_formulae[j_formula] = (
+                f"noiseFormula_{obs_name}"
+            )
             # different conditions will have the same noise formula
             if (obs_name, original_formula) not in formulae_changed:
                 self.rr.addParameter(f"noiseFormula_{obs_name}", 0.0, False)
@@ -774,11 +772,11 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
                     )
                     mapping_per_condition[0][override] = parameter_id_or_value
                     if isinstance(parameter_id_or_value, str):
-                        mapping_per_condition[2][
-                            override
-                        ] = self.petab_problem.parameter_df.loc[
-                            parameter_id_or_value, petab.PARAMETER_SCALE
-                        ]
+                        mapping_per_condition[2][override] = (
+                            self.petab_problem.parameter_df.loc[
+                                parameter_id_or_value, petab.PARAMETER_SCALE
+                            ]
+                        )
                     elif isinstance(parameter_id_or_value, numbers.Number):
                         mapping_per_condition[2][override] = LIN
                     else:
@@ -792,11 +790,11 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
                     )
                     mapping_per_condition[1][override] = parameter_id_or_value
                     if isinstance(parameter_id_or_value, str):
-                        mapping_per_condition[3][
-                            override
-                        ] = self.petab_problem.parameter_df.loc[
-                            parameter_id_or_value, petab.PARAMETER_SCALE
-                        ]
+                        mapping_per_condition[3][override] = (
+                            self.petab_problem.parameter_df.loc[
+                                parameter_id_or_value, petab.PARAMETER_SCALE
+                            ]
+                        )
                     elif isinstance(parameter_id_or_value, numbers.Number):
                         mapping_per_condition[3][override] = LIN
                     else:

@@ -172,9 +172,9 @@ def parameter_profile(
 
     # fill in the ProfilerResults at the right index
     for indexed_profile in indexed_profiles:
-        result.profile_result.list[-1][
-            indexed_profile["index"]
-        ] = indexed_profile["profile"]
+        result.profile_result.list[-1][indexed_profile["index"]] = (
+            indexed_profile["profile"]
+        )
 
     autosave(
         filename=filename,

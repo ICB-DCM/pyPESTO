@@ -537,7 +537,7 @@ def _prior_densities(
         raise NotImplementedError
     else:
         raise ValueError(
-            f"NegLogPriors of type {prior_type} are currently " "not supported"
+            f"NegLogPriors of type {prior_type} are currently not supported"
         )
 
 

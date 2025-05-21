@@ -156,9 +156,9 @@ class HistoryTest(unittest.TestCase):
                     atol=1e-2,
                 ), attr
             elif isinstance(start[attr], float):
-                assert np.isclose(
-                    start[attr], rstart[attr], equal_nan=True
-                ), attr
+                assert np.isclose(start[attr], rstart[attr], equal_nan=True), (
+                    attr
+                )
             else:
                 assert start[attr] == rstart[attr], attr
 

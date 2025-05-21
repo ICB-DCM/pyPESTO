@@ -2,7 +2,7 @@
 
 import logging
 from time import process_time
-from typing import Callable, List, Optional, Union
+from typing import Callable, Optional, Union
 
 import numpy as np
 
@@ -22,7 +22,7 @@ def variational_fit(
     n_samples: Optional[int] = None,
     random_seed: Optional[int] = None,
     start_sigma: Optional[dict[str, np.ndarray]] = None,
-    x0: Union[np.ndarray, List[np.ndarray]] = None,
+    x0: Union[np.ndarray, list[np.ndarray]] = None,
     result: Result = None,
     filename: Union[str, Callable, None] = None,
     overwrite: bool = False,
