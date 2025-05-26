@@ -10,12 +10,14 @@ import pypesto.sample as sample
 from pypesto.C import AMICI_STATUS, AMICI_T, AMICI_Y, MEAN, WEIGHTED_SIGMA
 from pypesto.engine import MultiProcessEngine
 from pypesto.ensemble import (
+    calculate_cutoff,
     Ensemble,
     read_ensemble_prediction_from_h5,
     write_ensemble_prediction_to_h5,
 )
 from pypesto.predict import AmiciPredictor
 
+from pypesto.C import POINTWISE
 from ..visualize import create_petab_problem
 
 
@@ -79,6 +81,41 @@ def test_ensemble_from_optimization():
     ]
     assert hist_tags == ensemble_hist.vector_tags
     assert ep_tags == ensemble_ep.vector_tags
+
+
+def test_cutoff_computation():
+    """
+    Test computing ensemble cutoff based on chi^2 distribution.
+    """
+    from scipy.stats import chi2
+    objective = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
+    dim_full = 10
+    lb = -5 * np.ones((dim_full, 1))
+    ub = 5 * np.ones((dim_full, 1))
+    n_starts = 5
+
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
+
+    optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
+    history_options = pypesto.HistoryOptions(trace_record=True)
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=n_starts,
+        history_options=history_options,
+        progress_bar=False,
+    )
+
+    assert (calculate_cutoff(result, percentile=95) ==
+            (result.optimize_result.fval[0] + chi2.ppf(q=0.95, df=result.problem.dim) / 2))
+
+    ens = Ensemble.from_optimization_endpoints(result=result, percentile=95)
+    assert ens.n_vectors == sum(result.optimize_result.fval <= calculate_cutoff(result, percentile=95))
+
+    assert (calculate_cutoff(result, percentile=95, cr_option=POINTWISE)
+            == (result.optimize_result.fval[0] + chi2.ppf(q=0.95, df=1) / 2))
 
 
 def test_ensemble_prediction_from_hdf5():

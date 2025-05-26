@@ -16,7 +16,7 @@ from .dimension_reduction import (
     get_umap_representation_parameters,
     get_umap_representation_predictions,
 )
-from .ensemble import Ensemble, EnsemblePrediction, get_percentile_label
+from .ensemble import Ensemble, EnsemblePrediction, get_percentile_label, calculate_cutoff
 from .util import (
     read_ensemble_prediction_from_h5,
     read_from_csv,
