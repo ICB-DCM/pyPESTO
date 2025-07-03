@@ -69,21 +69,19 @@ def read_hdf5_optimization(
 
         return LazyOptimizerResult(file_name, f"optimization/results/{opt_id}")
 
+    group = f[f"/optimization/results/{opt_id}"]
+    dset_ids = set(group)
+    attr_ids = set(group.attrs)
+
     result = OptimizerResult()
     for optimization_key in result.keys():
-        if optimization_key == "history":
-            if optimization_key in f:
-                result["history"] = Hdf5History(id=opt_id, file=file_name)
-                result["history"].recover_options(file_name)
-                continue
-        if optimization_key in f[f"/optimization/results/{opt_id}"]:
-            result[optimization_key] = f[
-                f"/optimization/results/{opt_id}/{optimization_key}"
-            ][:]
-        elif optimization_key in f[f"/optimization/results/{opt_id}"].attrs:
-            result[optimization_key] = f[
-                f"/optimization/results/{opt_id}"
-            ].attrs[optimization_key]
+        if optimization_key == "history" and optimization_key in f:
+            result["history"] = Hdf5History(id=opt_id, file=file_name)
+            result["history"].recover_options(file_name)
+        elif optimization_key in dset_ids:
+            result[optimization_key] = group[optimization_key][:]
+        elif optimization_key in attr_ids:
+            result[optimization_key] = group.attrs[optimization_key]
     return result
 
 
