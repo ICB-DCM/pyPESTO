@@ -118,6 +118,64 @@ def test_cutoff_computation():
             == (result.optimize_result.fval[0] + chi2.ppf(q=0.95, df=1) / 2))
 
 
+def test_parameter_ci_computation_from_ensemble():
+    """
+    Test computing ensemble cutoff based on chi^2 distribution and resulting parameter CIs.
+    """
+    from scipy.stats import norm
+
+    # Normal distribution parameters
+    loc = 3
+    scale = 1.4
+
+    # Confidence interval
+    percentile = 95
+
+    # Upper bound of PPF
+    lower_bound = (100 - percentile) / 100 / 2
+    upper_bound = 1 - lower_bound
+
+    # The ground truth confidence interval bound will be deviated by this amount to generate
+    # the samples.
+    # This should be small -- an incorrect chi2 cutoff computation will choose one of the
+    # deviations from the bound positions, rather than the bound position, as the bounds of the
+    # confidence interval.
+    epsilon = 1e-3
+
+    samples = [
+        # the lower bound +- epsilon
+        norm.ppf(lower_bound, loc=loc, scale=scale) - epsilon,
+        norm.ppf(lower_bound, loc=loc, scale=scale),
+        norm.ppf(lower_bound, loc=loc, scale=scale) + epsilon,
+        # MLE
+        loc,
+        # the upper bound +- epsilon
+        norm.ppf(upper_bound, loc=loc, scale=scale) - epsilon,
+        norm.ppf(upper_bound, loc=loc, scale=scale),
+        norm.ppf(upper_bound, loc=loc, scale=scale) + epsilon,
+    ]
+    fvals = [-norm.logpdf(sample, loc=loc, scale=scale) for sample in samples]
+    pairs = (list(zip(samples, fvals, strict=True)))
+    pairs.sort(key=lambda pair: pair[1])
+
+    result = pypesto.Result(problem=pypesto.Problem(
+        objective=pypesto.Objective(),
+        lb=[loc - 3 * scale],
+        ub=[loc + 3 * scale],
+        dim_full=1,
+    ))
+    for k, (sample, fval) in enumerate(pairs):
+        result.optimize_result.append(
+            optimize_result=pypesto.OptimizerResult(id=str(k), fval=fval, x=sample)
+        )
+
+    cutoff = calculate_cutoff(result, percentile=percentile)
+    ensemble = [r for r in result.optimize_result.list if r.fval-1.e-14 <= cutoff] # correction for numerical noise
+    xs = [r.x for r in ensemble]
+    assert min(xs) == norm.ppf(lower_bound, loc=loc, scale=scale)
+    assert max(xs) == norm.ppf(upper_bound, loc=loc, scale=scale)
+
+
 def test_ensemble_prediction_from_hdf5():
     """
     Test writing an ensemble prediction to hdf5 and loading it.
