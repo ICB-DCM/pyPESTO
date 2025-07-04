@@ -154,7 +154,7 @@ def test_parameter_ci_computation_from_ensemble():
         norm.ppf(upper_bound, loc=loc, scale=scale),
         norm.ppf(upper_bound, loc=loc, scale=scale) + epsilon,
     ]
-    fvals = [-norm.logpdf(sample, loc=loc, scale=scale) for sample in samples]
+    fvals = [-norm.logpdf(s, loc=loc, scale=scale) for s in samples]
     pairs = (list(zip(samples, fvals, strict=True)))
     pairs.sort(key=lambda pair: pair[1])
 
@@ -164,9 +164,9 @@ def test_parameter_ci_computation_from_ensemble():
         ub=[loc + 3 * scale],
         dim_full=1,
     ))
-    for k, (sample, fval) in enumerate(pairs):
+    for k, (s, fval) in enumerate(pairs):
         result.optimize_result.append(
-            optimize_result=pypesto.OptimizerResult(id=str(k), fval=fval, x=sample)
+            optimize_result=pypesto.OptimizerResult(id=str(k), fval=fval, x=s)
         )
 
     cutoff = calculate_cutoff(result, percentile=percentile)

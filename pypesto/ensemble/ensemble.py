@@ -1222,7 +1222,7 @@ def calculate_cutoff(
     percentile: float = 95,
     cr_option: str = SIMULTANEOUS,
 ):
-    """
+    r"""
     Calculate the cutoff of the objective function values of the ensemble.
 
     Based on the number of parameters of the problem. Based on the
