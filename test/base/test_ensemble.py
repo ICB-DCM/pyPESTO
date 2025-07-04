@@ -94,6 +94,7 @@ def test_cutoff_computation():
     Test computing ensemble cutoff based on chi^2 distribution.
     """
     from scipy.stats import chi2
+
     objective = pypesto.Objective(
         fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
     )
@@ -114,14 +115,19 @@ def test_cutoff_computation():
         progress_bar=False,
     )
 
-    assert (calculate_cutoff(result, percentile=95) ==
-            (result.optimize_result.fval[0] + chi2.ppf(q=0.95, df=result.problem.dim) / 2))
+    assert calculate_cutoff(result, percentile=95) == (
+        result.optimize_result.fval[0]
+        + chi2.ppf(q=0.95, df=result.problem.dim) / 2
+    )
 
     ens = Ensemble.from_optimization_endpoints(result=result, percentile=95)
-    assert ens.n_vectors == sum(result.optimize_result.fval <= calculate_cutoff(result, percentile=95))
+    assert ens.n_vectors == sum(
+        result.optimize_result.fval <= calculate_cutoff(result, percentile=95)
+    )
 
-    assert (calculate_cutoff(result, percentile=95, cr_option=POINTWISE)
-            == (result.optimize_result.fval[0] + chi2.ppf(q=0.95, df=1) / 2))
+    assert calculate_cutoff(result, percentile=95, cr_option=POINTWISE) == (
+        result.optimize_result.fval[0] + chi2.ppf(q=0.95, df=1) / 2
+    )
 
 
 def test_parameter_ci_computation_from_ensemble():
@@ -161,22 +167,26 @@ def test_parameter_ci_computation_from_ensemble():
         norm.ppf(upper_bound, loc=loc, scale=scale) + epsilon,
     ]
     fvals = [-norm.logpdf(s, loc=loc, scale=scale) for s in samples]
-    pairs = (list(zip(samples, fvals, strict=True)))
+    pairs = list(zip(samples, fvals, strict=True))
     pairs.sort(key=lambda pair: pair[1])
 
-    result = pypesto.Result(problem=pypesto.Problem(
-        objective=pypesto.Objective(),
-        lb=[loc - 3 * scale],
-        ub=[loc + 3 * scale],
-        dim_full=1,
-    ))
+    result = pypesto.Result(
+        problem=pypesto.Problem(
+            objective=pypesto.Objective(),
+            lb=[loc - 3 * scale],
+            ub=[loc + 3 * scale],
+            dim_full=1,
+        )
+    )
     for k, (s, fval) in enumerate(pairs):
         result.optimize_result.append(
             optimize_result=pypesto.OptimizerResult(id=str(k), fval=fval, x=s)
         )
 
     cutoff = calculate_cutoff(result, percentile=percentile)
-    ensemble = [r for r in result.optimize_result.list if r.fval-1.e-14 <= cutoff] # correction for numerical noise
+    ensemble = [
+        r for r in result.optimize_result.list if r.fval - 1.0e-14 <= cutoff
+    ]  # correction for numerical noise
     xs = [r.x for r in ensemble]
     assert min(xs) == norm.ppf(lower_bound, loc=loc, scale=scale)
     assert max(xs) == norm.ppf(upper_bound, loc=loc, scale=scale)
