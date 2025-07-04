@@ -7,17 +7,23 @@ import scipy.optimize as so
 import pypesto
 import pypesto.optimize as optimize
 import pypesto.sample as sample
-from pypesto.C import AMICI_STATUS, AMICI_T, AMICI_Y, MEAN, WEIGHTED_SIGMA
+from pypesto.C import (
+    AMICI_STATUS,
+    AMICI_T,
+    AMICI_Y,
+    MEAN,
+    POINTWISE,
+    WEIGHTED_SIGMA,
+)
 from pypesto.engine import MultiProcessEngine
 from pypesto.ensemble import (
-    calculate_cutoff,
     Ensemble,
+    calculate_cutoff,
     read_ensemble_prediction_from_h5,
     write_ensemble_prediction_to_h5,
 )
 from pypesto.predict import AmiciPredictor
 
-from pypesto.C import POINTWISE
 from ..visualize import create_petab_problem
 
 
