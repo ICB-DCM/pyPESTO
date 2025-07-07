@@ -1232,9 +1232,9 @@ def calculate_cutoff(
     The ensemble is created based on
     :math:`-2\log(\mathcal{L}(\theta)/\mathcal{L}(\hat{\theta})) =
     -2\log(\mathcal{L}(\theta)) - (-2\log(\mathcal{L}(\hat{\theta}))) =
-    2(J(\theta) - J(\hat{\theta}))) \leq \Delta_{\alpha}`, where :math:`mathcal{L}` is the likelihood,
+    2(J(\theta) - J(\hat{\theta}))) \leq \Delta_{\alpha}`, where :math:`\mathcal{L}` is the likelihood,
     :math:`J` is the negative log-likelihood, :math:`\Delta_{\alpha}` is a percentile of the
-    :math:`\chi^2` distribution and :math: `J(\hat{\theta})` is the smallest objective function value
+    :math:`\chi^2` distribution and :math:`J(\hat{\theta})` is the smallest objective function value
     found during optimization. The ensemble contains all the parameter vectors :math:`\theta` that satisfy
     :math:`J(\theta)\leq J(\hat{\theta}) + \Delta_{\alpha}/2`.
 
