@@ -130,6 +130,9 @@ def profile_nested_cis(
     if colors is None:
         colors = [None]*len(confidence_levels)
 
+    # ensure that the confidence levels are sorted in decreasing order
+    confidence_levels, colors = zip(*sorted(zip(confidence_levels, colors), reverse=True))
+
     if profile_indices is None:
         profile_indices = [ix for ix, res in enumerate(profile_list) if res]
 
