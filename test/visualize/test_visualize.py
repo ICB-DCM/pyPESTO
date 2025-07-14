@@ -716,7 +716,7 @@ def test_profile_cis():
     visualize.profile_cis(result, show_bounds=True, profile_indices=[0])
 
 
-# @close_fig
+@close_fig
 def test_nested_profile_cis():
     """Test the profile approximate confidence interval visualization."""
     result = create_profile_result()
