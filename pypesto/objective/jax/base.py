@@ -64,6 +64,7 @@ def _device_fun(base_objective: ObjectiveBase, x: jnp.array) -> jnp.array:
         ),
         jax.ShapeDtypeStruct((), x.dtype),
         x,
+        vmap_method="sequential",
     )
 
 
@@ -110,6 +111,7 @@ def _device_fun_value_and_grad(
             ),
         ),
         x,
+        vmap_method="sequential",
     )
 
 
