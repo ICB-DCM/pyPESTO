@@ -2,10 +2,11 @@ from collections.abc import Sequence
 from typing import Literal, Union
 
 import matplotlib.axes
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch, Rectangle
 
 from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
@@ -127,8 +128,11 @@ def profile_nested_cis(
     # extract profile list
     profile_list = result.profile_result.list[profile_list]
 
+    n_cls = len(confidence_levels)
+    ws = [(0.6/n_cls)*i for i in range(1,n_cls+1)]
     if colors is None:
-        colors = [None]*len(confidence_levels)
+        blues = cm.get_cmap("Blues")
+        colors = [blues(i) for i in ws]
 
     # ensure that the confidence levels are sorted in decreasing order
     confidence_levels, colors = zip(*sorted(zip(confidence_levels, colors), reverse=True))
@@ -139,8 +143,7 @@ def profile_nested_cis(
     if ax is None:
         _, ax = plt.subplots()
 
-    n_cls = len(confidence_levels)
-    ws = [(0.6/n_cls)*i for i in range(1,n_cls+1)]
+    legends = []
     for i, confidence_level in enumerate(confidence_levels):
         confidence_ratio = chi2_quantile_to_ratio(confidence_level)
 
@@ -173,9 +176,12 @@ def profile_nested_cis(
                 ax.plot([j-0.4, j+0.4], [result.problem.ub_full[i_par]]*2, color='grey')
 
         ax.add_collection(PatchCollection(rectangles, facecolors=colors[i], edgecolors="dimgrey"))
+        legends.append(Patch(color=colors[i], label=f'{confidence_level*100}%'))
 
     x_names = [problem.x_names[ix] for ix in profile_indices]
     parameters_ind = np.arange(0, len(profile_indices))
+
+    ax.legend(title='Confidence level:', handles=legends)
 
     if rotation == 'v':
         ax.set_yticks(parameters_ind)
