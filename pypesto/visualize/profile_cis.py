@@ -15,6 +15,7 @@ from ..result import Result
 def profile_cis(
     result: Result,
     confidence_level: float = 0.95,
+    df: int = 1,
     profile_indices: Sequence[int] = None,
     profile_list: int = 0,
     color: Union[str, tuple] = "C0",
@@ -32,6 +33,8 @@ def profile_cis(
         The confidence level in (0,1), which is translated to an approximate
         threshold assuming a chi2 distribution, using
         `pypesto.profile.chi2_quantile_to_ratio`.
+    df:
+        Degrees of freedom of the chi2 distribution.
     profile_indices:
         List of integer values specifying which profiles should be plotted.
         Defaults to the indices for which profiles were generated in profile
@@ -56,7 +59,7 @@ def profile_cis(
     if ax is None:
         _, ax = plt.subplots()
 
-    confidence_ratio = chi2_quantile_to_ratio(confidence_level)
+    confidence_ratio = chi2_quantile_to_ratio(confidence_level, df=df)
 
     # calculate intervals
     intervals = []
@@ -93,6 +96,7 @@ def profile_cis(
 def profile_nested_cis(
     result: Result,
     confidence_levels: Sequence[float] = (0.95, 0.9),
+    df: int = 1,
     profile_indices: Sequence[int] = None,
     profile_list: int = 0,
     colors: Sequence = None,
@@ -110,6 +114,8 @@ def profile_nested_cis(
         The confidence levels in (0,1), which are translated to an approximate
         threshold assuming a chi2 distribution, using
         `pypesto.profile.chi2_quantile_to_ratio`.
+    df:
+        Degrees of freedom of the chi2 distribution.
     profile_indices:
         List of integer values specifying which profiles should be plotted.
         Defaults to the indices for which profiles were generated in profile
@@ -147,7 +153,7 @@ def profile_nested_cis(
 
     legends = []
     for i, confidence_level in enumerate(confidence_levels):
-        confidence_ratio = chi2_quantile_to_ratio(confidence_level)
+        confidence_ratio = chi2_quantile_to_ratio(confidence_level, df=df)
 
         xs_list = []
         x = -ws[i] / 2
