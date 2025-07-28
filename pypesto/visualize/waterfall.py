@@ -173,6 +173,10 @@ def waterfall(
                 ax=inset_axes,
                 colors=coloring[:n_starts_to_zoom],
             )
+            # remove the title and axes labels for the zoom in subplot
+            inset_axes.set_title("")
+            inset_axes.set_ylabel("")
+            inset_axes.set_xlabel("")
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
@@ -190,6 +194,8 @@ def waterfall(
     else:
         ax.set_ylabel(f"Objective value (offset={offset_y:0.3e})")
     ax.set_title("Waterfall plot")
+
+    plt.show()
     return ax
 
 
