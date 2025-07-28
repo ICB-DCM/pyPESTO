@@ -723,6 +723,7 @@ def test_nested_profile_cis():
     visualize.profile_nested_cis(result, confidence_levels=[0.99, 0.95, 0.9])
     visualize.profile_nested_cis(result, colors=["#5F9ED1", "#007ACC"])
 
+
 @close_fig
 def test_optimizer_history():
     # create the necessary results

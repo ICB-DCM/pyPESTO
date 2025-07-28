@@ -91,13 +91,13 @@ def profile_cis(
 
 
 def profile_nested_cis(
-        result: Result,
-        confidence_levels: Sequence[float] = (0.95, 0.9),
-        profile_indices: Sequence[int] = None,
-        profile_list: int = 0,
-        colors: Sequence = None,
-        ax: matplotlib.axes.Axes = None,
-        rotation: Literal["v", "h"] = "v",
+    result: Result,
+    confidence_levels: Sequence[float] = (0.95, 0.9),
+    profile_indices: Sequence[int] = None,
+    profile_list: int = 0,
+    colors: Sequence = None,
+    ax: matplotlib.axes.Axes = None,
+    rotation: Literal["v", "h"] = "v",
 ):
     """
     Plot approximate nested confidence intervals based on profiles.
@@ -129,13 +129,15 @@ def profile_nested_cis(
     profile_list = result.profile_result.list[profile_list]
 
     n_cls = len(confidence_levels)
-    ws = [(0.6/n_cls)*i for i in range(1,n_cls+1)]
+    ws = [(0.6 / n_cls) * i for i in range(1, n_cls + 1)]
     if colors is None:
         blues = cm.get_cmap("Blues")
         colors = [blues(i) for i in ws]
 
     # ensure that the confidence levels are sorted in decreasing order
-    confidence_levels, colors = zip(*sorted(zip(confidence_levels, colors), reverse=True))
+    confidence_levels, colors = zip(
+        *sorted(zip(confidence_levels, colors), reverse=True)
+    )
 
     if profile_indices is None:
         profile_indices = [ix for ix, res in enumerate(profile_list) if res]
@@ -148,42 +150,65 @@ def profile_nested_cis(
         confidence_ratio = chi2_quantile_to_ratio(confidence_level)
 
         xs_list = []
-        x = -ws[i]/2
+        x = -ws[i] / 2
         rectangles = []
         for j, i_par in enumerate(profile_indices):
-            conf_l_indices = [idx for idx, ratio in enumerate(profile_list[i_par].ratio_path) if
-                              ratio>=confidence_ratio]
+            conf_l_indices = [
+                idx
+                for idx, ratio in enumerate(profile_list[i_par].ratio_path)
+                if ratio >= confidence_ratio
+            ]
             xs = profile_list[i_par].x_path[i_par][conf_l_indices]
             xs_list.append(xs)
 
             par_ci = [np.min(xs), np.max(xs)]
             h = par_ci[1] - par_ci[0]
 
-            if rotation == 'v':
-                rectangles.append(
-                    Rectangle((par_ci[0], x), h, ws[i]))
+            if rotation == "v":
+                rectangles.append(Rectangle((par_ci[0], x), h, ws[i]))
             else:
-                rectangles.append(
-                    Rectangle((x, par_ci[0]), ws[i], h))
+                rectangles.append(Rectangle((x, par_ci[0]), ws[i], h))
             x += 1
 
             # visualize parameter boundaries
-            if rotation == 'v':
-                ax.plot([result.problem.lb_full[i_par]]*2, [j-0.4, j+0.4], color='grey')
-                ax.plot([result.problem.ub_full[i_par]]*2, [j-0.4, j+0.4], color='grey')
+            if rotation == "v":
+                ax.plot(
+                    [result.problem.lb_full[i_par]] * 2,
+                    [j - 0.4, j + 0.4],
+                    color="grey",
+                )
+                ax.plot(
+                    [result.problem.ub_full[i_par]] * 2,
+                    [j - 0.4, j + 0.4],
+                    color="grey",
+                )
             else:
-                ax.plot([j-0.4, j+0.4], [result.problem.lb_full[i_par]]*2, color='grey')
-                ax.plot([j-0.4, j+0.4], [result.problem.ub_full[i_par]]*2, color='grey')
+                ax.plot(
+                    [j - 0.4, j + 0.4],
+                    [result.problem.lb_full[i_par]] * 2,
+                    color="grey",
+                )
+                ax.plot(
+                    [j - 0.4, j + 0.4],
+                    [result.problem.ub_full[i_par]] * 2,
+                    color="grey",
+                )
 
-        ax.add_collection(PatchCollection(rectangles, facecolors=colors[i], edgecolors="dimgrey"))
-        legends.append(Patch(color=colors[i], label=f'{confidence_level*100}%'))
+        ax.add_collection(
+            PatchCollection(
+                rectangles, facecolors=colors[i], edgecolors="dimgrey"
+            )
+        )
+        legends.append(
+            Patch(color=colors[i], label=f"{confidence_level * 100}%")
+        )
 
     x_names = [problem.x_names[ix] for ix in profile_indices]
     parameters_ind = np.arange(0, len(profile_indices))
 
-    ax.legend(title='Confidence level:', handles=legends)
+    ax.legend(title="Confidence level:", handles=legends)
 
-    if rotation == 'v':
+    if rotation == "v":
         ax.set_yticks(parameters_ind)
         ax.set_yticklabels(x_names)
         ax.set_ylabel("Parameter")
