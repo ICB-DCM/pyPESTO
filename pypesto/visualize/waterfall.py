@@ -194,8 +194,6 @@ def waterfall(
     else:
         ax.set_ylabel(f"Objective value (offset={offset_y:0.3e})")
     ax.set_title("Waterfall plot")
-
-    plt.show()
     return ax
 
 
