@@ -130,6 +130,23 @@ class ProfilerResult(dict):
     __setattr__ = dict.__setitem__
     __delattr__ = dict.__delitem__
 
+    def summary(self) -> str:
+        """
+        Get summary of the object.
+
+        Returns
+        -------
+        summary: str
+        """
+
+        message = (
+            "### Profiler Result\n\n"
+            f"* message: {self.message} \n"
+            f"* number of evaluations: {self.n_fval}\n"
+            f"* total computation time for the profile: {self.time_total:0.3f}s\n"
+        )
+        return message
+
     def append_profile_point(
         self,
         x: np.ndarray,
@@ -212,6 +229,50 @@ class ProfileResult:
 
     def __init__(self):
         self.list: list[list[ProfilerResult]] = []
+
+    def summary(
+        self,
+    ) -> str:
+        """
+        Get summary of the object.
+
+        Returns
+        -------
+        summary: str
+        """
+        if len(self.list) == 0:
+            return "## Profile Result \n\n*empty*\n"
+
+        summary = (
+            "### Profile Result \n\n"
+            f"* number of profile lists: {len(self.list)} \n"
+        )
+        for idx, profile_list in enumerate(self.list):
+            n_profiler_results = sum([pr is not None for pr in profile_list])
+            profile_computation_times = np.array([
+                pr.time_total if pr is not None else 0 for pr in profile_list
+            ])
+            masked = np.where(
+                profile_computation_times > 0,
+                profile_computation_times,
+                np.inf,
+            )
+            times_message = (
+                f"\t* Total profile computation time: {sum(profile_computation_times):0.3f}s\n"
+                f"\t* Mean profile computation time: {np.mean(profile_computation_times):0.3f}s\n"
+                f"\t* Maximum execution time: {np.max(profile_computation_times):0.3f}s,"
+                f"\tindex={np.argmax(profile_computation_times)}\n"
+                f"\t* Minimum execution time: {np.min(masked):0.3f}s,\t"
+                f"index={np.argmin(masked)}"
+            )
+
+            profile_list_summary = (
+                f"## Profile List {idx} \n\n"
+                f"* number of profiler results: {n_profiler_results} \n"
+                f"* computation time summary:\n{times_message}\n"
+            )
+            summary += profile_list_summary
+        return summary
 
     def append_empty_profile_list(self) -> int:
         """Append an empty profile list to the list of profile lists.
