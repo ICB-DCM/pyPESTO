@@ -545,6 +545,11 @@ class ScipyOptimizer(Optimizer):
             options["maxfun"] = 1000
         elif self.method.lower() in ("nelder-mead", "powell"):
             options["maxfev"] = 1000
+
+        if self.method.lower() == "l-bfgs-b":
+            # Deprecated since scipy 1.15.0
+            del options["disp"]
+
         return options
 
 
