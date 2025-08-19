@@ -123,7 +123,7 @@ def profile_nested_cis(
     profile_list:
         Index of the profile list to be used.
     colors:
-         A color for each confidence interval.
+        A color for each confidence interval.
     ax:
         Axes object to use. Default: Create a new one.
     rotation:
