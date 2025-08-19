@@ -101,7 +101,7 @@ def profile_nested_cis(
     profile_list: int = 0,
     colors: Sequence = None,
     ax: matplotlib.axes.Axes = None,
-    rotation: Literal["v", "h"] = "v",
+    orientation: Literal["v", "h"] = "v",
 ):
     """
     Plot approximate nested confidence intervals based on profiles.
@@ -126,8 +126,8 @@ def profile_nested_cis(
         A color for each confidence interval.
     ax:
         Axes object to use. Default: Create a new one.
-    rotation:
-        Rotation of the plot, either vertical or horizontal.
+    orientation:
+        Orientation of the plot, either vertical or horizontal.
     """
     # extract problem
     problem = result.problem
@@ -170,14 +170,14 @@ def profile_nested_cis(
             par_ci = [np.min(xs), np.max(xs)]
             h = par_ci[1] - par_ci[0]
 
-            if rotation == "v":
+            if orientation == "v":
                 rectangles.append(Rectangle((par_ci[0], x), h, ws[i]))
             else:
                 rectangles.append(Rectangle((x, par_ci[0]), ws[i], h))
             x += 1
 
             # visualize parameter boundaries
-            if rotation == "v":
+            if orientation == "v":
                 ax.plot(
                     [result.problem.lb_full[i_par]] * 2,
                     [j - 0.4, j + 0.4],
@@ -214,7 +214,7 @@ def profile_nested_cis(
 
     ax.legend(title="Confidence level:", handles=legends)
 
-    if rotation == "v":
+    if orientation == "v":
         ax.set_yticks(parameters_ind)
         ax.set_yticklabels(x_names)
         ax.set_ylabel("Parameter")
