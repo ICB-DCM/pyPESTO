@@ -212,8 +212,6 @@ def profile_nested_cis(
     x_names = [problem.x_names[ix] for ix in profile_indices]
     parameters_ind = np.arange(0, len(profile_indices))
 
-    ax.legend(title="Confidence level:", handles=legends)
-
     if orientation == "v":
         ax.set_yticks(parameters_ind)
         ax.set_yticklabels(x_names)
@@ -224,5 +222,13 @@ def profile_nested_cis(
         ax.set_xticklabels(ax.get_xticklabels(), ha="right")
         ax.set_xlabel("Parameter")
         ax.set_ylabel("Parameter value")
+
+    ax.legend(
+        title="Confidence level:",
+        handles=legends,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 1.16),
+        ncol=len(legends),
+    )
 
     return ax
