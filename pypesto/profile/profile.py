@@ -3,6 +3,8 @@ import logging
 from collections.abc import Iterable
 from typing import Callable, Union
 
+import numpy as np
+
 from ..engine import Engine, SingleCoreEngine
 from ..optimize import Optimizer
 from ..problem import Problem
@@ -156,24 +158,33 @@ def parameter_profile(
             profile_list=profile_list,
         )
 
-        task = ProfilerTask(
-            current_profile=current_profile,
-            problem=problem,
-            optimizer=optimizer,
-            options=profile_options,
-            create_next_guess=create_next_guess,
-            global_opt=global_opt,
-            i_par=i_par,
-        )
-        tasks.append(task)
+        for par_direction in [-1, 1]:
+            task = ProfilerTask(
+                current_profile=copy.deepcopy(current_profile),
+                problem=problem,
+                optimizer=optimizer,
+                options=profile_options,
+                create_next_guess=create_next_guess,
+                global_opt=global_opt,
+                i_par=i_par,
+                par_direction=par_direction,
+            )
+            tasks.append(task)
 
     # execute the tasks with Engine
     indexed_profiles = engine.execute(tasks, progress_bar=progress_bar)
+    paired_profiles = {}
+    for indexed_profile in indexed_profiles:
+        if indexed_profile["index"] not in paired_profiles:
+            paired_profiles[indexed_profile["index"]] = [None, None]
+        paired_profiles[indexed_profile["index"]][
+            max(indexed_profile["par_direction"], 0)
+        ] = indexed_profile["profile"]
 
     # fill in the ProfilerResults at the right index
-    for indexed_profile in indexed_profiles:
-        result.profile_result.list[-1][indexed_profile["index"]] = (
-            indexed_profile["profile"]
+    for p_index in paired_profiles:
+        result.profile_result.list[-1][p_index] = combine_profiles_halves(
+            *paired_profiles[p_index]
         )
 
     autosave(
@@ -184,3 +195,50 @@ def parameter_profile(
     )
 
     return result
+
+
+def combine_profiles_halves(profile_desc, profile_asc):
+    """
+    Combine ascending and descending profile halves into a single profile.
+
+    Parameters
+    ----------
+    profile_desc : Profile
+        The descending half of the profile to be modified and merged.
+    profile_asc : Profile
+        The ascending half of the profile to be merged.
+
+    Returns
+    -------
+    Profile
+        Combined profile after concatenating paths and summing cumulative values.
+    """
+    profile_desc.flip_profile()
+    profile_desc.x_path = np.concatenate(
+        (profile_desc.x_path, profile_asc.x_path), axis=1
+    )
+    profile_desc.fval_path = np.concatenate(
+        (profile_desc.fval_path, profile_asc.fval_path)
+    )
+    profile_desc.ratio_path = np.concatenate(
+        (profile_desc.ratio_path, profile_asc.ratio_path)
+    )
+    profile_desc.gradnorm_path = np.concatenate(
+        (profile_desc.gradnorm_path, profile_asc.gradnorm_path)
+    )
+    profile_desc.exitflag_path = np.concatenate(
+        (profile_desc.exitflag_path, profile_asc.exitflag_path)
+    )
+    profile_desc.color_path = np.concatenate(
+        (profile_desc.color_path, profile_asc.color_path)
+    )
+    profile_desc.time_path = np.concatenate(
+        (profile_desc.time_path, profile_asc.time_path)
+    )
+
+    profile_desc.time_total += profile_asc.time_total
+    profile_desc.n_fval += profile_asc.n_fval
+    profile_desc.n_grad += profile_asc.n_grad
+    profile_desc.n_hess += profile_asc.n_hess
+
+    return profile_desc
