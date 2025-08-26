@@ -158,6 +158,7 @@ def parameter_profile(
             profile_list=profile_list,
         )
 
+        # create two tasks for each parameter: in descending and ascending direction
         for par_direction in [-1, 1]:
             task = ProfilerTask(
                 current_profile=copy.deepcopy(current_profile),
@@ -173,6 +174,8 @@ def parameter_profile(
 
     # execute the tasks with Engine
     indexed_profiles = engine.execute(tasks, progress_bar=progress_bar)
+
+    # combine the descending and ascending profile halves for each parameter
     paired_profiles = {}
     for indexed_profile in indexed_profiles:
         if indexed_profile["index"] not in paired_profiles:
@@ -180,9 +183,9 @@ def parameter_profile(
         paired_profiles[indexed_profile["index"]][
             max(indexed_profile["par_direction"], 0)
         ] = indexed_profile["profile"]
-
     # fill in the ProfilerResults at the right index
     for p_index in paired_profiles:
+        # combine the two profile halves before assigning them to the profile result list
         result.profile_result.list[-1][p_index] = combine_profiles_halves(
             *paired_profiles[p_index]
         )
