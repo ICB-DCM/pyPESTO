@@ -206,7 +206,9 @@ def process_y_limits(ax, y_limits):
         data_limits = ax.dataLim.ymin, ax.dataLim.ymax
 
         # Check if data fits to axes and adapt limits, if necessary
-        if ax_limits[0] > data_limits[0] or ax_limits[1] < data_limits[1]:
+        if np.isfinite(data_limits).all() and (
+            ax_limits[0] > data_limits[0] or ax_limits[1] < data_limits[1]
+        ):
             # Get range of data
             data_range = data_limits[1] - data_limits[0]
             if ax.get_yscale() == "log":
@@ -374,7 +376,7 @@ def process_start_indices(
             "Some start indices were removed due to inf or nan function values."
         )
 
-    return np.asarray(start_indices)
+    return np.asarray(start_indices, dtype=int)
 
 
 def process_parameter_indices(
