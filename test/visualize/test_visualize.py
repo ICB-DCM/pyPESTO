@@ -2,6 +2,7 @@ import functools
 import logging
 import os
 from collections.abc import Sequence
+from copy import deepcopy
 from functools import wraps
 from pathlib import Path
 
@@ -285,6 +286,15 @@ def test_waterfall_with_nan_inf():
 
     # test plotting of lists
     visualize.waterfall([result_1, result_2])
+
+    # test all-non-finite
+    result_no_finite = deepcopy(result_1)
+    result_no_finite.optimize_result.list = [
+        or_
+        for or_ in result_no_finite.optimize_result.list
+        if not np.isfinite(or_.fval)
+    ]
+    visualize.waterfall(result_no_finite)
 
 
 @close_fig
