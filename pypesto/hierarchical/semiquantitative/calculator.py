@@ -68,6 +68,7 @@ class SemiquantCalculator(AmiciCalculator):
         if inner_solver is None:
             inner_solver = SemiquantInnerSolver()
         self.inner_solver = inner_solver
+        self._can_use_same_plists_gradients = False
 
     def initialize(self):
         """Initialize."""
@@ -221,7 +222,20 @@ class SemiquantCalculator(AmiciCalculator):
             ):
                 sy = get_sensitivities_from_adjoint_gradient(rdatas, edatas)
                 ssigma = [np.zeros_like(s) for s in sy]
-            inner_result[GRAD] = self.inner_solver.calculate_gradients(
+            # Check whether we can use the same plists gradients
+            if not self._can_use_same_plists_gradients:
+                self.inner_solver.check_if_can_use_gradients_same_plists(
+                    sy=sy,
+                    parameter_mapping=parameter_mapping,
+                    par_opt_ids=x_ids,
+                    par_sim_ids=amici_model.getParameterIds(),
+                    par_edatas_indices=[edata.plist for edata in edatas],
+                )
+                self._can_use_same_plists_gradients = True
+
+            inner_result[
+                GRAD
+            ] = self.inner_solver.calculate_gradients_same_plists(
                 problem=self.inner_problem,
                 x_inner_opt=x_inner_opt,
                 sim=sim,
@@ -235,6 +249,25 @@ class SemiquantCalculator(AmiciCalculator):
                 snllh=snllh,
             )
 
+            # inner_grad_same_plists = self.inner_solver.calculate_gradients_same_plists(
+            #     problem=self.inner_problem,
+            #     x_inner_opt=x_inner_opt,
+            #     sim=sim,
+            #     amici_sigma=sigma,
+            #     sy=sy,
+            #     amici_ssigma=ssigma,
+            #     parameter_mapping=parameter_mapping,
+            #     par_opt_ids=x_ids,
+            #     par_sim_ids=amici_model.getParameterIds(),
+            #     par_edatas_indices=[edata.plist for edata in edatas],
+            #     snllh=np.zeros(dim),
+            # )
+
+            # # Check if the gradients are the same
+            # if not np.allclose(inner_result[GRAD], inner_grad_same_plists):
+            #     breakpoint()
+            # print("THE DIFFERENCE L2 norm:")
+            # print(np.linalg.norm(inner_result[GRAD] - inner_grad_same_plists))
         return filter_return_dict(inner_result)
 
 

@@ -32,6 +32,7 @@ from .parameter import SplineInnerParameter
 
 try:
     import amici
+
     import petab.v1 as petab
     from petab.v1.C import (
         ESTIMATE,
@@ -367,34 +368,42 @@ def spline_inner_parameters_from_measurement_df(
     # Select the semiquantitative measurements.
     df = df[df[MEASUREMENT_TYPE] == SEMIQUANTITATIVE]
 
-    # Iterate over groups.
+    # Iterate over observables.
     for observable_id in observable_ids:
-        group = observable_ids.index(observable_id) + 1
-        df_for_group = df[df[OBSERVABLE_ID] == observable_id]
+        df_for_observable = df[df[OBSERVABLE_ID] == observable_id]
 
-        n_spline_parameters = int(np.ceil(len(df_for_group) * spline_ratio))
-        if n_spline_parameters < 2:
-            raise ValueError(
-                "The number of spline parameters must be at least 2."
-                " Please adjust the spline ratio."
+        # Iterate over groups.
+        for group in df_for_observable["group"].unique():
+            group = int(group)
+            df_for_group = df_for_observable[
+                df_for_observable["group"] == group
+            ]
+
+            n_spline_parameters = int(
+                np.ceil(len(df_for_group) * spline_ratio)
             )
-
-        # Create n_spline_parameters number of spline inner parameters.
-        for par_index in range(n_spline_parameters):
-            par_id = f"{par_type}_{observable_id}_{group}_{par_index+1}"
-            inner_parameters.append(
-                SplineInnerParameter(
-                    inner_parameter_id=par_id,
-                    inner_parameter_type=InnerParameterType.SPLINE,
-                    scale=LIN,
-                    lb=lb,
-                    ub=ub,
-                    observable_id=observable_id,
-                    group=group,
-                    index=par_index + 1,
-                    estimate=estimate,
+            if n_spline_parameters < 2:
+                raise ValueError(
+                    "The number of spline parameters must be at least 2."
+                    " Please adjust the spline ratio."
                 )
-            )
+
+            # Create n_spline_parameters number of spline inner parameters.
+            for par_index in range(n_spline_parameters):
+                par_id = f"{par_type}_{observable_id}_{group}_{par_index+1}"
+                inner_parameters.append(
+                    SplineInnerParameter(
+                        inner_parameter_id=par_id,
+                        inner_parameter_type=InnerParameterType.SPLINE,
+                        scale=LIN,
+                        lb=lb,
+                        ub=ub,
+                        observable_id=observable_id,
+                        group=group,
+                        index=par_index + 1,
+                        estimate=estimate,
+                    )
+                )
 
     inner_parameters.sort(key=lambda x: (x.group, x.index))
 
@@ -533,4 +542,5 @@ def get_spline_inner_par_ids_for_measurement(
         inner_par.inner_parameter_id
         for inner_par in inner_parameters
         if inner_par.observable_id == measurement[OBSERVABLE_ID]
+        and inner_par.group == measurement["group"]
     ]
