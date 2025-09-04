@@ -1222,12 +1222,21 @@ def calculate_cutoff(
     percentile: float = 95,
     cr_option: str = SIMULTANEOUS,
 ):
-    """
-    Calculate the cutoff of the ensemble.
+    r"""
+    Calculate the cutoff of the objective function values of the ensemble.
 
     Based on the number of parameters of the problem. Based on the
     assumption that the difference of the nllh's of the true and optimal
     parameter is chi^2 distributed with n_theta degrees of freedom.
+
+    The ensemble is created based on
+    :math:`-2\log(\mathcal{L}(\theta)/\mathcal{L}(\hat{\theta})) =
+    -2\log(\mathcal{L}(\theta)) - (-2\log(\mathcal{L}(\hat{\theta}))) =
+    2(J(\theta) - J(\hat{\theta}))) \leq \Delta_{\alpha}`, where :math:`\mathcal{L}` is the likelihood,
+    :math:`J` is the negative log-likelihood, :math:`\Delta_{\alpha}` is a percentile of the
+    :math:`\chi^2` distribution and :math:`J(\hat{\theta})` is the smallest objective function value
+    found during optimization. The ensemble contains all the parameter vectors :math:`\theta` that satisfy
+    :math:`J(\theta)\leq J(\hat{\theta}) + \Delta_{\alpha}/2`.
 
     Parameters
     ----------
@@ -1248,8 +1257,7 @@ def calculate_cutoff(
     """
     if percentile > 100:
         raise ValueError(
-            f"percentile={percentile} is too large. Choose "
-            f"0<=percentile<=100."
+            f"percentile={percentile} is too large. Choose 0<=percentile<=100."
         )
     if cr_option not in [SIMULTANEOUS, POINTWISE]:
         raise ValueError(
@@ -1265,7 +1273,7 @@ def calculate_cutoff(
         # degrees of freedom is equal to 1
         df = 1
 
-    range = chi2.ppf(q=percentile / 100, df=df)
+    range = chi2.ppf(q=percentile / 100, df=df) / 2
     return fval_opt + range
 
 

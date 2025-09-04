@@ -6,6 +6,75 @@ Release notes
 ..........
 
 
+0.5.6 (2025-05-18)
+-------------------
+
+- General
+    - GHA and CI improvements (#1560, #1554, #1571, #1573, #1577)
+    - Documentation improvement (#1557, #1479, #1539, #1551)
+    - Fix compatibility with jax 0.6.0 (#1580)
+- Optimization
+    - SacessOptimizer: Minor updates (#1564)
+    - Fix SacessOptimizer relative fval improvement check (#1558)
+    - Add Ipopt factory for use with SacessOptimizer (#1533)
+    - Make CmaOptimizer respect wall time limits and max evals under SacessOptimizer (#1555)
+    - Make print parameter summary nicer (#1549)
+- Select
+    - Fix model hash typing issue (#1548)
+- Store
+    - Speed up `read_hdf5_optimization` (#1570, #1556)
+
+
+0.5.5 (2025-01-10)
+-------------------
+
+- **Breaking Changes**
+  - **PETab select**: There are some deprecated features that will show up as warnings. In addition:
+
+    - The plotting methods ignore some arguments. You will need to reimplement these with the newer approach, which uses
+      plotting methods from the PEtab Select library instead. See the model selection notebook for examples.
+
+    - All objects containing multiple models (e.g., dictionaries or lists) are now replaced by `petab_select.Models`,
+      which supports dictionary and list methods.
+
+      To convert your old list of models:
+
+      ```python
+      petab_select.Models(list_of_Model)
+      ```
+- General
+    - Exclude nlopt==2.9.0 from setup (#1519)
+    - Improve CI (#1521, #1523, #1532, #1536, #1508, #1544, #1531)
+    - Update references/documentation (#1506, #1491, #1516, #1543)
+    - **Docker Image** (#1083, #1538)
+- Hierarchical
+    - Fix no error if inner observable parameter in noise formula & viceversa (#1504)
+    - Remove inner datas from relative calculator (#1505)
+    - Fix not scaling inner pars when applying to rdatas (#1534)
+- Optimization
+    - ESSOptimizer: Fix priority for local search startpoints (#1503)
+    - Fix NLoptOptimizer.__repr__ (#1518)
+    - Improve exception-handling in SacessOptimizer (#1517)
+    - Fix ESSOptimizer min of empty sequence (#1510)
+    - Don't modify sys.path for amici model imports (#1522)
+    - Set OptimizerResult.optimizer in Optimizer.minimize (#1525)
+    - SacessOptimizer: More efficient saving of intermediate results (#1529)
+- Objective
+    - AmiciObjective/PEtab import: Fix plist (#1493)
+    - PEtab: Fix warning from fill_in_parameters with fixed parameters (#1509)
+    - Amici: Fix handling of PEtab fixed parameters (#1514)
+    - Fix get_parameter_prior_dict docstring (#1537)
+- Select
+    - Support user-provided calibration results (#1338)
+    - Problem-specific minimize method for SaCeSS (#1339)
+    - Update for the latest PEtab Select version; see example notebook or the PEtab Select repo (#1530)
+- Storage
+    - Enable writing Optimize(r)Result directly in Writer (#1528)
+    - Update parameter scale storage (#1542
+- Visualize
+    - Fix flatten of observable mapping with one observable (#1515)
+
+
 0.5.4 (2024-10-19)
 -------------------
 

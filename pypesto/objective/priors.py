@@ -244,11 +244,13 @@ def get_parameter_prior_dict(
         "parameterScaleUniform", "parameterScaleNormal",
         "parameterScaleLaplace"}
     prior_parameters:
-        Parameters of the priors. Parameters are defined in linear scale.
+        Parameters of the priors. Parameters are defined in the parameter
+        scale if the `prior_type` starts with ``parameterScale``, otherwise in
+        the linear scale.
     parameter_scale:
         scale in which the parameter is defined (since a parameter can be
         log-transformed, while the prior is always defined in the linear
-        space, unless it starts with "parameterScale")
+        space, unless it starts with ``parameterScale``).
     """
     log_f, d_log_f_dx, dd_log_f_ddx, res, d_res_dx = _prior_densities(
         prior_type, prior_parameters
@@ -535,7 +537,7 @@ def _prior_densities(
         raise NotImplementedError
     else:
         raise ValueError(
-            f"NegLogPriors of type {prior_type} are currently " "not supported"
+            f"NegLogPriors of type {prior_type} are currently not supported"
         )
 
 

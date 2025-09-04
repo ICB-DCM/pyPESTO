@@ -69,21 +69,19 @@ def read_hdf5_optimization(
 
         return LazyOptimizerResult(file_name, f"optimization/results/{opt_id}")
 
+    group = f[f"/optimization/results/{opt_id}"]
+    dset_ids = set(group)
+    attr_ids = set(group.attrs)
+
     result = OptimizerResult()
     for optimization_key in result.keys():
-        if optimization_key == "history":
-            if optimization_key in f:
-                result["history"] = Hdf5History(id=opt_id, file=file_name)
-                result["history"].recover_options(file_name)
-                continue
-        if optimization_key in f[f"/optimization/results/{opt_id}"]:
-            result[optimization_key] = f[
-                f"/optimization/results/{opt_id}/{optimization_key}"
-            ][:]
-        elif optimization_key in f[f"/optimization/results/{opt_id}"].attrs:
-            result[optimization_key] = f[
-                f"/optimization/results/{opt_id}"
-            ].attrs[optimization_key]
+        if optimization_key == "history" and optimization_key in f:
+            result["history"] = Hdf5History(id=opt_id, file=file_name)
+            result["history"].recover_options(file_name)
+        elif optimization_key in dset_ids:
+            result[optimization_key] = group[optimization_key][:]
+        elif optimization_key in attr_ids:
+            result[optimization_key] = group.attrs[optimization_key]
     return result
 
 
@@ -144,6 +142,7 @@ class ProblemHDF5Reader:
         problem.x_fixed_vals = [float(val) for val in problem.x_fixed_vals]
         problem.x_fixed_indices = [int(ix) for ix in problem.x_fixed_indices]
         problem.x_names = [name.decode() for name in problem.x_names]
+        problem.x_scales = [scale.decode() for scale in problem.x_scales]
 
         return problem
 
@@ -178,12 +177,13 @@ class OptimizationResultHDF5Reader:
     def read(self) -> Result:
         """Read HDF5 result file and return pyPESTO result object."""
         with h5py.File(self.storage_filename, "r") as f:
-            for opt_id in f["/optimization/results"]:
-                result = read_hdf5_optimization(
+            results = [
+                read_hdf5_optimization(
                     f, self.storage_filename, opt_id, lazy=self.lazy
                 )
-                self.results.optimize_result.append(result)
-            self.results.optimize_result.sort()
+                for opt_id in f["/optimization/results"]
+            ]
+            self.results.optimize_result.append(results, sort=True)
         return self.results
 
 
@@ -220,7 +220,7 @@ class SamplingResultHDF5Reader:
             self.results.sample_result = McmcPtResult(**sample_result)
         except TypeError:
             logger.warning(
-                "Warning: You tried loading a non-existent " "sampling result."
+                "Warning: You tried loading a non-existent sampling result."
             )
 
         return self.results
@@ -257,14 +257,14 @@ class ProfileResultHDF5Reader:
                     [None for _ in f[f"/profiling/{profile_id}"]]
                 )
                 for parameter_id in f[f"/profiling/{profile_id}"]:
-                    if f[f"/profiling/{profile_id}/" f"{parameter_id}"].attrs[
+                    if f[f"/profiling/{profile_id}/{parameter_id}"].attrs[
                         "IsNone"
                     ]:
                         continue
-                    profiling_list[int(profile_id)][
-                        int(parameter_id)
-                    ] = read_hdf5_profile(
-                        f, profile_id=profile_id, parameter_id=parameter_id
+                    profiling_list[int(profile_id)][int(parameter_id)] = (
+                        read_hdf5_profile(
+                            f, profile_id=profile_id, parameter_id=parameter_id
+                        )
                     )
             self.results.profile_result.list = profiling_list
         return self.results

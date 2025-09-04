@@ -129,9 +129,9 @@ class OrdinalProblem(AmiciInnerProblem):
 
             if all(x.censoring_type is not None for x in xs):
                 self.groups[group][MEASUREMENT_TYPE] = CENSORED
-                self.groups[group][
-                    QUANTITATIVE_IXS
-                ] = self.get_censored_group_quantitative_ixs(xs)
+                self.groups[group][QUANTITATIVE_IXS] = (
+                    self.get_censored_group_quantitative_ixs(xs)
+                )
                 self.groups[group][QUANTITATIVE_DATA] = np.concatenate(
                     [
                         data_i[mask_i]

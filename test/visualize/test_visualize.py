@@ -2,6 +2,7 @@ import functools
 import logging
 import os
 from collections.abc import Sequence
+from copy import deepcopy
 from functools import wraps
 from pathlib import Path
 
@@ -285,6 +286,15 @@ def test_waterfall_with_nan_inf():
 
     # test plotting of lists
     visualize.waterfall([result_1, result_2])
+
+    # test all-non-finite
+    result_no_finite = deepcopy(result_1)
+    result_no_finite.optimize_result.list = [
+        or_
+        for or_ in result_no_finite.optimize_result.list
+        if not np.isfinite(or_.fval)
+    ]
+    visualize.waterfall(result_no_finite)
 
 
 @close_fig
@@ -1163,9 +1173,9 @@ def test_visualize_optimized_model_fit_aggregated():
             petab_problem.parameter_df.upperBound,
         )
     ]
-    petab_problem.parameter_df[
-        "objectivePriorParameters"
-    ] = objectivePriorParameters
+    petab_problem.parameter_df["objectivePriorParameters"] = (
+        objectivePriorParameters
+    )
 
     # import to pypesto
     importer = pypesto.petab.PetabImporter(petab_problem)
@@ -1220,7 +1230,7 @@ def test_time_trajectory_model():
 @close_fig
 def test_sacess_history():
     """Test pypesto.visualize.optimizer_history.sacess_history"""
-    from pypesto.optimize.ess.sacess import SacessOptimizer
+    from pypesto.optimize.ess.sacess import ESSExitFlag, SacessOptimizer
     from pypesto.visualize.optimizer_history import sacess_history
 
     problem = create_problem()
@@ -1228,6 +1238,7 @@ def test_sacess_history():
         max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
     )
     sacess.minimize(problem)
+    assert sacess.exit_flag == ESSExitFlag.MAX_TIME
     sacess_history(sacess.histories)
 
 

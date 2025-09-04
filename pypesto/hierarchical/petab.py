@@ -678,8 +678,7 @@ def validate_observable_data_types(petab_problem: petab.Problem) -> None:
         ]
         if CENSORING_BOUNDS not in meas_df_w_censored.columns:
             raise ValueError(
-                "Censoring bounds must be specified for censored "
-                "measurements."
+                "Censoring bounds must be specified for censored measurements."
             )
         for _, row in meas_df_w_censored.iterrows():
             if (

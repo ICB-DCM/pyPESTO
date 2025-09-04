@@ -204,9 +204,9 @@ class SemiquantCalculator(AmiciCalculator):
         )
         inner_result[SPLINE_KNOTS] = self.inner_problem.get_spline_knots()
 
-        inner_result[
-            INNER_PARAMETERS
-        ] = self.inner_problem.get_inner_noise_parameters()
+        inner_result[INNER_PARAMETERS] = (
+            self.inner_problem.get_inner_noise_parameters()
+        )
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:
@@ -233,20 +233,20 @@ class SemiquantCalculator(AmiciCalculator):
                 )
                 self._can_use_same_plists_gradients = True
 
-            inner_result[
-                GRAD
-            ] = self.inner_solver.calculate_gradients_same_plists(
-                problem=self.inner_problem,
-                x_inner_opt=x_inner_opt,
-                sim=sim,
-                amici_sigma=sigma,
-                sy=sy,
-                amici_ssigma=ssigma,
-                parameter_mapping=parameter_mapping,
-                par_opt_ids=x_ids,
-                par_sim_ids=amici_model.getParameterIds(),
-                par_edatas_indices=[edata.plist for edata in edatas],
-                snllh=snllh,
+            inner_result[GRAD] = (
+                self.inner_solver.calculate_gradients_same_plists(
+                    problem=self.inner_problem,
+                    x_inner_opt=x_inner_opt,
+                    sim=sim,
+                    amici_sigma=sigma,
+                    sy=sy,
+                    amici_ssigma=ssigma,
+                    parameter_mapping=parameter_mapping,
+                    par_opt_ids=x_ids,
+                    par_sim_ids=amici_model.getParameterIds(),
+                    par_edatas_indices=[edata.plist for edata in edatas],
+                    snllh=snllh,
+                )
             )
 
             # inner_grad_same_plists = self.inner_solver.calculate_gradients_same_plists(

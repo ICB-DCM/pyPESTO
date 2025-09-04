@@ -545,11 +545,16 @@ class ScipyOptimizer(Optimizer):
             options["maxfun"] = 1000
         elif self.method.lower() in ("nelder-mead", "powell"):
             options["maxfev"] = 1000
+
+        if self.method.lower() == "l-bfgs-b":
+            # Deprecated since scipy 1.15.0
+            del options["disp"]
+
         return options
 
 
 class IpoptOptimizer(Optimizer):
-    """Use IpOpt (https://pypi.org/project/ipopt/) for optimization."""
+    """Use Ipopt (https://pypi.org/project/cyipopt/) for optimization."""
 
     def __init__(self, options: dict = None):
         """
@@ -560,6 +565,9 @@ class IpoptOptimizer(Optimizer):
         options:
             Options are directly passed on to `cyipopt.minimize_ipopt`, except
             for the `approx_grad` option, which is handled separately.
+
+            For a list of available options, see the Ipopt documentation
+            (https://coin-or.github.io/Ipopt/OPTIONS.html).
         """
         super().__init__()
         self.approx_grad = False
@@ -599,7 +607,7 @@ class IpoptOptimizer(Optimizer):
             jac = objective.get_grad
         else:
             raise ValueError(
-                "For IPOPT, the objective must either be able to return "
+                "For Ipopt, the objective must either be able to return "
                 "gradients or the `approx_grad` must be set to True."
             )
 
@@ -1357,8 +1365,7 @@ class FidesOptimizer(Optimizer):
                 rep += f" hessian_update={self.hessian_update}"
             else:
                 rep += (
-                    f" hessian_update="
-                    f"{self.hessian_update.__class__.__name__}"
+                    f" hessian_update={self.hessian_update.__class__.__name__}"
                 )
         if self.verbose is not None:
             rep += f" verbose={self.verbose}"

@@ -833,9 +833,9 @@ def sampling_prediction_trajectories(
                 petab.SIMULATION_CONDITION_ID: simulation_condition_id,
             }
             if preequilibration_condition_id:
-                condition[
-                    petab.PREEQUILIBRATION_CONDITION_ID
-                ] = preequilibration_condition_id
+                condition[petab.PREEQUILIBRATION_CONDITION_ID] = (
+                    preequilibration_condition_id
+                )
             for output_id in output_ids:
                 _df = petab.get_rows_for_condition(
                     measurement_df=measurement_df,
