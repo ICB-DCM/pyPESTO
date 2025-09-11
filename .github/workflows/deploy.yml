@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Remove direct dependencies from setup.cfg
       # Remove any "git+https"-based dependencies that are not supported
@@ -21,7 +21,7 @@ jobs:
       run: sed -i '/git+https/d' setup.cfg
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
 
