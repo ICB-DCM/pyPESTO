@@ -218,28 +218,14 @@ def assign_clusters(vals):
     elif len(vals) == 1:
         return np.array([0]), np.array([1.0])
 
-    # linkage requires (n, 1) data array
-    vals = np.reshape(vals, (-1, 1))
+    # sort values
+    vals = np.sort(vals)
 
-    # however: clusters are sorted by size, not by value... Resort.
-    # Create preallocated object first
-    cluster_indices = np.zeros(vals.size, dtype=int)
+    # assign cluster to first element and then assign new cluster every time distance is greater 0.1 
+    cluster_indices = np.append([0], np.cumsum(np.diff(vals) > 0.1))
 
-    # get clustering based on distance
-    clust = cluster.hierarchy.fcluster(
-        cluster.hierarchy.linkage(vals), t=0.1, criterion="distance"
-    )
-
-    # get unique clusters
-    _, ind_clust = np.unique(clust, return_index=True)
-    unique_clust = clust[np.sort(ind_clust)]
-    cluster_size = np.zeros(unique_clust.size, dtype=int)
-
-    # loop over clusters: resort and count number of entries
-    for index, i_clust in enumerate(unique_clust):
-        cluster_indices[np.where(clust == i_clust)] = index
-        cluster_size[index] = sum(clust == i_clust)
-
+    # get cluster sizes
+    _, cluster_size = np.unique(cluster_indices, return_counts=True)
     return cluster_indices, cluster_size
 
 
