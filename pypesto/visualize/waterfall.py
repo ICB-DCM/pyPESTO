@@ -255,7 +255,16 @@ def waterfall_lowlevel(
         ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
 
     # Overlay with scatter points with individual colors
-    ax.scatter(start_indices, fvals, c=colors, marker="o", linewidth=1.0, label=legend_text, zorder=2.0, alpha=1.0)
+    ax.scatter(
+        start_indices,
+        fvals,
+        c=colors,
+        marker="o",
+        linewidth=1.0,
+        label=legend_text,
+        zorder=2.0,
+        alpha=1.0,
+    )
 
     # check if y-axis has a reasonable scale
     y_min, y_max = ax.get_ylim()

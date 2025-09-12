@@ -12,7 +12,6 @@ from operator import itemgetter
 from typing import Any, Callable, Optional, Union
 
 import numpy as np
-from scipy import cluster
 from tqdm import tqdm as _tqdm
 
 
@@ -221,7 +220,7 @@ def assign_clusters(vals):
     # sort values
     vals = np.sort(vals)
 
-    # assign cluster to first element and then assign new cluster every time distance is greater 0.1 
+    # assign cluster to first element and then assign new cluster every time distance is greater 0.1
     cluster_indices = np.append([0], np.cumsum(np.diff(vals) > 0.1))
 
     # get cluster sizes
