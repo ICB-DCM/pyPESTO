@@ -92,6 +92,237 @@ class RelativeInnerSolver(InnerSolver):
 
         return compute_nllh(relevant_data, sim, sigma, problem.data_mask)
 
+    def check_if_can_use_gradients_same_plists(
+        self,
+        sy: list[np.ndarray],
+        parameter_mapping: ParameterMapping,
+        par_opt_ids: list,
+        par_sim_ids: list,
+        par_edatas_indices: list,
+    ):
+        """Check if gradients can be calculated with the assumption of same plists."""
+        # Change par_edatas_indices to a list of dictionaries with
+        # keys being the value in par_edatas_indices and the values being the
+        # indices of the corresponding values -- for O(1) lookup of the indices.
+        par_edatas_indices = [
+            {par_edata_idx: idx for idx, par_edata_idx in enumerate(par_edata)}
+            for par_edata in par_edatas_indices
+        ]
+
+        # Do same for par_sim_ids and par_opt_ids
+        par_sim_ids = {
+            par_sim_id: idx for idx, par_sim_id in enumerate(par_sim_ids)
+        }
+        par_opt_ids = {
+            par_opt_id: idx for idx, par_opt_id in enumerate(par_opt_ids)
+        }
+        mappings_across_conditions = []
+
+        for condition_map_sim_var in [
+            cond_par_map.map_sim_var for cond_par_map in parameter_mapping
+        ]:
+            mapping_for_condition = dict()
+            for par_sim, par_opt in condition_map_sim_var.items():
+                if (
+                    not isinstance(par_opt, str)
+                ):
+                    continue
+                elif par_opt not in par_opt_ids:
+                    continue
+                par_sim_idx = par_sim_ids[par_sim]
+                par_opt_idx = par_opt_ids[par_opt]
+                par_amici_rdata_idx = [
+                    par_edata_indices[par_sim_idx] 
+                    for par_edata_indices in par_edatas_indices
+                ]
+                if all(
+                    [
+                        par_amici_rdata_id == par_amici_rdata_idx[0]
+                        for par_amici_rdata_id in par_amici_rdata_idx
+                    ]
+                ):
+                    par_amici_rdata_idx = par_amici_rdata_idx[0]
+                else:
+                    raise ValueError(
+                        "Parameter mappings are different across conditions."
+                    )
+                mapping_for_condition[par_opt_idx] = par_amici_rdata_idx
+            mappings_across_conditions.append(mapping_for_condition)
+        
+        # Check that all mappings are the same across conditions
+        if not all([
+            mapping_for_condition == mappings_across_conditions[0]
+            for mapping_for_condition in mappings_across_conditions
+        ]):
+            raise ValueError(
+                "Parameter mappings are different across conditions."
+            )
+
+        # Check that the length of the mappings is the same as the length of sy
+        if len(mappings_across_conditions[0].keys()) == len(sy[0]):
+            raise ValueError(
+                "The number of parameters in the mappings is different from the number of sensitivities."
+            )
+
+        # Check that par_edatas_indices are the same for all conditions
+        if not all(
+            [
+                par_edata_indices == par_edatas_indices[0]
+                for par_edata_indices in par_edatas_indices
+            ]
+        ):
+            raise ValueError(
+                "plists are not the same for all conditions. "
+                "Cannot use calculate_gradients_same_plists to calculate gradients."
+            )
+    
+    def calculate_gradients_same_plists(
+        self,
+        problem: InnerProblem,
+        sim: list[np.ndarray],
+        ssim: list[np.ndarray],
+        sigma: list[np.ndarray],
+        ssigma: list[np.ndarray],
+        inner_parameters: dict[str, float],
+        parameter_mapping: ParameterMapping,
+        par_opt_ids: list[str],
+        par_sim_ids: list[str],
+        par_edatas_indices: list[list[int]],
+        snllh: np.ndarray,
+    ) -> np.ndarray:
+        """Calculate the gradients with respect to the outer parameters.
+        
+        Use the assumption of same plists for all conditions to speed up the
+        gradient calculations across conditions by vectorizing.
+
+        Parameters
+        ----------
+        problem:
+            The inner problem to solve.
+        sim:
+            List of model output matrices, as provided in AMICI's
+            ``ReturnData.y``. Same order as simulations in the
+            PEtab problem.
+        ssim:
+            List of sensitivity matrices from the model, as provided in AMICI's
+            ``ReturnData.sy``. Same order as simulations in the
+            PEtab problem.
+        sigma:
+            List of sigma matrices from the model, as provided in AMICI's
+            ``ReturnData.sigmay``. Same order as simulations in the
+            PEtab problem.
+        ssigma:
+            List of sigma sensitivity matrices from the model, as provided
+            in AMICI's ``ReturnData.ssigmay``. Same order as simulations in the
+            PEtab problem.
+        inner_parameters:
+            The computed inner parameters.
+        parameter_mapping:
+            Mapping of optimization to simulation parameters.
+        par_opt_ids:
+            Ids of outer otimization parameters.
+        par_sim_ids:
+            Ids of outer simulation parameters, includes fixed parameters.
+        snllh:
+            A zero-initialized vector of the same length as ``par_opt_ids`` to store the
+            gradients in. Will be modified in-place.
+
+        Returns
+        -------
+        The gradients with respect to the outer parameters.
+        """
+        relevant_data = copy.deepcopy(problem.data)
+        sim = copy.deepcopy(sim)
+        sigma = copy.deepcopy(sigma)
+        inner_parameters = copy.deepcopy(inner_parameters)
+        inner_parameters = scale_back_value_dict(inner_parameters, problem)
+
+        # restructure sensitivities to have parameter index as second index
+        ssim = [np.moveaxis(sy_cond, 1, 0) for sy_cond in ssim]
+        ssigma = [np.moveaxis(ssy_cond, 1, 0) for ssy_cond in ssigma]
+
+        # apply offsets, scalings and sigmas
+        for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
+            apply_offset(
+                offset_value=inner_parameters[x.inner_parameter_id],
+                data=relevant_data,
+                mask=x.ixs,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.SCALING):
+            apply_scaling(
+                scaling_value=inner_parameters[x.inner_parameter_id],
+                sim=sim,
+                mask=x.ixs,
+            )
+            apply_scaling_to_sensitivities(
+                scaling_value=inner_parameters[x.inner_parameter_id],
+                ssim=ssim,
+                mask=x.ixs,
+            )
+
+        for x in problem.get_xs_for_type(InnerParameterType.SIGMA):
+            apply_sigma(
+                sigma_value=inner_parameters[x.inner_parameter_id],
+                sigma=sigma,
+                mask=x.ixs,
+            )
+        
+        n_parameters = len(ssim[0])
+        n_conditions = len(ssim)
+        sim_to_opt_indices = np.zeros(n_parameters, dtype=int)
+
+        # Change par_edatas_indices to a list of dictionaries with
+        # keys being the value in par_edatas_indices and the values being the
+        # indices of the corresponding values -- for O(1) lookup of the indices.
+        par_edatas_indices = [
+            {par_edata_idx: idx for idx, par_edata_idx in enumerate(par_edata)}
+            for par_edata in par_edatas_indices
+        ]
+        # Do same for par_sim_ids and par_opt_ids
+        par_sim_ids = {
+            par_sim_id: idx for idx, par_sim_id in enumerate(par_sim_ids)
+        }
+        par_opt_ids = {
+            par_opt_id: idx for idx, par_opt_id in enumerate(par_opt_ids)
+        }
+
+        for par_sim, par_opt in parameter_mapping[0].map_sim_var.items():
+            if (
+                not isinstance(par_opt, str)
+            ):
+                continue
+            elif par_opt not in par_opt_ids:
+                continue
+            par_sim_idx = par_sim_ids[par_sim]
+            par_opt_idx = par_opt_ids[par_opt]
+            par_amici_rdata_idx = [
+                par_edata_indices[par_sim_idx] 
+                for par_edata_indices in par_edatas_indices
+            ]
+            if all(
+                [
+                    par_amici_rdata_id == par_amici_rdata_idx[0]
+                    for par_amici_rdata_id in par_amici_rdata_idx
+                ]
+            ):
+                par_amici_rdata_idx = par_amici_rdata_idx[0]
+            sim_to_opt_indices[par_amici_rdata_idx] = int(par_opt_idx)
+
+        # compute gradients
+        for cond_idx, _ in enumerate(parameter_mapping):
+            gradient_for_cond = compute_nllh_gradient_for_condition(
+                data=relevant_data[cond_idx],
+                sim=sim[cond_idx],
+                ssim=ssim[cond_idx],
+                sigma=sigma[cond_idx],
+                ssigma=ssigma[cond_idx],
+            )
+            snllh[sim_to_opt_indices] += gradient_for_cond
+
+        return snllh
+
+
     def calculate_gradients(
         self,
         problem: InnerProblem,
@@ -150,24 +381,8 @@ class RelativeInnerSolver(InnerSolver):
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
 
         # restructure sensitivities to have parameter index as second index
-        ssim = [
-            np.asarray(
-                [
-                    ssim[cond_idx][:, par_idx, :]
-                    for par_idx in range(ssim[cond_idx].shape[1])
-                ]
-            )
-            for cond_idx in range(len(sim))
-        ]
-        ssigma = [
-            np.asarray(
-                [
-                    ssigma[cond_idx][:, par_idx, :]
-                    for par_idx in range(ssigma[cond_idx].shape[1])
-                ]
-            )
-            for cond_idx in range(len(sigma))
-        ]
+        ssim = [np.moveaxis(sy_cond, 1, 0) for sy_cond in ssim]
+        ssigma = [np.moveaxis(ssy_cond, 1, 0) for ssy_cond in ssigma]
 
         # apply offsets, scalings and sigmas
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):

@@ -113,6 +113,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
 
         self._known_least_squares_safe = False
+        self._recalc_plists_and_scales = True
 
     def initialize(self):
         """Initialize."""
@@ -373,12 +374,19 @@ class InnerCalculatorCollector(AmiciCalculator):
         # sensitivities or are in residual mode, we can do so if the only
         # non-quantitative data type is relative data. In this case, we
         # use the relative calculator directly.
-        if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
-            or 2 in sensi_orders
-            or mode == MODE_RES
-        ):
+        # if (
+        #     (
+        #         amici_solver.getSensitivityMethod()
+        #         == amici.SensitivityMethod_adjoint
+        #         and not any(
+        #             data_type in self.data_types
+        #             for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
+        #         )
+        #     )
+        #     or 2 in sensi_orders
+        #     or mode == MODE_RES
+        # ):
+        if 2 in sensi_orders or mode == MODE_RES:
             relative_calculator = self.inner_calculators[0]
             ret = relative_calculator(
                 x_dct=x_dct,
@@ -426,7 +434,13 @@ class InnerCalculatorCollector(AmiciCalculator):
                 scaled_parameters=True,
                 parameter_mapping=parameter_mapping,
                 amici_model=amici_model,
+                recalc_plists_and_scales=self._recalc_plists_and_scales,
             )
+            if self._recalc_plists_and_scales:
+                self._recalc_plists_and_scales = False
+        
+        # print("The amici_reporting variable of the solver is equal to observables_likelihood: ", 
+        #       amici_solver.getReturnDataReportingMode() == amici.RDataReporting.observables_likelihood)
 
         # run amici simulation
         rdatas = amici.runAmiciSimulations(

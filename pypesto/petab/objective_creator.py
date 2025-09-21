@@ -332,6 +332,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
         calculator = None
         amici_reporting = None
+        amici_reporting = amici.RDataReporting.observables_likelihood
 
         if (
             self._non_quantitative_data_types is not None
@@ -350,7 +351,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
                 edatas,
                 inner_options,
             )
-            amici_reporting = amici.RDataReporting.full
+            amici_reporting = amici.RDataReporting.observables_likelihood
 
             # FIXME: currently not supported with hierarchical
             if "guess_steadystate" in kwargs and kwargs["guess_steadystate"]:

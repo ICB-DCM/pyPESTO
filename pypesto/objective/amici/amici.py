@@ -461,7 +461,8 @@ class AmiciObjective(ObjectiveBase):
             if return_dict:
                 # Use AMICI full reporting if amici.ReturnDatas are returned
                 # and no other reporting mode was set
-                amici_reporting = amici.RDataReporting.full
+                amici_reporting = amici.RDataReporting.observables_likelihood
+                #amici_reporting = amici.RDataReporting.full
             else:
                 # Else, only ask amici to compute required quantities
                 amici_reporting = (

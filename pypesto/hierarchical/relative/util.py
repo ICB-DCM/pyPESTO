@@ -480,6 +480,40 @@ def compute_nllh(
     return nllh
 
 
+
+def compute_nllh_gradient_for_same_plists(
+    data: list[np.ndarray],
+    sim: list[np.ndarray],
+    sigma: list[np.ndarray],
+    ssim: list[np.ndarray],
+    ssigma: list[np.ndarray],
+):
+    """Compute gradient of negative the log-likelihood function for all conditions.
+
+    Compute gradient of negative log-likelihood function with respect to
+    outer optimization parameters for all conditions, given the model outputs,
+    relevant data and sigmas. Can be used only if all conditions share the same
+    parameter list.
+    """
+    data = np.asarray(data)
+    sim = np.asarray(sim)
+    sigma = np.asarray(sigma)
+    ssim = np.asarray(ssim)
+    ssigma = np.asarray(ssigma)
+
+    gradient = np.nansum(
+        np.multiply(
+            ssigma,
+            ((np.ones_like(data) - (data - sim) ** 2 / sigma**2) / sigma),
+        ),
+        axis=(1, 2, 3),
+    ) + np.nansum(
+        np.multiply(ssim, (sim - data) / sigma**2),
+        axis=(1, 2, 3),
+    )
+    return gradient
+
+
 def compute_nllh_gradient_for_condition(
     data: np.ndarray,
     sim: np.ndarray,

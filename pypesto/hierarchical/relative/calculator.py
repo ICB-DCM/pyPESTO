@@ -64,6 +64,8 @@ class RelativeAmiciCalculator(AmiciCalculator):
         if inner_solver is None:
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
+        self._can_use_same_plists_gradients = False
+        self._recalc_plists_and_scales = True
 
     def initialize(self):
         """Initialize."""
@@ -130,11 +132,12 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 "optimizer."
             )
 
-        if (
-            1 in sensi_orders
-            and amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod.adjoint
-        ) or 2 in sensi_orders:
+        # if (
+        #     1 in sensi_orders
+        #     and amici_solver.getSensitivityMethod()
+        #     == amici.SensitivityMethod.adjoint
+        # ) or 2 in sensi_orders:
+        if 2 in sensi_orders:
             inner_result, inner_parameters = self.call_amici_twice(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
@@ -301,7 +304,10 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 scaled_parameters=True,
                 parameter_mapping=parameter_mapping,
                 amici_model=amici_model,
+                recalc_plists_and_scales=self._recalc_plists_and_scales,
             )
+            if self._recalc_plists_and_scales:
+                self._recalc_plists_and_scales = False
             # run amici simulation
             rdatas = amici.runAmiciSimulations(
                 amici_model,
@@ -346,16 +352,42 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # compute the objective function gradient, if requested
         if 1 in sensi_orders:
-            inner_result[GRAD] = self.inner_solver.calculate_gradients(
+            if (
+                amici_solver.getSensitivityMethod()
+                == amici.SensitivityMethod_forward
+            ):
+                sy = [rdata[AMICI_SY] for rdata in rdatas]
+                ssigma = [rdata[AMICI_SSIGMAY] for rdata in rdatas]
+            elif (
+                amici_solver.getSensitivityMethod()
+                == amici.SensitivityMethod_adjoint
+            ):
+                sy = get_sensitivities_from_adjoint_gradient(rdatas, edatas)
+                ssigma = [np.zeros_like(s) for s in sy]
+
+            # TODO taking a bit long, its a good check, but maybe not necessary
+            # if not self._can_use_same_plists_gradients:
+            #     self.inner_solver.check_if_can_use_gradients_same_plists(
+            #         sy=sy,
+            #         parameter_mapping=parameter_mapping,
+            #         par_opt_ids=x_ids,
+            #         par_sim_ids=amici_model.getParameterIds(),
+            #         par_edatas_indices=[edata.plist for edata in edatas],
+            #     )
+            #     self._can_use_same_plists_gradients = True
+            #     print("Using same plists gradients")
+
+            inner_result[GRAD] = self.inner_solver.calculate_gradients_same_plists(
                 problem=self.inner_problem,
                 sim=[rdata[AMICI_Y] for rdata in rdatas],
-                ssim=[rdata[AMICI_SY] for rdata in rdatas],
+                ssim=sy,
                 sigma=[rdata[AMICI_SIGMAY] for rdata in rdatas],
-                ssigma=[rdata[AMICI_SSIGMAY] for rdata in rdatas],
+                ssigma=ssigma,
                 inner_parameters=inner_parameters,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.getParameterIds(),
+                par_edatas_indices=[edata.plist for edata in edatas],
                 snllh=snllh,
             )
         # apply the computed inner parameters to the ReturnData
@@ -367,3 +399,75 @@ class RelativeAmiciCalculator(AmiciCalculator):
         inner_result[RDATAS] = rdatas
 
         return inner_result, inner_parameters
+
+
+def get_sensitivities_from_adjoint_gradient(
+    rdatas: list[amici.ReturnData],
+    edatas: list[amici.ExpData],
+):
+    """Get sensitivities from adjoint gradient.
+
+    If there is only one timepoint and one observable per condition, the
+    sensitivities can be calculated from the adjoint gradient as:
+    y_sensitivities = -sllh / ((y - data) / sigma_y) for each condition.
+
+    Parameters
+    ----------
+    rdatas:
+        List of AMICI simulation results.
+    edatas:
+        List of AMICI experimental data.
+
+    Returns
+    -------
+    y_sensitivities:
+        List of sensitivities for each timepoint.
+    """
+    n_observables = rdatas[0].y.shape[1]
+    n_conditions = len(rdatas)
+    n_parameters = len(rdatas[0].sllh)
+    obs_idx_per_cond = np.array(
+        [
+            np.where(
+                ~np.isnan(amici.numpy.ExpDataView(edata)["observedData"][0])
+            )[0][0]
+            for edata in edatas
+        ]
+    )
+
+    y = np.array(
+        [
+            rdata[AMICI_Y][0][obs_idx]
+            for rdata, obs_idx in zip(rdatas, obs_idx_per_cond)
+        ]
+    )
+    wrong_grad = -np.array([rdata["sllh"] for rdata in rdatas])
+    sigma_y = np.array(
+        [
+            rdata[AMICI_SIGMAY][0][obs_idx]
+            for rdata, obs_idx in zip(rdatas, obs_idx_per_cond)
+        ]
+    )
+
+    data = np.array(
+        [
+            amici.numpy.ExpDataView(edata)["observedData"][0][obs_idx]
+            for edata, obs_idx in zip(edatas, obs_idx_per_cond)
+        ]
+    )
+
+    residual = (y - data) / sigma_y
+    # Account for zero residuals. Does not matter for the result, but avoids
+    # division by zero.
+    residual[residual == 0] = 1
+    y_sensitivities = np.divide(wrong_grad, residual[:, np.newaxis])
+
+    # reshape to AMICI rdata.sy shape
+    y_sensitivities_correct_dim = np.full(
+        (n_conditions, 1, n_parameters, n_observables), np.nan
+    )
+
+    y_sensitivities_correct_dim[
+        np.arange(n_conditions), 0, :, obs_idx_per_cond
+    ] = y_sensitivities
+    return y_sensitivities_correct_dim
