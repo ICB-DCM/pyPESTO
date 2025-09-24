@@ -254,28 +254,21 @@ def waterfall_lowlevel(
     # plot line
     if scale_y == "log10":
         ax.semilogy(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
+        ax.set_yscale("log")
     else:
         ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
 
-    # plot points
-    for j in start_indices:
-        # parse data for plotting
-        color = colors[start_indices.index(j)]
-        fval = fvals[start_indices.index(j)]
-        if j == start_indices[0]:
-            tmp_legend = legend_text
-        else:
-            tmp_legend = None
-
-        # line plot (linear or logarithmic)
-        if scale_y == "log10":
-            ax.semilogy(
-                j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0
-            )
-        else:
-            ax.plot(
-                j, fval, color=color, marker="o", label=tmp_legend, alpha=1.0
-            )
+    # Overlay with scatter points with individual colors
+    ax.scatter(
+        start_indices,
+        fvals,
+        c=colors,
+        marker="o",
+        linewidth=1.0,
+        label=legend_text,
+        zorder=2.0,
+        alpha=1.0,
+    )
 
     # check if y-axis has a reasonable scale
     y_min, y_max = ax.get_ylim()
