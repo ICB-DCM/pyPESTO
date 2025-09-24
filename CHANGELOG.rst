@@ -6,6 +6,30 @@ Release notes
 ..........
 
 
+0.5.7 (2025-09-24)
+-------------------
+
+- General
+    - GHA and CI improvements (#1582, #1586, #1587, #1590, #1592, #1581, #1602, #1605)
+    - Jupyter Examples (#1594, #1567)
+    - Revised citation for pyPESTO in README.md (#1601)
+    - Removed aesara from requirements (#1595)
+    - Require Python 3.11 (#1585)
+- Optimization
+    - update scipy interface (#1588)
+- Ensemble
+    - accurate cutoff based on chi2 distribution (#1566)
+- Profiling
+    - split ProfilerTask into descending and ascending parts (#1598)
+- Visualize
+    -  Fix IndexError in waterfall for all-non-finite values (#1600)
+    - prettier intervals for profiles by using capstyle (#1607)
+    - Improve waterfall plot efficiency (#1608)
+- Objective
+    - Update roadrunner installation hint (#1596)
+    - Updated roadrunner steady state computation (#1604)
+
+
 0.5.6 (2025-05-18)
 -------------------
 
