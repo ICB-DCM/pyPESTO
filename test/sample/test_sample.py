@@ -213,7 +213,9 @@ def test_regularize_covariance():
     """
     matrix = np.array([[-1.0, -4.0], [-4.0, 1.0]])
     assert np.any(np.linalg.eigvals(matrix) < 0)
-    reg = sample.adaptive_metropolis.regularize_covariance(matrix, 1e-6)
+    reg = sample.adaptive_metropolis.regularize_covariance(
+        matrix, 1e-6, max_tries=1
+    )
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
 

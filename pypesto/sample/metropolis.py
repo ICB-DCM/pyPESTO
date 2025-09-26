@@ -46,6 +46,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_neglogpost: Union[Sequence[float], None] = None
         self.trace_neglogprior: Union[Sequence[float], None] = None
         self.temper_lpost: bool = False
+        self._current_x_grad: Union[np.ndarray, None] = None
 
     @classmethod
     def default_options(cls):
@@ -111,7 +112,7 @@ class MetropolisSampler(InternalSampler):
         Propose new parameter, evaluate and check whether to accept.
         """
         # propose step
-        x_new: np.ndarray = self._propose_parameter(x)
+        x_new, x_new_grad = self._propose_parameter(x)
 
         # check if step lies within bounds
         if any(x_new < self.problem.lb) or any(x_new > self.problem.ub):
@@ -152,8 +153,12 @@ class MetropolisSampler(InternalSampler):
             log_p_acc = min(beta * (lpost_new - lpost), 0)
 
         # This accounts for an asymmetric proposal distribution
-        log_q_forward = self._compute_transition_log_prob(x, x_new)
-        log_q_backward = self._compute_transition_log_prob(x_new, x)
+        log_q_forward = self._compute_transition_log_prob(
+            x, x_new, self._current_x_grad
+        )
+        log_q_backward = self._compute_transition_log_prob(
+            x_new, x, x_new_grad
+        )
         proposal_correction = log_q_backward - log_q_forward
         log_p_acc = min(log_p_acc + proposal_correction, 0)
 
@@ -166,6 +171,7 @@ class MetropolisSampler(InternalSampler):
             x = x_new
             lpost = lpost_new
             lprior = lprior_new
+            self._current_x_grad = x_new_grad
 
         # update proposal
         self._update_proposal(
@@ -177,7 +183,7 @@ class MetropolisSampler(InternalSampler):
     def _propose_parameter(self, x: np.ndarray):
         """Propose a step."""
         x_new: np.ndarray = x + self.options["std"] * np.random.randn(len(x))
-        return x_new
+        return x_new, None  # no gradient needed
 
     def _update_proposal(
         self, x: np.ndarray, lpost: float, log_p_acc: float, n_sample_cur: int
@@ -185,7 +191,10 @@ class MetropolisSampler(InternalSampler):
         """Update the proposal density. Default: Do nothing."""
 
     def _compute_transition_log_prob(
-        self, x_from: np.ndarray, x_to: np.ndarray
+        self,
+        x_from: np.ndarray,
+        x_to: np.ndarray,
+        x_from_grad: Union[np.ndarray, None],
     ):
         """Compute the transition log probability for symmetric proposal.
 

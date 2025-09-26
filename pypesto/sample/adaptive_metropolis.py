@@ -100,15 +100,17 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         else:
             cov0 = np.eye(len(x0))
         self._cov_chol, self._cov = regularize_covariance(
-            cov0, self.options["reg_factor"], self.options["max_tries"]
+            cov0,
+            reg_factor=self.options["reg_factor"],
+            max_tries=self.options["max_tries"],
         )
         self._mean_hist = self.trace_x[-1]
         self._cov_hist = self._cov
         self._cov_scale = 1.0
 
     def _propose_parameter(self, x: np.ndarray):
-        x_new = np.random.multivariate_normal(x, self._cov)
-        return x_new
+        x_new: np.ndarray = np.random.multivariate_normal(x, self._cov)
+        return x_new, None  # no gradient needed
 
     def _update_proposal(
         self, x: np.ndarray, lpost: float, log_p_acc: float, n_sample_cur: int

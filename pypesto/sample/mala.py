@@ -71,6 +71,7 @@ class Mala(AdaptiveMetropolisSampler):
             raise ValueError("MALA sampler requires gradient information.")
 
         super().initialize(problem, x0)
+        self._current_x_grad = -self.neglogpost.get_grad(x0)
 
     def _propose_parameter(self, x: np.ndarray):
         """Propose a parameter using preconditioned MALA dynamics."""
@@ -93,19 +94,16 @@ class Mala(AdaptiveMetropolisSampler):
         diffusion = np.sqrt(step_size) * precond_noise
 
         x_new: np.ndarray = x + drift + diffusion
-        return x_new
+        return x_new, grad
 
     def _compute_transition_log_prob(
-        self, x_from: np.ndarray, x_to: np.ndarray
+        self, x_from: np.ndarray, x_to: np.ndarray, x_from_grad: np.ndarray
     ):
         """Compute the log probability of transitioning from x_from to x_to with preconditioning."""
         step_size = self.options["step_size"]
 
-        # Get gradient at position
-        grad_from = -self.neglogpost.get_grad(x_from)
-
         # Apply preconditioning to gradient
-        precond_grad_from = self._cov @ grad_from
+        precond_grad_from = self._cov @ x_from_grad
 
         # Mean of the preconditioned proposal distribution
         mean = x_from + (step_size / 2.0) * precond_grad_from
