@@ -1,3 +1,4 @@
+import logging
 import numbers
 
 import numpy as np
@@ -78,15 +79,15 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
             # regularization factor for ill-conditioned cov matrices of
             # the adapted proposal density. regularization might happen if the
             # eigenvalues of the cov matrix strongly differ in order of magnitude.
-            "reg_factor": 1e-6,
+            "reg_factor": 1e-8,
+            # maximum number of attempts to regularize the covariance matrix
+            "max_tries": 10,
             # initial covariance matrix. defaults to a unit matrix
             "cov0": None,
             # target acceptance rate
             "target_acceptance_rate": 0.234,
             # show progress
             "show_progress": None,
-            # compute cholesky decomposition of the covariance matrix
-            "compute_cholesky": False,
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -99,12 +100,12 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
                 cov0 = float(cov0) * np.eye(len(x0))
         else:
             cov0 = np.eye(len(x0))
-        self._cov = regularize_covariance(cov0, self.options["reg_factor"])
+        self._cov_chol, self._cov = regularize_covariance(
+            cov0, self.options["reg_factor"], self.options["max_tries"]
+        )
         self._mean_hist = self.trace_x[-1]
         self._cov_hist = self._cov
         self._cov_scale = 1.0
-        if self.options["compute_cholesky"]:
-            self._cov_chol = np.linalg.cholesky(self._cov)
 
     def _propose_parameter(self, x: np.ndarray):
         x_new = np.random.multivariate_normal(x, self._cov)
@@ -117,6 +118,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         decay_constant = self.options["decay_constant"]
         threshold_sample = self.options["threshold_sample"]
         reg_factor = self.options["reg_factor"]
+        max_tries = self.options["max_tries"]
         target_acceptance_rate = self.options["target_acceptance_rate"]
 
         # compute historical mean and covariance
@@ -139,9 +141,9 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         self._cov = self._cov_scale * self._cov_hist
 
         # regularize proposal covariance
-        self._cov = regularize_covariance(cov=self._cov, reg_factor=reg_factor)
-        if self.options["compute_cholesky"]:
-            self._cov_chol = np.linalg.cholesky(self._cov)
+        self._cov_chol, self._cov = regularize_covariance(
+            cov=self._cov, reg_factor=reg_factor, max_tries=max_tries
+        )
 
 
 def update_history_statistics(
@@ -191,7 +193,11 @@ def update_history_statistics(
     return mean, cov
 
 
-def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
+def regularize_covariance(
+    cov: np.ndarray,
+    reg_factor: float,
+    max_tries: int,
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Regularize the estimated covariance matrix of the sample.
 
@@ -204,27 +210,42 @@ def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
         Estimate of the covariance matrix of the sample.
     reg_factor:
         Regularization factor. Larger values result in stronger regularization.
+    max_tries:
+        Maximum number of attempts to regularize the covariance matrix.
 
     Returns
     -------
+    L:
+        Cholesky decomposition of the regularized covariance matrix.
     cov:
         Regularized estimate of the covariance matrix of the sample.
     """
-    # eigh assumes exact symmetry, so we symmetrize cov first
+    # we symmetrize cov first
     cov = 0.5 * (cov + cov.T)
+
+    d = cov.shape[0]
+    eye = np.eye(d)
     if not np.all(np.isfinite(cov)):
         s = np.nanmean(np.diag(cov))
         s = 1.0 if not np.isfinite(s) or s <= 0 else s
-        return s * np.eye(cov.shape[0])
+        return np.sqrt(s) * eye, s * eye
 
-    # eigh guarantees real eigenvalues and orthonormal eigenvectors (Covariance is symmetric positive semidefinite)
-    w, Q = np.linalg.eigh(cov)
-    w = np.maximum(w, reg_factor)
-    # project to the set of positive definite matrices
-    cov_reg = Q @ (w[:, None] * Q.T)
+    # scale for the initial jitter
+    s = np.mean(np.diag(cov))
+    s = 1.0 if not np.isfinite(s) or s <= 0 else s
 
-    # eig = np.linalg.eigvals(cov)
-    # eig_min = min(eig)
-    # if eig_min <= 0:
-    #     cov += (abs(eig_min) + reg_factor) * np.eye(cov.shape[0])
-    return cov_reg
+    jitter = reg_factor * s
+    for _ in range(max_tries):
+        try:
+            new_cov = cov + jitter * eye
+            L = np.linalg.cholesky(new_cov)
+            return L, new_cov
+        except np.linalg.LinAlgError:
+            jitter *= 2.0
+    logging.warning(
+        "Could not regularize covariance matrix. Falling back to "
+        "scaled identity."
+    )
+
+    # final safe fallback
+    return np.sqrt(s) * eye, s * eye

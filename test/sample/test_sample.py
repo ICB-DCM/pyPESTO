@@ -41,12 +41,12 @@ from .util import (
 @pytest.fixture(
     params=[
         "Metropolis",
-        # "AdaptiveMetropolis",
-        # "ParallelTempering",
-        # "AdaptiveParallelTempering",
-        # "Pymc",
-        # "Emcee",
-        # "Dynesty",
+        "AdaptiveMetropolis",
+        "ParallelTempering",
+        "AdaptiveParallelTempering",
+        "Pymc",
+        "Emcee",
+        "Dynesty",
         "Mala",
     ]
 )

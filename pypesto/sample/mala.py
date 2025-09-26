@@ -54,15 +54,15 @@ class Mala(AdaptiveMetropolisSampler):
             # regularization factor for ill-conditioned cov matrices of
             # the adapted proposal density. regularization might happen if the
             # eigenvalues of the cov matrix strongly differ in order of magnitude.
-            "reg_factor": 1e-6,
+            "reg_factor": 1e-8,
+            # maximum number of attempts to regularize the covariance matrix
+            "max_tries": 10,
             # initial covariance matrix. defaults to a unit matrix
             "cov0": None,
             # target acceptance rate
             "target_acceptance_rate": 0.574,
             # show progress
             "show_progress": None,
-            # compute cholesky decomposition of the covariance matrix
-            "compute_cholesky": True,
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
