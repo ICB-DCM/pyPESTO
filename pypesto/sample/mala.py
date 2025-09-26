@@ -53,9 +53,7 @@ class Mala(AdaptiveMetropolisSampler):
             "threshold_sample": 1,
             # regularization factor for ill-conditioned cov matrices of
             # the adapted proposal density. regularization might happen if the
-            # eigenvalues of the cov matrix strongly differ in order
-            # of magnitude. in this case, the algorithm adds a small
-            # diag matrix to the cov matrix with elements of this factor
+            # eigenvalues of the cov matrix strongly differ in order of magnitude.
             "reg_factor": 1e-6,
             # initial covariance matrix. defaults to a unit matrix
             "cov0": None,

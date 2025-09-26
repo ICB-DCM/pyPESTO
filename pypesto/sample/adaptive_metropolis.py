@@ -77,9 +77,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
             "threshold_sample": 1,
             # regularization factor for ill-conditioned cov matrices of
             # the adapted proposal density. regularization might happen if the
-            # eigenvalues of the cov matrix strongly differ in order
-            # of magnitude. in this case, the algorithm adds a small
-            # diag matrix to the cov matrix with elements of this factor
+            # eigenvalues of the cov matrix strongly differ in order of magnitude.
             "reg_factor": 1e-6,
             # initial covariance matrix. defaults to a unit matrix
             "cov0": None,
@@ -212,8 +210,21 @@ def regularize_covariance(cov: np.ndarray, reg_factor: float) -> np.ndarray:
     cov:
         Regularized estimate of the covariance matrix of the sample.
     """
-    eig = np.linalg.eigvals(cov)
-    eig_min = min(eig)
-    if eig_min <= 0:
-        cov += (abs(eig_min) + reg_factor) * np.eye(cov.shape[0])
-    return cov
+    # eigh assumes exact symmetry, so we symmetrize cov first
+    cov = 0.5 * (cov + cov.T)
+    if not np.all(np.isfinite(cov)):
+        s = np.nanmean(np.diag(cov))
+        s = 1.0 if not np.isfinite(s) or s <= 0 else s
+        return s * np.eye(cov.shape[0])
+
+    # eigh guarantees real eigenvalues and orthonormal eigenvectors (Covariance is symmetric positive semidefinite)
+    w, Q = np.linalg.eigh(cov)
+    w = np.maximum(w, reg_factor)
+    # project to the set of positive definite matrices
+    cov_reg = Q @ (w[:, None] * Q.T)
+
+    # eig = np.linalg.eigvals(cov)
+    # eig_min = min(eig)
+    # if eig_min <= 0:
+    #     cov += (abs(eig_min) + reg_factor) * np.eye(cov.shape[0])
+    return cov_reg
