@@ -229,6 +229,13 @@ def regularize_covariance(
         s = 1.0 if not np.isfinite(s) or s <= 0 else s
         return np.sqrt(s) * eye, s * eye
 
+    # Try Cholesky on original matrix first
+    try:
+        L = np.linalg.cholesky(cov)
+        return L, cov
+    except np.linalg.LinAlgError:
+        pass  # Need regularization
+
     # scale for the initial jitter
     s = np.mean(np.diag(cov))
     s = 1.0 if not np.isfinite(s) or s <= 0 else s
