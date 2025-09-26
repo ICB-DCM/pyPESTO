@@ -77,8 +77,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
             # a higher value reduces the impact of early adaptation
             "threshold_sample": 1,
             # regularization factor for ill-conditioned cov matrices of
-            # the adapted proposal density. regularization might happen if the
-            # eigenvalues of the cov matrix strongly differ in order of magnitude.
+            # the adapted proposal density.
             "reg_factor": 1e-8,
             # maximum number of attempts to regularize the covariance matrix
             "max_tries": 10,
