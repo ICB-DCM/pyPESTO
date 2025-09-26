@@ -4,7 +4,7 @@ from ..problem import Problem
 from .adaptive_metropolis import AdaptiveMetropolisSampler
 
 
-class Mala(AdaptiveMetropolisSampler):
+class MalaSampler(AdaptiveMetropolisSampler):
     """Metropolis-Adjusted Langevin Algorithm (MALA) sampler with preconditioning.
 
     MALA is a gradient-based MCMC method that uses the gradient of the

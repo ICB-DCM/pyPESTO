@@ -64,7 +64,7 @@ def sampler(request):
             },
         )
     elif request.param == "Mala":
-        return sample.Mala(
+        return sample.MalaSampler(
             options={
                 "show_progress": False,
                 "step_size": 0.01,

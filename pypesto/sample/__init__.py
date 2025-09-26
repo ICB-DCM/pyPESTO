@@ -17,7 +17,7 @@ from .evidence import (
     laplace_approximation_log_evidence,
     parallel_tempering_log_evidence,
 )
-from .mala import Mala
+from .mala import MalaSampler
 from .metropolis import MetropolisSampler
 from .parallel_tempering import ParallelTemperingSampler
 from .sample import sample
