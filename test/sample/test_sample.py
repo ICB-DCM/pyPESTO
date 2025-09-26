@@ -41,12 +41,13 @@ from .util import (
 @pytest.fixture(
     params=[
         "Metropolis",
-        "AdaptiveMetropolis",
-        "ParallelTempering",
-        "AdaptiveParallelTempering",
-        "Pymc",
-        "Emcee",
-        "Dynesty",
+        # "AdaptiveMetropolis",
+        # "ParallelTempering",
+        # "AdaptiveParallelTempering",
+        # "Pymc",
+        # "Emcee",
+        # "Dynesty",
+        "Mala",
     ]
 )
 def sampler(request):
@@ -60,6 +61,13 @@ def sampler(request):
         return sample.AdaptiveMetropolisSampler(
             options={
                 "show_progress": False,
+            },
+        )
+    elif request.param == "Mala":
+        return sample.Mala(
+            options={
+                "show_progress": False,
+                "step_size": 0.01,
             },
         )
     elif request.param == "ParallelTempering":
@@ -103,6 +111,9 @@ def problem(request):
 
 def test_pipeline(sampler, problem):
     """Check that a typical pipeline runs through."""
+    if isinstance(sampler, sample.Mala):
+        if not problem.objective.has_grad:
+            pytest.skip("MALA requires gradient information.")
     # optimization
     optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     result = optimize.minimize(

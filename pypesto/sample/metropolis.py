@@ -151,6 +151,12 @@ class MetropolisSampler(InternalSampler):
             # log acceptance probability (temper log posterior)
             log_p_acc = min(beta * (lpost_new - lpost), 0)
 
+        # This accounts for an asymmetric proposal distribution
+        log_q_forward = self._compute_transition_log_prob(x, x_new)
+        log_q_backward = self._compute_transition_log_prob(x_new, x)
+        proposal_correction = log_q_backward - log_q_forward
+        log_p_acc = min(log_p_acc + proposal_correction, 0)
+
         # flip a coin
         u = np.random.uniform(0, 1)
 
@@ -177,6 +183,15 @@ class MetropolisSampler(InternalSampler):
         self, x: np.ndarray, lpost: float, log_p_acc: float, n_sample_cur: int
     ):
         """Update the proposal density. Default: Do nothing."""
+
+    def _compute_transition_log_prob(
+        self, x_from: np.ndarray, x_to: np.ndarray
+    ):
+        """Compute the transition log probability for symmetric proposal.
+
+        For a symmetric proposal distribution, this is zero.
+        """
+        return 0.0
 
     def get_last_sample(self) -> InternalSample:
         """Get the last sample in the chain.

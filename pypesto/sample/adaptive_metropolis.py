@@ -62,6 +62,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         self._mean_hist = None
         self._cov_hist = None
         self._cov_scale = None
+        self._cov_chol = None
 
     @classmethod
     def default_options(cls):
@@ -86,6 +87,8 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
             "target_acceptance_rate": 0.234,
             # show progress
             "show_progress": None,
+            # compute cholesky decomposition of the covariance matrix
+            "compute_cholesky": False,
         }
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -102,6 +105,8 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         self._mean_hist = self.trace_x[-1]
         self._cov_hist = self._cov
         self._cov_scale = 1.0
+        if self.options["compute_cholesky"]:
+            self._cov_chol = np.linalg.cholesky(self._cov)
 
     def _propose_parameter(self, x: np.ndarray):
         x_new = np.random.multivariate_normal(x, self._cov)
@@ -137,6 +142,8 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
 
         # regularize proposal covariance
         self._cov = regularize_covariance(cov=self._cov, reg_factor=reg_factor)
+        if self.options["compute_cholesky"]:
+            self._cov_chol = np.linalg.cholesky(self._cov)
 
 
 def update_history_statistics(
