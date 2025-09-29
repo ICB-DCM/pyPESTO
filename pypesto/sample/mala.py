@@ -1,7 +1,11 @@
+import logging
+
 import numpy as np
 
 from ..problem import Problem
 from .adaptive_metropolis import AdaptiveMetropolisSampler
+
+logger = logging.getLogger(__name__)
 
 
 class MalaSampler(AdaptiveMetropolisSampler):
@@ -90,11 +94,9 @@ class MalaSampler(AdaptiveMetropolisSampler):
 
         # Boisvert-Beaudry and Bedard (2022)
         # Set step size to problem dimension if not specified
-        self.step_size = (
-            np.sqrt((1 / problem.dim) ** (1 / 3))
-            if self.step_size is None
-            else self.step_size
-        )
+        if self.step_size is None:
+            self.step_size = np.sqrt((1 / problem.dim) ** (1 / 3))
+            logger.info(f"Step size set to {self.step_size}")
         self._dimension_of_target_weight = 1 + (1 / problem.dim) ** (1 / 3)
 
         super().initialize(problem, x0)
