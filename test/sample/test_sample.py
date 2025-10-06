@@ -111,7 +111,7 @@ def problem(request):
 
 def test_pipeline(sampler, problem):
     """Check that a typical pipeline runs through."""
-    if isinstance(sampler, sample.Mala):
+    if isinstance(sampler, sample.MalaSampler):
         if not problem.objective.has_grad:
             pytest.skip("MALA requires gradient information.")
     # optimization
