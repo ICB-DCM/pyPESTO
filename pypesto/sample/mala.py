@@ -36,6 +36,7 @@ class MalaSampler(AdaptiveMetropolisSampler):
     parameter space requires O(dim^(1/3)) steps.
 
     For reference, see:
+
     * Roberts et al. 1996.
       Exponential convergence of Langevin distributions and their
       discrete approximations
