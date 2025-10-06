@@ -112,7 +112,7 @@ class MetropolisSampler(InternalSampler):
         Propose new parameter, evaluate and check whether to accept.
         """
         # propose step
-        x_new, x_new_grad = self._propose_parameter(x)
+        x_new, x_new_grad = self._propose_parameter(x, beta=beta)
 
         # check if step lies within bounds
         if any(x_new < self.problem.lb) or any(x_new > self.problem.ub):
@@ -180,7 +180,7 @@ class MetropolisSampler(InternalSampler):
 
         return x, lpost, lprior
 
-    def _propose_parameter(self, x: np.ndarray):
+    def _propose_parameter(self, x: np.ndarray, beta: float):
         """Propose a step."""
         x_new: np.ndarray = x + self.options["std"] * np.random.randn(len(x))
         return x_new, None  # no gradient needed

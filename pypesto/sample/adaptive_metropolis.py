@@ -108,7 +108,7 @@ class AdaptiveMetropolisSampler(MetropolisSampler):
         self._cov_hist = self._cov
         self._cov_scale = 1.0
 
-    def _propose_parameter(self, x: np.ndarray):
+    def _propose_parameter(self, x: np.ndarray, beta: float):
         x_new: np.ndarray = np.random.multivariate_normal(x, self._cov)
         return x_new, None  # no gradient needed
 

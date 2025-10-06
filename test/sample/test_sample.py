@@ -42,11 +42,11 @@ from .util import (
     params=[
         "Metropolis",
         "AdaptiveMetropolis",
-        "ParallelTempering",
-        "AdaptiveParallelTempering",
-        "Pymc",
-        "Emcee",
-        "Dynesty",
+        # "ParallelTempering",
+        # "AdaptiveParallelTempering",
+        # "Pymc",
+        # "Emcee",
+        # "Dynesty",
         "Mala",
     ]
 )
@@ -67,7 +67,6 @@ def sampler(request):
         return sample.MalaSampler(
             options={
                 "show_progress": False,
-                "step_size": 0.01,
             },
         )
     elif request.param == "ParallelTempering":

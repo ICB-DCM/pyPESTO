@@ -103,10 +103,10 @@ class MalaSampler(AdaptiveMetropolisSampler):
         super().initialize(problem, x0)
         self._current_x_grad = -self.neglogpost.get_grad(x0)
 
-    def _propose_parameter(self, x: np.ndarray):
+    def _propose_parameter(self, x: np.ndarray, beta: float):
         """Propose a parameter using preconditioned MALA dynamics."""
         # Get gradient of log-posterior at current position
-        grad = -self.neglogpost.get_grad(x)
+        grad = -beta * self.neglogpost.get_grad(x)
 
         # Apply preconditioning to gradient
         precond_grad = self._cov @ grad
