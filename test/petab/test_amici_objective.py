@@ -88,21 +88,21 @@ def test_preeq_guesses():
     )
     obj_creator = importer.create_objective_creator()
     amici_model = obj_creator.create_model()
-    amici_model.setSteadyStateComputationMode(
+    amici_model.set_steady_state_computation_mode(
         amici.SteadyStateComputationMode.integrateIfNewtonFails
     )
-    amici_model.setSteadyStateSensitivityMode(
+    amici_model.set_steady_state_sensitivity_mode(
         amici.SteadyStateSensitivityMode.integrateIfNewtonFails
     )
     obj = obj_creator.create_objective(model=amici_model)
     problem = importer.create_problem(objective=obj)
-    obj.amici_model.setSteadyStateSensitivityMode(
+    obj.amici_model.set_steady_state_sensitivity_mode(
         amici.SteadyStateSensitivityMode.integrationOnly
     )
     obj = problem.objective
-    obj.amici_solver.setNewtonMaxSteps(0)
-    obj.amici_solver.setAbsoluteTolerance(1e-12)
-    obj.amici_solver.setRelativeTolerance(1e-12)
+    obj.amici_solver.set_newton_max_steps(0)
+    obj.amici_solver.set_absolute_tolerance(1e-12)
+    obj.amici_solver.set_relative_tolerance(1e-12)
 
     # assert that initial guess is uninformative
     assert obj.steadystate_guesses["fval"] == np.inf

@@ -139,7 +139,7 @@ class AmiciPredictor:
 
         self.output_ids = output_ids
         if output_ids is None:
-            self.output_ids = amici_objective.amici_model.getObservableIds()
+            self.output_ids = amici_objective.amici_model.get_observable_ids()
 
         if amici_output_fields is None:
             amici_output_fields = [
@@ -361,7 +361,7 @@ class AmiciPredictor:
             to AMICI was successful (``status == 0``), before writing the output.
             """
             amici_nt = [
-                len(edata.getTimepoints())
+                len(edata.get_timepoints())
                 for edata in self.amici_objective.edatas
             ]
             amici_ny = len(self.output_ids)

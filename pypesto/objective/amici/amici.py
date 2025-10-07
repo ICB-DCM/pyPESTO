@@ -169,7 +169,7 @@ class AmiciObjective(ObjectiveBase):
         # optimization parameter ids
         if x_ids is None:
             # use model parameter ids as ids
-            x_ids = list(self.amici_model.getParameterIds())
+            x_ids = list(self.amici_model.get_parameter_ids())
         self.x_ids = x_ids
 
         # mapping of parameters
@@ -204,7 +204,7 @@ class AmiciObjective(ObjectiveBase):
 
         if (
             self.guess_steadystate is not False
-            and self.amici_model.getSteadyStateSensitivityMode()
+            and self.amici_model.get_steady_state_sensitivity_mode()
             == amici.SteadyStateSensitivityMode.integrationOnly
         ):
             if self.guess_steadystate:
@@ -226,7 +226,7 @@ class AmiciObjective(ObjectiveBase):
                 "data": {
                     iexp: {}
                     for iexp, edata in enumerate(self.edatas)
-                    if len(edata.fixedParametersPreequilibration)
+                    if len(edata.fixed_parameters_pre_equilibration)
                 },
             }
         # optimization parameter names
@@ -252,7 +252,7 @@ class AmiciObjective(ObjectiveBase):
         """Return basic information of the objective configuration."""
         info = super().get_config()
         info["x_names"] = self.x_names
-        info["model_name"] = self.amici_model.getName()
+        info["model_name"] = self.amici_model.get_name()
         info["solver"] = str(type(self.amici_solver))
         info["sensi_order"] = self.max_sensi_order
 
@@ -331,7 +331,7 @@ class AmiciObjective(ObjectiveBase):
         try:
             # write amici solver settings to file
             try:
-                amici.writeSolverSettingsToHDF5(self.amici_solver, _file)
+                amici.write_solver_settings_to_hdf5(self.amici_solver, _file)
             except AttributeError as e:
                 e.args += (
                     "Pickling the AmiciObjective requires an AMICI "
@@ -374,7 +374,7 @@ class AmiciObjective(ObjectiveBase):
                 f.write(state["amici_solver_settings"])
             # read in solver settings
             try:
-                amici.readSolverSettingsFromHDF5(_file, solver)
+                amici.read_solver_settings_from_hdf5(_file, solver)
             except AttributeError as err:
                 if not err.args:
                     err.args = ("",)
@@ -415,10 +415,10 @@ class AmiciObjective(ObjectiveBase):
         if max_sensi_order is None:
             max_sensi_order = 1
             # check whether it is ok to request 2nd order
-            sensi_mthd = self.amici_solver.getSensitivityMethod()
-            mthd_fwd = amici.SensitivityMethod_forward
+            sensi_mthd = self.amici_solver.get_sensitivity_method()
+            mthd_fwd = amici.SensitivityMethod.forward
             if mode == MODE_FUN and (
-                self.amici_model.o2mode
+                self.amici_model.get_second_order_mode()
                 or (sensi_mthd == mthd_fwd and self.fim_for_hess)
             ):
                 max_sensi_order = 2
@@ -469,7 +469,7 @@ class AmiciObjective(ObjectiveBase):
                     if mode == MODE_FUN
                     else amici.RDataReporting.residuals
                 )
-        self.amici_solver.setReturnDataReportingMode(amici_reporting)
+        self.amici_solver.set_return_data_reporting_mode(amici_reporting)
 
         # update steady state
         if (
@@ -601,7 +601,9 @@ class AmiciObjective(ObjectiveBase):
         """
         if self.custom_timepoints is not None:
             for index in range(len(self.edatas)):
-                self.edatas[index].setTimepoints(self.custom_timepoints[index])
+                self.edatas[index].set_timepoints(
+                    self.custom_timepoints[index]
+                )
 
     def set_custom_timepoints(
         self,

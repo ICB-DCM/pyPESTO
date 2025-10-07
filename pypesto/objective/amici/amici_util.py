@@ -62,7 +62,7 @@ def map_par_opt_to_par_sim(
     """
     par_sim_vals = [
         condition_map_sim_var[par_id]
-        for par_id in amici_model.getParameterIds()
+        for par_id in amici_model.get_parameter_ids()
     ]
 
     # iterate over simulation parameter indices
@@ -130,8 +130,8 @@ def create_identity_parameter_mapping(
         amici_to_petab_scale,
     )
 
-    x_ids = list(amici_model.getParameterIds())
-    x_scales = list(amici_model.getParameterScale())
+    x_ids = list(amici_model.get_parameter_ids())
+    x_scales = list(amici_model.get_parameter_scale())
     parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
@@ -382,7 +382,7 @@ def get_error_output(
             data.nt() if data.nt() else amici_model.nt() for data in edatas
         )
     n_res = nt * amici_model.nytrue
-    if amici_model.getAddSigmaResiduals():
+    if amici_model.get_add_sigma_residuals():
         n_res *= 2
 
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(

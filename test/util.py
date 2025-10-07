@@ -310,24 +310,24 @@ def load_amici_objective(example_name):
 
     try:
         model_module = importlib.import_module(model_name)
-        model = model_module.getModel()
+        model = model_module.get_model()
     except (ModuleNotFoundError, amici.AmiciVersionError):
         # import sbml model, compile and generate amici module
         sbml_importer = amici.SbmlImporter(sbml_file)
         sbml_importer.sbml2amici(model_name, model_output_dir, verbose=False)
         model_module = importlib.import_module(model_name)
-        model = model_module.getModel()
+        model = model_module.get_model()
 
-    model.requireSensitivitiesForAllParameters()
-    model.setTimepoints(np.linspace(0, 10, 11))
-    model.setParameterScale(amici.ParameterScaling_log10)
-    model.setParameters([-0.3, -0.7])
-    solver = model.getSolver()
-    solver.setSensitivityMethod(amici.SensitivityMethod_forward)
-    solver.setSensitivityOrder(amici.SensitivityOrder_first)
+    model.require_sensitivities_for_all_parameters()
+    model.set_timepoints(np.linspace(0, 10, 11))
+    model.set_parameter_scale(amici.ParameterScaling.log10)
+    model.set_parameters([-0.3, -0.7])
+    solver = model.create_solver()
+    solver.set_sensitivity_method(amici.SensitivityMethod.forward)
+    solver.set_sensitivity_order(amici.SensitivityOrder.first)
 
     # generate experimental data
-    rdata = amici.runAmiciSimulation(model, solver, None)
+    rdata = amici.run_simulation(model, solver, None)
     edata = amici.ExpData(rdata, 0.05, 0.0)
 
     return (pypesto.AmiciObjective(model, solver, [edata], 2), model)

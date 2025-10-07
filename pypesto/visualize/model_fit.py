@@ -240,7 +240,7 @@ def time_trajectory_model(
         problem = result.problem
     # add timepoints as needed
     if timepoints is None:
-        end_time = max(problem.objective.edatas[0].getTimepoints())
+        end_time = max(problem.objective.edatas[0].get_timepoints())
         timepoints = np.linspace(start=0, stop=end_time, num=n_timepoints)
 
     # get rdatas
@@ -342,7 +342,7 @@ def _get_simulation_rdatas(
             amici_model=amici_model,
         )
 
-        rdatas = amici.runAmiciSimulations(
+        rdatas = amici.run_simulations(
             amici_model,
             amici_solver,
             edatas,
@@ -400,7 +400,7 @@ def _time_trajectory_model_with_states(
     state_indices_by_name = []
     if state_ids is not None:
         state_indices_by_id = [
-            model.getStateIds().index(state_id) for state_id in state_ids
+            model.get_state_ids().index(state_id) for state_id in state_ids
         ]
     if state_names is not None:
         state_indices_by_name = [
@@ -414,7 +414,8 @@ def _time_trajectory_model_with_states(
     observable_indices = None
     if observable_ids is not None:
         observable_indices = [
-            model.getObservableIds().index(obs_id) for obs_id in observable_ids
+            model.get_observable_ids().index(obs_id)
+            for obs_id in observable_ids
         ]
 
     fig, axes = plt.subplots(len(rdatas), 2)
@@ -422,13 +423,13 @@ def _time_trajectory_model_with_states(
     axes = np.atleast_2d(axes)
 
     for i_cond, rdata in enumerate(rdatas):
-        amici.plotting.plotStateTrajectories(
+        amici.plotting.plot_state_trajectories(
             rdata=rdata,
             state_indices=state_indices,
             ax=axes[i_cond, 0],
             model=model,
         )
-        amici.plotting.plotObservableTrajectories(
+        amici.plotting.plot_observable_trajectories(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond, 1],
@@ -468,13 +469,14 @@ def _time_trajectory_model_without_states(
     observable_indices = None
     if observable_ids is not None:
         observable_indices = [
-            model.getObservableIds().index(obs_id) for obs_id in observable_ids
+            model.get_observable_ids().index(obs_id)
+            for obs_id in observable_ids
         ]
 
     fig, axes = plt.subplots(len(rdatas))
 
     for i_cond, rdata in enumerate(rdatas):
-        amici.plotting.plotObservableTrajectories(
+        amici.plotting.plot_observable_trajectories(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond] if len(rdatas) > 1 else axes,
