@@ -87,32 +87,32 @@ def test_deepcopy_objective():
     )
     factory = petab_importer.create_objective_creator()
     amici_model = factory.create_model()
-    amici_model.setSteadyStateSensitivityMode(
+    amici_model.set_steady_state_sensitivity_mode(
         amici.SteadyStateSensitivityMode.integrateIfNewtonFails
     )
-    amici_model.setSteadyStateComputationMode(
+    amici_model.set_steady_state_computation_mode(
         amici.SteadyStateComputationMode.integrateIfNewtonFails
     )
     objective = factory.create_objective(model=amici_model)
 
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_adjoint
+    objective.amici_solver.set_sensitivity_method(
+        amici.SensitivityMethod.adjoint
     )
 
     objective2 = copy.deepcopy(objective)
 
     # test some properties
     assert (
-        objective.amici_model.getParameterIds()
-        == objective2.amici_model.getParameterIds()
+        objective.amici_model.get_parameter_ids()
+        == objective2.amici_model.get_parameter_ids()
     )
     assert (
-        objective.amici_solver.getSensitivityOrder()
-        == objective2.amici_solver.getSensitivityOrder()
+        objective.amici_solver.get_sensitivity_order()
+        == objective2.amici_solver.get_sensitivity_order()
     )
     assert (
-        objective.amici_solver.getSensitivityMethod()
-        == objective2.amici_solver.getSensitivityMethod()
+        objective.amici_solver.get_sensitivity_method()
+        == objective2.amici_solver.get_sensitivity_method()
     )
     assert len(objective.edatas) == len(objective2.edatas)
 
@@ -133,23 +133,23 @@ def test_pickle_objective():
     factory = petab_importer.create_objective_creator()
     objective = factory.create_objective()
 
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_adjoint
+    objective.amici_solver.set_sensitivity_method(
+        amici.SensitivityMethod.adjoint
     )
 
     objective2 = pickle.loads(pickle.dumps(objective))
 
     # test some properties
     assert (
-        objective.amici_model.getParameterIds()
-        == objective2.amici_model.getParameterIds()
+        objective.amici_model.get_parameter_ids()
+        == objective2.amici_model.get_parameter_ids()
     )
     assert (
-        objective.amici_solver.getSensitivityOrder()
-        == objective2.amici_solver.getSensitivityOrder()
+        objective.amici_solver.get_sensitivity_order()
+        == objective2.amici_solver.get_sensitivity_order()
     )
     assert (
-        objective.amici_solver.getSensitivityMethod()
-        == objective2.amici_solver.getSensitivityMethod()
+        objective.amici_solver.get_sensitivity_method()
+        == objective2.amici_solver.get_sensitivity_method()
     )
     assert len(objective.edatas) == len(objective2.edatas)

@@ -170,7 +170,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         module = amici.import_model_module(
             module_name=self.model_name, module_path=self.output_folder
         )
-        model = module.getModel()
+        model = module.get_model()
         check_model(
             amici_model=model,
             petab_problem=self.petab_problem,
@@ -238,7 +238,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        solver = model.getSolver()
+        solver = model.create_solver()
         return solver
 
     def create_edatas(

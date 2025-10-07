@@ -1088,12 +1088,12 @@ def test_sampling_prediction_trajectories():
     post_processor_amici_x = functools.partial(
         post_processor,
         output_type=pypesto.C.AMICI_X,
-        output_ids=result.problem.objective.amici_model.getStateIds(),
+        output_ids=result.problem.objective.amici_model.get_state_ids(),
     )
     predictor = predict.AmiciPredictor(
         result.problem.objective,
         post_processor=post_processor_amici_x,
-        output_ids=result.problem.objective.amici_model.getStateIds(),
+        output_ids=result.problem.objective.amici_model.get_state_ids(),
     )
 
     sample_ensemble = ensemble.Ensemble.from_sample(

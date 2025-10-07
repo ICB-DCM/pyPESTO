@@ -214,12 +214,12 @@ def test_ensemble_prediction_from_hdf5():
     post_processor_y = partial(
         post_processor,
         output_type=AMICI_Y,
-        output_ids=problem.objective.amici_model.getObservableIds(),
+        output_ids=problem.objective.amici_model.get_observable_ids(),
     )
     predictor_y = AmiciPredictor(
         problem.objective,
         post_processor=post_processor_y,
-        output_ids=problem.objective.amici_model.getObservableIds(),
+        output_ids=problem.objective.amici_model.get_observable_ids(),
     )
     ensemble_prediction = get_ensemble_prediction(max_size=10)
 
@@ -314,7 +314,7 @@ def get_ensemble_prediction(
         return outputs
 
     amici_objective = result.problem.objective
-    observable_ids = amici_objective.amici_model.getObservableIds()
+    observable_ids = amici_objective.amici_model.get_observable_ids()
     post_processor_y = partial(
         post_processor,
         output_type=AMICI_Y,

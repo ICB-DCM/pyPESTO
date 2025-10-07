@@ -132,7 +132,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         if (
             1 in sensi_orders
-            and amici_solver.getSensitivityMethod()
+            and amici_solver.get_sensitivity_method()
             == amici.SensitivityMethod.adjoint
         ) or 2 in sensi_orders:
             inner_result, inner_parameters = self.call_amici_twice(
@@ -292,7 +292,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if AMICI ReturnData is not provided, we need to simulate the model
         if rdatas is None:
-            amici_solver.setSensitivityOrder(sensi_order)
+            amici_solver.set_sensitivity_order(sensi_order)
             x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
             # fill in parameters
             fill_in_parameters(
@@ -303,7 +303,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 amici_model=amici_model,
             )
             # run amici simulation
-            rdatas = amici.runAmiciSimulations(
+            rdatas = amici.run_simulations(
                 amici_model,
                 amici_solver,
                 edatas,
@@ -355,7 +355,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 inner_parameters=inner_parameters,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.getParameterIds(),
+                par_sim_ids=amici_model.get_parameter_ids(),
                 snllh=snllh,
             )
         # apply the computed inner parameters to the ReturnData

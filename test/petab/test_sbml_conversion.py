@@ -39,7 +39,7 @@ class AmiciObjectiveTest(unittest.TestCase):
     def runTest(self):
         for example in ["conversion_reaction"]:
             objective, model = load_amici_objective(example)
-            x0 = np.array(list(model.getParameters()))
+            x0 = np.array(list(model.get_parameters()))
 
             df = objective.check_grad(
                 x0,
@@ -98,7 +98,7 @@ def parameter_estimation(objective, library, solver, fixed_pars, n_starts):
     dim = len(objective.x_ids)
     lb = -2 * np.ones((1, dim))
     ub = 2 * np.ones((1, dim))
-    pars = objective.amici_model.getParameters()
+    pars = objective.amici_model.get_parameters()
     problem = pypesto.Problem(
         objective,
         lb,
