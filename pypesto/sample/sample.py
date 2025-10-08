@@ -6,6 +6,7 @@ import numpy as np
 
 from ..problem import Problem
 from ..result import Result
+from ..startpoint import PriorStartpoints
 from ..store import autosave
 from .adaptive_metropolis import AdaptiveMetropolisSampler
 from .sampler import Sampler
@@ -20,6 +21,7 @@ def sample(
     sampler: Sampler = None,
     x0: Union[np.ndarray, list[np.ndarray]] = None,
     result: Result = None,
+    warm_start: bool = True,
     filename: Union[str, Callable, None] = None,
     overwrite: bool = False,
 ) -> Result:
@@ -41,6 +43,10 @@ def sample(
         found in optimization is used. Note that some samplers require an
         initial parameter, some may ignore it. x0 can also be a list,
         to have separate starting points for parallel tempering chains.
+    warm_start:
+        Whether to warm start from previous optimization results stored in
+        `result` if no x0 is provided. Default is True. Otherwise, samples
+        from the prior.
     result:
         A result to write to. If None provided, one is created from the
         problem.
@@ -69,12 +75,20 @@ def sample(
 
     # try to find initial parameters
     if x0 is None:
-        result.optimize_result.sort()
-        if len(result.optimize_result.list) > 0:
-            x0 = problem.get_reduced_vector(
-                result.optimize_result.list[0]["x"]
-            )
-        # TODO multiple x0 for PT, #269
+        if warm_start:
+            result.optimize_result.sort()
+            if len(result.optimize_result.list) > 0:
+                x0 = problem.get_reduced_vector(
+                    result.optimize_result.list[0]["x"]
+                )
+        else:
+            get_start_params = PriorStartpoints(check_fval=True)
+            x0 = get_start_params.sample(
+                n_starts=1,
+                lb=problem.lb,
+                ub=problem.ub,
+                priors=problem.x_priors,
+            )[0]
 
     # set sampler
     if sampler is None:

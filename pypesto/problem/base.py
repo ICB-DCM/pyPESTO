@@ -14,8 +14,12 @@ import numpy as np
 import pandas as pd
 
 from ..objective import ObjectiveBase
-from ..objective.priors import NegLogParameterPriors
-from ..startpoint import StartpointMethod, to_startpoint_method, uniform
+from ..objective.priors import NegLogParameterPriors, NegLogPriors
+from ..startpoint import (
+    PriorStartpoints,
+    StartpointMethod,
+    to_startpoint_method,
+)
 from ..version import __version__
 
 SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
@@ -99,7 +103,7 @@ class Problem:
         x_guesses: Optional[Iterable[float]] = None,
         x_names: Optional[Iterable[str]] = None,
         x_scales: Optional[Iterable[str]] = None,
-        x_priors_defs: Optional[NegLogParameterPriors] = None,
+        x_priors_defs: Union[NegLogParameterPriors, NegLogPriors, None] = None,
         lb_init: Union[np.ndarray, list[float], None] = None,
         ub_init: Union[np.ndarray, list[float], None] = None,
         copy_objective: bool = True,
@@ -163,7 +167,7 @@ class Problem:
 
         # startpoint method
         if startpoint_method is None:
-            startpoint_method = uniform
+            startpoint_method = PriorStartpoints
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
         # save python and pypesto version

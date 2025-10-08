@@ -8,6 +8,7 @@ import numpy as np
 from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
 from ..result import McmcPtResult
+from ..startpoint import PriorStartpoints
 from ..util import tqdm
 from .sampler import InternalSampler, Sampler
 
@@ -84,6 +85,7 @@ class ParallelTemperingSampler(Sampler):
             "show_progress": None,
             "beta_init": BETA_DECAY,  # replaced in adaptive PT
             "alpha": 0.3,
+            "same_start_point": False,
         }
 
     def initialize(
@@ -94,7 +96,17 @@ class ParallelTemperingSampler(Sampler):
         if isinstance(x0, list):
             x0s = x0
         else:
-            x0s = [x0 for _ in range(n_chains)]
+            if self.options["same_start_point"]:
+                x0s = [x0 for _ in range(n_chains)]
+            else:
+                get_start_params = PriorStartpoints(check_fval=True)
+                x0s = get_start_params.sample(
+                    n_starts=n_chains - 1,
+                    lb=problem.lb,
+                    ub=problem.ub,
+                    priors=problem.x_priors,
+                )
+                x0s = [x0] + list(x0s)
         for sampler, x0 in zip(self.samplers, x0s):
             _problem = copy.deepcopy(problem)
             sampler.initialize(_problem, x0)

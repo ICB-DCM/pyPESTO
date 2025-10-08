@@ -173,6 +173,33 @@ def test_derivatives(prior_type_list, scale):
         )
 
 
+def test_sample(prior_type_list, scale):
+    """
+    Tests the sampling from the prior.
+    """
+
+    prior_list = [
+        get_parameter_prior_dict(
+            iprior,
+            prior_type,
+            (
+                [-1, 1]
+                if prior_type in ["uniform", "parameterScaleUniform"]
+                else [1, 1]
+            ),
+            scale,
+        )
+        for iprior, prior_type in enumerate(prior_type_list)
+    ]
+
+    test_prior = NegLogParameterPriors(prior_list)
+
+    n_samples = 100
+    samples = test_prior.sample(n_samples=n_samples)
+
+    assert samples.shape == (n_samples, len(prior_type_list))
+
+
 def lin_to_scaled(x: float, scale: str):
     """
     transforms x to linear scale

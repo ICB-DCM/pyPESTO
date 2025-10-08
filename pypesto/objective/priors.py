@@ -225,6 +225,53 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return sres
 
+    def sample(
+        self, n_samples: int = 1, rng: np.random.Generator = None
+    ) -> np.ndarray:
+        """
+        Sample from the prior distribution.
+
+        Parameters
+        ----------
+        n_samples:
+            Number of samples to draw.
+        rng:
+            Random number generator. If None, uses np.random.default_rng().
+
+        Returns
+        -------
+        samples:
+            Array of shape (n_samples, n_parameters) containing samples from the prior.
+        """
+        if rng is None:
+            rng = np.random.default_rng()
+
+        # Determine the number of parameters
+        if self.x_names is not None:
+            n_parameters = len(self.x_names)
+        else:
+            # Find the maximum index in prior_list
+            n_parameters = max(prior["index"] for prior in self.prior_list) + 1
+
+        samples = np.zeros((n_samples, n_parameters))
+
+        for prior in self.prior_list:
+            index = prior["index"]
+            prior_type = prior.get("type", None)
+            prior_parameters = prior.get("parameters", None)
+
+            if prior_type is None or prior_parameters is None:
+                raise ValueError(
+                    "Prior type and parameters must be specified for sampling. "
+                    "Use get_parameter_prior_dict to create proper prior dictionaries."
+                )
+
+            samples[:, index] = _sample_from_prior(
+                prior_type, prior_parameters, n_samples, rng
+            )
+
+        return samples
+
 
 def get_parameter_prior_dict(
     index: int,
@@ -264,6 +311,8 @@ def get_parameter_prior_dict(
             "density_ddx": dd_log_f_ddx,
             "residual": res,
             "residual_dx": d_res_dx,
+            "type": prior_type,
+            "parameters": prior_parameters,
         }
 
     elif parameter_scale == C.LOG:
@@ -308,6 +357,8 @@ def get_parameter_prior_dict(
             "density_ddx": dd_log_f_log,
             "residual": res_log,
             "residual_dx": d_res_log,
+            "type": prior_type,
+            "parameters": prior_parameters,
         }
 
     elif parameter_scale == C.LOG10:
@@ -353,6 +404,8 @@ def get_parameter_prior_dict(
             "density_ddx": dd_log_f_log10,
             "residual": res_log,
             "residual_dx": d_res_log,
+            "type": prior_type,
+            "parameters": prior_parameters,
         }
 
     else:
@@ -560,3 +613,62 @@ def _get_constant_function(constant: float):
         return constant
 
     return function
+
+
+def _sample_from_prior(
+    prior_type: str,
+    prior_parameters: list,
+    n_samples: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """
+    Sample from individual prior distributions.
+
+    Parameters
+    ----------
+    prior_type:
+        Type of the prior distribution.
+    prior_parameters:
+        Parameters of the prior distribution.
+    n_samples:
+        Number of samples to draw.
+    rng:
+        Random number generator.
+
+    Returns
+    -------
+    samples:
+        Array of samples from the prior distribution.
+    """
+    if prior_type in [C.UNIFORM, C.PARAMETER_SCALE_UNIFORM]:
+        low = prior_parameters[0]
+        high = prior_parameters[1]
+        return rng.uniform(low, high, n_samples)
+
+    elif prior_type in [C.NORMAL, C.PARAMETER_SCALE_NORMAL]:
+        mean = prior_parameters[0]
+        std = prior_parameters[1]
+        return rng.normal(mean, std, n_samples)
+
+    elif prior_type in [C.LAPLACE, C.PARAMETER_SCALE_LAPLACE]:
+        mean = prior_parameters[0]
+        scale = prior_parameters[1]
+        return rng.laplace(mean, scale, n_samples)
+
+    elif prior_type == C.LOG_NORMAL:
+        mean = prior_parameters[0]
+        sigma = prior_parameters[1]
+        return rng.lognormal(mean, sigma, n_samples)
+
+    elif prior_type == C.LOG_UNIFORM:
+        raise NotImplementedError(
+            "Log-uniform distribution sampling is not yet implemented"
+        )
+    elif prior_type == C.LOG_LAPLACE:
+        raise NotImplementedError(
+            "Log-Laplace distribution sampling is not yet implemented"
+        )
+    else:
+        raise ValueError(
+            f"Sampling from prior type {prior_type} is not supported"
+        )
