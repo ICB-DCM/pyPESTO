@@ -75,13 +75,14 @@ def sample(
 
     # try to find initial parameters
     if x0 is None:
-        if warm_start:
+        if warm_start and result.optimize_result is not None:
             result.optimize_result.sort()
             if len(result.optimize_result.list) > 0:
                 x0 = problem.get_reduced_vector(
                     result.optimize_result.list[0]["x"]
                 )
         else:
+            logger.info("No x0 provided, sampling from prior.")
             get_start_params = PriorStartpoints(check_fval=True)
             x0 = get_start_params.sample(
                 n_starts=1,
