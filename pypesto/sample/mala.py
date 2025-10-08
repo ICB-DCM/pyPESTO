@@ -106,10 +106,11 @@ class MalaSampler(AdaptiveMetropolisSampler):
     def _propose_parameter(self, x: np.ndarray, beta: float):
         """Propose a parameter using preconditioned MALA dynamics."""
         # Get gradient of log-posterior at current position
-        grad = -beta * self.neglogpost.get_grad(x)
+        grad = -self.neglogpost.get_grad(x)
+        # todo: in parallel tempering, this should be the tempered gradient, but only the likelihood is tempered
 
         # Apply preconditioning to gradient
-        precond_grad = self._cov @ grad
+        precond_grad = self._cov @ (beta * grad)
 
         # Generate standard Gaussian noise
         noise = np.random.randn(len(x))

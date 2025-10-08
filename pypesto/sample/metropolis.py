@@ -154,10 +154,10 @@ class MetropolisSampler(InternalSampler):
 
         # This accounts for an asymmetric proposal distribution
         log_q_forward = self._compute_transition_log_prob(
-            x, x_new, self._current_x_grad
+            x, x_new, beta * self._current_x_grad
         )
         log_q_backward = self._compute_transition_log_prob(
-            x_new, x, x_new_grad
+            x_new, x, beta * x_new_grad
         )
         proposal_correction = log_q_backward - log_q_forward
         log_p_acc = min(log_p_acc + proposal_correction, 0)
