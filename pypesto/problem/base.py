@@ -19,6 +19,7 @@ from ..startpoint import (
     PriorStartpoints,
     StartpointMethod,
     to_startpoint_method,
+    uniform,
 )
 from ..version import __version__
 
@@ -167,7 +168,10 @@ class Problem:
 
         # startpoint method
         if startpoint_method is None:
-            startpoint_method = PriorStartpoints
+            if x_priors_defs is None:
+                startpoint_method = uniform
+            else:
+                startpoint_method = PriorStartpoints
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
         # save python and pypesto version
