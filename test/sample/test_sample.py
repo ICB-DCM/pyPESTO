@@ -42,11 +42,11 @@ from .util import (
     params=[
         "Metropolis",
         "AdaptiveMetropolis",
-        # "ParallelTempering",
-        # "AdaptiveParallelTempering",
-        # "Pymc",
-        # "Emcee",
-        # "Dynesty",
+        "ParallelTempering",
+        "AdaptiveParallelTempering",
+        "Pymc",
+        "Emcee",
+        "Dynesty",
         "Mala",
     ]
 )
