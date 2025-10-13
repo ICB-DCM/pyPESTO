@@ -392,21 +392,6 @@
   url              = {https://www.biorxiv.org/content/early/2025/04/17/2025.04.11.648323},
 }
 
-@Article{PerssonFro2025,
-  author           = {Persson, Sebastian and Frohlich, Fabian and Grein, Stephan and Lomna, Torkel and Ognissanti, Damiano and Hassselgren, Viktor and Hasenauer, Jan and Cvijovic, Marija},
-  journal          = {bioRxiv},
-  title            = {PEtab.jl: Advancing the Efficiency and Utility of Dynamic Modelling},
-  year             = {2025},
-  abstract         = {Dynamic models are useful to study processes ranging from cell signalling to cell differentiation. Common modelling workflows, such as model exploration and parameter estimation, are computationally demanding. The Julia programming language is a promising tool to address these computational challenges. To evaluate it, we developed SBMLImporter.jl and PEtab.jl, a package for model fitting. SBMLImporter.jl was used to evaluate different stochastic simulators against PySB and RoadRunner, overall Julia simulators proved fastest. For Ordinary Differential Equations (ODE) models solvers, gradient methods, and parameter estimation performance were evaluated using PEtab benchmark problems. For the latter two tasks PEtab.jl was compared against pyPESTO, which employs the high-performance AMICI library. Guidelines for choosing ODE solver were produced by evaluating 31 ODE solvers for 29 models. Further, by leveraging automatic differentiation PEtab.jl proved efficient and, for up to medium-sized models, was often at least twice faster than pyPESTO, showcasing how Julia{\textquoteright}s ecosystem can accelerate modelling workflows.Competing Interest Statement.F consults for DeepOrigin, no impact on study.Swedish Research CouncilSwedish Research Council, , VR2023-04319, VR2017-05117Swedish Foundation for Strategic ResearchSwedish Foundation for Strategic Research, , FFL15-0238},
-  creationdate     = {2025-05-05T09:46:07},
-  doi              = {10.1101/2025.04.30.651378},
-  elocation-id     = {2025.04.30.651378},
-  eprint           = {https://www.biorxiv.org/content/early/2025/05/04/2025.04.30.651378.full.pdf},
-  modificationdate = {2025-05-05T09:46:07},
-  publisher        = {Cold Spring Harbor Laboratory},
-  url              = {https://www.biorxiv.org/content/early/2025/05/04/2025.04.30.651378},
-}
-
 @Article{HoepflOez2025,
   author           = {Höpfl, Sebastian and Özverin, Merih and Nowack, Helena and Tamas, Raluca and Clark, Andrew G. and Radde, Nicole and Olayioye, Monilola A.},
   journal          = {PLOS Computational Biology},
@@ -497,18 +482,36 @@
 }
 
 @Article{VivaresDij2025,
-  author={Vivares, Gonzalo and Dijkstra, Jan and Bannink, Andre},
-  title={Modeling diurnal rumen metabolism dynamics in dairy cattle: An update to a mechanistic model representing eating behavior, rumen content, rumination, and acid-base balance},
-  journal={Journal of Dairy Science},
-  year={2025},
-  month={Jul},
-  day={01},
-  publisher={Elsevier},
-  volume={108},
-  number={7},
-  pages={6934-6957},
-  issn={0022-0302},
-  doi={10.3168/jds.2024-26121},
-  url={https://doi.org/10.3168/jds.2024-26121}
+  author           = {Vivares, Gonzalo and Dijkstra, Jan and Bannink, Andre},
+  journal          = {Journal of Dairy Science},
+  title            = {Modeling diurnal rumen metabolism dynamics in dairy cattle: An update to a mechanistic model representing eating behavior, rumen content, rumination, and acid-base balance},
+  year             = {2025},
+  issn             = {0022-0302},
+  month            = {Jul},
+  number           = {7},
+  pages            = {6934-6957},
+  volume           = {108},
+  day              = {01},
+  doi              = {10.3168/jds.2024-26121},
+  modificationdate = {2025-10-13T14:07:37},
+  publisher        = {Elsevier},
 }
+
+@Article{PerssonFro2025,
+  author           = {Persson, Sebastian and Fröhlich, Fabian and Grein, Stephan and Loman, Torkel and Ognissanti, Damiano and Hasselgren, Viktor and Hasenauer, Jan and Cvijovic, Marija},
+  journal          = {Bioinformatics},
+  title            = {{PEtab.jl}: advancing the efficiency and utility of dynamic modelling},
+  year             = {2025},
+  issn             = {1367-4811},
+  month            = {09},
+  number           = {9},
+  pages            = {btaf497},
+  volume           = {41},
+  abstract         = {Dynamic models represent a powerful tool for studying complex biological processes, ranging from cell signalling to cell differentiation. Building such models often requires computationally demanding modelling workflows, such as model exploration and parameter estimation. We developed two Julia-based tools: SBMLImporter.jl, an SBML importer, and PEtab.jl, an importer for parameter estimation problems in the PEtab format, designed to streamline modelling processes. These tools leverage Julia’s high-performance computing capabilities, including symbolic pre-processing and advanced ODE solvers. PEtab.jl aims to be a Julia-accessible toolbox that supports the entire modelling pipeline from parameter estimation to identifiability analysis.SBMLImporter.jl and PEtab.jl are implemented in the Julia programming language. Both packages are available on GitHub (github.com/sebapersson/SBMLImporter.jl and github.com/sebapersson/PEtab.jl) as officially registered Julia packages, installable via the Julia package manager. Each package is continuously tested and supported on Linux, macOS, and Windows.},
+  creationdate     = {2025-10-13T14:06:30},
+  doi              = {10.1093/bioinformatics/btaf497},
+  eprint           = {https://academic.oup.com/bioinformatics/article-pdf/41/9/btaf497/64232071/btaf497.pdf},
+  modificationdate = {2025-10-13T14:07:29},
+}
+
 @Comment{jabref-meta: databaseType:bibtex;}
