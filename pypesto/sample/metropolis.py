@@ -46,7 +46,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_neglogpost: Union[Sequence[float], None] = None
         self.trace_neglogprior: Union[Sequence[float], None] = None
         self.temper_lpost: bool = False
-        self._current_x_grad: Union[np.ndarray, None] = None
+        self._current_x_grad: Union[np.ndarray] = np.nan
 
     @classmethod
     def default_options(cls):
@@ -183,7 +183,7 @@ class MetropolisSampler(InternalSampler):
     def _propose_parameter(self, x: np.ndarray, beta: float):
         """Propose a step."""
         x_new: np.ndarray = x + self.options["std"] * np.random.randn(len(x))
-        return x_new, None  # no gradient needed
+        return x_new, np.nan  # no gradient needed
 
     def _update_proposal(
         self, x: np.ndarray, lpost: float, log_p_acc: float, n_sample_cur: int
