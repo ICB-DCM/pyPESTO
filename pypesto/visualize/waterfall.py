@@ -174,9 +174,7 @@ def waterfall(
                 colors=coloring[:n_starts_to_zoom],
             )
             # remove the title and axes labels for the zoom in subplot
-            inset_axes.set_title("")
-            inset_axes.set_ylabel("")
-            inset_axes.set_xlabel("")
+            inset_axes.set(title=None, xlabel=None, ylabel=None)
 
     # apply changes specified be the user to the axis object
     ax = handle_options(ax, max_len_fvals, refs, y_limits, offset_y)
