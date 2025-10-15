@@ -21,7 +21,7 @@ def sample(
     sampler: Sampler = None,
     x0: Union[np.ndarray, list[np.ndarray]] = None,
     result: Result = None,
-    warm_start: bool = True,
+    warm_start: float = 1.0,
     filename: Union[str, Callable, None] = None,
     overwrite: bool = False,
 ) -> Result:
@@ -45,8 +45,10 @@ def sample(
         to have separate starting points for parallel tempering chains.
     warm_start:
         Whether to warm start from previous optimization results stored in
-        `result` if no x0 is provided. Default is True. Otherwise, samples
-        from the prior.
+        `result` or to sample from the prior. The value is the convex
+        combination between the two, with 1.0 meaning only warm start and
+        0.0 meaning only sample from prior. If `x0` is provided,
+        `warm_start` is ignored.
     result:
         A result to write to. If None provided, one is created from the
         problem.
@@ -73,16 +75,13 @@ def sample(
     if n_samples is not None:
         n_samples = bound_n_samples_from_env(n_samples)
 
+    if warm_start > 1.0 or warm_start < 0.0:
+        raise ValueError("warm_start must be in [0, 1].")
+
     # try to find initial parameters
     if x0 is None:
-        if warm_start and result.optimize_result is not None:
-            result.optimize_result.sort()
-            if len(result.optimize_result.list) > 0:
-                x0 = problem.get_reduced_vector(
-                    result.optimize_result.list[0]["x"]
-                )
-        else:
-            logger.info("No x0 provided, sampling from prior.")
+        if warm_start == 0:
+            logger.info("Sampling initial points from prior.")
             get_start_params = PriorStartpoints(check_fval=True)
             x0 = get_start_params.sample(
                 n_starts=1,
@@ -90,6 +89,27 @@ def sample(
                 ub=problem.ub,
                 priors=problem.x_priors,
             )[0]
+        elif result.optimize_result is not None:
+            result.optimize_result.sort()
+            if len(result.optimize_result.list) > 0:
+                x0 = problem.get_reduced_vector(
+                    result.optimize_result.list[0]["x"]
+                )
+            if warm_start < 1.0 and x0 is not None:
+                logger.info(
+                    f"Initializing sampling with a warm start from optimization "
+                    f"and prior sampling with weight: {warm_start}."
+                )
+                get_start_params = PriorStartpoints(check_fval=True)
+                x0_prior = get_start_params.sample(
+                    n_starts=1,
+                    lb=problem.lb,
+                    ub=problem.ub,
+                    priors=problem.x_priors,
+                )[0]
+                x0 = warm_start * x0 + (1 - warm_start) * x0_prior
+        else:
+            logger.info("No initial point provided.")
 
     # set sampler
     if sampler is None:
