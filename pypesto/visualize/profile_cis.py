@@ -76,13 +76,8 @@ def profile_cis(
     x_names = [problem.x_names[ix] for ix in profile_indices]
 
     for ix, (lb, ub) in enumerate(intervals):
-        ax.plot(
-            [lb, ub],
-            [ix + 1, ix + 1],
-            marker="|",
-            color=color,
-            solid_capstyle="butt",
-        )
+        half = (ub-lb)/2
+        ax.errorbar(lb+half, ix + 1, xerr=half, capsize=5, color=color, linewidth=2)
 
     parameters_ind = np.arange(1, len(intervals) + 1)
     ax.set_yticks(parameters_ind)
