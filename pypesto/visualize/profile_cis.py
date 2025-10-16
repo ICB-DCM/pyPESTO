@@ -11,6 +11,10 @@ from matplotlib.patches import Patch, Rectangle
 from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
 
+cis_visualization_settings = {
+    "capsize": 5,
+    "linewidth": 2,
+}
 
 def profile_cis(
     result: Result,
@@ -76,8 +80,10 @@ def profile_cis(
     x_names = [problem.x_names[ix] for ix in profile_indices]
 
     for ix, (lb, ub) in enumerate(intervals):
-        half = (ub-lb)/2
-        ax.errorbar(lb+half, ix + 1, xerr=half, capsize=5, color=color, linewidth=2)
+        half = (ub - lb) / 2
+        ax.errorbar(
+            lb + half, ix + 1, xerr=half, color=color, **cis_visualization_settings
+        )
 
     parameters_ind = np.arange(1, len(intervals) + 1)
     ax.set_yticks(parameters_ind)
