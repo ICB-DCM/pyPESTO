@@ -1,12 +1,11 @@
-from typing import Optional, Union
-
 import matplotlib.cm as cm
 import numpy as np
+from matplotlib.colors import is_color_like
 
 from pypesto.util import assign_clusters
 
 # for typehints
-from ..C import RGBA
+from ..C import COLOR, RGBA
 
 
 def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
@@ -89,8 +88,11 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
 
 
 def assign_colors(
-    vals, colors=None, balance_alpha=True, highlight_global=True
-):
+    vals: np.ndarray,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    balance_alpha: bool = True,
+    highlight_global: bool = True,
+) -> np.ndarray:
     """
     Assign colors or format user specified colors.
 
@@ -99,8 +101,8 @@ def assign_colors(
     vals: numeric list or array
         List to be clustered and assigned colors.
 
-    colors: list, or RGBA, optional
-        list of colors, or single color
+    colors: list, or COLOR, optional
+        list of colors recognized by matplotlib, or single color
 
     balance_alpha: bool (optional)
         Flag indicating whether alpha for large clusters should be reduced to
@@ -111,7 +113,7 @@ def assign_colors(
 
     Returns
     -------
-    colors: list of RGBA
+    colors: list of colors recognized by matplotlib
         One for each element in 'vals'.
     """
     # sanity checks
@@ -126,46 +128,36 @@ def assign_colors(
             highlight_global=highlight_global,
         )
 
-    # The user passed values and colors: parse them first!
-    # we want everything to be numpy arrays, to not check every time whether a
-    # list was passed or an ndarray
-    colors = np.array(colors)
-
     # Get number of elements and use user assigned colors
     n_vals = len(vals) if isinstance(vals, list) else vals.size
 
-    # Two usages are possible: One color for the whole data set, or one
-    # color for each value:
-    if colors.size == 4:
-        # Only one color was passed: flatten in case and repeat n_vals times
-        if colors.ndim == 2:
-            colors = colors[0]
+    if is_color_like(colors):
+        # one color was passed
         return np.array([colors] * n_vals)
 
-    if (
-        len(colors.shape) > 1
-        and colors.shape[1] == 4
-        and n_vals == colors.shape[0]
+    elif (
+        isinstance(colors, (list, np.ndarray))
+        and len(colors) == len(vals)
+        and sum([is_color_like(c) for c in colors]) == len(colors)
     ):
-        return colors
+        # a list of colors was passed, one for each value in vals
 
-    if colors.shape[0] == 4:
-        colors = np.transpose(colors)
-        if n_vals == colors.shape[0]:
-            return colors
+        # convert to ndarray
+        colors = np.array(colors)
+        return colors
 
     # Shape of array did not match n_vals. Error due to size mismatch:
     raise ValueError(
         "Incorrect color input. Colors must be specified either as "
-        "list of `[r, g, b, alpha]` with length equal to that of `vals` "
-        f"(here: {n_vals}), or as a single `[r, g, b, alpha]`."
+        "list of colors recognized by matplotlib with length equal to that of `vals` "
+        f"(here: {n_vals}), or as a single matplotlib color."
     )
 
 
 def assign_colors_for_list(
     num_entries: int,
-    colors: Optional[Union[RGBA, list[RGBA], np.ndarray]] = None,
-) -> Union[list[list[float]], np.ndarray]:
+    colors: RGBA | list[RGBA] | np.ndarray | None = None,
+) -> list[list[float]] | np.ndarray:
     """
     Create a list of colors for a list of items.
 

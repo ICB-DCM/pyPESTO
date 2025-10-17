@@ -5,7 +5,7 @@ Package-wide consistent constant definitions.
 """
 
 from enum import Enum
-from typing import Literal, Union
+from typing import Literal
 
 ###############################################################################
 # ENSEMBLE
@@ -315,12 +315,13 @@ LEN_RGB = 3  # number of elements in an RGB color
 LEN_RGBA = 4  # number of elements in an RGBA color
 RGB = tuple[(float,) * LEN_RGB]  # typing of an RGB color
 RGBA = tuple[(float,) * LEN_RGBA]  # typing of an RGBA color
-RGB_RGBA = Union[RGB, RGBA]  # typing of an RGB or RGBA color
+RGB_RGBA = RGB | RGBA  # typing of an RGB or RGBA color
 RGBA_MIN = 0  # min value for an RGBA element
 RGBA_MAX = 1  # max value for an RGBA element
 RGBA_ALPHA = 3  # zero-indexed fourth element in RGBA
 RGBA_WHITE = (RGBA_MAX, RGBA_MAX, RGBA_MAX, RGBA_MAX)  # white as an RGBA color
 RGBA_BLACK = (RGBA_MIN, RGBA_MIN, RGBA_MIN, RGBA_MAX)  # black as an RGBA color
+COLOR = str | RGB | RGBA  # typing of a color recognized by matplotlib
 
 # optimizer history
 TRACE_X_TIME = "time"
