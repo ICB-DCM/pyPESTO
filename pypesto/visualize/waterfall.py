@@ -7,7 +7,7 @@ from mpl_toolkits.axes_grid1 import inset_locator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import ALL, COLOR, RGBA, WATERFALL_MAX_VALUE
+from ..C import ALL, COLOR, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -61,7 +61,7 @@ def waterfall(
         Reference points for optimization results, containing at least a
         function value fval
     colors:
-        Colors or single color  for plotting. If not set, clustering is done
+        List of colors or single color for plotting. If not set, clustering is done
         and colors are assigned automatically
     legends:
         Labels for line plots, one label per result object
@@ -204,7 +204,7 @@ def waterfall_lowlevel(
     size: tuple[float] | None = (18.5, 10.5),
     scale_y: str = "log10",
     offset_y: float = 0.0,
-    colors: RGBA | Sequence[RGBA] | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legend_text: str | None = None,
 ):
     """
@@ -212,21 +212,20 @@ def waterfall_lowlevel(
 
     Parameters
     ----------
-    fvals: numeric list or array
+    fvals:
         Including values need to be plotted. `None` values indicate that the
         corresponding start index should be skipped.
-    ax: matplotlib.Axes
+    ax:
         Axes object to use.
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Color recognized by matplotlib or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
     legend_text:
         Label for line plots

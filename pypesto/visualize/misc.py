@@ -31,7 +31,7 @@ def process_result_list(
     results: Result | list[Result],
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends=None,
-):
+) -> tuple[list[Result], list[COLOR], list[str]]:
     """
     Assign colors and legends to a list of results, check user provided lists.
 
@@ -69,7 +69,7 @@ def process_result_list(
         if colors is None:
             colors = [colors]
         else:
-            colors = [np.array(colors)]  # todo
+            colors = [np.array(colors)]
 
         # create list of legends for later handling
         if not isinstance(legends, list):
