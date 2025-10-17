@@ -1,6 +1,6 @@
 import logging
-from collections.abc import Iterable, Sequence
-from typing import Callable, Optional, Union
+from collections.abc import Callable, Iterable, Sequence
+from typing import Optional
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -12,9 +12,9 @@ from matplotlib.ticker import MaxNLocator
 from pypesto.util import delete_nan_inf
 
 from ..C import (
+    COLOR,
     INNER_PARAMETERS,
     LOG10,
-    RGBA,
     WATERFALL_MAX_VALUE,
     InnerParameterType,
 )
@@ -38,18 +38,18 @@ logger = logging.getLogger(__name__)
 
 
 def parameters(
-    results: Union[Result, Sequence[Result]],
-    ax: Optional[matplotlib.axes.Axes] = None,
-    parameter_indices: Union[str, Sequence[int]] = "free_only",
-    lb: Optional[Union[np.ndarray, list[float]]] = None,
-    ub: Optional[Union[np.ndarray, list[float]]] = None,
-    size: Optional[tuple[float, float]] = None,
-    reference: Optional[list[ReferencePoint]] = None,
-    colors: Optional[Union[RGBA, list[RGBA]]] = None,
-    legends: Optional[Union[str, list[str]]] = None,
+    results: Result | Sequence[Result],
+    ax: matplotlib.axes.Axes | None = None,
+    parameter_indices: str | Sequence[int] = "free_only",
+    lb: np.ndarray | list[float] | None = None,
+    ub: np.ndarray | list[float] | None = None,
+    size: tuple[float, float] | None = None,
+    reference: list[ReferencePoint] | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends: str | list[str] | None = None,
     balance_alpha: bool = True,
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
-    scale_to_interval: Optional[tuple[float, float]] = None,
+    start_indices: int | Iterable[int] | None = None,
+    scale_to_interval: tuple[float, float] | None = None,
     plot_inner_parameters: bool = True,
     log10_scale_hier_sigma: bool = True,
 ) -> matplotlib.axes.Axes:
@@ -76,7 +76,7 @@ def parameters(
         List of reference points for optimization results, containing at
         least a function value fval
     colors:
-        list of RGBA colors, or single RGBA color
+        list of colors recognized by matplotlib, or single color
         If not set, clustering is done and colors are assigned automatically
     legends:
         Labels for line plots, one label per result object
@@ -196,11 +196,11 @@ def parameters(
 def parameter_hist(
     result: Result,
     parameter_name: str,
-    bins: Union[int, str] = "auto",
+    bins: int | str = "auto",
     ax: Optional["matplotlib.Axes"] = None,
-    size: Optional[tuple[float]] = (18.5, 10.5),
-    color: Optional[list[float]] = None,
-    start_indices: Optional[Union[int, list[int]]] = None,
+    size: tuple[float] | None = (18.5, 10.5),
+    color: list[float] | None = None,
+    start_indices: int | list[int] | None = None,
 ):
     """
     Plot parameter values as a histogram.
@@ -256,15 +256,15 @@ def parameter_hist(
 def parameters_lowlevel(
     xs: np.ndarray,
     fvals: np.ndarray,
-    lb: Optional[Union[np.ndarray, list[float]]] = None,
-    ub: Optional[Union[np.ndarray, list[float]]] = None,
-    x_labels: Optional[Iterable[str]] = None,
+    lb: np.ndarray | list[float] | None = None,
+    ub: np.ndarray | list[float] | None = None,
+    x_labels: Iterable[str] | None = None,
     x_axis_label: str = "Parameter value",
-    ax: Optional[matplotlib.axes.Axes] = None,
-    size: Optional[tuple[float, float]] = None,
-    colors: Optional[Sequence[Union[np.ndarray, list[float]]]] = None,
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = None,
+    colors: Sequence[np.ndarray | list[float]] | None = None,
     linestyle: str = "-",
-    legend_text: Optional[str] = None,
+    legend_text: str | None = None,
     balance_alpha: bool = True,
 ) -> matplotlib.axes.Axes:
     """
@@ -359,9 +359,9 @@ def parameters_lowlevel(
 def handle_inputs(
     result: Result,
     parameter_indices: list[int],
-    lb: Optional[Union[np.ndarray, list[float]]] = None,
-    ub: Optional[Union[np.ndarray, list[float]]] = None,
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    lb: np.ndarray | list[float] | None = None,
+    ub: np.ndarray | list[float] | None = None,
+    start_indices: int | Iterable[int] | None = None,
     plot_inner_parameters: bool = False,
     log10_scale_hier_sigma: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, list[str], np.ndarray, list[np.ndarray]]:
@@ -437,7 +437,9 @@ def handle_inputs(
         ub = result.problem.ub_full
 
     # get labels as x_names and scales
-    x_labels = list(zip(result.problem.x_names, result.problem.x_scales))
+    x_labels = list(
+        zip(result.problem.x_names, result.problem.x_scales, strict=False)
+    )
 
     # handle fixed and free indices
     if len(parameter_indices) < result.problem.dim_full:
@@ -455,11 +457,13 @@ def handle_inputs(
     if inner_xs is not None and plot_inner_parameters:
         lb = np.concatenate([lb, inner_lb])
         ub = np.concatenate([ub, inner_ub])
-        inner_xs_labels = list(zip(inner_xs_names, inner_xs_scales))
+        inner_xs_labels = list(
+            zip(inner_xs_names, inner_xs_scales, strict=False)
+        )
         x_labels = x_labels + inner_xs_labels
         xs_out = [
             np.concatenate([x, inner_x]) if x is not None else None
-            for x, inner_x in zip(xs_out, inner_xs_out)
+            for x, inner_x in zip(xs_out, inner_xs_out, strict=False)
         ]
 
     # If all the scales are the same, put it in the x_axis_label
@@ -476,10 +480,10 @@ def handle_inputs(
 def _handle_inner_inputs(
     result: Result,
     log10_scale_hier_sigma: bool = True,
-) -> Union[
-    tuple[None, None, None, None, None],
-    tuple[list[np.ndarray], list[str], list[str], np.ndarray, np.ndarray],
-]:
+) -> (
+    tuple[None, None, None, None, None]
+    | tuple[list[np.ndarray], list[str], list[str], np.ndarray, np.ndarray]
+):
     """Handle inner parameters from hierarchical optimization, if available.
 
     Parameters
@@ -573,11 +577,11 @@ def _handle_inner_inputs(
 
 def parameters_correlation_matrix(
     result: Result,
-    parameter_indices: Union[str, Sequence[int]] = "free_only",
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
-    method: Union[str, Callable] = "pearson",
+    parameter_indices: str | Sequence[int] = "free_only",
+    start_indices: int | Iterable[int] | None = None,
+    method: str | Callable = "pearson",
     cluster: bool = True,
-    cmap: Union[Colormap, str] = "bwr",
+    cmap: Colormap | str = "bwr",
     return_table: bool = False,
 ) -> matplotlib.axes.Axes:
     """
@@ -642,8 +646,8 @@ def parameters_correlation_matrix(
 
 def optimization_scatter(
     result: Result,
-    parameter_indices: Union[str, Sequence[int]] = "free_only",
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
+    parameter_indices: str | Sequence[int] = "free_only",
+    start_indices: int | Iterable[int] | None = None,
     diag_kind: str = "kde",
     suptitle: str = None,
     size: tuple[float, float] = None,

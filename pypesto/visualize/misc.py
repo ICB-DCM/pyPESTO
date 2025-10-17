@@ -2,13 +2,13 @@ import logging
 import warnings
 from collections.abc import Iterable
 from numbers import Number
-from typing import Optional, Union
 
 import numpy as np
 
 from ..C import (
     ALL,
     ALL_CLUSTERED,
+    COLOR,
     FIRST_CLUSTER,
     FREE_ONLY,
     LEN_RGB,
@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 
 
 def process_result_list(
-    results: Union[Result, list[Result]], colors=None, legends=None
+    results: Result | list[Result],
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends=None,
 ):
     """
     Assign colors and legends to a list of results, check user provided lists.
@@ -38,7 +40,7 @@ def process_result_list(
     results: list or pypesto.Result
         list of pypesto.Result objects or a single pypesto.Result
     colors: list, optional
-        list of RGBA colors
+        list of colors recognized by matplotlib, or single color
     legends: str or list
         labels for line plots
 
@@ -46,7 +48,7 @@ def process_result_list(
     -------
     results: list of pypesto.Result
        list of pypesto.Result objects
-    colors: list of RGBA
+    colors: list of colors
         One for each element in 'results'.
     legends: list of str
         labels for line plots
@@ -67,7 +69,7 @@ def process_result_list(
         if colors is None:
             colors = [colors]
         else:
-            colors = [np.array(colors)]
+            colors = [np.array(colors)]  # todo
 
         # create list of legends for later handling
         if not isinstance(legends, list):
@@ -106,7 +108,7 @@ def process_result_list(
 
 
 def process_offset_y(
-    offset_y: Optional[float], scale_y: str, min_val: float
+    offset_y: float | None, scale_y: str, min_val: float
 ) -> float:
     """
     Compute offset for y-axis, depend on user settings.
@@ -303,7 +305,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
 
 def process_start_indices(
     result: Result,
-    start_indices: Union[str, int, Iterable[int]] = None,
+    start_indices: str | int | Iterable[int] = None,
 ) -> np.ndarray:
     """
     Process the start_indices.
@@ -381,7 +383,7 @@ def process_start_indices(
 
 def process_parameter_indices(
     result: Result,
-    parameter_indices: Union[str, Iterable[int]] = FREE_ONLY,
+    parameter_indices: str | Iterable[int] = FREE_ONLY,
 ) -> list:
     """
     Process the parameter indices, always returning a valid array.

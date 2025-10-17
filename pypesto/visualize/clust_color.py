@@ -5,7 +5,7 @@ from matplotlib.colors import is_color_like
 from pypesto.util import assign_clusters
 
 # for typehints
-from ..C import COLOR, RGBA
+from ..C import COLOR
 
 
 def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
@@ -156,7 +156,7 @@ def assign_colors(
 
 def assign_colors_for_list(
     num_entries: int,
-    colors: RGBA | list[RGBA] | np.ndarray | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
 ) -> list[list[float]] | np.ndarray:
     """
     Create a list of colors for a list of items.
@@ -178,8 +178,9 @@ def assign_colors_for_list(
     """
     # if the user did not specify any colors:
     if colors is None:
-        # default colors will be used, on for each entry in the result list.
+        # default colors will be used, one for each entry in the result list.
         # Colors are created from assign_colors, which needs a dummy list
+        # doubled for clustering
         dummy_clusters = np.array(list(range(num_entries)) * 2)
 
         # we don't want alpha levels for all plotting routines in this case...
@@ -188,7 +189,7 @@ def assign_colors_for_list(
         )
 
         # dummy cluster had twice as many entries as really there. Reduce.
-        real_indices = np.arange(int(colors.shape[0] / 2))
+        real_indices = np.arange(0, colors.shape[0], 2)
         return colors[real_indices]
 
     # Pass the colors through assign_colors to check correct format of RGBA

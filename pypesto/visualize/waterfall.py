@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,9 +7,9 @@ from mpl_toolkits.axes_grid1 import inset_locator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import ALL, WATERFALL_MAX_VALUE
+from ..C import ALL, COLOR, RGBA, WATERFALL_MAX_VALUE
 from ..result import Result
-from .clust_color import RGBA, assign_colors
+from .clust_color import assign_colors
 from .misc import (
     process_offset_y,
     process_result_list,
@@ -21,17 +20,17 @@ from .reference_points import ReferencePoint, create_references
 
 
 def waterfall(
-    results: Union[Result, Sequence[Result]],
-    ax: Optional[plt.Axes] = None,
-    size: Optional[tuple[float, float]] = (18.5, 10.5),
-    y_limits: Optional[tuple[float]] = None,
-    scale_y: Optional[str] = "log10",
-    offset_y: Optional[float] = None,
-    start_indices: Optional[Union[Sequence[int], int]] = None,
+    results: Result | Sequence[Result],
+    ax: plt.Axes | None = None,
+    size: tuple[float, float] | None = (18.5, 10.5),
+    y_limits: tuple[float] | None = None,
+    scale_y: str | None = "log10",
+    offset_y: float | None = None,
+    start_indices: Sequence[int] | int | None = None,
     n_starts_to_zoom: int = 0,
-    reference: Optional[Sequence[ReferencePoint]] = None,
-    colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
-    legends: Optional[Union[Sequence[str], str]] = None,
+    reference: Sequence[ReferencePoint] | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends: Sequence[str] | str | None = None,
     order_by_id: bool = False,
 ):
     """
@@ -122,7 +121,11 @@ def waterfall(
         max_len_fvals = np.max([max_len_fvals, *fvals_raw.shape])
 
         # remove colors where value is infinite if colors were passed on
-        if colors[j] is not None and fvals_raw.size == colors[j].shape[0]:
+        if (
+            colors[j] is not None
+            and isinstance(colors[j], np.ndarray)
+            and fvals_raw.size == colors[j].shape[0]
+        ):
             colors[j] = colors[j][
                 np.isfinite(np.transpose(fvals_raw)).flatten()
             ]
@@ -197,12 +200,12 @@ def waterfall(
 
 def waterfall_lowlevel(
     fvals,
-    ax: Optional[plt.Axes] = None,
-    size: Optional[tuple[float]] = (18.5, 10.5),
+    ax: plt.Axes | None = None,
+    size: tuple[float] | None = (18.5, 10.5),
     scale_y: str = "log10",
     offset_y: float = 0.0,
-    colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
-    legend_text: Optional[str] = None,
+    colors: RGBA | Sequence[RGBA] | None = None,
+    legend_text: str | None = None,
 ):
     """
     Plot waterfall plot using list of function values.
@@ -297,9 +300,9 @@ def waterfall_lowlevel(
 def process_offset_for_list(
     offset_y: float,
     results: Sequence[Result],
-    scale_y: Optional[str],
-    start_indices: Optional[Sequence[int]] = None,
-    references: Optional[Sequence[ReferencePoint]] = None,
+    scale_y: str | None,
+    start_indices: Sequence[int] | None = None,
+    references: Sequence[ReferencePoint] | None = None,
 ) -> tuple[list[np.ndarray], float]:
     """
     Compute common offset_y and add it to `fvals` of results.
