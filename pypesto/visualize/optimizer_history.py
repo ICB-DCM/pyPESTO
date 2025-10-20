@@ -1,14 +1,13 @@
 import logging
 import warnings
 from collections.abc import Iterable
-from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 from ..C import (
-    RGBA,
+    COLOR,
     TRACE_X_STEPS,
     TRACE_X_TIME,
     TRACE_Y_FVAL,
@@ -24,20 +23,22 @@ logger = logging.getLogger(__name__)
 
 
 def optimizer_history(
-    results: Union[Result, list[Result]],
-    ax: Optional[plt.Axes] = None,
+    results: Result | list[Result],
+    ax: plt.Axes | None = None,
     size: tuple = (18.5, 10.5),
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
     scale_y: str = "log10",
-    offset_y: Optional[float] = None,
-    colors: Optional[Union[RGBA, list[RGBA]]] = None,
-    y_limits: Optional[Union[float, list[float], np.ndarray]] = None,
-    start_indices: Optional[Union[int, list[int]]] = None,
-    reference: Optional[
-        Union[ReferencePoint, dict, list[ReferencePoint], list[dict]]
-    ] = None,
-    legends: Optional[Union[str, list[str]]] = None,
+    offset_y: float | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    y_limits: float | list[float] | np.ndarray | None = None,
+    start_indices: int | list[int] | None = None,
+    reference: ReferencePoint
+    | dict
+    | list[ReferencePoint]
+    | list[dict]
+    | None = None,
+    legends: str | list[str] | None = None,
 ) -> plt.Axes:
     """
     Plot history of optimizer.
@@ -51,7 +52,7 @@ def optimizer_history(
         Optimization result obtained by 'optimize.py' or list of those
     ax:
         Axes object to use.
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
     trace_x:
@@ -67,9 +68,8 @@ def optimizer_history(
     offset_y:
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Color recognized by matplotlib or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
     y_limits:
         maximum value to be plotted on the y-axis, or y-limits
@@ -128,12 +128,12 @@ def optimizer_history(
 def optimizer_history_lowlevel(
     vals: list[np.ndarray],
     scale_y: str = "log10",
-    colors: Optional[Union[RGBA, list[RGBA]]] = None,
-    ax: Optional[plt.Axes] = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    ax: plt.Axes | None = None,
     size: tuple = (18.5, 10.5),
     x_label: str = "Optimizer steps",
     y_label: str = "Objective value",
-    legend_text: Optional[str] = None,
+    legend_text: str | None = None,
 ) -> plt.Axes:
     """
     Plot optimizer history using list of numpy arrays.
@@ -144,9 +144,8 @@ def optimizer_history_lowlevel(
         list of 2xn-arrays (x_values and y_values of the trace)
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Color recognized by matplotlib or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
     ax:
         Axes object to use.
@@ -227,7 +226,7 @@ def optimizer_history_lowlevel(
 
 
 def get_trace(
-    result: Result, trace_x: Optional[str], trace_y: Optional[str]
+    result: Result, trace_x: str | None, trace_y: str | None
 ) -> list[np.ndarray]:
     """
     Get the values of the optimizer trace from the pypesto.Result object.
@@ -309,7 +308,7 @@ def get_trace(
 
 def get_vals(
     vals: list[np.ndarray],
-    scale_y: Optional[str],
+    scale_y: str | None,
     offset_y: float,
     trace_y: str,
     start_indices: Iterable[int],
@@ -416,7 +415,7 @@ def handle_options(
     vals: list[np.ndarray],
     trace_y: str,
     ref: list[ReferencePoint],
-    y_limits: Union[float, np.ndarray, None],
+    y_limits: float | np.ndarray | None,
     offset_y: float,
 ) -> plt.Axes:
     """
@@ -481,7 +480,7 @@ def handle_options(
 
 def sacess_history(
     histories: list[HistoryBase],
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Plot `SacessOptimizer` history.
 
