@@ -225,9 +225,7 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return sres
 
-    def sample(
-        self, n_samples: int = 1, rng: np.random.Generator = None
-    ) -> np.ndarray:
+    def sample(self, n_samples: int = 1, seed: int = None) -> np.ndarray:
         """
         Sample from the prior distribution.
 
@@ -235,16 +233,15 @@ class NegLogParameterPriors(ObjectiveBase):
         ----------
         n_samples:
             Number of samples to draw.
-        rng:
-            Random number generator. If None, uses np.random.default_rng().
+        seed:
+            Random seed for reproducibility.
 
         Returns
         -------
         samples:
             Array of shape (n_samples, n_parameters) containing samples from the prior.
         """
-        if rng is None:
-            rng = np.random.default_rng()
+        rng = np.random.default_rng(seed)
 
         # Determine the number of parameters
         if self.x_names is not None:
