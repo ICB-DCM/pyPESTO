@@ -1,13 +1,13 @@
 from collections.abc import Iterable, Sequence
-from numbers import Real
-from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import is_color_like
 
 from pypesto.util import delete_nan_inf
 
+from ..C import COLOR
 from ..result import Result
 from .clust_color import assign_colors, assign_colors_for_list
 from .misc import process_result_list, process_start_indices
@@ -15,11 +15,11 @@ from .misc import process_result_list, process_start_indices
 
 def optimization_run_properties_one_plot(
     results: Result,
-    properties_to_plot: Optional[list[str]] = None,
+    properties_to_plot: list[str] | None = None,
     size: tuple[float, float] = (18.5, 10.5),
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
-    colors: Optional[Union[list[float], list[list[float]]]] = None,
-    legends: Optional[Union[str, list[str]]] = None,
+    start_indices: int | Iterable[int] | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends: str | list[str] | None = None,
     plot_type: str = "line",
 ) -> matplotlib.axes.Axes:
     """
@@ -38,8 +38,8 @@ def optimization_run_properties_one_plot(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
     colors:
-        List of RGBA colors (one color per property in properties_to_plot),
-        or single RGBA color. If not set and one result, clustering is done
+        List of colors recognized by matplotlib colors (one color per property in properties_to_plot),
+        or single color. If not set and one result, clustering is done
         and colors are assigned automatically
     legends:
         Labels, one label per optimization property
@@ -79,12 +79,12 @@ def optimization_run_properties_one_plot(
 
     if colors is None:
         colors = assign_colors_for_list(len(properties_to_plot))
-    elif len(colors) == 4 and isinstance(colors[0], Real):
+    elif is_color_like(colors):
         colors = [colors]
 
     if len(colors) != len(properties_to_plot):
         raise ValueError(
-            "Number of RGBA colors should be the same as number "
+            "Number of colors should be the same as number "
             "of optimization properties to plot"
         )
 
@@ -121,12 +121,12 @@ def optimization_run_properties_one_plot(
 
 
 def optimization_run_properties_per_multistart(
-    results: Union[Result, Sequence[Result]],
-    properties_to_plot: Optional[list[str]] = None,
+    results: Result | Sequence[Result],
+    properties_to_plot: list[str] | None = None,
     size: tuple[float, float] = (18.5, 10.5),
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
-    colors: Optional[Union[list[float], list[list[float]]]] = None,
-    legends: Optional[Union[str, list[str]]] = None,
+    start_indices: int | Iterable[int] | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends: str | list[str] | None = None,
     plot_type: str = "line",
 ) -> dict[str, plt.Subplot]:
     """
@@ -145,8 +145,8 @@ def optimization_run_properties_per_multistart(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
     colors:
-        List of RGBA colors (one color per result in results),
-        or single RGBA color. If not set and one result, clustering is done
+        List of colors recognized by matplotlib (one color per result in results),
+        or single color. If not set and one result, clustering is done
         and colors are assigned automatically
     legends:
         Labels for line plots, one label per result object
@@ -204,7 +204,7 @@ def optimization_run_properties_per_multistart(
 
     for ax in axes.flat[num_subplot:]:
         ax.remove()
-    axes = dict(zip(range(num_subplot), axes.flat))
+    axes = dict(zip(range(num_subplot), axes.flat, strict=False))
     for idx, prop_name in enumerate(properties_to_plot):
         ax = axes[idx]
         optimization_run_property_per_multistart(
@@ -221,21 +221,21 @@ def optimization_run_properties_per_multistart(
 
 
 def optimization_run_property_per_multistart(
-    results: Union[Result, Sequence[Result]],
+    results: Result | Sequence[Result],
     opt_run_property: str,
-    axes: Optional[matplotlib.axes.Axes] = None,
+    axes: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] = (18.5, 10.5),
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
-    colors: Optional[Union[list[float], list[list[float]]]] = None,
-    legends: Optional[Union[str, list[str]]] = None,
+    start_indices: int | Iterable[int] | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends: str | list[str] | None = None,
     plot_type: str = "line",
 ) -> matplotlib.axes.Axes:
     """
     Plot stats for an optimization run property specified by opt_run_property.
 
     It is possible to plot a histogram or a line plot. In a line plot,
-    on the x axis are the numbers of the multistarts, where the multistarts are
-    ordered with respect to a function value. On the y axis of the line plot
+    on the x-axis are the numbers of the multistarts, where the multistarts are
+    ordered with respect to a function value. On the y-axis of the line plot
     the value of the corresponding parameter for each multistart is displayed.
 
     Parameters
@@ -254,8 +254,8 @@ def optimization_run_property_per_multistart(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
     colors:
-        List of RGBA colors (one color per result in results),
-        or single RGBA color. If not set and one result, clustering is done
+        List of colors recognized by matplotlib (one color per result in results),
+        or single color. If not set and one result, clustering is done
         and colors are assigned automatically
     legends:
         Labels for line plots, one label per result object
@@ -349,9 +349,9 @@ def stats_lowlevel(
     property_name: str,
     axis_label: str,
     ax: matplotlib.axes.Axes,
-    start_indices: Optional[Union[int, Iterable[int]]] = None,
-    color: Union[str, list[float], list[list[float]]] = "C0",
-    legend: Optional[str] = None,
+    start_indices: int | Iterable[int] | None = None,
+    color: COLOR | list[COLOR] | np.ndarray | None = "C0",
+    legend: str | None = None,
     plot_type: str = "line",
 ):
     """
@@ -364,15 +364,15 @@ def stats_lowlevel(
     property_name:
         name of the optimization result property which value should be plotted
     axis_label:
-        Label for the y axis of the line plot or x axis of the histogram
+        Label for the y-axis of the line plot or x-axis of the histogram
     ax:
         Axes object to use
     start_indices:
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
     color:
-        List of RGBA colors (length equal to the number of multistarts),
-        or single color, defined by a string or RGBA list
+        List of colors recognized by matplotlib (length equal to the number of multistarts),
+        or single color
         If not set, then for the line plot clustering is done and
         colors are assigned automatically
     legend:
