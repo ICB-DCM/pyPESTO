@@ -727,6 +727,14 @@ def test_profile_cis():
 
 
 @close_fig
+def test_nested_profile_cis():
+    """Test the profile approximate confidence interval visualization."""
+    result = create_profile_result()
+    visualize.profile_nested_cis(result, confidence_levels=[0.99, 0.95, 0.9])
+    visualize.profile_nested_cis(result, colors=["#5F9ED1", "#007ACC"])
+
+
+@close_fig
 def test_optimizer_history():
     # create the necessary results
     result_1 = create_optimization_history()
