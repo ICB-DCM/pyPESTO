@@ -182,13 +182,13 @@ def create_optimization_history():
     return result_with_trace
 
 
-def create_profile_result():
+def create_profile_result(scaling: float = 1):
     # create a pypesto result
     result = create_optimization_result()
 
     # write some dummy results for profiling
-    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15])
-    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1])
+    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15]) * scaling
+    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1]) * scaling
     x_path_1 = np.array(
         [
             [2.0, 2.1, 2.3, 2.5, 2.7, 2.9, 3.0],
@@ -201,8 +201,8 @@ def create_profile_result():
             [2.1, 2.2, 2.4, 2.5, 2.8, 2.9, 3.1],
         ]
     )
-    fval_path_1 = [4.0, 3.0, 1.0, 0.0, 1.5, 2.5, 5.0]
-    fval_path_2 = [4.5, 3.5, 1.5, 0.0, 1.3, 2.3, 4.3]
+    fval_path_1 = np.array([4.0, 3.0, 1.0, 0.0, 1.5, 2.5, 5.0]) * scaling
+    fval_path_2 = np.array([4.5, 3.5, 1.5, 0.0, 1.3, 2.3, 4.3]) * scaling
     tmp_result_1 = pypesto.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
     tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
@@ -300,7 +300,7 @@ def test_waterfall_with_nan_inf():
 @close_fig
 def test_waterfall_with_options():
     # create the necessary results
-    result_1 = create_optimization_result()
+    result_1 = create_optimization_result(n=8)
     result_2 = create_optimization_result()
 
     # alternative figure size and plotting options
@@ -651,13 +651,17 @@ def test_ensemble_identifiability():
 def test_profiles():
     # create the necessary results
     result_1 = create_profile_result()
-    result_2 = create_profile_result()
+    result_2 = create_profile_result(scaling=1.2)
 
     # test a standard call
     visualize.profiles(result_1)
 
     # test plotting of lists
     visualize.profiles([result_1, result_2])
+
+    # test colors
+    visualize.profiles(result_1, quality_colors=True)
+    visualize.profiles([result_1, result_2], colors=["C3", "C0"])
 
 
 @close_fig
@@ -700,7 +704,7 @@ def test_profiles_lowlevel():
         ]
     )
     fvals = [p1, p2]
-    visualize.profiles_lowlevel(fvals)
+    visualize.profiles_lowlevel(fvals, color="m")
 
 
 @close_fig
@@ -715,7 +719,7 @@ def test_profile_lowlevel():
             [0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15],
         ]
     )
-    visualize.profile_lowlevel(fvals=fvals)
+    visualize.profile_lowlevel(fvals=fvals, color="m")
 
 
 @close_fig
