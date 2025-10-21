@@ -159,6 +159,7 @@ class PetabStartpoints(CheckedStartpoints):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
+        priors=None,
     ) -> np.ndarray:
         """Actual startpoint sampling.
 
