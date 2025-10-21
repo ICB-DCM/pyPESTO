@@ -66,10 +66,10 @@ def process_result_list(
     # handle results according to their number
     if single_result:
         # assign colors and create list for later handling
-        if colors is None:
-            colors = [colors]
-        else:
+        if colors is not None and isinstance(colors, list):
             colors = [np.array(colors)]
+        else:
+            colors = [colors]
 
         # create list of legends for later handling
         if not isinstance(legends, list):

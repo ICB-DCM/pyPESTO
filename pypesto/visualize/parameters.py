@@ -199,7 +199,7 @@ def parameter_hist(
     bins: int | str = "auto",
     ax: Optional["matplotlib.Axes"] = None,
     size: tuple[float] | None = (18.5, 10.5),
-    color: list[float] | None = None,
+    color: COLOR | None = None,
     start_indices: int | list[int] | None = None,
 ):
     """
@@ -219,7 +219,7 @@ def parameter_hist(
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
     color:
-        RGBA color.
+        Color recognized by matplotlib.
     start_indices:
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
@@ -262,7 +262,7 @@ def parameters_lowlevel(
     x_axis_label: str = "Parameter value",
     ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = None,
-    colors: Sequence[np.ndarray | list[float]] | None = None,
+    colors: Sequence[np.ndarray | COLOR] | None = None,
     linestyle: str = "-",
     legend_text: str | None = None,
     balance_alpha: bool = True,
@@ -286,7 +286,7 @@ def parameters_lowlevel(
     size:
         see parameters
     colors:
-        One for each element in 'fvals'.
+        A single color recognized by matplotlib or a list of colors, one for each element in 'fvals'.
     linestyle:
         linestyle argument for parameter plot
     legend_text:

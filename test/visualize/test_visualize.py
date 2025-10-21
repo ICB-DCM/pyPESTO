@@ -332,6 +332,29 @@ def test_waterfall_with_options():
             y_limits=5.0,
         )
 
+    # test colors
+    for color in [
+        "C3",
+        "#5F8FD4",
+        [
+            "#5F8FD4",
+            "#C62A9F",
+            "#49EFA2",
+            "#F4B63C",
+            "#7D3DF1",
+            "#F2272A",
+            "#3EC9DD",
+        ],
+    ]:
+        visualize.waterfall(
+            result_2,
+            colors=color,
+        )
+    visualize.waterfall(
+        [result_1, result_2],
+        colors=["C3", "C7"],
+    )
+
     # Test with linear scale
     visualize.waterfall(
         result_1, reference=ref3, scale_y="lin", offset_y=0.2, y_limits=5.0
@@ -450,6 +473,23 @@ def test_parameters_lowlevel():
 
     # test no bounds
     visualize.parameters_lowlevel(xs, fvals)
+
+    # test setting colors
+    # colors from tableu 10
+    hex_colors = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+    ]
+    visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub, colors="m")
+    visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub, colors=hex_colors)
 
 
 @close_fig
@@ -876,7 +916,9 @@ def test_optimization_stats():
 
     visualize.optimization_run_properties_per_multistart([result_1, result_2])
 
-    visualize.optimization_run_properties_one_plot(result_1, ["time"])
+    visualize.optimization_run_properties_one_plot(
+        result_1, ["time"], colors="C0"
+    )
 
     visualize.optimization_run_properties_one_plot(
         result_1, ["n_fval", "n_grad", "n_hess"]
@@ -885,7 +927,7 @@ def test_optimization_stats():
     visualize.optimization_run_property_per_multistart(
         [result_1, result_2],
         "time",
-        colors=[[0.5, 0.9, 0.9, 0.3], [0.9, 0.7, 0.8, 0.5]],
+        colors=["g", "C1"],
         legends=["result1", "result2"],
         plot_type="both",
     )
@@ -942,15 +984,26 @@ def test_assign_colors():
     fvals = np.array(fvals)
     visualize.assign_colors(fvals)
     fvals = [0.01, 0.02, 1.0]
-    visualize.assign_colors(fvals, colors=[0.5, 0.9, 0.9, 0.3])
-    visualize.assign_colors(
-        fvals,
-        colors=[
-            [0.5, 0.9, 0.9, 0.3],
-            [0.5, 0.8, 0.8, 0.5],
-            [0.9, 0.1, 0.1, 0.1],
-        ],
-    )
+    for color in [
+        [0.5, 0.9, 0.9, 0.3],
+        "C1",
+        "#0f0f0f80",
+        "g",
+        "0.7",
+        "tab:purple",
+    ]:
+        visualize.assign_colors(fvals, colors=color)
+
+    color_list = [
+        [0.5, 0.9, 0.9, 0.3],
+        [0.5, 0.8, 0.8, 0.5],
+        [0.9, 0.1, 0.1, 0.1],
+    ]
+    for color in [color_list, np.array(color_list)]:
+        visualize.assign_colors(
+            fvals,
+            colors=color,
+        )
 
 
 def test_delete_nan_inf():
@@ -1183,6 +1236,7 @@ def test_visualize_optimized_model_fit_aggregated():
         for lb, ub in zip(
             petab_problem.parameter_df.lowerBound,
             petab_problem.parameter_df.upperBound,
+            strict=False,
         )
     ]
     petab_problem.parameter_df["objectivePriorParameters"] = (
