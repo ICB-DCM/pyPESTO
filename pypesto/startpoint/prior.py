@@ -1,7 +1,10 @@
 """Prior-based sampling."""
 
+from typing import Union
+
 import numpy as np
 
+from ..objective import NegLogParameterPriors, NegLogPriors
 from .base import CheckedStartpoints
 from .uniform import uniform
 
@@ -44,7 +47,7 @@ class PriorStartpoints(CheckedStartpoints):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
-        priors=None,
+        priors: Union[NegLogParameterPriors, NegLogPriors, None] = None,
     ) -> np.ndarray:
         """Sample startpoints from prior or uniform distribution.
 
@@ -95,7 +98,7 @@ class PriorStartpoints(CheckedStartpoints):
         samples: np.ndarray,
         lb: np.ndarray,
         ub: np.ndarray,
-        priors,
+        priors: Union[NegLogParameterPriors, NegLogPriors],
         prior_indices: set,
     ) -> np.ndarray:
         """Resample any samples that are out of bounds.
