@@ -146,6 +146,19 @@ class EnsemblePrediction:
         is often the case for large-scale data sets taken from online
         databases or similar.
         """
+
+        # Check if all conditions of a prediction have the same observables
+        n_conditions = len(self.prediction_results[0].conditions)
+        for i_cond in range(1, n_conditions):
+            if (
+                self.prediction_results[0].conditions[i_cond].output_ids
+                != self.prediction_results[0].conditions[i_cond - 1].output_ids
+            ):
+                raise ValueError(
+                    "Cannot condense prediction results to arrays, "
+                    "as not all conditions have the same observables."
+                )
+
         # prepare for storing results over all predictions
         output = []
         output_sensi = []
@@ -983,11 +996,16 @@ class Ensemble:
             for prediction_result in prediction_chunk
         ]
 
-        return EnsemblePrediction(
+        # Add the prediction to the ensemble predictions.
+        prediction = EnsemblePrediction(
             predictor=predictor,
             prediction_id=prediction_id,
             prediction_results=prediction_results,
         )
+
+        self.predictions.append(prediction)
+
+        return prediction
 
     def compute_summary(
         self, percentiles_list: Sequence[int] = (5, 20, 80, 95)

@@ -283,7 +283,9 @@ def get_prediction_dataset(
         numpy array containing the ensemble predictions
     """
     if isinstance(ens, Ensemble):
-        dataset = ens.predictions[prediction_index]
+        ensemble_prediction = ens.predictions[prediction_index]
+        ensemble_prediction.condense_to_arrays()
+        dataset = ensemble_prediction.prediction_arrays[OUTPUT].transpose()
     elif isinstance(ens, EnsemblePrediction):
         ens.condense_to_arrays()
         dataset = ens.prediction_arrays[OUTPUT].transpose()
