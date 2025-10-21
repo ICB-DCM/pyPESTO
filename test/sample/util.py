@@ -49,6 +49,19 @@ def gaussian_problem():
     def nllh(x):
         return -gaussian_llh(x)
 
+    objective = pypesto.Objective(fun=nllh)
+    problem = pypesto.Problem(
+        objective=objective, lb=LB_GAUSSIAN, ub=UB_GAUSSIAN
+    )
+    return problem
+
+
+def gaussian_problem_with_grad():
+    """Defines a simple Gaussian problem."""
+
+    def nllh(x):
+        return -gaussian_llh(x)
+
     objective = pypesto.Objective(fun=nllh, grad=gaussian_nllh_grad)
     problem = pypesto.Problem(
         objective=objective, lb=LB_GAUSSIAN, ub=UB_GAUSSIAN

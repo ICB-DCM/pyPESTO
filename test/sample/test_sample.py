@@ -32,6 +32,7 @@ from .util import (
     gaussian_nllh_grad,
     gaussian_nllh_hess,
     gaussian_problem,
+    gaussian_problem_with_grad,
     negative_log_posterior,
     negative_log_prior,
     rosenbrock_problem,
@@ -98,11 +99,15 @@ def sampler(request):
         )
 
 
-@pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
+@pytest.fixture(
+    params=["gaussian", "gaussian_with_grad", "gaussian_mixture", "rosenbrock"]
+)
 def problem(request):
     if request.param == "gaussian":
         return gaussian_problem()
-    if request.param == "gaussian_mixture":
+    elif request.param == "gaussian_with_grad":
+        return gaussian_problem_with_grad()
+    elif request.param == "gaussian_mixture":
         return gaussian_mixture_problem()
     elif request.param == "rosenbrock":
         return rosenbrock_problem()
@@ -113,6 +118,11 @@ def test_pipeline(sampler, problem):
     if isinstance(sampler, sample.MalaSampler):
         if not problem.objective.has_grad:
             pytest.skip("MALA requires gradient information.")
+    if isinstance(sampler, sample.EmceeSampler):
+        if problem.objective.has_grad:
+            pytest.skip(
+                "EMCEE fails to converge when started in optimal point with gradient."
+            )
     # optimization
     optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     result = optimize.minimize(
