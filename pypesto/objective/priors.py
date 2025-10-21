@@ -36,7 +36,10 @@ class NegLogParameterPriors(ObjectiveBase):
     {'index': [int],
      'density_fun': [Callable],
      'density_dx': [Callable],
-     'density_ddx': [Callable]}
+     'density_ddx': [Callable],
+     'type': [str],  # e.g. 'normal', 'uniform', 'parameterScaleNormal', 'laplace', ...
+     'parameters': [[#1, #2]],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab)
+     }
 
     A prior instance can be added to e.g. an objective, that gives the
     likelihood, by an AggregatedObjective.
