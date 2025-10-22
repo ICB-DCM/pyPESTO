@@ -171,7 +171,7 @@ class Problem:
             if x_priors_defs is None:
                 startpoint_method = uniform
             else:
-                startpoint_method = PriorStartpoints
+                startpoint_method = PriorStartpoints()
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
         # save python and pypesto version

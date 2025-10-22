@@ -95,6 +95,10 @@ class ParallelTemperingSampler(Sampler):
         n_chains = len(self.samplers)
         if isinstance(x0, list):
             x0s = x0
+            if len(x0s) != n_chains and isinstance(x0s[0], np.ndarray):
+                raise ValueError(
+                    "If x0 is a list, its length must match the number of chains."
+                )
         else:
             if self.options["same_start_point"]:
                 x0s = [x0 for _ in range(n_chains)]

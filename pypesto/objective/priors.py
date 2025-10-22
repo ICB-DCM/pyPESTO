@@ -263,7 +263,7 @@ class NegLogParameterPriors(ObjectiveBase):
             if prior_type is None or prior_parameters is None:
                 raise ValueError(
                     "Prior type and parameters must be specified for sampling. "
-                    "Use get_parameter_prior_dict to create proper prior dictionaries."
+                    "Use 'get_parameter_prior_dict' to create proper prior dictionaries."
                 )
 
             samples[:, index] = _sample_from_prior(
