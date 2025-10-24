@@ -2,6 +2,7 @@ import logging
 import warnings
 from collections.abc import Iterable
 from numbers import Number
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -24,33 +25,36 @@ from ..result import Result
 from ..util import assign_clusters, delete_nan_inf
 from .clust_color import assign_colors_for_list
 
+if TYPE_CHECKING:
+    from matplotlib.pyplot import Axes
+
 logger = logging.getLogger(__name__)
 
 
 def process_result_list(
     results: Result | list[Result],
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
-    legends=None,
+    legends: str | list[str] = None,
 ) -> tuple[list[Result], list[COLOR], list[str]]:
     """
     Assign colors and legends to a list of results, check user provided lists.
 
     Parameters
     ----------
-    results: list or pypesto.Result
+    results:
         list of pypesto.Result objects or a single pypesto.Result
-    colors: list, optional
+    colors:
         list of colors recognized by matplotlib, or single color
-    legends: str or list
+    legends:
         labels for line plots
 
     Returns
     -------
-    results: list of pypesto.Result
+    results:
        list of pypesto.Result objects
-    colors: list of colors
+    colors:
         One for each element in 'results'.
-    legends: list of str
+    legends:
         labels for line plots
     """
     # check how many results were passed
@@ -151,20 +155,23 @@ def process_offset_y(
     return 1.0 - min_val
 
 
-def process_y_limits(ax, y_limits):
+def process_y_limits(
+    ax: Axes,
+    y_limits: None | Iterable[float] | np.ndarray,
+) -> Axes:
     """
     Apply user specified limits of y-axis.
 
     Parameters
     ----------
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
-    y_limits: ndarray
+    y_limits:
        y_limits, minimum and maximum, for current axes object
 
     Returns
     -------
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
     """
     # apply y-limits, if they were specified by the user
