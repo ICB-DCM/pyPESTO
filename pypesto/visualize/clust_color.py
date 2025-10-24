@@ -8,18 +8,20 @@ from pypesto.util import assign_clusters
 from ..C import COLOR
 
 
-def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
+def assign_clustered_colors(
+    vals: np.ndarray, balance_alpha: bool = True, highlight_global: bool = True
+):
     """
     Cluster and assign colors.
 
     Parameters
     ----------
-    vals: numeric list or array
+    vals:
         List to be clustered and assigned colors.
-    balance_alpha: bool (optional)
+    balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
-        avoid overplotting (default: True)
-    highlight_global: bool (optional)
+        avoid overplotting
+    highlight_global:
         flag indicating whether global optimum should be highlighted
 
     Returns
@@ -98,17 +100,14 @@ def assign_colors(
 
     Parameters
     ----------
-    vals: numeric list or array
+    vals:
         List to be clustered and assigned colors.
-
-    colors: list, or COLOR, optional
+    colors:
         list of colors recognized by matplotlib, or single color
-
-    balance_alpha: bool (optional)
+    balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
-        avoid overplotting (default: True)
-
-    highlight_global: bool (optional)
+        avoid overplotting
+    highlight_global:
         flag indicating whether global optimum should be highlighted
 
     Returns
