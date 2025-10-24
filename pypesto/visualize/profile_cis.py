@@ -11,6 +11,7 @@ from matplotlib.patches import Patch, Rectangle
 from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
 
+# kwargs passed to `matplotlib.axes.Axes.errorbar` for plotting confidence levels
 cis_visualization_settings = {
     "capsize": 5,
     "linewidth": 2,
