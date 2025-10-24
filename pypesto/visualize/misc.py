@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import warnings
 from collections.abc import Iterable
@@ -34,7 +36,7 @@ logger = logging.getLogger(__name__)
 def process_result_list(
     results: Result | list[Result],
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
-    legends: str | list[str] = None,
+    legends: str | list[str] | None = None,
 ) -> tuple[list[Result], list[COLOR], list[str]]:
     """
     Assign colors and legends to a list of results, check user provided lists.
