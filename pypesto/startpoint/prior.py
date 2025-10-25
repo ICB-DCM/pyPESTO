@@ -1,5 +1,6 @@
 """Prior-based sampling."""
 
+import logging
 from typing import Union
 
 import numpy as np
@@ -7,6 +8,8 @@ import numpy as np
 from ..objective import NegLogParameterPriors, NegLogPriors
 from .base import CheckedStartpoints
 from .uniform import uniform
+
+logger = logging.getLogger(__name__)
 
 
 class PriorStartpoints(CheckedStartpoints):
@@ -164,5 +167,9 @@ class PriorStartpoints(CheckedStartpoints):
             # If we still have out-of-bounds samples after max iterations,
             # clip them to bounds
             samples = np.clip(samples, lb_reshaped, ub_reshaped)
+            logger.warning(
+                "Maximum startpoint resampling iterations reached. "
+                "Some samples were clipped to bounds."
+            )
 
         return samples

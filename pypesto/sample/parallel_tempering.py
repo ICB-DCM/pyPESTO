@@ -85,7 +85,7 @@ class ParallelTemperingSampler(Sampler):
             "show_progress": None,
             "beta_init": BETA_DECAY,  # replaced in adaptive PT
             "alpha": 0.3,
-            "same_start_point": False,
+            "warm_start_parallel_chains": 0.75,
         }
 
     def initialize(
@@ -100,17 +100,24 @@ class ParallelTemperingSampler(Sampler):
                     "If x0 is a list, its length must match the number of chains."
                 )
         else:
-            if self.options["same_start_point"]:
-                x0s = [x0 for _ in range(n_chains)]
-            else:
+            if self.options["warm_start"] < 1.0:
+                logger.info(
+                    f"Initializing parallel chains with a combination of the starting point "
+                    f"and prior samples with weight: {self.options['warm_start']}."
+                )
                 get_start_params = PriorStartpoints(check_fval=True)
-                x0s = get_start_params.sample(
+                x0_prior = get_start_params.sample(
                     n_starts=n_chains - 1,
                     lb=problem.lb,
                     ub=problem.ub,
                     priors=problem.x_priors,
+                )[0]
+                x0s = (
+                    self.options["warm_start"] * x0
+                    + (1 - self.options["warm_start"]) * x0_prior
                 )
-                x0s = [x0] + list(x0s)
+            else:
+                x0s = [x0 for _ in range(n_chains)]
         for sampler, x0 in zip(self.samplers, x0s):
             _problem = copy.deepcopy(problem)
             sampler.initialize(_problem, x0)
