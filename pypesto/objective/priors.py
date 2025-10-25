@@ -246,14 +246,9 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         rng = np.random.default_rng(seed)
 
-        # Determine the number of parameters
-        if self.x_names is not None:
-            n_parameters = len(self.x_names)
-        else:
-            # Find the maximum index in prior_list
-            n_parameters = max(prior["index"] for prior in self.prior_list) + 1
-
-        samples = np.zeros((n_samples, n_parameters))
+        # Find the maximum index in prior_list
+        n_parameters = max(prior["index"] for prior in self.prior_list) + 1
+        samples = np.zeros((n_samples, n_parameters)) * np.nan
 
         for prior in self.prior_list:
             index = prior["index"]
@@ -417,7 +412,7 @@ def get_parameter_prior_dict(
 
 def _prior_densities(
     prior_type: str,
-    prior_parameters: np.array,
+    prior_parameters: np.ndarray,
 ) -> [
     Callable,
     Callable,
@@ -436,7 +431,7 @@ def _prior_densities(
     the vector. If a reformulation as residual is not possible, the respective
     entries will be `None`.
 
-    Currently the following distributions are supported:
+    Currently, the following distributions are supported:
         * uniform:
             Uniform distribution on transformed parameter scale.
         * parameterScaleUniform:
