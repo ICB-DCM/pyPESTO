@@ -85,7 +85,7 @@ class ParallelTemperingSampler(Sampler):
             "show_progress": None,
             "beta_init": BETA_DECAY,  # replaced in adaptive PT
             "alpha": 0.3,
-            "warm_start_parallel_chains": 0.75,
+            "warm_start_parallel_chains": 0.9,
         }
 
     def initialize(
@@ -107,7 +107,7 @@ class ParallelTemperingSampler(Sampler):
                 )
                 get_start_params = PriorStartpoints(check_fval=True)
                 x0_prior = get_start_params.sample(
-                    n_starts=n_chains - 1,
+                    n_starts=n_chains,
                     lb=problem.lb,
                     ub=problem.ub,
                     priors=problem.x_priors,
