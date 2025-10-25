@@ -100,10 +100,10 @@ class ParallelTemperingSampler(Sampler):
                     "If x0 is a list, its length must match the number of chains."
                 )
         else:
-            if self.options["warm_start"] < 1.0:
+            if self.options["warm_start_parallel_chains"] < 1.0:
                 logger.info(
                     f"Initializing parallel chains with a combination of the starting point "
-                    f"and prior samples with weight: {self.options['warm_start']}."
+                    f"and prior samples with weight: {self.options['warm_start_parallel_chains']}."
                 )
                 get_start_params = PriorStartpoints(check_fval=True)
                 x0_prior = get_start_params.sample(
@@ -111,10 +111,11 @@ class ParallelTemperingSampler(Sampler):
                     lb=problem.lb,
                     ub=problem.ub,
                     priors=problem.x_priors,
-                )[0]
+                )
                 x0s = (
-                    self.options["warm_start"] * x0
-                    + (1 - self.options["warm_start"]) * x0_prior
+                    self.options["warm_start_parallel_chains"] * x0
+                    + (1 - self.options["warm_start_parallel_chains"])
+                    * x0_prior
                 )
             else:
                 x0s = [x0 for _ in range(n_chains)]
