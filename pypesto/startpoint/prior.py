@@ -74,22 +74,20 @@ class PriorStartpoints(CheckedStartpoints):
             samples = np.zeros((n_starts, n_par))
 
             # Identify which parameters have priors
-            prior_indices = {prior["index"] for prior in priors.prior_list}
+            # prior_samples_dict = {prior["index"]: np.zeros(n_starts) for prior in priors.prior_list}
 
             # Sample from priors where available
-            prior_samples = priors.sample(n_samples=n_starts)
-            for i in prior_indices:
-                samples[:, i] = prior_samples[:, i]
+            prior_samples_dict = priors.sample(n_samples=n_starts)
+            for i in prior_samples_dict.keys():
+                samples[:, i] = prior_samples_dict[i]
 
             # Fill in uniform samples for parameters without priors
             for i in range(n_par):
-                if i not in prior_indices:
+                if i not in prior_samples_dict.keys():
                     samples[:, i] = np.random.uniform(lb[i], ub[i], n_starts)
 
             # Check bounds and resample out-of-bounds values
-            samples = self._resample_out_of_bounds(
-                samples, lb, ub, priors, prior_indices
-            )
+            samples = self._resample_out_of_bounds(samples, lb, ub, priors)
 
             return samples
 
@@ -102,7 +100,6 @@ class PriorStartpoints(CheckedStartpoints):
         lb: np.ndarray,
         ub: np.ndarray,
         priors: Union[NegLogParameterPriors, NegLogPriors],
-        prior_indices: set,
     ) -> np.ndarray:
         """Resample any samples that are out of bounds.
 
@@ -112,7 +109,6 @@ class PriorStartpoints(CheckedStartpoints):
         lb: Lower parameter bound.
         ub: Upper parameter bound.
         priors: Parameter priors for resampling.
-        prior_indices: Set of parameter indices that have priors.
 
         Returns
         -------
@@ -143,13 +139,15 @@ class PriorStartpoints(CheckedStartpoints):
             new_samples = np.zeros((n_resample, n_par))
 
             # Generate new samples from priors
-            prior_samples = priors.sample(n_samples=n_resample)
-            for i in prior_indices:
-                new_samples[:, i] = prior_samples[:, i]
+            prior_samples_dict = priors.sample(n_samples=n_resample)
+            for i in prior_samples_dict.keys():
+                new_samples[:, i] = prior_samples_dict[i]
+            # for i in prior_indices:
+            #    new_samples[:, i] = prior_samples[:, i]
 
             # Fill in uniform samples for parameters without priors
             for i in range(n_par):
-                if i not in prior_indices:
+                if i not in prior_samples_dict.keys():
                     new_samples[:, i] = np.random.uniform(
                         lb[i], ub[i], n_resample
                     )

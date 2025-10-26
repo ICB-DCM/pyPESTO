@@ -228,7 +228,9 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return sres
 
-    def sample(self, n_samples: int = 1, seed: int = None) -> np.ndarray:
+    def sample(
+        self, n_samples: int = 1, seed: int = None
+    ) -> dict[str, np.ndarray]:
         """
         Sample from the prior distribution.
 
@@ -242,13 +244,17 @@ class NegLogParameterPriors(ObjectiveBase):
         Returns
         -------
         samples:
-            Array of shape (n_samples, n_parameters) containing samples from the prior.
+            Dictionary of samples from the prior distributions for each
+            parameter index.
         """
         rng = np.random.default_rng(seed)
 
         # Find the maximum index in prior_list
-        n_parameters = max(prior["index"] for prior in self.prior_list) + 1
-        samples = np.zeros((n_samples, n_parameters)) * np.nan
+        prior_samples_dict = {
+            prior["index"]: np.zeros(n_samples) for prior in self.prior_list
+        }
+        # n_parameters = max(prior["index"] for prior in self.prior_list) + 1
+        # samples = np.zeros((n_samples, n_parameters)) * np.nan
 
         for prior in self.prior_list:
             index = prior["index"]
@@ -261,11 +267,11 @@ class NegLogParameterPriors(ObjectiveBase):
                     "Use 'get_parameter_prior_dict' to create proper prior dictionaries."
                 )
 
-            samples[:, index] = _sample_from_prior(
+            prior_samples_dict[index] = _sample_from_prior(
                 prior_type, prior_parameters, n_samples, rng
             )
 
-        return samples
+        return prior_samples_dict
 
 
 def get_parameter_prior_dict(
