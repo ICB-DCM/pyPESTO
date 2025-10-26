@@ -195,9 +195,11 @@ def test_sample(prior_type_list, scale):
     test_prior = NegLogParameterPriors(prior_list)
 
     n_samples = 100
-    samples = test_prior.sample(n_samples=n_samples)
+    sample_dict = test_prior.sample(n_samples=n_samples)
 
-    assert samples.shape == (n_samples, len(prior_type_list))
+    for iprior in range(len(prior_type_list)):
+        samples = sample_dict[iprior]
+        assert len(samples) == n_samples
 
 
 def lin_to_scaled(x: float, scale: str):
