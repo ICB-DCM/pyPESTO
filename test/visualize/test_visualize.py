@@ -1236,7 +1236,7 @@ def test_visualize_optimized_model_fit_aggregated():
         for lb, ub in zip(
             petab_problem.parameter_df.lowerBound,
             petab_problem.parameter_df.upperBound,
-            strict=False,
+            strict=True,
         )
     ]
     petab_problem.parameter_df["objectivePriorParameters"] = (

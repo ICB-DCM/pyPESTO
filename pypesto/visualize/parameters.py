@@ -438,7 +438,7 @@ def handle_inputs(
 
     # get labels as x_names and scales
     x_labels = list(
-        zip(result.problem.x_names, result.problem.x_scales, strict=False)
+        zip(result.problem.x_names, result.problem.x_scales, strict=True)
     )
 
     # handle fixed and free indices
@@ -458,12 +458,12 @@ def handle_inputs(
         lb = np.concatenate([lb, inner_lb])
         ub = np.concatenate([ub, inner_ub])
         inner_xs_labels = list(
-            zip(inner_xs_names, inner_xs_scales, strict=False)
+            zip(inner_xs_names, inner_xs_scales, strict=True)
         )
         x_labels = x_labels + inner_xs_labels
         xs_out = [
             np.concatenate([x, inner_x]) if x is not None else None
-            for x, inner_x in zip(xs_out, inner_xs_out, strict=False)
+            for x, inner_x in zip(xs_out, inner_xs_out, strict=True)
         ]
 
     # If all the scales are the same, put it in the x_axis_label

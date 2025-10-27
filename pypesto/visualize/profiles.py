@@ -111,7 +111,7 @@ def profiles(
                 x_labels = [
                     name
                     for name, fval in zip(
-                        result.problem.x_names, fvals, strict=False
+                        result.problem.x_names, fvals, strict=True
                     )
                     if fval is not None
                 ]
@@ -256,7 +256,7 @@ def profiles_lowlevel(
 
     counter = 0
     for i_plot, (fval, lb, ub) in enumerate(
-        zip(fvals, lb_full, ub_full, strict=False)
+        zip(fvals, lb_full, ub_full, strict=True)
     ):
         # if we have empty profiles and more axes than profiles: skip
         if n_plots != n_fvals and fval is None:
@@ -377,7 +377,7 @@ def profile_lowlevel(
         if not single_color:
             # Create a mapping from (x, ratio) to color
             point_to_color = dict(
-                zip(zip(xs, ratios, strict=False), color, strict=False)
+                zip(zip(xs, ratios, strict=True), color, strict=True)
             )
         else:
             point_to_color = None

@@ -204,7 +204,7 @@ def optimization_run_properties_per_multistart(
 
     for ax in axes.flat[num_subplot:]:
         ax.remove()
-    axes = dict(zip(range(num_subplot), axes.flat, strict=False))
+    axes = dict(zip(range(num_subplot), axes.flat, strict=True))
     for idx, prop_name in enumerate(properties_to_plot):
         ax = axes[idx]
         optimization_run_property_per_multistart(
