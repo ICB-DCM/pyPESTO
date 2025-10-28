@@ -59,7 +59,7 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     no_clusters = np.where(cluster_size == 1)[0]
     real_clusters = np.unique(np.where(cluster_size > 1)[0])
 
-    # assign transparency valuesaccording to cluster size, if wanted
+    # assign transparency values according to cluster size, if wanted
     if balance_alpha:
         # set minimal alpha value to avoid non-visible colors
         min_alpha = 0.01
