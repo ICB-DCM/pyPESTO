@@ -623,8 +623,8 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
         if rr is None:
             if roadrunner is None:
                 raise ImportError(
-                    "The `roadrunner` package is required for this objective "
-                    "function."
+                    "The `roadrunner` package (on PyPI: `libroadrunner`) "
+                    "is required for this objective function."
                 )
             rr = roadrunner.RoadRunner()
         self.rr = rr

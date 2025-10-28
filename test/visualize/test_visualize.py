@@ -2,6 +2,7 @@ import functools
 import logging
 import os
 from collections.abc import Sequence
+from copy import deepcopy
 from functools import wraps
 from pathlib import Path
 
@@ -285,6 +286,15 @@ def test_waterfall_with_nan_inf():
 
     # test plotting of lists
     visualize.waterfall([result_1, result_2])
+
+    # test all-non-finite
+    result_no_finite = deepcopy(result_1)
+    result_no_finite.optimize_result.list = [
+        or_
+        for or_ in result_no_finite.optimize_result.list
+        if not np.isfinite(or_.fval)
+    ]
+    visualize.waterfall(result_no_finite)
 
 
 @close_fig
@@ -714,6 +724,14 @@ def test_profile_cis():
     result = create_profile_result()
     visualize.profile_cis(result, confidence_level=0.99)
     visualize.profile_cis(result, show_bounds=True, profile_indices=[0])
+
+
+@close_fig
+def test_nested_profile_cis():
+    """Test the profile approximate confidence interval visualization."""
+    result = create_profile_result()
+    visualize.profile_nested_cis(result, confidence_levels=[0.99, 0.95, 0.9])
+    visualize.profile_nested_cis(result, colors=["#5F9ED1", "#007ACC"])
 
 
 @close_fig

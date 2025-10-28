@@ -48,7 +48,7 @@ def profiles(
         least a function value fval.
     colors:
         List of colors, or single color. If multiple colors are passed, their
-        number needs to corresponds to either the number of results or the
+        number needs to correspond to either the number of results or the
         number of profile_list_ids. Cannot be provided if quality_colors is set to True.
     legends:
         Labels for line plots, one label per result object.
