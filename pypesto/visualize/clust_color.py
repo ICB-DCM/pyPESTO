@@ -61,15 +61,13 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
 
     # assign transparency valuesaccording to cluster size, if wanted
     if balance_alpha:
-        # set minimal alpha value to avoid non-visible colors
-        min_alpha = 0.01
         # assign neutral color, add 1 for avoiding division by zero
         grey = [0.7, 0.7, 0.7, min(1.0, 5.0 / (no_clusters.size + 1.0))]
 
         # reduce alpha level depend on size of each cluster
         n_cluster_size = np.delete(cluster_size, no_clusters)
         for icluster in range(n_clusters):
-            color_list[icluster][3] = min(1.0, max(5.0 / n_cluster_size[icluster], min_alpha))
+            color_list[icluster][3] = min(1.0, 5.0 / n_cluster_size[icluster])
     else:
         # assign neutral color
         grey = [0.7, 0.7, 0.7, 1.0]
