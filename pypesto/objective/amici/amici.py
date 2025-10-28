@@ -38,6 +38,13 @@ from .amici_util import (
 if TYPE_CHECKING:
     from ...hierarchical import InnerCalculatorCollector
 
+    try:
+        import amici
+        import amici.petab.petab_importer
+        import pandas as pd
+        from amici.petab.parameter_mapping import ParameterMapping
+    except ImportError:
+        pass
 try:
     import amici.sim.sundials as asd
     from amici.importers.petab.v1.parameter_mapping import ParameterMapping
@@ -370,7 +377,7 @@ class AmiciObjective(ObjectiveBase):
                 f.write(state["amici_solver_settings"])
             # read in solver settings
             try:
-                asd.read_solver_settings_from_hdf5(_file, solver)
+                amici.read_solver_settings_from_hdf5(_file, solver)
             except AttributeError as err:
                 if not err.args:
                     err.args = ("",)
@@ -389,7 +396,7 @@ class AmiciObjective(ObjectiveBase):
         self.edatas = edatas
 
         self.apply_custom_timepoints()
-        asd.set_model_settings(
+        amici.set_model_settings(
             self.amici_model,
             state["AMICI_model_settings"],
         )
@@ -400,6 +407,7 @@ class AmiciObjective(ObjectiveBase):
         mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
+        import amici
 
         if not sensi_orders:
             return True
@@ -411,7 +419,7 @@ class AmiciObjective(ObjectiveBase):
             max_sensi_order = 1
             # check whether it is ok to request 2nd order
             sensi_mthd = self.amici_solver.get_sensitivity_method()
-            mthd_fwd = asd.SensitivityMethod.forward
+            mthd_fwd = amici.SensitivityMethod.forward
             if mode == MODE_FUN and (
                 self.amici_model.get_second_order_mode()
                 or (sensi_mthd == mthd_fwd and self.fim_for_hess)
@@ -431,9 +439,9 @@ class AmiciObjective(ObjectiveBase):
         sensi_orders: tuple[int, ...],
         mode: ModeType,
         return_dict: bool = False,
-        edatas: Sequence[asd.ExpData] = None,
+        edatas: Sequence[amici.ExpData] = None,
         parameter_mapping: ParameterMapping = None,
-        amici_reporting: asd.RDataReporting | None = None,
+        amici_reporting: amici.RDataReporting | None = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -443,7 +451,7 @@ class AmiciObjective(ObjectiveBase):
         result:
             A dict containing the results.
         """
-        import amici.sim.sundials as asd
+        import amici
 
         x_dct = self.par_arr_to_dct(x)
 
@@ -456,13 +464,13 @@ class AmiciObjective(ObjectiveBase):
             if return_dict:
                 # Use AMICI full reporting if amici.ReturnDatas are returned
                 # and no other reporting mode was set
-                amici_reporting = asd.RDataReporting.full
+                amici_reporting = amici.RDataReporting.full
             else:
                 # Else, only ask amici to compute required quantities
                 amici_reporting = (
-                    asd.RDataReporting.likelihood
+                    amici.RDataReporting.likelihood
                     if mode == MODE_FUN
-                    else asd.RDataReporting.residuals
+                    else amici.RDataReporting.residuals
                 )
         self.amici_solver.set_return_data_reporting_mode(amici_reporting)
 
@@ -555,7 +563,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         condition_ix: int,
         x_dct: dict,
-        rdata: asd.ReturnData,
+        rdata: amici.ReturnData,
     ) -> None:
         """
         Store condition parameter, steadystate and steadystate sensitivity.
@@ -697,7 +705,7 @@ class AmiciObjective(ObjectiveBase):
 
         id_to_val = {
             self.x_ids[x_idx]: x_val
-            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals, strict=True)
+            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals)
         }
         for condition_mapping in self.parameter_mapping:
             for (
