@@ -104,7 +104,7 @@ class Problem:
         x_guesses: Optional[Iterable[float]] = None,
         x_names: Optional[Iterable[str]] = None,
         x_scales: Optional[Iterable[str]] = None,
-        x_priors_defs: Union[NegLogParameterPriors, NegLogPriors, None] = None,
+        x_priors_defs: NegLogParameterPriors | NegLogPriors | None = None,
         lb_init: Union[np.ndarray, list[float], None] = None,
         ub_init: Union[np.ndarray, list[float], None] = None,
         copy_objective: bool = True,
