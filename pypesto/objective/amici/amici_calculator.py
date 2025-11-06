@@ -270,14 +270,28 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
                 # TODO: to amici -- set sllh even if llh is nan?
                 snllh = np.full(len(x_ids), np.nan)
             else:
-                # llh to nllh, dict to array
-                snllh = -np.array(
-                    [
-                        result["sllh"][x_id]  # if x_id in res["sllh"] else 0.0
-                        for x_id in x_ids
-                        if x_id in x_dct.keys()
-                    ]
-                )
+                try:
+                    # llh to nllh, dict to array
+                    snllh = -np.array(
+                        [
+                            result["sllh"][
+                                x_id
+                            ]  # if x_id in res["sllh"] else 0.0
+                            for x_id in x_ids
+                            if x_id in x_dct.keys()
+                        ]
+                    )
+                except KeyError as e:
+                    # A requested sensitivity is missing.
+                    # Probably the affected parameter is a fixed parameter
+                    # in amici instead of a sensitivity parameter
+                    # (non_estimated_parameters_as_constants=True ?).
+                    # In this case, only max(sensi_orders) == 0 is supported
+                    # unless this parameter is fixed in the pypesto problem.
+                    raise ValueError(
+                        f"Cannot compute gradient, missing entry for "
+                        f"{set(result['sllh']) - set(x_dct.keys())}."
+                    ) from e
         if 2 in sensi_orders:
             if result["s2llh"] is None and np.isnan(result["llh"]):
                 # TODO: to amici -- set s2llh even if llh is nan?

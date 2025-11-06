@@ -309,6 +309,7 @@ def test_petab_v2_boehm():
     petab_problem = v2.Problem.from_yaml(
         models.get_problem_yaml_path(problem_id)
     )
+    expected_fval_nominal = 138.22199693517703
 
     # create model
     importer = PetabImporter(petab_problem)
@@ -316,6 +317,7 @@ def test_petab_v2_boehm():
     assert problem.x_names == petab_problem.x_ids
     assert problem.dim == petab_problem.n_estimated == 9
     assert problem.dim_full == len(petab_problem.parameters) == 11
+    # petab-non-estimated parameters are fixed in the pypesto problem
     assert problem.x_fixed_indices == [
         i for i, p in enumerate(petab_problem.parameters) if not p.estimate
     ]
@@ -325,28 +327,46 @@ def test_petab_v2_boehm():
 
     # evaluate objective at nominal parameters
     fval = problem.objective(np.asarray(petab_problem.x_nominal_free))
-    assert np.isclose(fval, 138.22199693517703)
+    assert np.isclose(fval, expected_fval_nominal)
 
     # deepcopy works?
     problem_deepcopy = copy.deepcopy(problem)
     fval = problem_deepcopy.objective(np.asarray(petab_problem.x_nominal_free))
-    assert np.isclose(fval, 138.22199693517703)
+    assert np.isclose(fval, expected_fval_nominal)
 
     # pickling works?
     problem_pickled = pickle.loads(pickle.dumps(problem))  # noqa: S301
     fval = problem_pickled.objective(np.asarray(petab_problem.x_nominal_free))
-    assert np.isclose(fval, 138.22199693517703)
+    assert np.isclose(fval, expected_fval_nominal)
 
     # gradient works?
     fval, grad = problem.objective(
         np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
     )
-    assert np.isclose(fval, 138.22199693517703)
+    assert np.isclose(fval, expected_fval_nominal)
     assert len(grad) == petab_problem.n_estimated
 
-    # TODO: fixing parameters, ...
-    # problem.fix_parameters(...)
-    # problem.unfix_parameters(...)
+    # fixing parameters, ...
+    problem.unfix_parameters(petab_problem.x_fixed_indices)
+    assert problem.dim == len(petab_problem.parameters)
+    with pytest.raises(ValueError, match="Cannot compute gradient"):
+        # cannot compute sensitivities for fixed parameters
+        problem.objective(
+            np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
+        )
+    fval = problem.objective(np.asarray(petab_problem.x_nominal))
+    assert np.isclose(fval, expected_fval_nominal)
+    # re-fixing parameters
+    problem.fix_parameters(
+        petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
+    )
+    assert problem.dim == petab_problem.n_estimated
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+
     # TODO mode=res/fun,
     # TODO hess/fim...
 
