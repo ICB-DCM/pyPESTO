@@ -208,12 +208,6 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
         """
         amici_solver = self.petab_simulator._solver
 
-        if 2 in sensi_orders:
-            raise NotImplementedError(
-                "Second order sensitivities are not yet supported for "
-                "PEtab v2."
-            )
-
         if mode != MODE_FUN:
             raise NotImplementedError(
                 "Only function value mode is currently supported for "
@@ -232,9 +226,22 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
         else:
             amici_solver.set_sensitivity_order(sensi_order)
 
+        dim = len(x_ids)
+
         # run amici simulation
-        res = self.petab_simulator.simulate(x_dct)
-        rdatas = res[RDATAS]
+        result = self.petab_simulator.simulate(x_dct)
+        rdatas = result[RDATAS]
+
+        # check if the simulation failed
+        if any(rdata["status"] < 0.0 for rdata in rdatas):
+            return get_error_output(
+                amici_model, edatas, rdatas, sensi_orders, mode, dim
+            )
+
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        nllh = -result["llh"]
 
         if (
             not self._known_least_squares_safe
@@ -256,28 +263,34 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
                 )
             self._known_least_squares_safe = True  # don't check this again
 
-        grad = None
+        # TODO: compute res, sres
+
         if 1 in sensi_orders:
-            if res["sllh"] is None and np.isnan(res["llh"]):
-                # TODO: to amici -- set sllh even if llh is nan
-                grad = np.full(len(x_ids), np.nan)
+            if result["sllh"] is None and np.isnan(result["llh"]):
+                # TODO: to amici -- set sllh even if llh is nan?
+                snllh = np.full(len(x_ids), np.nan)
             else:
                 # llh to nllh, dict to array
-                grad = -np.array(
+                snllh = -np.array(
                     [
-                        res["sllh"][x_id]  # if x_id in res["sllh"] else 0.0
+                        result["sllh"][x_id]  # if x_id in res["sllh"] else 0.0
                         for x_id in x_ids
                         if x_id in x_dct.keys()
                     ]
                 )
+        if 2 in sensi_orders:
+            if result["s2llh"] is None and np.isnan(result["llh"]):
+                # TODO: to amici -- set s2llh even if llh is nan?
+                s2nllh = np.full((len(x_ids), len(x_ids)), np.nan)
+            else:
+                s2nllh = -result["s2llh"]
 
         ret = {
-            FVAL: -res["llh"],
-            GRAD: grad,
-            # TODO
-            # HESS: s2nllh,
-            # RES: res,
-            # SRES: sres,
+            FVAL: nllh,
+            GRAD: snllh,
+            HESS: s2nllh,
+            RES: res,
+            SRES: sres,
             RDATAS: rdatas,
         }
 
