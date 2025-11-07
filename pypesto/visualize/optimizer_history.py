@@ -478,6 +478,66 @@ def handle_options(
     return ax
 
 
+def monotonic_history(
+    histories: list[HistoryBase],
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Get the overall monotonically decreasing history from multiple histories.
+
+    Parameters
+    ----------
+    histories:
+        List of histories to merge.
+        The histories are expected to have time and function value traces,
+        and that the function values are monotonically decreasing within each
+        history.
+
+    Returns
+    -------
+    t:
+        Time points of overall history.
+    fx:
+        Objective values of overall history.
+    """
+    if len(histories) == 0:
+        warnings.warn("No histories to process.", stacklevel=2)
+        return np.array([], dtype="float"), np.array([], dtype="float")
+
+    for history in histories:
+        fvals = history.get_fval_trace()
+        if not np.all(fvals[:-1] >= fvals[1:]):
+            raise ValueError(
+                "Each history is expected to have monotonically "
+                "decreasing function values."
+            )
+
+    # merge results
+    t = np.hstack([history.get_time_trace() for history in histories])
+    fx = np.hstack([history.get_fval_trace() for history in histories])
+    time_order = np.argsort(t)
+    t = t[time_order]
+    fx = fx[time_order]
+
+    # get the monotonously decreasing sequence
+    monotone = np.where(fx == np.fmin.accumulate(fx))[0]
+    t_mono, fx_mono = t[monotone], fx[monotone]
+
+    # remove duplicates
+    # convert to np.recarray for multi-level sorting
+    # so that we can use np.unique later to remove duplicates
+    records = np.rec.fromarrays([t_mono, fx_mono], names="t,fx")
+    records.sort(order=["t", "fx"])
+    t_mono, unique_idx = np.unique(records.t, return_index=True, sorted=True)
+    fx_mono = records.fx[unique_idx]
+
+    # extend from last decrease to last timepoint
+    if t_mono[-1] != (t_max := t.max()):
+        t_mono = np.append(t_mono, [t_max])
+        fx_mono = np.append(fx_mono, [fx_mono.min()])
+
+    return t_mono, fx_mono
+
+
 def sacess_history(
     histories: list[HistoryBase],
     ax: plt.Axes | None = None,
@@ -505,23 +565,10 @@ def sacess_history(
         warnings.warn("No histories to plot.", stacklevel=2)
 
     # plot overall minimum
-    # merge results
-    t = np.hstack([history.get_time_trace() for history in histories])
-    fx = np.hstack([history.get_fval_trace() for history in histories])
-    time_order = np.argsort(t)
-    t = t[time_order]
-    fx = fx[time_order]
-
-    # get the monotonously decreasing sequence
-    monotone = np.where(fx <= np.fmin.accumulate(fx))[0]
-    x, y = t[monotone], fx[monotone]
-
-    # extend from last decrease to last timepoint
-    x = np.append(x, [t.max()])
-    y = np.append(y, [y.min()])
+    t_overall, fx_overall = monotonic_history(histories)
     ax.step(
-        x,
-        y,
+        t_overall,
+        fx_overall,
         linestyle="dotted",
         color="grey",
         where="post",
@@ -536,7 +583,7 @@ def sacess_history(
             warnings.warn(f"No trace for worker #{worker_idx}.", stacklevel=2)
             continue
         # extend from last decrease to last timepoint
-        x = np.append(x, [np.max(t)])
+        x = np.append(x, [np.max(t_overall)])
         y = np.append(y, [np.min(y)])
         lines = ax.step(
             x, y, ".-", where="post", label=f"worker {worker_idx}", alpha=0.8
