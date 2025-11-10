@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Literal, Union
+from typing import Literal
 
 import matplotlib.axes
 import matplotlib.cm as cm
@@ -11,6 +11,12 @@ from matplotlib.patches import Patch, Rectangle
 from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
 
+# kwargs passed to `matplotlib.axes.Axes.errorbar` for plotting confidence levels
+cis_visualization_settings = {
+    "capsize": 5,
+    "linewidth": 2,
+}
+
 
 def profile_cis(
     result: Result,
@@ -18,7 +24,7 @@ def profile_cis(
     df: int = 1,
     profile_indices: Sequence[int] = None,
     profile_list: int = 0,
-    color: Union[str, tuple] = "C0",
+    color: str | tuple = "C0",
     show_bounds: bool = False,
     ax: matplotlib.axes.Axes = None,
 ) -> matplotlib.axes.Axes:
@@ -76,12 +82,13 @@ def profile_cis(
     x_names = [problem.x_names[ix] for ix in profile_indices]
 
     for ix, (lb, ub) in enumerate(intervals):
-        ax.plot(
-            [lb, ub],
-            [ix + 1, ix + 1],
-            marker="|",
+        half = (ub - lb) / 2
+        ax.errorbar(
+            lb + half,
+            ix + 1,
+            xerr=half,
             color=color,
-            solid_capstyle="butt",
+            **cis_visualization_settings,
         )
 
     parameters_ind = np.arange(1, len(intervals) + 1)
@@ -148,7 +155,8 @@ def profile_nested_cis(
 
     # ensure that the confidence levels are sorted in decreasing order
     confidence_levels, colors = zip(
-        *sorted(zip(confidence_levels, colors), reverse=True)
+        *sorted(zip(confidence_levels, colors, strict=True), reverse=True),
+        strict=True,
     )
 
     if profile_indices is None:
