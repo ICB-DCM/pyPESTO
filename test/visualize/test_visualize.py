@@ -8,12 +8,13 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import petab.v1 as petab
 import pytest
 import scipy.optimize as so
 
+import petab.v1 as petab
 import pypesto
 import pypesto.ensemble as ensemble
+import pypesto.ensemble.dimension_reduction as dr
 import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.predict as predict
@@ -1316,3 +1317,132 @@ def test_visualize_estimated_observable_mapping():
         problem=problem, n_starts=1, optimizer=optimizer
     )
     visualize.visualize_estimated_observable_mapping(result, problem)
+
+
+@close_fig
+def test_projection_scatter_umap_parameters():
+    """Test UMAP projection scatter visualization for parameters."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = ensemble.Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Get UMAP representation
+    umap_repr, _ = dr.get_umap_representation_parameters(ens)
+
+    # Test visualization
+    visualize.projection_scatter_umap(umap_repr, components=(0, 1))
+
+
+@close_fig
+def test_projection_scatter_pca_parameters():
+    """Test PCA projection scatter visualization for parameters."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = ensemble.Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Get PCA representation
+    pca_repr, _ = dr.get_pca_representation_parameters(ens)
+
+    # Test visualization with default components
+    visualize.projection_scatter_pca(pca_repr)
+
+    # Test visualization with specific components
+    visualize.projection_scatter_pca(pca_repr, components=(0, 1))
+
+
+@close_fig
+def test_projection_scatter_umap_predictions():
+    """Test UMAP projection scatter visualization for predictions."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=5,
+        progress_bar=False,
+    )
+
+    ens = ensemble.Ensemble.from_optimization_endpoints(
+        result=result, max_size=10
+    )
+
+    # Create predictor
+    predictor = predict.AmiciPredictor(problem.objective)
+
+    # Get predictions
+    ensemble_prediction = ens.predict(
+        predictor,
+        prediction_id="test_pred",
+        progress_bar=False,
+    )
+
+    # Get UMAP representation
+    umap_repr, _ = dr.get_umap_representation_predictions(ensemble_prediction)
+
+    # Test visualization
+    visualize.projection_scatter_umap(umap_repr, components=(0, 1))
+
+
+@close_fig
+def test_projection_scatter_pca_predictions():
+    """Test PCA projection scatter visualization for predictions."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=5,
+        progress_bar=False,
+    )
+
+    ens = ensemble.Ensemble.from_optimization_endpoints(
+        result=result, max_size=10
+    )
+
+    # Create predictor
+    predictor = predict.AmiciPredictor(problem.objective)
+
+    # Get predictions
+    ensemble_prediction = ens.predict(
+        predictor,
+        prediction_id="test_pred",
+        progress_bar=False,
+    )
+
+    # Get PCA representation
+    pca_repr, _ = dr.get_pca_representation_predictions(ensemble_prediction)
+
+    # Test visualization
+    visualize.projection_scatter_pca(pca_repr, components=(0, 1))
