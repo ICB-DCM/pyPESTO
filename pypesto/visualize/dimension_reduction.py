@@ -216,7 +216,7 @@ def ensemble_scatter_lowlevel(
     y_label: str = "component 2",
     color_by: Sequence[float] = None,
     color_map: str = "viridis",
-    background_color: RGBA = (0.0, 0.0, 0.0, 1.0),
+    background_color: RGBA = (0.0, 0.0, 0.0, 0.0),
     marker_type: str = ".",
     scatter_size: float = 0.5,
     invert_scatter_order: bool = False,

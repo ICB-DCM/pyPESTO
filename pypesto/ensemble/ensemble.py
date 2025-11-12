@@ -71,8 +71,6 @@ class EnsemblePrediction:
         predictor: Callable[[Sequence], PredictionResult] | None = None,
         prediction_id: str = None,
         prediction_results: Sequence[PredictionResult] = None,
-        lower_bound: Sequence[np.ndarray] = None,
-        upper_bound: Sequence[np.ndarray] = None,
     ):
         """
         Initialize.
@@ -86,27 +84,12 @@ class EnsemblePrediction:
             Identifier for the predictions
         prediction_results:
             List of Prediction results
-        lower_bound:
-            Array of potential lower bounds for the predictions, should have
-            the same shape as the output of the predictions, i.e., a list of
-            numpy array (one list entry per condition), with the arrays having
-            the shape of n_timepoints x n_outputs for each condition.
-        upper_bound:
-            array of potential upper bounds for the parameters
         """
         self.predictor = predictor
         self.prediction_id = prediction_id
         self.prediction_results = prediction_results
         if prediction_results is None:
             self.prediction_results = []
-
-        # handle bounds, Not yet Implemented
-        if lower_bound is not None:
-            raise NotImplementedError
-        if upper_bound is not None:
-            raise NotImplementedError
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
 
         self.prediction_arrays = None
         self.prediction_summary = {
@@ -133,8 +116,6 @@ class EnsemblePrediction:
                 for i_key in self.prediction_summary.keys()
             },
         )
-        yield LOWER_BOUND, self.lower_bound
-        yield UPPER_BOUND, self.upper_bound
 
     def condense_to_arrays(self):
         """
