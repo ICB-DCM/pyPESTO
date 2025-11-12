@@ -387,7 +387,7 @@ def test_hpd_calculation():
 
 
 def test_covariance_matrix_parameters():
-    """Test computing covariance matrix for ensemble parameters runs without errors."""
+    """Test computing covariance matrix for a parameter ensemble runs without errors."""
     problem = create_petab_problem()
 
     sampler = sample.AdaptiveMetropolisSampler(
@@ -418,7 +418,7 @@ def test_covariance_matrix_parameters():
 
 
 def test_spectral_decomposition_parameters():
-    """Test spectral decomposition for ensemble parameters runs without errors."""
+    """Test spectral decomposition for a parameter ensemble runs without errors."""
     problem = create_petab_problem()
 
     sampler = sample.AdaptiveMetropolisSampler(
@@ -451,7 +451,7 @@ def test_spectral_decomposition_parameters():
 
 
 def test_pca_representation_parameters():
-    """Test PCA representation of ensemble parameters runs without errors."""
+    """Test PCA representation of a parameter ensemble runs without errors."""
     problem = create_petab_problem()
 
     sampler = sample.AdaptiveMetropolisSampler(
@@ -491,7 +491,7 @@ def test_pca_representation_parameters():
 
 
 def test_umap_representation_parameters():
-    """Test UMAP representation of ensemble parameters runs without errors."""
+    """Test UMAP representation of a parameter ensemble runs without errors."""
     problem = create_petab_problem()
 
     sampler = sample.AdaptiveMetropolisSampler(
