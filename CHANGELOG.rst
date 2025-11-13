@@ -6,25 +6,38 @@ Release notes
 ..........
 
 
-0.5.7 (2025-09-24)
+0.5.7 (2025-11-13)
 -------------------
 
 - General
-    - GHA and CI improvements (#1582, #1586, #1587, #1590, #1592, #1581, #1602, #1605)
-    - Jupyter Examples (#1594, #1567)
-    - Revised citation for pyPESTO in README.md (#1601)
     - Removed aesara from requirements (#1595)
     - Require Python 3.11 (#1585)
+    - Require h5py!=3.15.0 (#1623)
+    - Require amici<1.0.0 (#1618)
+- Documentation
+    - Updated installation instructions (#1614)
+    - Fixed getting started notebook / pyswarms documentation (#1616)
+    - Fixed documentation display of ``int_`` type hints in ``Hdf5History.from_history`` (#1635)
+    - Updated references and citations (#1601, #1609, #1612)
+- Examples
+    - Removed pymc3 reference from getting-started example (#1594)
+    - Updated getting_started.ipynb (#1567)
 - Optimization
     - update scipy interface (#1588)
 - Ensemble
     - accurate cutoff based on chi2 distribution (#1566)
+- History
+    - Add monotonic_history (#1632)
 - Profiling
     - split ProfilerTask into descending and ascending parts (#1598)
+    - Profiles nested CIs (#1584)
 - Visualize
-    -  Fix IndexError in waterfall for all-non-finite values (#1600)
+    - Fix IndexError in waterfall for all-non-finite values (#1600)
     - prettier intervals for profiles by using capstyle (#1607)
     - Improve waterfall plot efficiency (#1608)
+    - remove unnecessary title and axes labels (#1589)
+    - Nicer pypesto.visualize.profile_cis interval markers (#1626)
+    - Allow to define colors more flexibly (#1627)
 - Objective
     - Update roadrunner installation hint (#1596)
     - Updated roadrunner steady state computation (#1604)
