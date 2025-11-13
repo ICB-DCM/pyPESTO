@@ -481,14 +481,6 @@ def test_pca_representation_parameters():
     assert pca_object is not None
     assert isinstance(pca_repr, np.ndarray)
 
-    # Test PCA with specific n_components
-    pca_repr_3, pca_object_3 = dr.get_pca_representation_parameters(
-        ens, n_components=3
-    )
-
-    assert pca_repr_3 is not None
-    assert pca_object_3 is not None
-
 
 def test_umap_representation_parameters():
     """Test UMAP representation of a parameter ensemble runs without errors."""

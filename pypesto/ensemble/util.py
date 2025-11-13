@@ -26,7 +26,7 @@ from ..C import (
     EnsembleType,
 )
 from ..result import PredictionConditionResult, PredictionResult
-from ..store import read_result, write_array
+from ..store import read_result
 from .ensemble import Ensemble, EnsemblePrediction
 
 
@@ -205,38 +205,6 @@ def write_ensemble_prediction_to_h5(
                 os.path.join(base, PREDICTION_ID),
                 data=ensemble_prediction.prediction_id,
             )
-
-        # write lower bounds per condition, if available
-        if ensemble_prediction.lower_bound is not None:
-            if isinstance(ensemble_prediction.lower_bound[0], np.ndarray):
-                lb_grp = f.require_group(LOWER_BOUND)
-                for i_cond, lower_bounds in enumerate(
-                    ensemble_prediction.lower_bound
-                ):
-                    condition_id = ensemble_prediction.prediction_results[
-                        0
-                    ].condition_ids[i_cond]
-                    write_array(lb_grp, condition_id, lower_bounds)
-            elif isinstance(ensemble_prediction.lower_bound[0], float):
-                f.create_dataset(
-                    LOWER_BOUND, data=ensemble_prediction.lower_bound
-                )
-
-        # write upper bounds per condition, if available
-        if ensemble_prediction.upper_bound is not None:
-            if isinstance(ensemble_prediction.upper_bound[0], np.ndarray):
-                ub_grp = f.require_group(UPPER_BOUND)
-                for i_cond, upper_bounds in enumerate(
-                    ensemble_prediction.upper_bound
-                ):
-                    condition_id = ensemble_prediction.prediction_results[
-                        0
-                    ].condition_ids[i_cond]
-                    write_array(ub_grp, condition_id, upper_bounds)
-            elif isinstance(ensemble_prediction.upper_bound[0], float):
-                f.create_dataset(
-                    UPPER_BOUND, data=ensemble_prediction.upper_bound
-                )
 
         # write summary statistics to h5 file
         for (
