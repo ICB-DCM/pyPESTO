@@ -2,6 +2,7 @@ import functools
 import logging
 import os
 from collections.abc import Sequence
+from copy import deepcopy
 from functools import wraps
 from pathlib import Path
 
@@ -181,13 +182,13 @@ def create_optimization_history():
     return result_with_trace
 
 
-def create_profile_result():
+def create_profile_result(scaling: float = 1):
     # create a pypesto result
     result = create_optimization_result()
 
     # write some dummy results for profiling
-    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15])
-    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1])
+    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15]) * scaling
+    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1]) * scaling
     x_path_1 = np.array(
         [
             [2.0, 2.1, 2.3, 2.5, 2.7, 2.9, 3.0],
@@ -200,8 +201,8 @@ def create_profile_result():
             [2.1, 2.2, 2.4, 2.5, 2.8, 2.9, 3.1],
         ]
     )
-    fval_path_1 = [4.0, 3.0, 1.0, 0.0, 1.5, 2.5, 5.0]
-    fval_path_2 = [4.5, 3.5, 1.5, 0.0, 1.3, 2.3, 4.3]
+    fval_path_1 = np.array([4.0, 3.0, 1.0, 0.0, 1.5, 2.5, 5.0]) * scaling
+    fval_path_2 = np.array([4.5, 3.5, 1.5, 0.0, 1.3, 2.3, 4.3]) * scaling
     tmp_result_1 = pypesto.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
     tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
@@ -286,11 +287,20 @@ def test_waterfall_with_nan_inf():
     # test plotting of lists
     visualize.waterfall([result_1, result_2])
 
+    # test all-non-finite
+    result_no_finite = deepcopy(result_1)
+    result_no_finite.optimize_result.list = [
+        or_
+        for or_ in result_no_finite.optimize_result.list
+        if not np.isfinite(or_.fval)
+    ]
+    visualize.waterfall(result_no_finite)
+
 
 @close_fig
 def test_waterfall_with_options():
     # create the necessary results
-    result_1 = create_optimization_result()
+    result_1 = create_optimization_result(n=8)
     result_2 = create_optimization_result()
 
     # alternative figure size and plotting options
@@ -321,6 +331,29 @@ def test_waterfall_with_options():
             start_indices=3,
             y_limits=5.0,
         )
+
+    # test colors
+    for color in [
+        "C3",
+        "#5F8FD4",
+        [
+            "#5F8FD4",
+            "#C62A9F",
+            "#49EFA2",
+            "#F4B63C",
+            "#7D3DF1",
+            "#F2272A",
+            "#3EC9DD",
+        ],
+    ]:
+        visualize.waterfall(
+            result_2,
+            colors=color,
+        )
+    visualize.waterfall(
+        [result_1, result_2],
+        colors=["C3", "C7"],
+    )
 
     # Test with linear scale
     visualize.waterfall(
@@ -440,6 +473,23 @@ def test_parameters_lowlevel():
 
     # test no bounds
     visualize.parameters_lowlevel(xs, fvals)
+
+    # test setting colors
+    # colors from tableu 10
+    hex_colors = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+    ]
+    visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub, colors="m")
+    visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub, colors=hex_colors)
 
 
 @close_fig
@@ -641,13 +691,17 @@ def test_ensemble_identifiability():
 def test_profiles():
     # create the necessary results
     result_1 = create_profile_result()
-    result_2 = create_profile_result()
+    result_2 = create_profile_result(scaling=1.2)
 
     # test a standard call
     visualize.profiles(result_1)
 
     # test plotting of lists
     visualize.profiles([result_1, result_2])
+
+    # test colors
+    visualize.profiles(result_1, quality_colors=True)
+    visualize.profiles([result_1, result_2], colors=["C3", "C0"])
 
 
 @close_fig
@@ -690,7 +744,7 @@ def test_profiles_lowlevel():
         ]
     )
     fvals = [p1, p2]
-    visualize.profiles_lowlevel(fvals)
+    visualize.profiles_lowlevel(fvals, color="m")
 
 
 @close_fig
@@ -705,7 +759,7 @@ def test_profile_lowlevel():
             [0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15],
         ]
     )
-    visualize.profile_lowlevel(fvals=fvals)
+    visualize.profile_lowlevel(fvals=fvals, color="m")
 
 
 @close_fig
@@ -714,6 +768,14 @@ def test_profile_cis():
     result = create_profile_result()
     visualize.profile_cis(result, confidence_level=0.99)
     visualize.profile_cis(result, show_bounds=True, profile_indices=[0])
+
+
+@close_fig
+def test_nested_profile_cis():
+    """Test the profile approximate confidence interval visualization."""
+    result = create_profile_result()
+    visualize.profile_nested_cis(result, confidence_levels=[0.99, 0.95, 0.9])
+    visualize.profile_nested_cis(result, colors=["#5F9ED1", "#007ACC"])
 
 
 @close_fig
@@ -854,7 +916,9 @@ def test_optimization_stats():
 
     visualize.optimization_run_properties_per_multistart([result_1, result_2])
 
-    visualize.optimization_run_properties_one_plot(result_1, ["time"])
+    visualize.optimization_run_properties_one_plot(
+        result_1, ["time"], colors="C0"
+    )
 
     visualize.optimization_run_properties_one_plot(
         result_1, ["n_fval", "n_grad", "n_hess"]
@@ -863,7 +927,7 @@ def test_optimization_stats():
     visualize.optimization_run_property_per_multistart(
         [result_1, result_2],
         "time",
-        colors=[[0.5, 0.9, 0.9, 0.3], [0.9, 0.7, 0.8, 0.5]],
+        colors=["g", "C1"],
         legends=["result1", "result2"],
         plot_type="both",
     )
@@ -920,15 +984,26 @@ def test_assign_colors():
     fvals = np.array(fvals)
     visualize.assign_colors(fvals)
     fvals = [0.01, 0.02, 1.0]
-    visualize.assign_colors(fvals, colors=[0.5, 0.9, 0.9, 0.3])
-    visualize.assign_colors(
-        fvals,
-        colors=[
-            [0.5, 0.9, 0.9, 0.3],
-            [0.5, 0.8, 0.8, 0.5],
-            [0.9, 0.1, 0.1, 0.1],
-        ],
-    )
+    for color in [
+        [0.5, 0.9, 0.9, 0.3],
+        "C1",
+        "#0f0f0f80",
+        "g",
+        "0.7",
+        "tab:purple",
+    ]:
+        visualize.assign_colors(fvals, colors=color)
+
+    color_list = [
+        [0.5, 0.9, 0.9, 0.3],
+        [0.5, 0.8, 0.8, 0.5],
+        [0.9, 0.1, 0.1, 0.1],
+    ]
+    for color in [color_list, np.array(color_list)]:
+        visualize.assign_colors(
+            fvals,
+            colors=color,
+        )
 
 
 def test_delete_nan_inf():
@@ -1161,6 +1236,7 @@ def test_visualize_optimized_model_fit_aggregated():
         for lb, ub in zip(
             petab_problem.parameter_df.lowerBound,
             petab_problem.parameter_df.upperBound,
+            strict=True,
         )
     ]
     petab_problem.parameter_df["objectivePriorParameters"] = (
@@ -1215,6 +1291,59 @@ def test_time_trajectory_model():
 
     # test call of time_trajectory_model
     time_trajectory_model(result=result)
+
+
+def test_monotonic_history():
+    from pypesto.history.memory import MemoryHistory
+    from pypesto.visualize.optimizer_history import monotonic_history
+
+    def create_history(t, fx):
+        from pypesto.C import FVAL, TIME
+
+        history = MemoryHistory()
+        history._trace[TIME] = t
+        history._trace[FVAL] = fx
+        assert (history.get_time_trace() == t).all()
+        assert (history.get_fval_trace() == fx).all()
+        return history
+
+    t = np.arange(5, dtype=float)
+    history1 = create_history(t, -t)
+    t_mono, fx_mono = monotonic_history([history1, history1])
+    assert t_mono.tolist() == history1.get_time_trace()
+    assert fx_mono.tolist() == history1.get_fval_trace()
+
+    history2 = create_history(t, -2 * t)
+    for histories in (
+        [history1, history2],
+        [history2, history1],
+        [history1, history2, history1],
+        [history2, history1, history2],
+    ):
+        t_mono, fx_mono = monotonic_history(histories)
+        assert t_mono.tolist() == history2.get_time_trace()
+        assert fx_mono.tolist() == history2.get_fval_trace()
+
+    t = np.arange(0.5, 6.5, dtype=float)
+    history3 = create_history(t, 2 - 2 * t)
+    for histories in (
+        [history1, history3],
+        [history3, history1],
+        [history1, history3, history1],
+    ):
+        t_mono, fx_mono = monotonic_history(histories)
+        assert t_mono.tolist() == [0.0, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.5, 5.5]
+        assert fx_mono.tolist() == [
+            -0.0,
+            -1.0,
+            -1.0,
+            -2.0,
+            -3.0,
+            -3.0,
+            -5.0,
+            -7.0,
+            -9.0,
+        ]
 
 
 @close_fig

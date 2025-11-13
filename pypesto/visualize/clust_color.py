@@ -1,26 +1,27 @@
-from typing import Optional, Union
-
 import matplotlib.cm as cm
 import numpy as np
+from matplotlib.colors import is_color_like
 
 from pypesto.util import assign_clusters
 
 # for typehints
-from ..C import RGBA
+from ..C import COLOR
 
 
-def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
+def assign_clustered_colors(
+    vals: np.ndarray, balance_alpha: bool = True, highlight_global: bool = True
+):
     """
     Cluster and assign colors.
 
     Parameters
     ----------
-    vals: numeric list or array
+    vals:
         List to be clustered and assigned colors.
-    balance_alpha: bool (optional)
+    balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
-        avoid overplotting (default: True)
-    highlight_global: bool (optional)
+        avoid overplotting
+    highlight_global:
         flag indicating whether global optimum should be highlighted
 
     Returns
@@ -59,15 +60,19 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
     no_clusters = np.where(cluster_size == 1)[0]
     real_clusters = np.unique(np.where(cluster_size > 1)[0])
 
-    # assign transparency valuesaccording to cluster size, if wanted
+    # assign transparency values according to cluster size, if wanted
     if balance_alpha:
+        # set minimal alpha value to avoid non-visible colors
+        min_alpha = 0.01
         # assign neutral color, add 1 for avoiding division by zero
         grey = [0.7, 0.7, 0.7, min(1.0, 5.0 / (no_clusters.size + 1.0))]
 
         # reduce alpha level depend on size of each cluster
         n_cluster_size = np.delete(cluster_size, no_clusters)
         for icluster in range(n_clusters):
-            color_list[icluster][3] = min(1.0, 5.0 / n_cluster_size[icluster])
+            color_list[icluster][3] = min(
+                1.0, max(5.0 / n_cluster_size[icluster], min_alpha)
+            )
     else:
         # assign neutral color
         grey = [0.7, 0.7, 0.7, 1.0]
@@ -89,29 +94,29 @@ def assign_clustered_colors(vals, balance_alpha=True, highlight_global=True):
 
 
 def assign_colors(
-    vals, colors=None, balance_alpha=True, highlight_global=True
-):
+    vals: np.ndarray,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    balance_alpha: bool = True,
+    highlight_global: bool = True,
+) -> np.ndarray:
     """
     Assign colors or format user specified colors.
 
     Parameters
     ----------
-    vals: numeric list or array
+    vals:
         List to be clustered and assigned colors.
-
-    colors: list, or RGBA, optional
-        list of colors, or single color
-
-    balance_alpha: bool (optional)
+    colors:
+        list of colors recognized by matplotlib, or single color
+    balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
-        avoid overplotting (default: True)
-
-    highlight_global: bool (optional)
+        avoid overplotting
+    highlight_global:
         flag indicating whether global optimum should be highlighted
 
     Returns
     -------
-    colors: list of RGBA
+    colors: list of colors recognized by matplotlib
         One for each element in 'vals'.
     """
     # sanity checks
@@ -126,46 +131,36 @@ def assign_colors(
             highlight_global=highlight_global,
         )
 
-    # The user passed values and colors: parse them first!
-    # we want everything to be numpy arrays, to not check every time whether a
-    # list was passed or an ndarray
-    colors = np.array(colors)
-
     # Get number of elements and use user assigned colors
     n_vals = len(vals) if isinstance(vals, list) else vals.size
 
-    # Two usages are possible: One color for the whole data set, or one
-    # color for each value:
-    if colors.size == 4:
-        # Only one color was passed: flatten in case and repeat n_vals times
-        if colors.ndim == 2:
-            colors = colors[0]
+    if is_color_like(colors):
+        # one color was passed
         return np.array([colors] * n_vals)
 
-    if (
-        len(colors.shape) > 1
-        and colors.shape[1] == 4
-        and n_vals == colors.shape[0]
+    elif (
+        isinstance(colors, (list, np.ndarray))
+        and len(colors) == len(vals)
+        and sum([is_color_like(c) for c in colors]) == len(colors)
     ):
-        return colors
+        # a list of colors was passed, one for each value in vals
 
-    if colors.shape[0] == 4:
-        colors = np.transpose(colors)
-        if n_vals == colors.shape[0]:
-            return colors
+        # convert to ndarray
+        colors = np.array(colors)
+        return colors
 
     # Shape of array did not match n_vals. Error due to size mismatch:
     raise ValueError(
         "Incorrect color input. Colors must be specified either as "
-        "list of `[r, g, b, alpha]` with length equal to that of `vals` "
-        f"(here: {n_vals}), or as a single `[r, g, b, alpha]`."
+        "list of colors recognized by matplotlib with length equal to that of `vals` "
+        f"(here: {n_vals}), or as a single matplotlib color."
     )
 
 
 def assign_colors_for_list(
     num_entries: int,
-    colors: Optional[Union[RGBA, list[RGBA], np.ndarray]] = None,
-) -> Union[list[list[float]], np.ndarray]:
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+) -> list[list[float]] | np.ndarray:
     """
     Create a list of colors for a list of items.
 
@@ -186,8 +181,9 @@ def assign_colors_for_list(
     """
     # if the user did not specify any colors:
     if colors is None:
-        # default colors will be used, on for each entry in the result list.
+        # default colors will be used, one for each entry in the result list.
         # Colors are created from assign_colors, which needs a dummy list
+        # doubled for clustering
         dummy_clusters = np.array(list(range(num_entries)) * 2)
 
         # we don't want alpha levels for all plotting routines in this case...
@@ -196,7 +192,7 @@ def assign_colors_for_list(
         )
 
         # dummy cluster had twice as many entries as really there. Reduce.
-        real_indices = np.arange(int(colors.shape[0] / 2))
+        real_indices = np.arange(0, colors.shape[0], 2)
         return colors[real_indices]
 
     # Pass the colors through assign_colors to check correct format of RGBA
