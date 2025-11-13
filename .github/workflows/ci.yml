@@ -357,6 +357,9 @@ jobs:
       run: tox -e size
 
     - name: Run pre-commit hooks
+      env:
+        PRE_COMMIT_COLOR: "always"
+        PRE_COMMIT_SHOW_DIFF: "1"
       run: pre-commit run --all-files
 
   docs:
