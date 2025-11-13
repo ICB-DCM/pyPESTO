@@ -6,6 +6,36 @@ Release notes
 ..........
 
 
+0.5.7 (2025-11-13)
+-------------------
+
+
+- General
+    - Require Python >=3.11 (#1585)
+- Documentation
+    - Updated references and citations (#1601, #1609, #1612)
+    - Various minor Documentation and Example fixes
+- Optimization
+    - update scipy interface (#1588)
+- Ensemble
+    - accurate cutoff based on chi2 distribution (#1566)
+- History
+    - Add monotonic_history from mutliple histories (#1632)
+- Profiling
+    - split ProfilerTask into descending and ascending parts (#1598)
+    - Profiles nested CIs (#1584)
+- Visualize
+    - Fix IndexError in waterfall for all-non-finite values (#1600)
+    - prettier intervals for profiles by using capstyle (#1607)
+    - Improve waterfall plot efficiency (#1608)
+    - remove unnecessary title and axes labels (#1589)
+    - Nicer pypesto.visualize.profile_cis interval markers (#1626)
+    - Allow to define colors more flexibly (#1627)
+    - Prevent invisible plot due to large cluster number in waterfall plot (#1631)
+- Objective
+    - Updated roadrunner steady state computation (#1604)
+
+
 0.5.6 (2025-05-18)
 -------------------
 
