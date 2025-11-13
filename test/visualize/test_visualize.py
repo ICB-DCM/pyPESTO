@@ -8,10 +8,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import petab.v1 as petab
 import pytest
 import scipy.optimize as so
 
-import petab.v1 as petab
 import pypesto
 import pypesto.ensemble as ensemble
 import pypesto.ensemble.dimension_reduction as dr
