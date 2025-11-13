@@ -9,25 +9,18 @@ Release notes
 0.5.7 (2025-11-13)
 -------------------
 
+
 - General
-    - Removed aesara from requirements (#1595)
-    - Require Python 3.11 (#1585)
-    - Require h5py!=3.15.0 (#1623)
-    - Require amici<1.0.0 (#1618)
+    - Require Python >=3.11 (#1585)
 - Documentation
-    - Updated installation instructions (#1614)
-    - Fixed getting started notebook / pyswarms documentation (#1616)
-    - Fixed documentation display of ``int_`` type hints in ``Hdf5History.from_history`` (#1635)
     - Updated references and citations (#1601, #1609, #1612)
-- Examples
-    - Removed pymc3 reference from getting-started example (#1594)
-    - Updated getting_started.ipynb (#1567)
+    - Various minor Documentation and Example fixes
 - Optimization
     - update scipy interface (#1588)
 - Ensemble
     - accurate cutoff based on chi2 distribution (#1566)
 - History
-    - Add monotonic_history (#1632)
+    - Add monotonic_history from mutliple histories (#1632)
 - Profiling
     - split ProfilerTask into descending and ascending parts (#1598)
     - Profiles nested CIs (#1584)
@@ -38,8 +31,8 @@ Release notes
     - remove unnecessary title and axes labels (#1589)
     - Nicer pypesto.visualize.profile_cis interval markers (#1626)
     - Allow to define colors more flexibly (#1627)
+    - Prevent invisible plot due to large cluster number in waterfall plot (#1631)
 - Objective
-    - Update roadrunner installation hint (#1596)
     - Updated roadrunner steady state computation (#1604)
 
 
