@@ -357,7 +357,7 @@ jobs:
       run: tox -e size
 
     - name: Run pre-commit hooks
-      run: pre-commit run --all-files
+      run: pre-commit run --all-files --show-diff-on-failure
 
   docs:
     runs-on: ubuntu-latest
