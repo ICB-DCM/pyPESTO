@@ -234,7 +234,7 @@ def get_prediction_dataset(
     Extract an array of prediction.
 
     Can be done from either an Ensemble object which contains a list of
-    predictions of from an EnsemblePrediction object.
+    predictions or from an EnsemblePrediction object.
 
     Parameters
     ----------
