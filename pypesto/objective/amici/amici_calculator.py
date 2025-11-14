@@ -176,7 +176,7 @@ def calculate_function_values(
         sensi_orders, mode, dim
     )
 
-    par_sim_ids = list(amici_model.get_parameter_ids())
+    par_sim_ids = list(amici_model.get_free_parameter_ids())
     sensi_method = amici_solver.get_sensitivity_method()
 
     # iterate over return data
