@@ -83,6 +83,11 @@ def get_umap_representation_predictions(
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)
 
+    # For a UMAP representation, we need to reshape the dataset.
+    # To the form (n_samples, n_features).
+    n_samples = dataset.shape[0]
+    dataset = dataset.reshape(n_samples, -1)
+
     # call lowlevel routine using the prediction ensemble
     return _get_umap_representation_lowlevel(
         dataset=dataset,
@@ -173,6 +178,11 @@ def get_pca_representation_predictions(
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)
+
+    # For a PCA representation, we need to reshape the dataset.
+    # To the form (n_samples, n_features).
+    n_samples = dataset.shape[0]
+    dataset = dataset.reshape(n_samples, -1)
 
     # call lowlevel routine using the prediction ensemble
     return _get_pca_representation_lowlevel(
