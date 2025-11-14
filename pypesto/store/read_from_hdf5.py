@@ -52,7 +52,7 @@ def read_hdf5_optimization(
     f: h5py.File,
     file_name: Path | str,
     opt_id: str,
-    lazy: bool = True,
+    lazy: bool = False,
     with_history: bool = True,
 ) -> "OptimizerResult":
     """Read HDF5 results per start.
@@ -309,7 +309,7 @@ def read_result(
     optimize: bool = False,
     profile: bool = False,
     sample: bool = False,
-    lazy: bool = True,
+    lazy: bool = False,
     with_history: bool = True,
 ) -> Result:
     """Save the whole pypesto.Result object in an HDF5 file.
