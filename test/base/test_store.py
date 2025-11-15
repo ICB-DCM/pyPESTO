@@ -550,3 +550,85 @@ def test_result_from_hdf5_history(hdf5_file):
                 result.optimize_result[0][key]
                 == result_from_hdf5.optimize_result[0][key]
             ), key
+
+
+def test_with_history_non_lazy(hdf5_file, optimized_result_with_history):
+    """Test that with_history parameter works correctly in non-lazy mode."""
+    # Read with history (default)
+    result_with_history = read_result(
+        hdf5_file, optimize=True, lazy=False, with_history=True
+    )
+
+    # Read without history
+    result_without_history = read_result(
+        hdf5_file, optimize=True, lazy=False, with_history=False
+    )
+
+    # Both should have the same number of optimizer results
+    assert len(result_with_history.optimize_result) == len(
+        result_without_history.optimize_result
+    )
+
+    # Check that with_history=True loads history objects
+    for opt_result in result_with_history.optimize_result:
+        # History should be loaded (Hdf5History object)
+        assert opt_result["history"] is not None
+        assert hasattr(opt_result["history"], "get_x_trace")
+
+    # Check that with_history=False does NOT load history
+    for opt_result in result_without_history.optimize_result:
+        # History should be None when with_history=False
+        assert opt_result["history"] is None
+
+    # Other attributes should be the same
+    for i in range(len(result_with_history.optimize_result)):
+        np.testing.assert_array_equal(
+            result_with_history.optimize_result[i]["x"],
+            result_without_history.optimize_result[i]["x"],
+        )
+        assert (
+            result_with_history.optimize_result[i]["fval"]
+            == result_without_history.optimize_result[i]["fval"]
+        )
+
+
+def test_with_history_lazy(hdf5_file, optimized_result_with_history):
+    """Test that with_history parameter works in lazy mode.
+
+    In lazy mode, with_history doesn't prevent loading initially since
+    everything is lazy, but it should be passed to LazyOptimizerResult.
+    """
+    # Read with lazy=True and with_history=True
+    result_with_history = read_result(
+        hdf5_file, optimize=True, lazy=True, with_history=True
+    )
+
+    # Read with lazy=True and with_history=False
+    result_without_history = read_result(
+        hdf5_file, optimize=True, lazy=True, with_history=False
+    )
+
+    # Both should have the same number of optimizer results
+    assert len(result_with_history.optimize_result) == len(
+        result_without_history.optimize_result
+    )
+
+    # Both should be LazyOptimizerResult instances
+    from pypesto.result import LazyOptimizerResult
+
+    for opt_result in result_with_history.optimize_result:
+        assert isinstance(opt_result, LazyOptimizerResult)
+
+    for opt_result in result_without_history.optimize_result:
+        assert isinstance(opt_result, LazyOptimizerResult)
+
+    # Other attributes should still be accessible and equal
+    for i in range(len(result_with_history.optimize_result)):
+        np.testing.assert_array_equal(
+            result_with_history.optimize_result[i]["x"],
+            result_without_history.optimize_result[i]["x"],
+        )
+        assert (
+            result_with_history.optimize_result[i]["fval"]
+            == result_without_history.optimize_result[i]["fval"]
+        )
