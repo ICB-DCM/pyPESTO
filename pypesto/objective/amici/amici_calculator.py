@@ -26,10 +26,14 @@ from .amici_util import (
     sim_sres_to_opt_sres,
 )
 
+try:
+    import amici
+except ImportError:
+    amici = None
+
 if TYPE_CHECKING:
     try:
-        import amici
-        from amici.petab.parameter_mapping import ParameterMapping
+        from amici.importers.petab.v1.parameter_mapping import ParameterMapping
     except ImportError:
         ParameterMapping = None
 
@@ -87,7 +91,7 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        import amici.petab.conditions
+        from amici.importers.petab.v1.conditions import fill_in_parameters
 
         # set order in solver
         sensi_order = 0
@@ -101,7 +105,7 @@ class AmiciCalculator:
             amici_solver.set_sensitivity_order(sensi_order)
 
         # fill in parameters
-        amici.petab.conditions.fill_in_parameters(
+        fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
             scaled_parameters=True,

@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
     try:
         import amici
-        from amici.petab.parameter_mapping import ParameterMapping
+        from amici.importers.petab.v1.parameter_mapping import ParameterMapping
     except ImportError:
         pass
 
@@ -113,7 +113,7 @@ class AmiciObjective(ObjectiveBase):
         parameter_mapping:
             Mapping of optimization parameters to model parameters. Format
             as created by
-            `amici.petab.parameter_mapping.create_parameter_mapping`.
+            `amici.importers.petab.v1.parameter_mapping.create_parameter_mapping`.
             The default is just to assume that optimization and simulation
             parameters coincide.
         guess_steadystate:
