@@ -43,11 +43,6 @@ from ..result import PredictionResult
 
 try:
     import amici
-    import amici.petab
-    import amici.petab.conditions
-    import amici.petab.parameter_mapping
-    import amici.petab.simulations
-    from amici.petab.import_helpers import check_model
 except ImportError:
     amici = None
 try:
@@ -166,6 +161,8 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def _create_model(self) -> amici.Model:
         """Load model module and return the model, no checks/compilation."""
+        from amici.importers.petab.v1.import_helpers import check_model
+
         # load moduĺe
         module = amici.import_model_module(
             module_name=self.model_name, module_path=self.output_folder
@@ -217,11 +214,13 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
             Extra arguments passed to :meth:`amici.sbml_import.SbmlImporter.sbml2amici`
             or :func:`amici.pysb_import.pysb2amici`.
         """
+        from amici.importers.petab.v1 import import_petab_problem
+
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        amici.petab.import_petab_problem(
+        import_petab_problem(
             petab_problem=self.petab_problem,
             model_name=self.model_name,
             model_output_dir=self.output_folder,
@@ -248,11 +247,13 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         verbose: bool = True,
     ) -> list[amici.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
+        from amici.importers.petab.v1.conditions import create_edatas
+
         # create model
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        return amici.petab.conditions.create_edatas(
+        return create_edatas(
             amici_model=model,
             petab_problem=self.petab_problem,
             simulation_conditions=simulation_conditions,
@@ -292,6 +293,11 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         -------
         A :class:`pypesto.objective.AmiciObjective` for the model and the data.
         """
+        from amici.importers.petab.v1.conditions import fill_in_parameters
+        from amici.importers.petab.v1.parameter_mapping import (
+            create_parameter_mapping,
+        )
+
         simulation_conditions = petab.get_simulation_conditions(
             self.petab_problem.measurement_df
         )
@@ -306,14 +312,12 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
             edatas = self.create_edatas(
                 model=model, simulation_conditions=simulation_conditions
             )
-        parameter_mapping = (
-            amici.petab.parameter_mapping.create_parameter_mapping(
-                petab_problem=self.petab_problem,
-                simulation_conditions=simulation_conditions,
-                scaled_parameters=True,
-                amici_model=model,
-                fill_fixed_parameters=False,
-            )
+        parameter_mapping = create_parameter_mapping(
+            petab_problem=self.petab_problem,
+            simulation_conditions=simulation_conditions,
+            scaled_parameters=True,
+            amici_model=model,
+            fill_fixed_parameters=False,
         )
         par_ids = self.petab_problem.x_ids
 
@@ -322,7 +326,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         problem_parameters = dict(
             zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
         )
-        amici.petab.conditions.fill_in_parameters(
+        fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
             scaled_parameters=True,
@@ -512,14 +516,16 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
         """
+        from amici.importers.petab.v1.simulations import (
+            rdatas_to_measurement_df,
+        )
+
         # create model
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        measurement_df = self.petab_problem.measurement_df
-
-        return amici.petab.simulations.rdatas_to_measurement_df(
-            rdatas, model, measurement_df
+        return rdatas_to_measurement_df(
+            rdatas, model, self.petab_problem.measurement_df
         )
 
     def rdatas_to_simulation_df(
