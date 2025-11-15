@@ -66,8 +66,12 @@ convention = "pep257"
     "D400",
     "D205",
 ]
-"doc/example/*.py" = [  # ignore docstyle in example pthon files.
+"doc/example/*.py" = [  # ignore docstyle in example python files.
     "D",
+]
+"doc/example/*.ipynb" = [
+    "S101",  # use of assert
+    "C408",  # unnecessary dict call
 ]
 "doc/conf.py" = [
     "E402",
