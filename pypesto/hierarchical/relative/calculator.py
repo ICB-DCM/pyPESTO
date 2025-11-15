@@ -7,8 +7,8 @@ import numpy as np
 
 try:
     import amici
-    from amici.petab.conditions import fill_in_parameters
-    from amici.petab.parameter_mapping import ParameterMapping
+    from amici.importers.petab.v1.conditions import fill_in_parameters
+    from amici.importers.petab.v1.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
