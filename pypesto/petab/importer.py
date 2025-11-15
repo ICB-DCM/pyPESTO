@@ -47,6 +47,7 @@ from .util import PetabStartpoints, get_petab_non_quantitative_data_types
 
 try:
     import amici
+    import amici.petab.simulations
 except ImportError:
     amici = None
 

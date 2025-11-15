@@ -2,10 +2,10 @@
 
 import logging
 
+import amici.petab.simulations
 import petab.v1 as petab
 import petabtests
 import pytest
-from amici.importers.petab.v1.simulations import rdatas_to_measurement_df
 
 import pypesto
 import pypesto.petab
@@ -96,7 +96,7 @@ def _execute_case(case, model_type, version):
     rdatas = ret["rdatas"]
     chi2 = sum(rdata["chi2"] for rdata in rdatas)
     llh = -ret["fval"]
-    simulation_df = rdatas_to_measurement_df(
+    simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
         rdatas, model, importer.petab_problem.measurement_df
     )
 

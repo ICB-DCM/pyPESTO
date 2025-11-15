@@ -24,7 +24,7 @@ from ...logging import log_level_active
 if TYPE_CHECKING:
     try:
         import amici
-        from amici.importers.petab.v1.parameter_mapping import (
+        from amici.petab.parameter_mapping import (
             ParameterMapping,
             ParameterMappingForCondition,
         )
@@ -124,7 +124,7 @@ def create_identity_parameter_mapping(
     both in preequilibration and simulation, are assumed to be provided
     correctly in model or edatas already.
     """
-    from amici.importers.petab.v1.parameter_mapping import (
+    from amici.petab.parameter_mapping import (
         ParameterMapping,
         ParameterMappingForCondition,
         amici_to_petab_scale,
