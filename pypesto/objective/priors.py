@@ -36,7 +36,10 @@ class NegLogParameterPriors(ObjectiveBase):
     {'index': [int],
      'density_fun': [Callable],
      'density_dx': [Callable],
-     'density_ddx': [Callable]}
+     'density_ddx': [Callable],
+     'type': [str],  # e.g. 'normal', 'uniform', 'parameterScaleNormal', 'laplace', ...
+     'parameters': [[#1, #2]],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab)
+     }
 
     A prior instance can be added to e.g. an objective, that gives the
     likelihood, by an AggregatedObjective.
@@ -225,6 +228,51 @@ class NegLogParameterPriors(ObjectiveBase):
 
         return sres
 
+    def sample(
+        self, n_samples: int = 1, seed: int = None
+    ) -> dict[str, np.ndarray]:
+        """
+        Sample from the prior distribution.
+
+        Parameters
+        ----------
+        n_samples:
+            Number of samples to draw.
+        seed:
+            Random seed for reproducibility.
+
+        Returns
+        -------
+        samples:
+            Dictionary of samples from the prior distributions for each
+            parameter index.
+        """
+        rng = np.random.default_rng(seed)
+
+        # Find the maximum index in prior_list
+        prior_samples_dict = {
+            prior["index"]: np.zeros(n_samples) for prior in self.prior_list
+        }
+        # n_parameters = max(prior["index"] for prior in self.prior_list) + 1
+        # samples = np.zeros((n_samples, n_parameters)) * np.nan
+
+        for prior in self.prior_list:
+            index = prior["index"]
+            prior_type = prior.get("type", None)
+            prior_parameters = prior.get("parameters", None)
+
+            if prior_type is None or prior_parameters is None:
+                raise ValueError(
+                    "Prior type and parameters must be specified for sampling. "
+                    "Use 'get_parameter_prior_dict' to create proper prior dictionaries."
+                )
+
+            prior_samples_dict[index] = _sample_from_prior(
+                prior_type, prior_parameters, n_samples, rng
+            )
+
+        return prior_samples_dict
+
 
 def get_parameter_prior_dict(
     index: int,
@@ -264,6 +312,8 @@ def get_parameter_prior_dict(
             "density_ddx": dd_log_f_ddx,
             "residual": res,
             "residual_dx": d_res_dx,
+            "type": prior_type,
+            "parameters": prior_parameters,
         }
 
     elif parameter_scale == C.LOG:
@@ -308,6 +358,8 @@ def get_parameter_prior_dict(
             "density_ddx": dd_log_f_log,
             "residual": res_log,
             "residual_dx": d_res_log,
+            "type": prior_type,
+            "parameters": prior_parameters,
         }
 
     elif parameter_scale == C.LOG10:
@@ -353,6 +405,8 @@ def get_parameter_prior_dict(
             "density_ddx": dd_log_f_log10,
             "residual": res_log,
             "residual_dx": d_res_log,
+            "type": prior_type,
+            "parameters": prior_parameters,
         }
 
     else:
@@ -364,7 +418,7 @@ def get_parameter_prior_dict(
 
 def _prior_densities(
     prior_type: str,
-    prior_parameters: np.array,
+    prior_parameters: np.ndarray,
 ) -> [
     Callable,
     Callable,
@@ -383,7 +437,7 @@ def _prior_densities(
     the vector. If a reformulation as residual is not possible, the respective
     entries will be `None`.
 
-    Currently the following distributions are supported:
+    Currently, the following distributions are supported:
         * uniform:
             Uniform distribution on transformed parameter scale.
         * parameterScaleUniform:
@@ -560,3 +614,62 @@ def _get_constant_function(constant: float):
         return constant
 
     return function
+
+
+def _sample_from_prior(
+    prior_type: str,
+    prior_parameters: list,
+    n_samples: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """
+    Sample from individual prior distributions.
+
+    Parameters
+    ----------
+    prior_type:
+        Type of the prior distribution.
+    prior_parameters:
+        Parameters of the prior distribution.
+    n_samples:
+        Number of samples to draw.
+    rng:
+        Random number generator.
+
+    Returns
+    -------
+    samples:
+        Array of samples from the prior distribution.
+    """
+    if prior_type in [C.UNIFORM, C.PARAMETER_SCALE_UNIFORM]:
+        low = prior_parameters[0]
+        high = prior_parameters[1]
+        return rng.uniform(low, high, n_samples)
+
+    elif prior_type in [C.NORMAL, C.PARAMETER_SCALE_NORMAL]:
+        mean = prior_parameters[0]
+        std = prior_parameters[1]
+        return rng.normal(mean, std, n_samples)
+
+    elif prior_type in [C.LAPLACE, C.PARAMETER_SCALE_LAPLACE]:
+        mean = prior_parameters[0]
+        scale = prior_parameters[1]
+        return rng.laplace(mean, scale, n_samples)
+
+    elif prior_type == C.LOG_NORMAL:
+        mean = prior_parameters[0]
+        sigma = prior_parameters[1]
+        return rng.lognormal(mean, sigma, n_samples)
+
+    elif prior_type == C.LOG_UNIFORM:
+        raise NotImplementedError(
+            "Log-uniform distribution sampling is not yet implemented"
+        )
+    elif prior_type == C.LOG_LAPLACE:
+        raise NotImplementedError(
+            "Log-Laplace distribution sampling is not yet implemented"
+        )
+    else:
+        raise ValueError(
+            f"Sampling from prior type {prior_type} is not supported"
+        )

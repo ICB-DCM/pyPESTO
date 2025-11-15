@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Callable
 import numpy as np
 
 from ..C import FVAL, GRAD
-from ..objective import ObjectiveBase
+from ..objective import NegLogParameterPriors, ObjectiveBase
 
 if TYPE_CHECKING:
     import pypesto
@@ -100,7 +100,9 @@ class CheckedStartpoints(StartpointMethod, ABC):
             return x_guesses[:n_starts, :]
 
         # apply startpoint method
-        x_sampled = self.sample(n_starts=n_required, lb=lb, ub=ub)
+        x_sampled = self.sample(
+            n_starts=n_required, lb=lb, ub=ub, priors=problem.x_priors
+        )
 
         # assemble
         xs = np.zeros(shape=(n_starts, dim))
@@ -120,6 +122,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
+        priors: NegLogParameterPriors | None = None,
     ) -> np.ndarray:
         """Actually sample startpoints.
 
@@ -131,6 +134,8 @@ class CheckedStartpoints(StartpointMethod, ABC):
         n_starts: Number of startpoints to generate.
         lb: Lower parameter bound.
         ub: Upper parameter bound.
+        priors: Parameter priors, if available. Some sampling methods may
+            utilize this information.
 
         Returns
         -------
@@ -143,6 +148,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
         lb: np.ndarray,
         ub: np.ndarray,
         objective: ObjectiveBase,
+        priors: NegLogParameterPriors | None = None,
     ) -> np.ndarray:
         """Check sampled points for fval, grad, and potentially resample ones.
 
@@ -152,6 +158,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
         lb: Lower parameter bound.
         ub: Upper parameter bound.
         objective: Objective function, for evaluation.
+        priors: Parameter priors, if available.
 
         Returns
         -------
@@ -188,7 +195,7 @@ class CheckedStartpoints(StartpointMethod, ABC):
                     break
 
                 # resample a single point
-                x = self.sample(n_starts=1, lb=lb, ub=ub)
+                x = self.sample(n_starts=1, lb=lb, ub=ub, priors=priors)
 
                 # evaluate candidate
                 objective.initialize()
@@ -237,9 +244,10 @@ class FunctionStartpoints(CheckedStartpoints):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
+        priors: NegLogParameterPriors | None = None,
     ) -> np.ndarray:
         """Call function."""
-        return self.function(n_starts=n_starts, lb=lb, ub=ub)
+        return self.function(n_starts=n_starts, lb=lb, ub=ub, priors=priors)
 
 
 def to_startpoint_method(

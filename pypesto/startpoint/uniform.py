@@ -10,6 +10,7 @@ def uniform(
     n_starts: int,
     lb: np.ndarray,
     ub: np.ndarray,
+    priors=None,
 ) -> np.ndarray:
     """Generate uniform points.
 
@@ -18,6 +19,7 @@ def uniform(
     n_starts: Number of starts.
     lb: Lower bound.
     ub: Upper bound.
+    priors: Ignored, only for compatibility with other startpoint methods.
 
     Returns
     -------

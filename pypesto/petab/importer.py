@@ -408,6 +408,7 @@ class PetabImporter:
                     "is not yet supported."
                 )
             objective = AggregatedObjective([objective, prior])
+            logger.info("Created an aggregated objective using priors.")
 
         if self._hierarchical:
             problem_class = HierarchicalProblem
