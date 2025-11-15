@@ -198,7 +198,7 @@ class AmiciInnerProblem(InnerProblem):
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
         data = [
-            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
+            amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
         ]
 
         # Mask the data using the inner problem mask. This is necessary

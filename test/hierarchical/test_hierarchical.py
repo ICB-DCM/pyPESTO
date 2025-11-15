@@ -59,11 +59,11 @@ def test_hierarchical_optimization_pipeline():
     for flag in flags:
         importer = PetabImporter(petab_problems[flag], hierarchical=flag)
         problem = importer.create_problem()
-        problem.objective.amici_solver.setSensitivityMethod(
+        problem.objective.amici_solver.set_sensitivity_method(
             amici.SensitivityMethod_adjoint
         )
-        problem.objective.amici_solver.setAbsoluteTolerance(1e-8)
-        problem.objective.amici_solver.setRelativeTolerance(1e-8)
+        problem.objective.amici_solver.set_absolute_tolerance(1e-8)
+        problem.objective.amici_solver.set_relative_tolerance(1e-8)
         problems[flag] = problem
 
     # Check for same optimization result
@@ -160,11 +160,11 @@ def test_hierarchical_calculator_and_objective():
         importer = PetabImporter(petab_problem, hierarchical=flag)
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
-        problem.objective.amici_solver.setSensitivityMethod(
-            amici.SensitivityMethod_adjoint
+        problem.objective.amici_solver.set_sensitivity_method(
+            amici.SensitivityMethod.adjoint
         )
-        problem.objective.amici_solver.setAbsoluteTolerance(1e-8)
-        problem.objective.amici_solver.setRelativeTolerance(1e-8)
+        problem.objective.amici_solver.set_absolute_tolerance(1e-8)
+        problem.objective.amici_solver.set_relative_tolerance(1e-8)
         problems[flag] = problem
 
     def calculate(problem, x_dct):
