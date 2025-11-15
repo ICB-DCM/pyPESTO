@@ -34,7 +34,7 @@ def conversion_reaction_model():
     # try to import the exisiting model, if possible
     try:
         model_module = amici.import_model_module(model_name, model_output_dir)
-        model = model_module.getModel()
+        model = model_module.get_model()
     except ValueError:
         # read in and adapt the sbml slightly
         sbml_importer = amici.SbmlImporter(sbml_file)
@@ -75,7 +75,7 @@ def conversion_reaction_model():
 
         # add constant parameters and observables to AMICI model
         constant_parameters = ["A0", "B0"]
-        observables = amici.assignmentRules2observables(
+        observables = amici.assignment_rules_to_observables(
             sbml_importer.sbml,  # the libsbml model object
             filter_function=lambda variable: variable.getId().startswith(
                 "observable_"
@@ -86,13 +86,13 @@ def conversion_reaction_model():
             model_name,
             model_output_dir,
             verbose=False,
-            observables=observables,
+            observation_model=observables,
             constant_parameters=constant_parameters,
         )
 
         # Importing the module and loading the model
         model_module = amici.import_model_module(model_name, model_output_dir)
-        model = model_module.getModel()
+        model = model_module.get_model()
     except RuntimeError as err:
         print(
             "pyPESTO unit test ran into an error importing the conversion "
@@ -113,10 +113,10 @@ def edata_objects(conversion_reaction_model):
     testmodel = conversion_reaction_model
 
     # set timepoints for which we want to simulate the model
-    testmodel.setTimepoints(np.linspace(0, 4, 10))
-    testmodel.setParameters(np.array([4.0, 0.4]))
+    testmodel.set_timepoints(np.linspace(0, 4, 10))
+    testmodel.set_parameters(np.array([4.0, 0.4]))
     # Create solver instance
-    solver = testmodel.getSolver()
+    solver = testmodel.create_solver()
 
     # create edatas
     rdatas = []
@@ -128,8 +128,8 @@ def edata_objects(conversion_reaction_model):
     ]
     # create rdatas and edatas from those
     for fp in fixedParameters:
-        testmodel.setFixedParameters(amici.DoubleVector(fp))
-        rdata = amici.runAmiciSimulation(testmodel, solver)
+        testmodel.set_fixed_parameters(amici.DoubleVector(fp))
+        rdata = amici.run_simulation(testmodel, solver)
         rdatas.append(rdata)
         edatas.append(amici.ExpData(rdata, 1.0, 0))
 

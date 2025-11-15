@@ -123,7 +123,9 @@ def inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
+    data = [
+        amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
+    ]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -135,7 +137,7 @@ def inner_problem_from_petab_problem(
             meas_indices[2] for meas_indices in ixs[par.inner_parameter_id]
         ]
         par.observable_ids = [
-            amici_model.getObservableIds()[obs_idx]
+            amici_model.get_observable_ids()[obs_idx]
             for obs_idx in par.observable_indices
         ]
 
@@ -256,7 +258,7 @@ def ixs_for_measurement_specific_parameters(
     a sorted list of non-unique time points for which there are measurements.
     """
     ixs_for_par = {}
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()

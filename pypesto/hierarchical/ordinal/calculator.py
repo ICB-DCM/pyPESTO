@@ -153,7 +153,7 @@ class OrdinalCalculator(AmiciCalculator):
 
         # If AMICI ReturnData is not provided, we need to simulate the model
         if rdatas is None:
-            amici_solver.setSensitivityOrder(sensi_order)
+            amici_solver.set_sensitivity_order(sensi_order)
 
             x_dct = copy.deepcopy(x_dct)
 
@@ -166,7 +166,7 @@ class OrdinalCalculator(AmiciCalculator):
                 amici_model=amici_model,
             )
             # run amici simulation
-            rdatas = amici.runAmiciSimulations(
+            rdatas = amici.run_simulations(
                 amici_model,
                 amici_solver,
                 edatas,
@@ -216,7 +216,7 @@ class OrdinalCalculator(AmiciCalculator):
                 ssigma=ssigma,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.getParameterIds(),
+                par_sim_ids=amici_model.get_parameter_ids(),
                 par_edatas_indices=[edata.plist for edata in edatas],
                 snllh=snllh,
             )
