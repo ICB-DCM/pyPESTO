@@ -29,7 +29,7 @@ from .parameter import SplineInnerParameter
 from .problem import SemiquantProblem
 
 try:
-    from amici.importers.petab.v1.parameter_mapping import ParameterMapping
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     pass
 

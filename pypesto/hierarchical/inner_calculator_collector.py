@@ -48,7 +48,7 @@ from ..objective.amici.amici_util import (
 try:
     import amici
     import petab.v1 as petab
-    from amici.importers.petab.v1.parameter_mapping import ParameterMapping
+    from amici.petab.parameter_mapping import ParameterMapping
 except ImportError:
     petab = None
     ParameterMapping = None
@@ -336,7 +336,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        from amici.importers.petab.v1.conditions import fill_in_parameters
+        from amici.petab.conditions import fill_in_parameters
 
         if mode == MODE_RES and any(
             data_type in self.data_types
