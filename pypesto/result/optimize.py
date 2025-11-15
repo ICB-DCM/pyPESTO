@@ -476,9 +476,9 @@ class LazyOptimizerResult(OptimizerResult):
         super().__init__()
         # Store these attributes in __dict__ instead of as dict items
         # This avoids conflicts with the lazy loading mechanism
-        object.__setattr__(self, "filename", filename)
-        object.__setattr__(self, "group_name", group_name)
-        object.__setattr__(self, "_data", {})
+        self.__dict__["filename"] = filename
+        self.__dict__["group_name"] = group_name
+        self.__dict__["_data"] = {}
 
     def _get_value(self, key):
         """
@@ -496,11 +496,11 @@ class LazyOptimizerResult(OptimizerResult):
         """
         # Use object.__getattribute__ to access internal attributes
         # This bypasses the parent's __getattr__ and prevents recursion
-        _data = object.__getattribute__(self, "_data")
+        _data = self.__dict__["_data"]
 
         if key not in _data:
-            filename = object.__getattribute__(self, "filename")
-            group_name = object.__getattribute__(self, "group_name")
+            filename = self.__dict__["filename"]
+            group_name = self.__dict__["group_name"]
 
             with h5py.File(filename, "r") as f:
                 if key in f[group_name]:
