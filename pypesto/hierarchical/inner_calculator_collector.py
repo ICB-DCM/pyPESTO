@@ -515,7 +515,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 dim=dim,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_parameter_ids(),
+                par_sim_ids=amici_model.get_free_parameter_ids(),
             )
             nllh += quantitative_result[FVAL]
             if 1 in sensi_orders:

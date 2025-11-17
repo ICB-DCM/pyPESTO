@@ -73,8 +73,8 @@ def conversion_reaction_model():
             create_observable(sbml_importer.sbml, spec)
             create_intial_assignment(sbml_importer.sbml, spec)
 
-        # add constant parameters and observables to AMICI model
-        constant_parameters = ["A0", "B0"]
+        # add fixed parameters and observables to AMICI model
+        fixed_parameters = ["A0", "B0"]
         observables = amici.assignment_rules_to_observables(
             sbml_importer.sbml,  # the libsbml model object
             filter_function=lambda variable: variable.getId().startswith(
@@ -87,7 +87,7 @@ def conversion_reaction_model():
             model_output_dir,
             verbose=False,
             observation_model=observables,
-            constant_parameters=constant_parameters,
+            fixed_parameters=fixed_parameters,
         )
 
         # Importing the module and loading the model
@@ -114,7 +114,7 @@ def edata_objects(conversion_reaction_model):
 
     # set timepoints for which we want to simulate the model
     testmodel.set_timepoints(np.linspace(0, 4, 10))
-    testmodel.set_parameters(np.array([4.0, 0.4]))
+    testmodel.set_free_parameters(np.array([4.0, 0.4]))
     # Create solver instance
     solver = testmodel.create_solver()
 

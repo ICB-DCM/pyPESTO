@@ -355,7 +355,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 inner_parameters=inner_parameters,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_parameter_ids(),
+                par_sim_ids=amici_model.get_free_parameter_ids(),
                 snllh=snllh,
             )
         # apply the computed inner parameters to the ReturnData

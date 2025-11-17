@@ -122,7 +122,7 @@ def test_preeq_guesses():
     assert obj.steadystate_guesses["fval"] < np.inf
     assert len(obj.steadystate_guesses["data"]) == len(obj.edatas)
     # check that we have test a problem where plist is nontrivial
-    assert any(len(e.plist) != len(e.parameters) for e in obj.edatas)
+    assert any(len(e.plist) != len(e.free_parameters) for e in obj.edatas)
 
     df = obj.check_grad(
         problem.get_reduced_vector(

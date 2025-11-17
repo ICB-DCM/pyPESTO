@@ -103,8 +103,8 @@ def test_deepcopy_objective():
 
     # test some properties
     assert (
-        objective.amici_model.get_parameter_ids()
-        == objective2.amici_model.get_parameter_ids()
+        objective.amici_model.get_free_parameter_ids()
+        == objective2.amici_model.get_free_parameter_ids()
     )
     assert (
         objective.amici_solver.get_sensitivity_order()
@@ -141,8 +141,8 @@ def test_pickle_objective():
 
     # test some properties
     assert (
-        objective.amici_model.get_parameter_ids()
-        == objective2.amici_model.get_parameter_ids()
+        objective.amici_model.get_free_parameter_ids()
+        == objective2.amici_model.get_free_parameter_ids()
     )
     assert (
         objective.amici_solver.get_sensitivity_order()

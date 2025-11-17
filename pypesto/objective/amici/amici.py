@@ -169,7 +169,7 @@ class AmiciObjective(ObjectiveBase):
         # optimization parameter ids
         if x_ids is None:
             # use model parameter ids as ids
-            x_ids = list(self.amici_model.get_parameter_ids())
+            x_ids = list(self.amici_model.get_free_parameter_ids())
         self.x_ids = x_ids
 
         # mapping of parameters

@@ -321,7 +321,7 @@ def load_amici_objective(example_name):
     model.require_sensitivities_for_all_parameters()
     model.set_timepoints(np.linspace(0, 10, 11))
     model.set_parameter_scale(amici.ParameterScaling.log10)
-    model.set_parameters([-0.3, -0.7])
+    model.set_free_parameters([-0.3, -0.7])
     solver = model.create_solver()
     solver.set_sensitivity_method(amici.SensitivityMethod.forward)
     solver.set_sensitivity_order(amici.SensitivityOrder.first)

@@ -62,7 +62,7 @@ def map_par_opt_to_par_sim(
     """
     par_sim_vals = [
         condition_map_sim_var[par_id]
-        for par_id in amici_model.get_parameter_ids()
+        for par_id in amici_model.get_free_parameter_ids()
     ]
 
     # iterate over simulation parameter indices
@@ -130,7 +130,7 @@ def create_identity_parameter_mapping(
         amici_to_petab_scale,
     )
 
-    x_ids = list(amici_model.get_parameter_ids())
+    x_ids = list(amici_model.get_free_parameter_ids())
     x_scales = list(amici_model.get_parameter_scale())
     parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):

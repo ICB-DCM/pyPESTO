@@ -187,7 +187,7 @@ def test_plist_mapping():
     #  `plist` later on)
     fixed_model_par_ids = ["init_b10", "init_bcry"]
     fixed_model_par_idxs = [
-        objective.amici_model.get_parameter_ids().index(id)
+        objective.amici_model.get_free_parameter_ids().index(id)
         for id in fixed_model_par_ids
     ]
     fixed_idxs = [problem.x_names.index(id) for id in fixed_ids]

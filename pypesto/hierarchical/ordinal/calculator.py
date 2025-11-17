@@ -216,7 +216,7 @@ class OrdinalCalculator(AmiciCalculator):
                 ssigma=ssigma,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_parameter_ids(),
+                par_sim_ids=amici_model.get_free_parameter_ids(),
                 par_edatas_indices=[edata.plist for edata in edatas],
                 snllh=snllh,
             )
