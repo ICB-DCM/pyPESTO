@@ -690,7 +690,7 @@ class DlibOptimizer(Optimizer):
             list(lb),
             list(ub),
             int(self.options["maxiter"]),
-            0.002,
+            self.options["solver_epsilon"],
         )
 
         optimizer_result = OptimizerResult(optimizer=str(self))
@@ -703,7 +703,7 @@ class DlibOptimizer(Optimizer):
 
     def get_default_options(self):
         """Create default options specific for the optimizer."""
-        return {"maxiter": 10000}
+        return {"maxiter": 10000, "solver_epsilon": 0.0}
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
