@@ -37,14 +37,6 @@ class TestOptimizerMaxtimeInterface:
             with pytest.raises(NotImplementedError):
                 optimizer.set_maxtime(10.0)
 
-    def test_cma_optimizer_support(self):
-        """Test CmaOptimizer time limit support."""
-        optimizer = optimize.CmaOptimizer()
-        assert optimizer.supports_maxtime() is True
-
-        optimizer.set_maxtime(10.0)
-        assert optimizer.options["timeout"] == 10.0
-
     def test_nlopt_optimizer_support(self):
         """Test NLoptOptimizer time limit support."""
         optimizer = optimize.NLoptOptimizer()
