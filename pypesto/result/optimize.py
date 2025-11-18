@@ -494,8 +494,6 @@ class LazyOptimizerResult(OptimizerResult):
         value
             The value of the key.
         """
-        # Use object.__getattribute__ to access internal attributes
-        # This bypasses the parent's __getattr__ and prevents recursion
         _data = self.__dict__["_data"]
 
         if key not in _data:
