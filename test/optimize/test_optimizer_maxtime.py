@@ -54,7 +54,12 @@ class TestOptimizerMaxtimeInterface:
 
         from fides.constants import Options as FidesOptions
 
+        assert FidesOptions.MAXTIME in optimizer.options
         assert optimizer.options[FidesOptions.MAXTIME] == 10.0
+
+        # Test updating existing value
+        optimizer.set_maxtime(15.5)
+        assert optimizer.options[FidesOptions.MAXTIME] == 15.5
 
     def test_ess_optimizer_support(self):
         """Test ESSOptimizer time limit support."""
@@ -65,20 +70,3 @@ class TestOptimizerMaxtimeInterface:
 
         optimizer.set_maxtime(10.0)
         assert optimizer.max_walltime_s == 10.0
-
-    def test_set_maxtime_updates_options(self):
-        """Test that set_maxtime properly updates optimizer options."""
-        # Test with FidesOptimizer (easy to verify)
-        optimizer = optimize.FidesOptimizer(options={})
-        assert len(optimizer.options) == 0
-
-        optimizer.set_maxtime(5.5)
-
-        from fides.constants import Options as FidesOptions
-
-        assert FidesOptions.MAXTIME in optimizer.options
-        assert optimizer.options[FidesOptions.MAXTIME] == 5.5
-
-        # Test updating existing value
-        optimizer.set_maxtime(15.5)
-        assert optimizer.options[FidesOptions.MAXTIME] == 15.5
