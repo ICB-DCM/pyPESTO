@@ -19,74 +19,84 @@ logger = logging.getLogger(__name__)
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
-class PymcObjectiveOp(pt.Op):
-    """PyTensor wrapper around a (non-normalized) log-probability function."""
+def _make_pymc_logprob_op(objective: ObjectiveBase, beta: float = 1.0):
+    # local import, only happens when the sampler is actually used
+    import pytensor.tensor as pt
 
-    itypes = [pt.dvector]  # expects a vector of parameter values when called
-    otypes = [pt.dscalar]  # outputs a single scalar value (the log prob)
+    class PymcObjectiveOp(pt.Op):
+        """PyTensor wrapper around a (non-normalized) log-probability function."""
 
-    def create_instance(objective: ObjectiveBase, beta: float = 1.0):
-        """Create an instance of this Op (factory method).
+        itypes = [
+            pt.dvector
+        ]  # expects a vector of parameter values when called
+        otypes = [pt.dscalar]  # outputs a single scalar value (the log prob)
 
-        Parameters
-        ----------
-        objective:
-            Objective function (negative log-likelihood or -posterior).
-        beta:
-            Inverse temperature (e.g. in parallel tempering).
+        def create_instance(objective: ObjectiveBase, beta: float = 1.0):
+            """Create an instance of this Op (factory method).
 
-        Returns
-        -------
-        PymcObjectiveOp
-            The created instance.
-        """
-        if objective.has_grad:
-            return PymcObjectiveWithGradientOp(objective, beta)
-        return PymcObjectiveOp(objective, beta)
+            Parameters
+            ----------
+            objective:
+                Objective function (negative log-likelihood or -posterior).
+            beta:
+                Inverse temperature (e.g. in parallel tempering).
 
-    def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
-        self._objective: ObjectiveBase = objective
-        self._beta: float = beta
+            Returns
+            -------
+            PymcObjectiveOp
+                The created instance.
+            """
+            if objective.has_grad:
+                return PymcObjectiveWithGradientOp(objective, beta)
+            return PymcObjectiveOp(objective, beta)
 
-    def perform(self, node, inputs, outputs, params=None):
-        """Calculate the objective function value."""
-        (theta,) = inputs
-        log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
-        outputs[0][0] = np.array(log_prob)
+        def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
+            self._objective: ObjectiveBase = objective
+            self._beta: float = beta
 
+        def perform(self, node, inputs, outputs, params=None):
+            """Calculate the objective function value."""
+            (theta,) = inputs
+            log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
+            outputs[0][0] = np.array(log_prob)
 
-class PymcObjectiveWithGradientOp(PymcObjectiveOp):
-    """PyTensor objective wrapper with gradient."""
+    class PymcObjectiveWithGradientOp(PymcObjectiveOp):
+        """PyTensor objective wrapper with gradient."""
 
-    def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
-        super().__init__(objective, beta)
+        def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
+            super().__init__(objective, beta)
 
-        self._log_prob_grad = PymcGradientOp(objective, beta)
+            self._log_prob_grad = PymcGradientOp(objective, beta)
 
-    def grad(self, inputs, g):  # noqa
-        """Calculate the vector-Jacobian product."""
-        # the method that calculates the gradients - it actually returns the
-        # vector-Jacobian product - g[0] is a vector of parameter values
-        (theta,) = inputs  # our parameters
-        return [g[0] * self._log_prob_grad(theta)]
+        def grad(self, inputs, g):  # noqa
+            """Calculate the vector-Jacobian product."""
+            # the method that calculates the gradients - it actually returns the
+            # vector-Jacobian product - g[0] is a vector of parameter values
+            (theta,) = inputs  # our parameters
+            return [g[0] * self._log_prob_grad(theta)]
 
+    class PymcGradientOp(pt.Op):
+        """PyTensor wrapper around a (non-normalized) log-probability gradient."""
 
-class PymcGradientOp(pt.Op):
-    """PyTensor wrapper around a (non-normalized) log-probability gradient."""
+        itypes = [
+            pt.dvector
+        ]  # expects a vector of parameter values when called
+        otypes = [pt.dvector]  # outputs a vector (the log prob grad)
 
-    itypes = [pt.dvector]  # expects a vector of parameter values when called
-    otypes = [pt.dvector]  # outputs a vector (the log prob grad)
+        def __init__(self, objective: ObjectiveBase, beta: float):
+            self._objective: ObjectiveBase = objective
+            self._beta: float = beta
 
-    def __init__(self, objective: ObjectiveBase, beta: float):
-        self._objective: ObjectiveBase = objective
-        self._beta: float = beta
+        def perform(self, node, inputs, outputs, params=None):
+            """Calculate the gradients of the objective function."""
+            (theta,) = inputs
+            # calculate gradients
+            log_prob_grad = -self._beta * self._objective(
+                theta, sensi_orders=(1,)
+            )
+            outputs[0][0] = log_prob_grad
 
-    def perform(self, node, inputs, outputs, params=None):
-        """Calculate the gradients of the objective function."""
-        (theta,) = inputs
-        # calculate gradients
-        log_prob_grad = -self._beta * self._objective(theta, sensi_orders=(1,))
-        outputs[0][0] = log_prob_grad
+    return PymcObjectiveOp(objective, beta)
 
 
 class PymcSampler(Sampler):
@@ -173,7 +183,8 @@ class PymcSampler(Sampler):
             raise SamplerImportError("pymc") from None
 
         problem = self.problem
-        log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
+        # log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
+        log_post = _make_pymc_logprob_op(problem.objective, beta)
         trace = self.trace
 
         x0 = None
