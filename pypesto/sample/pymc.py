@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-import pytensor.tensor as pt
 
 from ..history import MemoryHistory
 from ..objective import ObjectiveBase
@@ -122,10 +121,7 @@ class PymcSampler(Sampler):
             import pymc
         except ImportError:
             raise SamplerImportError("pymc") from None
-        try:
-            import arviz as az
-        except ImportError:
-            raise SamplerImportError("arviz") from None
+        import arviz as az
 
         self.step_function = step_function
         self.problem: Problem | None = None
@@ -181,6 +177,7 @@ class PymcSampler(Sampler):
             import pymc
         except ImportError:
             raise SamplerImportError("pymc") from None
+        import pytensor.tensor as pt
 
         problem = self.problem
         # log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
