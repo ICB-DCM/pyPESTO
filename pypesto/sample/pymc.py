@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import logging
 
-import arviz as az
 import numpy as np
-import pymc
 import pytensor.tensor as pt
 
 from ..history import MemoryHistory
@@ -110,6 +108,15 @@ class PymcSampler(Sampler):
         **kwargs,
     ):
         super().__init__(kwargs)
+        try:
+            import pymc
+        except ImportError:
+            raise SamplerImportError("pymc") from None
+        try:
+            import arviz as az
+        except ImportError:
+            raise SamplerImportError("arviz") from None
+
         self.step_function = step_function
         self.problem: Problem | None = None
         self.x0: np.ndarray | None = None
