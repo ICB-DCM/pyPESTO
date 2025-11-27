@@ -123,7 +123,9 @@ class PymcGradientOp(_PT_OP_BASE):
 
 
 class PymcSampler(Sampler):
-    """Wrapper around Pymc v4 samplers.
+    """Use pymc for sampling.
+
+    Wrapper around Pymc https://www.pymc.io/welcome.html samplers.
 
     Parameters
     ----------
