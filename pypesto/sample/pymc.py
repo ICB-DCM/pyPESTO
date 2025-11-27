@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 
 import numpy as np
@@ -14,88 +15,111 @@ from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
+# Lazy import of pymc, arviz, and pytensor
+# Only import if available, otherwise create dummy types for type checking
+if importlib.util.find_spec("pymc") is not None:
+    import pymc
+    import pytensor.tensor as pt
+
+    _PT_OP_BASE = pt.Op
+else:
+    pymc = type("", (), {})()
+    pymc.backends = type("", (), {})()
+    pymc.backends.Text = None
+    pt = None
+    _PT_OP_BASE = object
+
+if importlib.util.find_spec("arviz") is not None:
+    import arviz as az
+else:
+    az = type("", (), {})()
+    az.InferenceData = None
+
 # implementation based on:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
-def _make_pymc_logprob_op(objective: ObjectiveBase, beta: float = 1.0):
-    # local import, only happens when the sampler is actually used
-    import pytensor.tensor as pt
+class PymcObjectiveOp(_PT_OP_BASE):
+    """PyTensor wrapper around a (non-normalized) log-probability function."""
 
-    class PymcObjectiveOp(pt.Op):
-        """PyTensor wrapper around a (non-normalized) log-probability function."""
+    # Class attributes - set to actual types if pt is available, None otherwise
+    # expects a vector of parameter values when called
+    itypes = [pt.dvector] if pt is not None else None
+    # outputs a single scalar value (the log prob)
+    otypes = [pt.dscalar] if pt is not None else None
 
-        itypes = [
-            pt.dvector
-        ]  # expects a vector of parameter values when called
-        otypes = [pt.dscalar]  # outputs a single scalar value (the log prob)
+    @staticmethod
+    def create_instance(objective: ObjectiveBase, beta: float = 1.0):
+        """Create an instance of this Op (factory method).
 
-        def create_instance(objective: ObjectiveBase, beta: float = 1.0):
-            """Create an instance of this Op (factory method).
+        Parameters
+        ----------
+        objective:
+            Objective function (negative log-likelihood or -posterior).
+        beta:
+            Inverse temperature (e.g. in parallel tempering).
 
-            Parameters
-            ----------
-            objective:
-                Objective function (negative log-likelihood or -posterior).
-            beta:
-                Inverse temperature (e.g. in parallel tempering).
+        Returns
+        -------
+        PymcObjectiveOp
+            The created instance.
+        """
+        if objective.has_grad:
+            return PymcObjectiveWithGradientOp(objective, beta)
+        return PymcObjectiveOp(objective, beta)
 
-            Returns
-            -------
-            PymcObjectiveOp
-                The created instance.
-            """
-            if objective.has_grad:
-                return PymcObjectiveWithGradientOp(objective, beta)
-            return PymcObjectiveOp(objective, beta)
+    def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
+        # Check dependencies
+        if importlib.util.find_spec("pymc") is None:
+            raise SamplerImportError("pymc")
+        self._objective: ObjectiveBase = objective
+        self._beta: float = beta
 
-        def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
-            self._objective: ObjectiveBase = objective
-            self._beta: float = beta
+    def perform(self, node, inputs, outputs, params=None):
+        """Calculate the objective function value."""
+        (theta,) = inputs
+        log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
+        outputs[0][0] = np.array(log_prob)
 
-        def perform(self, node, inputs, outputs, params=None):
-            """Calculate the objective function value."""
-            (theta,) = inputs
-            log_prob = -self._beta * self._objective(theta, sensi_orders=(0,))
-            outputs[0][0] = np.array(log_prob)
 
-    class PymcObjectiveWithGradientOp(PymcObjectiveOp):
-        """PyTensor objective wrapper with gradient."""
+class PymcObjectiveWithGradientOp(PymcObjectiveOp):
+    """PyTensor objective wrapper with gradient."""
 
-        def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
-            super().__init__(objective, beta)
+    def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
+        super().__init__(objective, beta)
 
-            self._log_prob_grad = PymcGradientOp(objective, beta)
+        self._log_prob_grad = PymcGradientOp(objective, beta)
 
-        def grad(self, inputs, g):  # noqa
-            """Calculate the vector-Jacobian product."""
-            # the method that calculates the gradients - it actually returns the
-            # vector-Jacobian product - g[0] is a vector of parameter values
-            (theta,) = inputs  # our parameters
-            return [g[0] * self._log_prob_grad(theta)]
+    def grad(self, inputs, g):  # noqa
+        """Calculate the vector-Jacobian product."""
+        # the method that calculates the gradients - it actually returns the
+        # vector-Jacobian product - g[0] is a vector of parameter values
+        (theta,) = inputs  # our parameters
+        return [g[0] * self._log_prob_grad(theta)]
 
-    class PymcGradientOp(pt.Op):
-        """PyTensor wrapper around a (non-normalized) log-probability gradient."""
 
-        itypes = [
-            pt.dvector
-        ]  # expects a vector of parameter values when called
-        otypes = [pt.dvector]  # outputs a vector (the log prob grad)
+class PymcGradientOp(_PT_OP_BASE):
+    """PyTensor wrapper around a (non-normalized) log-probability gradient."""
 
-        def __init__(self, objective: ObjectiveBase, beta: float):
-            self._objective: ObjectiveBase = objective
-            self._beta: float = beta
+    # Class attributes - set to actual types if pt is available, None otherwise
+    # expects a vector of parameter values when called
+    itypes = [pt.dvector] if pt is not None else None
+    # outputs a single scalar value (the log prob)
+    otypes = [pt.dvector] if pt is not None else None
 
-        def perform(self, node, inputs, outputs, params=None):
-            """Calculate the gradients of the objective function."""
-            (theta,) = inputs
-            # calculate gradients
-            log_prob_grad = -self._beta * self._objective(
-                theta, sensi_orders=(1,)
-            )
-            outputs[0][0] = log_prob_grad
+    def __init__(self, objective: ObjectiveBase, beta: float):
+        # Check dependencies
+        if importlib.util.find_spec("pymc") is None:
+            raise SamplerImportError("pymc")
+        self._objective: ObjectiveBase = objective
+        self._beta: float = beta
 
-    return PymcObjectiveOp(objective, beta)
+    def perform(self, node, inputs, outputs, params=None):
+        """Calculate the gradients of the objective function."""
+        (theta,) = inputs
+        # calculate gradients
+        log_prob_grad = -self._beta * self._objective(theta, sensi_orders=(1,))
+        outputs[0][0] = log_prob_grad
 
 
 class PymcSampler(Sampler):
@@ -116,13 +140,11 @@ class PymcSampler(Sampler):
         post_compute_fval: bool = True,
         **kwargs,
     ):
-        super().__init__(kwargs)
-        try:
-            import pymc
-        except ImportError:
-            raise SamplerImportError("pymc") from None
-        import arviz as az
+        # Check dependencies
+        if importlib.util.find_spec("pymc") is None:
+            raise SamplerImportError("pymc")
 
+        super().__init__(kwargs)
         self.step_function = step_function
         self.problem: Problem | None = None
         self.x0: np.ndarray | None = None
@@ -172,16 +194,11 @@ class PymcSampler(Sampler):
         ----------
         n_samples:
             Number of samples to be computed.
+        beta:
+            Inverse temperature for tempering (default: 1.0).
         """
-        try:
-            import pymc
-        except ImportError:
-            raise SamplerImportError("pymc") from None
-        import pytensor.tensor as pt
-
         problem = self.problem
-        # log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
-        log_post = _make_pymc_logprob_op(problem.objective, beta)
+        log_post = PymcObjectiveOp.create_instance(problem.objective, beta)
         trace = self.trace
 
         x0 = None
