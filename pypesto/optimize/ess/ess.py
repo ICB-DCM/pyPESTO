@@ -785,3 +785,33 @@ class ESSOptimizer:
     def set_maxtime(self, seconds: float) -> None:
         """Set the maximum wall time for optimization."""
         self.max_walltime_s = seconds
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        self.max_iter = iterations
+
+    def supports_maxeval(self) -> bool:
+        """Check whether optimizer supports evaluation limits."""
+        return True
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+        """
+        self.max_eval = evaluations
