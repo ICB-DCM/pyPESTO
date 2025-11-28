@@ -5,7 +5,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from petab_select.constants import ESTIMATE, TYPE_PATH, Criterion
+from petab_select.constants import TYPE_PATH, Criterion
 
 from .. import store, visualize
 from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
@@ -94,11 +94,12 @@ def save_minimize_result_postprocessor(
 
 
 def save_postprocessor(*args, **kwargs):
-    """Deprecated. Use `save_minimize_result_postprocessor`."""
+    """Use `save_minimize_result_postprocessor`. Deprecated."""
     warnings.warn(
         "`save_postprocessor` is deprecated. Use "
         "`save_minimize_result_postprocessor`.",
-        DeprecationWarning
+        DeprecationWarning,
+        stacklevel=2,
     )
     save_minimize_result_postprocessor(*args, **kwargs)
 
