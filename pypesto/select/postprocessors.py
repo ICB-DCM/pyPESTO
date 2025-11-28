@@ -5,7 +5,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from petab_select.constants import TYPE_PATH, Criterion
+from petab_select.constants import ESTIMATE, TYPE_PATH, Criterion
 
 from .. import store, visualize
 from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
@@ -53,7 +53,7 @@ def waterfall_plot_postprocessor(
     plt.savefig(str(plot_output_path))
 
 
-def save_postprocessor(
+def save_minimize_result_postprocessor(
     problem: ModelProblem,
     output_path: TYPE_PATH = ".",
     use_model_hash: bool = False,
@@ -68,7 +68,7 @@ def save_postprocessor(
 
        from functools import partial
        output_path = 'results'
-       pp = partial(save_postprocessor, output_path=output_path)
+       pp = partial(save_minimize_result_postprocessor, output_path=output_path)
        selector = pypesto.select.ModelSelector(
            problem=problem,
            model_postprocessor=pp,
@@ -91,6 +91,53 @@ def save_postprocessor(
         problem.minimize_result,
         Path(output_path) / (stem + ".hdf5"),
     )
+
+
+def save_postprocessor(*args, **kwargs):
+    """Deprecated. Use `save_minimize_result_postprocessor`."""
+    warnings.warn(
+        "`save_postprocessor` is deprecated. Use "
+        "`save_minimize_result_postprocessor`.",
+        DeprecationWarning
+    )
+    save_minimize_result_postprocessor(*args, **kwargs)
+
+
+def save_model_postprocessor(
+    problem: ModelProblem,
+    output_path: TYPE_PATH = ".",
+    use_model_hash: bool = False,
+):
+    """Save the model.
+
+    When used, first set the output folder for results, e.g. with
+    :func:`functools.partial`. This is because postprocessors should take only a
+    single parameter: an optimized model.
+
+    .. code-block:: python
+
+       from functools import partial
+       output_path = 'results'
+       pp = partial(save_yaml_postprocessor, output_path=output_path)
+       selector = pypesto.select.ModelSelector(
+           problem=problem,
+           model_postprocessor=pp,
+       )
+
+    Parameters
+    ----------
+    problem:
+        A model selection :class:`ModelProblem` that has been optimized.
+    output_path:
+        The location where output will be stored.
+    use_model_hash:
+        Whether the filename should use the model hash. Defaults to ``False``,
+        in which case the model ID is used instead.
+    """
+    stem = problem.model.model_id
+    if use_model_hash:
+        stem = str(problem.model.hash)
+    problem.model.to_yaml(Path(output_path) / (stem + ".yaml"))
 
 
 def model_id_binary_postprocessor(problem: ModelProblem):
