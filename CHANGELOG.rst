@@ -6,6 +6,55 @@ Release notes
 ..........
 
 
+0.5.7 (2025-11-13)
+-------------------
+
+
+- General
+    - Require Python >=3.11 (#1585)
+- Documentation
+    - Updated references and citations (#1601, #1609, #1612)
+    - Various minor Documentation and Example fixes
+- Optimization
+    - update scipy interface (#1588)
+- Ensemble
+    - accurate cutoff based on chi2 distribution (#1566)
+- History
+    - Add monotonic_history from mutliple histories (#1632)
+- Profiling
+    - split ProfilerTask into descending and ascending parts (#1598)
+    - Profiles nested CIs (#1584)
+- Visualize
+    - Fix IndexError in waterfall for all-non-finite values (#1600)
+    - prettier intervals for profiles by using capstyle (#1607)
+    - Improve waterfall plot efficiency (#1608)
+    - remove unnecessary title and axes labels (#1589)
+    - Nicer pypesto.visualize.profile_cis interval markers (#1626)
+    - Allow to define colors more flexibly (#1627)
+    - Prevent invisible plot due to large cluster number in waterfall plot (#1631)
+- Objective
+    - Updated roadrunner steady state computation (#1604)
+
+
+0.5.6 (2025-05-18)
+-------------------
+
+- General
+    - GHA and CI improvements (#1560, #1554, #1571, #1573, #1577)
+    - Documentation improvement (#1557, #1479, #1539, #1551)
+    - Fix compatibility with jax 0.6.0 (#1580)
+- Optimization
+    - SacessOptimizer: Minor updates (#1564)
+    - Fix SacessOptimizer relative fval improvement check (#1558)
+    - Add Ipopt factory for use with SacessOptimizer (#1533)
+    - Make CmaOptimizer respect wall time limits and max evals under SacessOptimizer (#1555)
+    - Make print parameter summary nicer (#1549)
+- Select
+    - Fix model hash typing issue (#1548)
+- Store
+    - Speed up `read_hdf5_optimization` (#1570, #1556)
+
+
 0.5.5 (2025-01-10)
 -------------------
 

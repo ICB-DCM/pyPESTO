@@ -479,8 +479,8 @@ class Hdf5History(HistoryBase):
     @staticmethod
     def from_history(
         other: HistoryBase,
-        file: Union[str, Path],
-        id_: str,
+        file: str | Path,
+        id_: str | int,
         overwrite: bool = False,
     ) -> "Hdf5History":
         """Write some History to HDF5.
@@ -491,7 +491,7 @@ class Hdf5History(HistoryBase):
             History to be copied to HDF5.
         file:
             HDF5 file to write to (append or create).
-        id_:
+        ``id_``:
             ID of the history.
         overwrite:
             Whether to overwrite an existing history with the same id.
@@ -501,6 +501,12 @@ class Hdf5History(HistoryBase):
         -------
         The newly created :class:`Hdf5History`.
         """
+        if isinstance(id_, int):
+            id_ = str(id_)
+        if not isinstance(id_, str):
+            raise ValueError(
+                f"ID must be a string or integer, not {type(id_)}"
+            )
         history = Hdf5History(file=file, id=id_)
         history._f = h5py.File(history.file, mode="a")
 
@@ -537,9 +543,9 @@ class Hdf5History(HistoryBase):
                 getter = getattr(other, f"get_{trace_key}_trace")
                 trace = getter()
                 for iteration, value in enumerate(trace):
-                    trace_group.require_group(str(iteration))[
-                        trace_key
-                    ] = value
+                    trace_group.require_group(str(iteration))[trace_key] = (
+                        value
+                    )
         finally:
             history._f.close()
             history._f = None

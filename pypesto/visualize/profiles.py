@@ -1,11 +1,12 @@
 from collections.abc import Sequence
-from typing import Optional, Union
 from warnings import warn
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.colors import is_color_like
 from matplotlib.ticker import MaxNLocator
 
+from ..C import COLOR
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import process_result_list
@@ -13,15 +14,15 @@ from .reference_points import ReferencePoint, create_references
 
 
 def profiles(
-    results: Union[Result, Sequence[Result]],
+    results: Result | Sequence[Result],
     ax=None,
     profile_indices: Sequence[int] = None,
     size: tuple[float, float] = (18.5, 6.5),
-    reference: Union[ReferencePoint, Sequence[ReferencePoint]] = None,
-    colors=None,
+    reference: ReferencePoint | Sequence[ReferencePoint] = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: Sequence[str] = None,
     x_labels: Sequence[str] = None,
-    profile_list_ids: Union[int, Sequence[int]] = 0,
+    profile_list_ids: int | Sequence[int] = 0,
     ratio_min: float = 0.0,
     show_bounds: bool = False,
     plot_objective_values: bool = False,
@@ -48,7 +49,7 @@ def profiles(
         least a function value fval.
     colors:
         List of colors, or single color. If multiple colors are passed, their
-        number needs to corresponds to either the number of results or the
+        number needs to correspond to either the number of results or the
         number of profile_list_ids. Cannot be provided if quality_colors is set to True.
     legends:
         Labels for line plots, one label per result object.
@@ -86,7 +87,7 @@ def profiles(
 
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
-        results, profile_list_ids, colors, legends
+        results, profile_list_ids, legends, colors
     )
 
     # get the parameter ids to be plotted
@@ -109,7 +110,9 @@ def profiles(
             if x_labels is None:
                 x_labels = [
                     name
-                    for name, fval in zip(result.problem.x_names, fvals)
+                    for name, fval in zip(
+                        result.problem.x_names, fvals, strict=True
+                    )
                     if fval is not None
                 ]
 
@@ -159,10 +162,10 @@ def profiles(
 
 
 def profiles_lowlevel(
-    fvals: Union[float, Sequence[float]],
-    ax: Optional[Sequence[plt.Axes]] = None,
+    fvals: float | Sequence[float],
+    ax: Sequence[plt.Axes] | None = None,
     size: tuple[float, float] = (18.5, 6.5),
-    color=None,
+    color: COLOR | list[np.ndarray] | None = None,
     legend_text: str = None,
     x_labels=None,
     show_bounds: bool = False,
@@ -184,7 +187,7 @@ def profiles_lowlevel(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
-    color: RGBA, list[np.ndarray[RGBA]], optional
+    color:
         Color for profiles in plot. In case of quality_colors=True, this is a list of
         np.ndarray[RGBA] for each profile -- one color per profile point for each profile.
     legend_text:
@@ -252,7 +255,9 @@ def profiles_lowlevel(
         rows = columns - 1
 
     counter = 0
-    for i_plot, (fval, lb, ub) in enumerate(zip(fvals, lb_full, ub_full)):
+    for i_plot, (fval, lb, ub) in enumerate(
+        zip(fvals, lb_full, ub_full, strict=True)
+    ):
         # if we have empty profiles and more axes than profiles: skip
         if n_plots != n_fvals and fval is None:
             continue
@@ -309,9 +314,9 @@ def profiles_lowlevel(
 
 def profile_lowlevel(
     fvals: Sequence[float],
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
     size: tuple[float, float] = (18.5, 6.5),
-    color=None,
+    color: COLOR | np.ndarray | None = None,
     legend_text: str = None,
     show_bounds: bool = False,
     lb: float = None,
@@ -329,8 +334,8 @@ def profile_lowlevel(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
-    color: RGBA, optional
-        Color for profiles in plot.
+    color:
+        Color for profiles in plot. A single color or an array of RGBA for each profile point
     legend_text:
         Label for line plots.
     show_bounds:
@@ -347,12 +352,7 @@ def profile_lowlevel(
     # parse input
     fvals = np.asarray(fvals)
     # get colors
-    if (
-        color is None
-        or isinstance(color, list)
-        or isinstance(color, tuple)
-        or (isinstance(color, np.ndarray) and not len(color.shape) == 2)
-    ):
+    if color is None or is_color_like(color):
         color = assign_colors([1.0], color)
         single_color = True
     else:
@@ -376,21 +376,23 @@ def profile_lowlevel(
         # we need to make a mapping from profile points to their colors
         if not single_color:
             # Create a mapping from (x, ratio) to color
-            point_to_color = dict(zip(zip(xs, ratios), color))
+            point_to_color = dict(
+                zip(zip(xs, ratios, strict=True), color, strict=True)
+            )
         else:
             point_to_color = None
 
         # Plot each profile point individually to allow for different colors
         for i in range(1, len(xs)):
             point_color = (
-                color
+                color[0]
                 if single_color
                 else tuple(point_to_color[(xs[i], ratios[i])])
             )
             ax.plot(
                 [xs[i - 1], xs[i]],
                 [ratios[i - 1], ratios[i]],
-                color=color if single_color else (0, 0, 0, 1),
+                color=color[0] if single_color else (0, 0, 0, 1),
                 linestyle="-",
             )
             if not single_color and point_color != (0, 0, 0, 1):
@@ -449,7 +451,7 @@ def handle_inputs(
     profile_list: int,
     ratio_min: float,
     plot_objective_values: bool,
-) -> list[np.array]:
+) -> tuple[list, list]:
     """
     Retrieve the values of the profiles to be plotted.
 
@@ -513,11 +515,11 @@ def handle_inputs(
 
 
 def process_result_list_profiles(
-    results: Result,
-    profile_list_ids: Sequence[int],
-    colors: Sequence[np.array],
-    legends: Union[str, list],
-) -> Sequence[int]:
+    results: Result | list[Result],
+    profile_list_ids: int | Sequence[int] | None,
+    legends: str | list[str],
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,  # todo: check
+) -> tuple[list[Result], list[int] | Sequence[int], list, list[str]]:
     """
     Assign colors and legends to a list of results.
 
@@ -525,12 +527,13 @@ def process_result_list_profiles(
 
     Parameters
     ----------
-    results: list or pypesto.Result
+    results:
         List of or single `pypesto.Result` after profiling.
-    profile_list_ids: int or list of ints, optional
+    profile_list_ids:
         Index or list of indices of the profile lists to be used for profiling.
-    colors: list of RGBA colors for plotting.
-    legends: list of str
+    colors:
+        list of colors for plotting.
+    legends:
         Legends for plotting
 
     Returns
@@ -565,7 +568,7 @@ def process_result_list_profiles(
 def process_profile_indices(
     results: Sequence[Result],
     profile_indices: Sequence[int],
-    profile_list_ids: Union[int, Sequence[int]],
+    profile_list_ids: int | Sequence[int],
 ):
     """
     Clean up profile_indices to be plotted.

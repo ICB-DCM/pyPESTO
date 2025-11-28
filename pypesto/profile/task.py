@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 import pypesto.optimize
 
@@ -24,6 +24,7 @@ class ProfilerTask(Task):
         global_opt: float,
         optimizer: "pypesto.optimize.Optimizer",
         create_next_guess: Callable,
+        par_direction: Literal[-1, 1],
     ):
         """
         Create the task object.
@@ -44,6 +45,9 @@ class ProfilerTask(Task):
             Handle of the method which creates the next profile point proposal
         i_par:
             index for the current parameter
+        par_direction:
+            The direction in which to perform the operation.
+            Must be either -1 (descending) or 1 (ascending).
         """
         super().__init__()
 
@@ -54,26 +58,32 @@ class ProfilerTask(Task):
         self.create_next_guess = create_next_guess
         self.i_par = i_par
         self.options = options
+        self.par_direction = par_direction
 
     def execute(self) -> dict[str, Any]:
         """Compute profile in descending and ascending direction."""
-        logger.debug(f"Executing task {self.i_par}.")
+        logger.debug(
+            f"Executing task {'descending' if self.par_direction == -1 else 'ascending'} {self.i_par}."
+        )
 
-        for par_direction in [-1, 1]:
-            # flip profile
-            self.current_profile.flip_profile()
+        # flip profile
+        self.current_profile.flip_profile()
 
-            # compute the current profile
-            self.current_profile = walk_along_profile(
-                current_profile=self.current_profile,
-                problem=self.problem,
-                par_direction=par_direction,
-                optimizer=self.optimizer,
-                options=self.options,
-                create_next_guess=self.create_next_guess,
-                global_opt=self.global_opt,
-                i_par=self.i_par,
-            )
+        # compute the current profile
+        self.current_profile = walk_along_profile(
+            current_profile=self.current_profile,
+            problem=self.problem,
+            par_direction=self.par_direction,
+            optimizer=self.optimizer,
+            options=self.options,
+            create_next_guess=self.create_next_guess,
+            global_opt=self.global_opt,
+            i_par=self.i_par,
+        )
 
         # return the ProfilerResult and the index of the parameter profiled
-        return {"profile": self.current_profile, "index": self.i_par}
+        return {
+            "profile": self.current_profile,
+            "index": self.i_par,
+            "par_direction": self.par_direction,
+        }

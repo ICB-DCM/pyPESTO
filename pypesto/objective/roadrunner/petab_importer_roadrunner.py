@@ -4,6 +4,7 @@ Creates from a PEtab problem a roadrunner model, a roadrunner objective or a
 pypesto problem with a roadrunner objective. The actual form of the likelihood
 depends on the noise model specified in the provided PEtab problem.
 """
+
 from __future__ import annotations
 
 import logging
@@ -129,9 +130,9 @@ class PetabImporterRR:
         for i_edata, j_formula, obs_name in to_change:
             # assign new parameter, formula in RR and parameter into mapping
             original_formula = edatas[i_edata].noise_formulae[j_formula]
-            edatas[i_edata].noise_formulae[
-                j_formula
-            ] = f"noiseFormula_{obs_name}"
+            edatas[i_edata].noise_formulae[j_formula] = (
+                f"noiseFormula_{obs_name}"
+            )
             # different conditions will have the same noise formula
             if (obs_name, original_formula) not in formulae_changed:
                 self.rr.addParameter(f"noiseFormula_{obs_name}", 0.0, False)
@@ -234,11 +235,11 @@ class PetabImporterRR:
                     )
                     mapping_per_condition[0][override] = parameter_id_or_value
                     if isinstance(parameter_id_or_value, str):
-                        mapping_per_condition[2][
-                            override
-                        ] = self.petab_problem.parameter_df.loc[
-                            parameter_id_or_value, petab.PARAMETER_SCALE
-                        ]
+                        mapping_per_condition[2][override] = (
+                            self.petab_problem.parameter_df.loc[
+                                parameter_id_or_value, petab.PARAMETER_SCALE
+                            ]
+                        )
                     elif isinstance(parameter_id_or_value, numbers.Number):
                         mapping_per_condition[2][override] = pypesto.C.LIN
                     else:
@@ -252,11 +253,11 @@ class PetabImporterRR:
                     )
                     mapping_per_condition[1][override] = parameter_id_or_value
                     if isinstance(parameter_id_or_value, str):
-                        mapping_per_condition[3][
-                            override
-                        ] = self.petab_problem.parameter_df.loc[
-                            parameter_id_or_value, petab.PARAMETER_SCALE
-                        ]
+                        mapping_per_condition[3][override] = (
+                            self.petab_problem.parameter_df.loc[
+                                parameter_id_or_value, petab.PARAMETER_SCALE
+                            ]
+                        )
                     elif isinstance(parameter_id_or_value, numbers.Number):
                         mapping_per_condition[3][override] = pypesto.C.LIN
                     else:

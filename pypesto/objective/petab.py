@@ -1,4 +1,5 @@
 """Objective function for PEtab models using the PEtab simulator."""
+
 from __future__ import annotations
 
 try:

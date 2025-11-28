@@ -5,7 +5,7 @@ Install and upgrade
 Requirements
 ------------
 
-This package requires Python 3.10 or later (see :ref:`Python support`).
+This package requires Python 3.11 or later (see :ref:`Python support`).
 It is continuously tested on Linux, and most parts should also work on other
 operating systems (MacOS, Windows).
 
@@ -28,21 +28,21 @@ where ENV_NAME denotes an individual environment name,
 if you do not want to mess up the system environment.
 
 
-Install from PIP
-----------------
+Install from PyPI
+-----------------
 
-The package can be installed from the Python Package Index PyPI
-via pip::
+The package can be installed from the Python Package Index
+`PyPI <https://pypi.org/project/pypesto/>`__ via pip::
 
     pip3 install pypesto
 
 
-Install from GIT
-----------------
+Install from GitHub
+-------------------
 
-If you want the bleeding edge version, install directly from github::
+If you want the bleeding edge version, install directly from GitHub::
 
-    pip3 install git+https://github.com/icb-dcm/pypesto.git
+    pip3 install git+https://github.com/icb-dcm/pypesto.git@develop
 
 If you need to have access to the source code, you can download it via::
 
@@ -74,13 +74,21 @@ Install optional packages and external dependencies
   or, in case of problems, follow the full instructions from the
   `AMICI documentation <https://amici.readthedocs.io/en/latest/python_installation.html>`_.
 
-* This package inherently supports optimization using the dlib toolbox.
+* This package inherently supports optimization using the
+  `dlib <https://dlib.net/>`__ toolbox.
   To use it, install dlib via::
 
    pip3 install dlib
 
 * All external dependencies can be installed through
   `this shell script <https://github.com/ICB-DCM/pyPESTO/blob/main/.github/workflows/install_deps.sh>`_.
+
+
+Install and run Docker container
+--------------------------------
+
+.. include:: containers.rst
+
 
 .. _Python Support:
 

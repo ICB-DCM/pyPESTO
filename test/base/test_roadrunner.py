@@ -1,4 +1,5 @@
 """Test the roadrunner interface."""
+
 import copy
 import logging
 import os
@@ -44,6 +45,8 @@ def test_petab_case(case, model_type, version):
 def _execute_case_rr(case, model_type, version):
     """Run a single PEtab test suite case"""
     case = petabtests.test_id_str(case)
+    if case == "0018" and model_type == "sbml" and version == "v1.0.0":
+        pytest.skip("https://github.com/ICB-DCM/pyPESTO/issues/1597")
     logger.info(f"Case {case}")
 
     # case folder

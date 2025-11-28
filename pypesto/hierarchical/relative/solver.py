@@ -312,14 +312,14 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
 
                 # calculate the optimal coupled scaling
                 coupled_scaling = x.coupled
-                x_opt[
-                    coupled_scaling.inner_parameter_id
-                ] = compute_optimal_scaling(
-                    data=data,
-                    sim=sim,
-                    sigma=sigma,
-                    mask=coupled_scaling.ixs,
-                    optimal_offset=x_opt[x.inner_parameter_id],
+                x_opt[coupled_scaling.inner_parameter_id] = (
+                    compute_optimal_scaling(
+                        data=data,
+                        sim=sim,
+                        sigma=sigma,
+                        mask=coupled_scaling.ixs,
+                        optimal_offset=x_opt[x.inner_parameter_id],
+                    )
                 )
 
                 # check whether they both satisfy their bounds

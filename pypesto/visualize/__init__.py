@@ -43,7 +43,7 @@ from .parameters import (
     parameters_correlation_matrix,
     parameters_lowlevel,
 )
-from .profile_cis import profile_cis
+from .profile_cis import profile_cis, profile_nested_cis
 from .profiles import profile_lowlevel, profiles, profiles_lowlevel
 from .reference_points import ReferencePoint, create_references
 from .sampling import (

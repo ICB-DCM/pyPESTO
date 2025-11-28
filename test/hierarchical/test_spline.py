@@ -276,7 +276,7 @@ def _inner_problem_exp():
 
     inner_parameters = [
         SplineInnerParameter(
-            inner_parameter_id=f"{par_type}_{1}_{par_index+1}",
+            inner_parameter_id=f"{par_type}_{1}_{par_index + 1}",
             inner_parameter_type=InnerParameterType.SPLINE,
             scale=LIN,
             lb=-np.inf,

@@ -49,7 +49,11 @@ def read_hdf5_profile(
 
 
 def read_hdf5_optimization(
-    f: h5py.File, file_name: Union[Path, str], opt_id: str, lazy: bool = False
+    f: h5py.File,
+    file_name: Path | str,
+    opt_id: str,
+    lazy: bool = False,
+    with_history: bool = True,
 ) -> "OptimizerResult":
     """Read HDF5 results per start.
 
@@ -63,27 +67,37 @@ def read_hdf5_optimization(
         Specifies the start that is read from the HDF5 file
     lazy:
         Whether to use lazy loading for optimizer results
+    with_history:
+        Whether to load the optimization history. When `lazy=False`, setting
+        `with_history=False` prevents loading history objects, which can save
+        memory and time. When `lazy=True`, this parameter has no effect
+        since history is only loaded when accessed.
     """
     if lazy:
         from ..result import LazyOptimizerResult
 
         return LazyOptimizerResult(file_name, f"optimization/results/{opt_id}")
 
+    group = f[f"/optimization/results/{opt_id}"]
+    dset_ids = set(group)
+    attr_ids = set(group.attrs)
+
     result = OptimizerResult()
     for optimization_key in result.keys():
-        if optimization_key == "history":
-            if optimization_key in f:
-                result["history"] = Hdf5History(id=opt_id, file=file_name)
-                result["history"].recover_options(file_name)
-                continue
-        if optimization_key in f[f"/optimization/results/{opt_id}"]:
-            result[optimization_key] = f[
-                f"/optimization/results/{opt_id}/{optimization_key}"
-            ][:]
-        elif optimization_key in f[f"/optimization/results/{opt_id}"].attrs:
-            result[optimization_key] = f[
-                f"/optimization/results/{opt_id}"
-            ].attrs[optimization_key]
+        if (
+            optimization_key == "history"
+            and optimization_key in f
+            and with_history
+        ):
+            result["history"] = Hdf5History(id=opt_id, file=file_name)
+            result["history"].recover_options(file_name)
+        elif optimization_key == "history" and not with_history:
+            # Skip loading history
+            continue
+        elif optimization_key in dset_ids:
+            result[optimization_key] = group[optimization_key][:]
+        elif optimization_key in attr_ids:
+            result[optimization_key] = group.attrs[optimization_key]
     return result
 
 
@@ -159,9 +173,16 @@ class OptimizationResultHDF5Reader:
         HDF5 result file name
     lazy:
         Whether to use lazy loading for optimizer results
+    with_history:
+        Whether to load the optimization history
     """
 
-    def __init__(self, storage_filename: Union[str, Path], lazy: bool = False):
+    def __init__(
+        self,
+        storage_filename: Union[str, Path],
+        lazy: bool = False,
+        with_history: bool = True,
+    ):
         """
         Initialize reader.
 
@@ -171,20 +192,31 @@ class OptimizationResultHDF5Reader:
             HDF5 result file name
         lazy:
             Whether to use lazy loading for optimizer results
+        with_history:
+            Whether to load the optimization history. When `lazy=False`,
+            setting `with_history=False` prevents loading history objects,
+            which can save memory and time. When `lazy=True`, this parameter
+            has no practical effect.
         """
         self.storage_filename = storage_filename
         self.results = Result()
         self.lazy = lazy
+        self.with_history = with_history
 
     def read(self) -> Result:
         """Read HDF5 result file and return pyPESTO result object."""
         with h5py.File(self.storage_filename, "r") as f:
-            for opt_id in f["/optimization/results"]:
-                result = read_hdf5_optimization(
-                    f, self.storage_filename, opt_id, lazy=self.lazy
+            results = [
+                read_hdf5_optimization(
+                    f,
+                    self.storage_filename,
+                    opt_id,
+                    lazy=self.lazy,
+                    with_history=self.with_history,
                 )
-                self.results.optimize_result.append(result)
-            self.results.optimize_result.sort()
+                for opt_id in f["/optimization/results"]
+            ]
+            self.results.optimize_result.append(results, sort=True)
         return self.results
 
 
@@ -221,7 +253,7 @@ class SamplingResultHDF5Reader:
             self.results.sample_result = McmcPtResult(**sample_result)
         except TypeError:
             logger.warning(
-                "Warning: You tried loading a non-existent " "sampling result."
+                "Warning: You tried loading a non-existent sampling result."
             )
 
         return self.results
@@ -258,14 +290,14 @@ class ProfileResultHDF5Reader:
                     [None for _ in f[f"/profiling/{profile_id}"]]
                 )
                 for parameter_id in f[f"/profiling/{profile_id}"]:
-                    if f[f"/profiling/{profile_id}/" f"{parameter_id}"].attrs[
+                    if f[f"/profiling/{profile_id}/{parameter_id}"].attrs[
                         "IsNone"
                     ]:
                         continue
-                    profiling_list[int(profile_id)][
-                        int(parameter_id)
-                    ] = read_hdf5_profile(
-                        f, profile_id=profile_id, parameter_id=parameter_id
+                    profiling_list[int(profile_id)][int(parameter_id)] = (
+                        read_hdf5_profile(
+                            f, profile_id=profile_id, parameter_id=parameter_id
+                        )
                     )
             self.results.profile_result.list = profiling_list
         return self.results
@@ -278,6 +310,7 @@ def read_result(
     profile: bool = False,
     sample: bool = False,
     lazy: bool = False,
+    with_history: bool = True,
 ) -> Result:
     """Save the whole pypesto.Result object in an HDF5 file.
 
@@ -298,6 +331,12 @@ def read_result(
         Read the sample result.
     lazy:
         Whether to use lazy loading for optimizer results
+    with_history:
+        Whether to load the optimization history. When `lazy=False`, setting
+        `with_history=False` prevents loading history objects, which can save
+        memory and time. When `lazy=True`, this parameter has no
+        practical effect since history is only loaded when explicitly
+        accessed anyway.
 
     Returns
     -------
@@ -315,7 +354,9 @@ def read_result(
         result.problem = pypesto_problem_reader.read()
 
     if optimize:
-        pypesto_opt_reader = OptimizationResultHDF5Reader(filename, lazy=lazy)
+        pypesto_opt_reader = OptimizationResultHDF5Reader(
+            filename, lazy=lazy, with_history=with_history
+        )
         try:
             temp_result = pypesto_opt_reader.read()
             result.optimize_result = temp_result.optimize_result

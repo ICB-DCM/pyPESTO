@@ -64,6 +64,7 @@ def _device_fun(base_objective: ObjectiveBase, x: jnp.array) -> jnp.array:
         ),
         jax.ShapeDtypeStruct((), x.dtype),
         x,
+        vmap_method="sequential",
     )
 
 
@@ -110,6 +111,7 @@ def _device_fun_value_and_grad(
             ),
         ),
         x,
+        vmap_method="sequential",
     )
 
 
@@ -193,7 +195,7 @@ class JaxObjective(ObjectiveBase):
 
         if not self.check_mode(mode):
             raise ValueError(
-                f"This Objective cannot be called with mode" f"={mode}."
+                f"This Objective cannot be called with mode={mode}."
             )
         if not self.check_sensi_orders(sensi_orders, mode):
             raise ValueError(

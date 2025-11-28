@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import logging
 import warnings
 from collections.abc import Iterable
 from numbers import Number
-from typing import Optional, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from ..C import (
     ALL,
     ALL_CLUSTERED,
+    COLOR,
     FIRST_CLUSTER,
     FREE_ONLY,
     LEN_RGB,
@@ -24,31 +27,36 @@ from ..result import Result
 from ..util import assign_clusters, delete_nan_inf
 from .clust_color import assign_colors_for_list
 
+if TYPE_CHECKING:
+    from matplotlib.pyplot import Axes
+
 logger = logging.getLogger(__name__)
 
 
 def process_result_list(
-    results: Union[Result, list[Result]], colors=None, legends=None
-):
+    results: Result | list[Result],
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends: str | list[str] | None = None,
+) -> tuple[list[Result], list[COLOR], list[str]]:
     """
     Assign colors and legends to a list of results, check user provided lists.
 
     Parameters
     ----------
-    results: list or pypesto.Result
+    results:
         list of pypesto.Result objects or a single pypesto.Result
-    colors: list, optional
-        list of RGBA colors
-    legends: str or list
+    colors:
+        list of colors recognized by matplotlib, or single color
+    legends:
         labels for line plots
 
     Returns
     -------
-    results: list of pypesto.Result
+    results:
        list of pypesto.Result objects
-    colors: list of RGBA
+    colors:
         One for each element in 'results'.
-    legends: list of str
+    legends:
         labels for line plots
     """
     # check how many results were passed
@@ -64,10 +72,10 @@ def process_result_list(
     # handle results according to their number
     if single_result:
         # assign colors and create list for later handling
-        if colors is None:
-            colors = [colors]
-        else:
+        if colors is not None and isinstance(colors, list):
             colors = [np.array(colors)]
+        else:
+            colors = [colors]
 
         # create list of legends for later handling
         if not isinstance(legends, list):
@@ -106,7 +114,7 @@ def process_result_list(
 
 
 def process_offset_y(
-    offset_y: Optional[float], scale_y: str, min_val: float
+    offset_y: float | None, scale_y: str, min_val: float
 ) -> float:
     """
     Compute offset for y-axis, depend on user settings.
@@ -149,20 +157,23 @@ def process_offset_y(
     return 1.0 - min_val
 
 
-def process_y_limits(ax, y_limits):
+def process_y_limits(
+    ax: Axes,
+    y_limits: None | Iterable[float] | np.ndarray,
+) -> Axes:
     """
     Apply user specified limits of y-axis.
 
     Parameters
     ----------
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
-    y_limits: ndarray
+    y_limits:
        y_limits, minimum and maximum, for current axes object
 
     Returns
     -------
-    ax: matplotlib.Axes, optional
+    ax:
         Axes object to use.
     """
     # apply y-limits, if they were specified by the user
@@ -206,7 +217,9 @@ def process_y_limits(ax, y_limits):
         data_limits = ax.dataLim.ymin, ax.dataLim.ymax
 
         # Check if data fits to axes and adapt limits, if necessary
-        if ax_limits[0] > data_limits[0] or ax_limits[1] < data_limits[1]:
+        if np.isfinite(data_limits).all() and (
+            ax_limits[0] > data_limits[0] or ax_limits[1] < data_limits[1]
+        ):
             # Get range of data
             data_range = data_limits[1] - data_limits[0]
             if ax.get_yscale() == "log":
@@ -301,7 +314,7 @@ def rgba2rgb(fg: RGB_RGBA, bg: RGB_RGBA = None) -> RGB:
 
 def process_start_indices(
     result: Result,
-    start_indices: Union[str, int, Iterable[int]] = None,
+    start_indices: str | int | Iterable[int] = None,
 ) -> np.ndarray:
     """
     Process the start_indices.
@@ -374,12 +387,12 @@ def process_start_indices(
             "Some start indices were removed due to inf or nan function values."
         )
 
-    return np.asarray(start_indices)
+    return np.asarray(start_indices, dtype=int)
 
 
 def process_parameter_indices(
     result: Result,
-    parameter_indices: Union[str, Iterable[int]] = FREE_ONLY,
+    parameter_indices: str | Iterable[int] = FREE_ONLY,
 ) -> list:
     """
     Process the parameter indices, always returning a valid array.

@@ -1,6 +1,5 @@
 """Deprecated. Use ``petab_select.plot`` methods instead."""
 
-
 import warnings
 
 import matplotlib.pyplot as plt
