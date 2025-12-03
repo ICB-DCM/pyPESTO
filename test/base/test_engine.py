@@ -3,7 +3,7 @@
 import copy
 import os
 
-import amici
+import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import cloudpickle as pickle
 import numpy as np
@@ -88,15 +88,15 @@ def test_deepcopy_objective():
     factory = petab_importer.create_objective_creator()
     amici_model = factory.create_model()
     amici_model.set_steady_state_sensitivity_mode(
-        amici.SteadyStateSensitivityMode.integrateIfNewtonFails
+        asd.SteadyStateSensitivityMode.integrateIfNewtonFails
     )
     amici_model.set_steady_state_computation_mode(
-        amici.SteadyStateComputationMode.integrateIfNewtonFails
+        asd.SteadyStateComputationMode.integrateIfNewtonFails
     )
     objective = factory.create_objective(model=amici_model)
 
     objective.amici_solver.set_sensitivity_method(
-        amici.SensitivityMethod.adjoint
+        asd.SensitivityMethod.adjoint
     )
 
     objective2 = copy.deepcopy(objective)
@@ -134,7 +134,7 @@ def test_pickle_objective():
     objective = factory.create_objective()
 
     objective.amici_solver.set_sensitivity_method(
-        amici.SensitivityMethod.adjoint
+        asd.SensitivityMethod.adjoint
     )
 
     objective2 = pickle.loads(pickle.dumps(objective))

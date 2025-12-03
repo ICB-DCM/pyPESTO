@@ -12,7 +12,7 @@ from ..C import LIN, LOG, LOG10
 from .base_parameter import InnerParameter
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     import petab.v1 as petab
     from petab.v1.C import OBSERVABLE_ID, TIME
 except ImportError:
@@ -63,8 +63,8 @@ class InnerProblem:
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: amici.Model,
-        edatas: list[amici.ExpData],
+        amici_model: asd.Model,
+        edatas: list[asd.ExpData],
     ) -> InnerProblem:
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
 
@@ -176,10 +176,10 @@ class AmiciInnerProblem(InnerProblem):
         AMICI ``ExpDataView``s for each simulation condition.
     """
 
-    def __init__(self, edatas: list[amici.ExpData], **kwargs):
+    def __init__(self, edatas: list[asd.ExpData], **kwargs):
         super().__init__(**kwargs)
 
-    def check_edatas(self, edatas: list[amici.ExpData]) -> bool:
+    def check_edatas(self, edatas: list[asd.ExpData]) -> bool:
         """Check for consistency in data.
 
         Currently only checks for the actual data values. e.g., timepoints are
@@ -197,9 +197,7 @@ class AmiciInnerProblem(InnerProblem):
         """
         # TODO replace but edata1==edata2 once this makes it into amici
         #  https://github.com/AMICI-dev/AMICI/issues/1880
-        data = [
-            amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas
-        ]
+        data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
         # Mask the data using the inner problem mask. This is necessary
         # because the inner problem is aware of only the data it uses.

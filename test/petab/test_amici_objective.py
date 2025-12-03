@@ -4,7 +4,7 @@ This is for testing the pypesto.Objective.
 
 import os
 
-import amici
+import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
 import petab.v1 as petab
@@ -89,15 +89,15 @@ def test_preeq_guesses():
     obj_creator = importer.create_objective_creator()
     amici_model = obj_creator.create_model()
     amici_model.set_steady_state_computation_mode(
-        amici.SteadyStateComputationMode.integrateIfNewtonFails
+        asd.SteadyStateComputationMode.integrateIfNewtonFails
     )
     amici_model.set_steady_state_sensitivity_mode(
-        amici.SteadyStateSensitivityMode.integrateIfNewtonFails
+        asd.SteadyStateSensitivityMode.integrateIfNewtonFails
     )
     obj = obj_creator.create_objective(model=amici_model)
     problem = importer.create_problem(objective=obj)
     obj.amici_model.set_steady_state_sensitivity_mode(
-        amici.SteadyStateSensitivityMode.integrationOnly
+        asd.SteadyStateSensitivityMode.integrationOnly
     )
     obj = problem.objective
     obj.amici_solver.set_newton_max_steps(0)

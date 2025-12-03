@@ -33,7 +33,7 @@ from .problem import OrdinalProblem
 from .solver import OrdinalInnerSolver
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     from amici.importers.petab.v1.conditions import fill_in_parameters
     from amici.importers.petab.v1.parameter_mapping import ParameterMapping
 except ImportError:
@@ -88,12 +88,12 @@ class OrdinalCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list[amici.ReturnData] = None,
+        rdatas: list[asd.ReturnData] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -166,7 +166,7 @@ class OrdinalCalculator(AmiciCalculator):
                 amici_model=amici_model,
             )
             # run amici simulation
-            rdatas = amici.run_simulations(
+            rdatas = asd.run_simulations(
                 amici_model,
                 amici_solver,
                 edatas,
@@ -184,7 +184,7 @@ class OrdinalCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
             # if the gradient was requested,
             # we need to provide some value for it

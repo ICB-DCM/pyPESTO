@@ -38,14 +38,14 @@ from .amici_util import (
 if TYPE_CHECKING:
     from ...hierarchical import InnerCalculatorCollector
 
-    try:
-        import amici
-        from amici.importers.petab.v1.parameter_mapping import ParameterMapping
-    except ImportError:
-        pass
+try:
+    import amici.sim.sundials as asd
+    from amici.importers.petab.v1.parameter_mapping import ParameterMapping
+except ImportError:
+    pass
 
-AmiciModel = Union["amici.Model", "amici.ModelPtr"]
-AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
+AmiciModel = Union["asd.Model", "asd.ModelPtr"]
+AmiciSolver = Union["asd.Solver", "asd.SolverPtr"]
 
 
 class AmiciObjectBuilder(abc.ABC):
@@ -65,7 +65,7 @@ class AmiciObjectBuilder(abc.ABC):
         """Create an AMICI solver."""
 
     @abc.abstractmethod
-    def create_edatas(self, model: AmiciModel) -> Sequence[amici.ExpData]:
+    def create_edatas(self, model: AmiciModel) -> Sequence[asd.ExpData]:
         """Create AMICI experimental data."""
 
 
@@ -78,7 +78,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: Sequence[amici.ExpData] | amici.ExpData,
+        edatas: Sequence[asd.ExpData] | asd.ExpData,
         max_sensi_order: int | None = None,
         x_ids: Sequence[str] | None = None,
         x_names: Sequence[str] | None = None,
@@ -88,7 +88,7 @@ class AmiciObjective(ObjectiveBase):
         fim_for_hess: bool | None = True,
         amici_object_builder: AmiciObjectBuilder | None = None,
         calculator: AmiciCalculator | InnerCalculatorCollector | None = None,
-        amici_reporting: amici.RDataReporting | None = None,
+        amici_reporting: asd.RDataReporting | None = None,
     ):
         """
         Initialize objective.
@@ -147,15 +147,17 @@ class AmiciObjective(ObjectiveBase):
         if amici is None:
             raise ImportError(
                 "This objective requires an installation of amici "
-                "(https://github.com/icb-dcm/amici). "
+                "(https://github.com/AMICI-dev/AMICI). "
                 "Install via `pip3 install amici`."
             )
+
+        import amici.sim.sundials as asd
 
         self.amici_model = amici_model.clone()
         self.amici_solver = amici_solver.clone()
 
         # make sure the edatas are a list of edata objects
-        if isinstance(edatas, amici.amici.ExpData):
+        if isinstance(edatas, asd.ExpData):
             edatas = [edatas]
 
         # set the experimental data container
@@ -205,7 +207,7 @@ class AmiciObjective(ObjectiveBase):
         if (
             self.guess_steadystate is not False
             and self.amici_model.get_steady_state_sensitivity_mode()
-            == amici.SteadyStateSensitivityMode.integrationOnly
+            == asd.SteadyStateSensitivityMode.integrationOnly
         ):
             if self.guess_steadystate:
                 raise ValueError(
@@ -292,8 +294,6 @@ class AmiciObjective(ObjectiveBase):
         self.calculator.initialize()
 
     def __deepcopy__(self, memodict: dict = None) -> AmiciObjective:
-        import amici
-
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - {
@@ -306,13 +306,11 @@ class AmiciObjective(ObjectiveBase):
         # copy objects that do not have __deepcopy__
         other.amici_model = self.amici_model.clone()
         other.amici_solver = self.amici_solver.clone()
-        other.edatas = [amici.ExpData(data) for data in self.edatas]
+        other.edatas = [asd.ExpData(data) for data in self.edatas]
 
         return other
 
     def __getstate__(self) -> dict:
-        import amici
-
         if self.amici_object_builder is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __getstate__ without "
@@ -331,7 +329,7 @@ class AmiciObjective(ObjectiveBase):
         try:
             # write amici solver settings to file
             try:
-                amici.write_solver_settings_to_hdf5(self.amici_solver, _file)
+                asd.write_solver_settings_to_hdf5(self.amici_solver, _file)
             except AttributeError as e:
                 e.args += (
                     "Pickling the AmiciObjective requires an AMICI "
@@ -346,15 +344,13 @@ class AmiciObjective(ObjectiveBase):
             os.close(_fd)
             os.remove(_file)
 
-        state["AMICI_model_settings"] = amici.get_model_settings(
+        state["AMICI_model_settings"] = asd.get_model_settings(
             self.amici_model
         )
 
         return state
 
     def __setstate__(self, state: dict) -> None:
-        import amici
-
         if state["amici_object_builder"] is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __setstate__ without "
@@ -374,7 +370,7 @@ class AmiciObjective(ObjectiveBase):
                 f.write(state["amici_solver_settings"])
             # read in solver settings
             try:
-                amici.read_solver_settings_from_hdf5(_file, solver)
+                asd.read_solver_settings_from_hdf5(_file, solver)
             except AttributeError as err:
                 if not err.args:
                     err.args = ("",)
@@ -393,7 +389,7 @@ class AmiciObjective(ObjectiveBase):
         self.edatas = edatas
 
         self.apply_custom_timepoints()
-        amici.set_model_settings(
+        asd.set_model_settings(
             self.amici_model,
             state["AMICI_model_settings"],
         )
@@ -404,7 +400,6 @@ class AmiciObjective(ObjectiveBase):
         mode: ModeType,
     ) -> bool:
         """See `ObjectiveBase` documentation."""
-        import amici
 
         if not sensi_orders:
             return True
@@ -416,7 +411,7 @@ class AmiciObjective(ObjectiveBase):
             max_sensi_order = 1
             # check whether it is ok to request 2nd order
             sensi_mthd = self.amici_solver.get_sensitivity_method()
-            mthd_fwd = amici.SensitivityMethod.forward
+            mthd_fwd = asd.SensitivityMethod.forward
             if mode == MODE_FUN and (
                 self.amici_model.get_second_order_mode()
                 or (sensi_mthd == mthd_fwd and self.fim_for_hess)
@@ -436,9 +431,9 @@ class AmiciObjective(ObjectiveBase):
         sensi_orders: tuple[int, ...],
         mode: ModeType,
         return_dict: bool = False,
-        edatas: Sequence[amici.ExpData] = None,
+        edatas: Sequence[asd.ExpData] = None,
         parameter_mapping: ParameterMapping = None,
-        amici_reporting: amici.RDataReporting | None = None,
+        amici_reporting: asd.RDataReporting | None = None,
     ):
         """
         Call objective function without pre- or post-processing and formatting.
@@ -448,7 +443,7 @@ class AmiciObjective(ObjectiveBase):
         result:
             A dict containing the results.
         """
-        import amici
+        import amici.sim.sundials as asd
 
         x_dct = self.par_arr_to_dct(x)
 
@@ -461,13 +456,13 @@ class AmiciObjective(ObjectiveBase):
             if return_dict:
                 # Use AMICI full reporting if amici.ReturnDatas are returned
                 # and no other reporting mode was set
-                amici_reporting = amici.RDataReporting.full
+                amici_reporting = asd.RDataReporting.full
             else:
                 # Else, only ask amici to compute required quantities
                 amici_reporting = (
-                    amici.RDataReporting.likelihood
+                    asd.RDataReporting.likelihood
                     if mode == MODE_FUN
-                    else amici.RDataReporting.residuals
+                    else asd.RDataReporting.residuals
                 )
         self.amici_solver.set_return_data_reporting_mode(amici_reporting)
 
@@ -560,7 +555,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         condition_ix: int,
         x_dct: dict,
-        rdata: amici.ReturnData,
+        rdata: asd.ReturnData,
     ) -> None:
         """
         Store condition parameter, steadystate and steadystate sensitivity.

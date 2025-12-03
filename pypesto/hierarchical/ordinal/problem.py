@@ -44,7 +44,7 @@ from ..base_problem import (
 from .parameter import OrdinalParameter
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     import petab.v1 as petab
     from petab.v1.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
 except ImportError:
@@ -174,8 +174,8 @@ class OrdinalProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: amici.Model,
-        edatas: list[amici.ExpData],
+        amici_model: asd.Model,
+        edatas: list[asd.ExpData],
         method: str = None,
     ) -> OrdinalProblem:
         """Construct the inner problem from the `petab_problem`."""
@@ -484,8 +484,8 @@ class OrdinalProblem(AmiciInnerProblem):
 
 def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
-    amici_model: amici.Model,
-    edatas: list[amici.ExpData],
+    amici_model: asd.Model,
+    edatas: list[asd.ExpData],
     method: str,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -500,7 +500,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas]
+    data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -520,7 +520,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
 def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
-    amici_model: amici.Model,
+    amici_model: asd.Model,
 ) -> list[OrdinalParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
@@ -621,7 +621,7 @@ def get_estimate_for_method(method: str) -> tuple[bool, bool]:
 
 def optimal_scaling_ixs_for_measurement_specific_parameters(
     petab_problem: petab.Problem,
-    amici_model: amici.Model,
+    amici_model: asd.Model,
     inner_parameters: list[OrdinalParameter],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.

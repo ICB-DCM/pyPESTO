@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     from amici.importers.petab.v1.conditions import fill_in_parameters
     from petab.v1.C import OBSERVABLE_ID
 
@@ -96,7 +96,7 @@ def plot_categories_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.run_simulations(
+    inner_rdatas = asd.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -104,7 +104,7 @@ def plot_categories_from_pypesto_result(
     )
 
     # If any amici simulation failed, raise warning and return None.
-    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+    if any(rdata.status != asd.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
             "solutions.",

@@ -9,14 +9,17 @@ import logging
 from collections.abc import Sequence
 from typing import Union
 
-import amici
-import amici.plotting
+import amici.sim.sundials as asd
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import petab.v1 as petab
 from amici.importers.petab.v1.conditions import fill_in_parameters
 from amici.importers.petab.v1.simulations import rdatas_to_simulation_df
+from amici.sim.sundials.plotting import (
+    plot_observable_trajectories,
+    plot_state_trajectories,
+)
 from petab.v1.visualize import plot_problem
 
 from ..C import CENSORED, ORDINAL, RDATAS, SEMIQUANTITATIVE
@@ -32,7 +35,7 @@ from ..result import Result
 from .observable_mapping import _add_spline_mapped_simulations_to_model_fit
 from .ordinal_categories import plot_categories_from_pypesto_result
 
-AmiciModel = Union["amici.Model", "amici.ModelPtr"]
+AmiciModel = Union["asd.Model", "asd.ModelPtr"]
 
 __all__ = ["visualize_optimized_model_fit", "time_trajectory_model"]
 
@@ -274,7 +277,7 @@ def _get_simulation_rdatas(
     problem: Problem,
     start_index: int = 0,
     simulation_timepoints: np.ndarray = None,
-) -> list[amici.ReturnData]:
+) -> list[asd.ReturnData]:
     """
     Get simulation results for a given optimization result and timepoints.
 
@@ -329,7 +332,7 @@ def _get_simulation_rdatas(
 
         # disable sensitivities to improve computation time
         amici_solver = copy.deepcopy(problem.objective.amici_solver)
-        amici_solver.setSensitivityOrder(amici.SensitivityOrder.none)
+        amici_solver.setSensitivityOrder(asd.SensitivityOrder.none)
 
         for j in range(len(edatas)):
             edatas[j].setTimepoints(simulation_timepoints)
@@ -342,7 +345,7 @@ def _get_simulation_rdatas(
             amici_model=amici_model,
         )
 
-        rdatas = amici.run_simulations(
+        rdatas = asd.run_simulations(
             amici_model,
             amici_solver,
             edatas,
@@ -364,7 +367,7 @@ def _get_simulation_rdatas(
 
 def _time_trajectory_model_with_states(
     model: AmiciModel,
-    rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
+    rdatas: Union["asd.ReturnData", Sequence["asd.ReturnData"]],
     state_ids: Sequence[str],
     state_names: Sequence[str],
     observable_ids: Union[str, Sequence[str]],
@@ -423,13 +426,13 @@ def _time_trajectory_model_with_states(
     axes = np.atleast_2d(axes)
 
     for i_cond, rdata in enumerate(rdatas):
-        amici.plotting.plot_state_trajectories(
+        plot_state_trajectories(
             rdata=rdata,
             state_indices=state_indices,
             ax=axes[i_cond, 0],
             model=model,
         )
-        amici.plotting.plot_observable_trajectories(
+        plot_observable_trajectories(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond, 1],
@@ -440,7 +443,7 @@ def _time_trajectory_model_with_states(
 
 def _time_trajectory_model_without_states(
     model: AmiciModel,
-    rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
+    rdatas: Union["asd.ReturnData", Sequence["asd.ReturnData"]],
     observable_ids: Union[str, Sequence[str]],
 ):
     """
@@ -476,7 +479,7 @@ def _time_trajectory_model_without_states(
     fig, axes = plt.subplots(len(rdatas))
 
     for i_cond, rdata in enumerate(rdatas):
-        amici.plotting.plot_observable_trajectories(
+        plot_observable_trajectories(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond] if len(rdatas) > 1 else axes,

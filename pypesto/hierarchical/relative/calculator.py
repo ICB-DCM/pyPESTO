@@ -6,7 +6,7 @@ from collections.abc import Sequence
 import numpy as np
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     from amici.importers.petab.v1.conditions import fill_in_parameters
     from amici.importers.petab.v1.parameter_mapping import ParameterMapping
 except ImportError:
@@ -77,12 +77,12 @@ class RelativeAmiciCalculator(AmiciCalculator):
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list[amici.ReturnData] = None,
+        rdatas: list[asd.ReturnData] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -133,7 +133,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         if (
             1 in sensi_orders
             and amici_solver.get_sensitivity_method()
-            == amici.SensitivityMethod.adjoint
+            == asd.SensitivityMethod.adjoint
         ) or 2 in sensi_orders:
             inner_result, inner_parameters = self.call_amici_twice(
                 x_dct=x_dct,
@@ -182,7 +182,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -216,7 +216,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
             # if the gradient was requested, we need to provide some value
             # for it
             if 1 in sensi_orders:
@@ -263,12 +263,12 @@ class RelativeAmiciCalculator(AmiciCalculator):
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list[amici.ReturnData] = None,
+        rdatas: list[asd.ReturnData] = None,
     ):
         """Calculate directly via solver calculate methods.
 
@@ -303,7 +303,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 amici_model=amici_model,
             )
             # run amici simulation
-            rdatas = amici.run_simulations(
+            rdatas = asd.run_simulations(
                 amici_model,
                 amici_solver,
                 edatas,
@@ -321,7 +321,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(

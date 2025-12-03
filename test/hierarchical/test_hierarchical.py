@@ -3,10 +3,10 @@
 import copy
 import time
 
-import amici
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
+from amici.sim.sundials import SensitivityMethod
 
 import pypesto
 from pypesto.C import (
@@ -60,7 +60,7 @@ def test_hierarchical_optimization_pipeline():
         importer = PetabImporter(petab_problems[flag], hierarchical=flag)
         problem = importer.create_problem()
         problem.objective.amici_solver.set_sensitivity_method(
-            amici.SensitivityMethod_adjoint
+            SensitivityMethod.adjoint
         )
         problem.objective.amici_solver.set_absolute_tolerance(1e-8)
         problem.objective.amici_solver.set_relative_tolerance(1e-8)
@@ -161,7 +161,7 @@ def test_hierarchical_calculator_and_objective():
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
         problem.objective.amici_solver.set_sensitivity_method(
-            amici.SensitivityMethod.adjoint
+            SensitivityMethod.adjoint
         )
         problem.objective.amici_solver.set_absolute_tolerance(1e-8)
         problem.objective.amici_solver.set_relative_tolerance(1e-8)

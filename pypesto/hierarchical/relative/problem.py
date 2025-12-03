@@ -18,7 +18,7 @@ from ..base_problem import (
 from .parameter import RelativeInnerParameter
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     import petab.v1 as petab
     from petab.v1.C import (
         ESTIMATE,
@@ -57,8 +57,8 @@ class RelativeInnerProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: "petab.Problem",
-        amici_model: "amici.Model",
-        edatas: list["amici.ExpData"],
+        amici_model: "asd.Model",
+        edatas: list["asd.ExpData"],
     ) -> "RelativeInnerProblem":
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
         return inner_problem_from_petab_problem(
@@ -100,15 +100,14 @@ class RelativeInnerProblem(AmiciInnerProblem):
 
 def inner_problem_from_petab_problem(
     petab_problem: "petab.Problem",
-    amici_model: "amici.Model",
-    edatas: list["amici.ExpData"],
+    amici_model: "asd.Model",
+    edatas: list["asd.ExpData"],
 ) -> RelativeInnerProblem:
     """
     Create inner problem from PEtab problem.
 
     Hierarchical optimization is a pypesto-specific PEtab extension.
     """
-    import amici
 
     # inner parameters
     inner_parameters = inner_parameters_from_parameter_df(
@@ -123,7 +122,7 @@ def inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas]
+    data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -242,7 +241,7 @@ def inner_parameters_from_parameter_df(
 
 def ixs_for_measurement_specific_parameters(
     petab_problem: "petab.Problem",
-    amici_model: "amici.Model",
+    amici_model: "asd.Model",
     x_ids: list[str],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """

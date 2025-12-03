@@ -46,7 +46,7 @@ from ..objective.amici.amici_util import (
 )
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     import petab.v1 as petab
     from amici.importers.petab.v1.parameter_mapping import ParameterMapping
 except ImportError:
@@ -61,8 +61,8 @@ from .semiquantitative import (
     SemiquantProblem,
 )
 
-AmiciModel = Union["amici.Model", "amici.ModelPtr"]
-AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
+AmiciModel = Union["asd.Model", "asd.ModelPtr"]
+AmiciSolver = Union["asd.Solver", "asd.SolverPtr"]
 
 
 class InnerCalculatorCollector(AmiciCalculator):
@@ -92,7 +92,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         data_types: set[str],
         petab_problem: petab.Problem,
         model: AmiciModel,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         inner_options: dict,
     ):
         super().__init__()
@@ -123,7 +123,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         self,
         petab_problem: petab.Problem,
         model: AmiciModel,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         inner_options: dict,
     ):
         """Construct inner calculators for each data type."""
@@ -221,12 +221,10 @@ class InnerCalculatorCollector(AmiciCalculator):
 
     def _get_quantitative_data_mask(
         self,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
     ) -> list[np.ndarray]:
         # transform experimental data
-        edatas = [
-            amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas
-        ]
+        edatas = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
         quantitative_data_mask = [
             np.ones_like(edata, dtype=bool) for edata in edatas
@@ -301,7 +299,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -358,7 +356,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         if (
             amici_solver.get_sensitivity_method()
-            == amici.SensitivityMethod.adjoint
+            == asd.SensitivityMethod.adjoint
             and any(
                 data_type in self.data_types
                 for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
@@ -375,7 +373,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         # use the relative calculator directly.
         if (
             amici_solver.get_sensitivity_method()
-            == amici.SensitivityMethod.adjoint
+            == asd.SensitivityMethod.adjoint
             or 2 in sensi_orders
             or mode == MODE_RES
         ):
@@ -429,7 +427,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
 
         # run amici simulation
-        rdatas = amici.run_simulations(
+        rdatas = asd.run_simulations(
             amici_model,
             amici_solver,
             edatas,
@@ -438,7 +436,7 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
             ret = {
                 FVAL: nllh,
                 GRAD: snllh,
@@ -541,8 +539,8 @@ class InnerCalculatorCollector(AmiciCalculator):
 
 
 def calculate_quantitative_result(
-    rdatas: list[amici.ReturnDataView],
-    edatas: list[amici.ExpData],
+    rdatas: list[asd.ReturnDataView],
+    edatas: list[asd.ExpData],
     sensi_orders: tuple[int],
     mode: ModeType,
     quantitative_data_mask: list[np.ndarray],
@@ -557,9 +555,7 @@ def calculate_quantitative_result(
     )
 
     # transform experimental data
-    edatas = [
-        amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas
-    ]
+    edatas = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
     # calculate the function value
     for rdata, edata, mask in zip(rdatas, edatas, quantitative_data_mask):

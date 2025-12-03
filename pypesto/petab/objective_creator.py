@@ -43,6 +43,7 @@ from ..result import PredictionResult
 
 try:
     import amici
+    import amici.sim.sundials as asd
 except ImportError:
     amici = None
 try:
@@ -110,7 +111,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
-    ) -> amici.Model:
+    ) -> asd.Model:
         """
         Import amici model.
 
@@ -159,8 +160,9 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
         return self._create_model()
 
-    def _create_model(self) -> amici.Model:
+    def _create_model(self) -> asd.Model:
         """Load model module and return the model, no checks/compilation."""
+        import amici
         from amici.importers.petab.v1.import_helpers import check_model
 
         # load moduĺe
@@ -229,9 +231,9 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def create_solver(
         self,
-        model: amici.Model = None,
+        model: asd.Model = None,
         verbose: bool = True,
-    ) -> amici.Solver:
+    ) -> asd.Solver:
         """Return model solver."""
         # create model
         if model is None:
@@ -242,10 +244,10 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def create_edatas(
         self,
-        model: amici.Model = None,
+        model: asd.Model = None,
         simulation_conditions=None,
         verbose: bool = True,
-    ) -> list[amici.ExpData]:
+    ) -> list[asd.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
         from amici.importers.petab.v1.conditions import create_edatas
 
@@ -261,9 +263,9 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def create_objective(
         self,
-        model: amici.Model = None,
-        solver: amici.Solver = None,
-        edatas: Sequence[amici.ExpData] = None,
+        model: asd.Model = None,
+        solver: asd.Solver = None,
+        edatas: Sequence[asd.ExpData] = None,
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
@@ -354,7 +356,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
                 edatas,
                 inner_options,
             )
-            amici_reporting = amici.RDataReporting.full
+            amici_reporting = asd.RDataReporting.full
 
             # FIXME: currently not supported with hierarchical
             if "guess_steadystate" in kwargs and kwargs["guess_steadystate"]:
@@ -493,8 +495,8 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def rdatas_to_measurement_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
         """
@@ -530,8 +532,8 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def rdatas_to_simulation_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
     ) -> pd.DataFrame:
         """
         See :meth:`rdatas_to_measurement_df`.

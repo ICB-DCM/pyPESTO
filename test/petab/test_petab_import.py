@@ -7,7 +7,7 @@ import os
 import unittest
 from itertools import chain
 
-import amici
+import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
 import petab.v1 as petab
@@ -124,7 +124,7 @@ class PetabImportTest(unittest.TestCase):
 
         objective = importer.create_problem().objective
         objective.amici_solver.set_sensitivity_method(
-            amici.SensitivityMethod.forward
+            asd.SensitivityMethod.forward
         )
         objective.amici_solver.set_absolute_tolerance(1e-10)
         objective.amici_solver.set_relative_tolerance(1e-12)
@@ -158,7 +158,7 @@ def test_plist_mapping():
     )
     objective = problem.objective
     objective.amici_solver.set_sensitivity_method(
-        amici.SensitivityMethod.forward
+        asd.SensitivityMethod.forward
     )
     objective.amici_solver.set_absolute_tolerance(1e-16)
     objective.amici_solver.set_relative_tolerance(1e-15)
@@ -227,12 +227,12 @@ def test_max_sensi_order():
     assert hess.shape == (npar, npar)
     assert (hess != 0).any()
     objective.amici_solver.set_sensitivity_method(
-        amici.SensitivityMethod.adjoint
+        asd.SensitivityMethod.adjoint
     )
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
     objective.amici_solver.set_sensitivity_method(
-        amici.SensitivityMethod.forward
+        asd.SensitivityMethod.forward
     )
 
     # fix max_sensi_order to 1

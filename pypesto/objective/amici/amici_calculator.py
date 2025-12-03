@@ -28,6 +28,7 @@ from .amici_util import (
 
 try:
     import amici
+    import amici.sim.sundials as asd
 except ImportError:
     amici = None
 
@@ -37,8 +38,8 @@ if TYPE_CHECKING:
     except ImportError:
         ParameterMapping = None
 
-AmiciModel = Union["amici.Model", "amici.ModelPtr"]
-AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
+AmiciModel = Union["asd.Model", "asd.ModelPtr"]
+AmiciSolver = Union["asd.Solver", "asd.SolverPtr"]
 
 
 class AmiciCalculator:
@@ -57,7 +58,7 @@ class AmiciCalculator:
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -114,7 +115,7 @@ class AmiciCalculator:
         )
 
         # run amici simulation
-        rdatas = amici.run_simulations(
+        rdatas = asd.run_simulations(
             amici_model,
             amici_solver,
             edatas,
@@ -159,13 +160,12 @@ def calculate_function_values(
     mode: ModeType,
     amici_model: AmiciModel,
     amici_solver: AmiciSolver,
-    edatas: list[amici.ExpData],
+    edatas: list[asd.ExpData],
     x_ids: Sequence[str],
     parameter_mapping: ParameterMapping,
     fim_for_hess: bool,
 ):
     """Calculate the function values from rdatas and return as dict."""
-    import amici
 
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
@@ -217,7 +217,7 @@ def calculate_function_values(
                 # Hessian
             if 2 in sensi_orders:
                 if (
-                    sensi_method != amici.SensitivityMethod.forward
+                    sensi_method != asd.SensitivityMethod.forward
                     or not fim_for_hess
                 ):
                     raise ValueError("AMICI cannot compute Hessians yet.")

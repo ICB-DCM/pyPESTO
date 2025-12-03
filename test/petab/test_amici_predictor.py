@@ -4,6 +4,7 @@ import os
 import shutil
 
 import amici
+import amici.sim.sundials as asd
 import libsbml
 import numpy as np
 import pandas as pd
@@ -37,7 +38,7 @@ def conversion_reaction_model():
         model = model_module.get_model()
     except ValueError:
         # read in and adapt the sbml slightly
-        sbml_importer = amici.SbmlImporter(sbml_file)
+        sbml_importer = amici.importers.sbml.SbmlImporter(sbml_file)
 
         # add observables to sbml model
         def create_observable(sbml_model, obs_id):
@@ -75,7 +76,7 @@ def conversion_reaction_model():
 
         # add fixed parameters and observables to AMICI model
         fixed_parameters = ["A0", "B0"]
-        observables = amici.assignment_rules_to_observables(
+        observables = amici.importers.sbml.assignment_rules_to_observables(
             sbml_importer.sbml,  # the libsbml model object
             filter_function=lambda variable: variable.getId().startswith(
                 "observable_"
@@ -121,17 +122,17 @@ def edata_objects(conversion_reaction_model):
     # create edatas
     rdatas = []
     edatas = []
-    fixedParameters = [
+    fixed_parameters = [
         np.array([2.0, 0.0]),
         np.array([0.0, 4.0]),
         np.array([1.0, 1.0]),
     ]
     # create rdatas and edatas from those
-    for fp in fixedParameters:
-        testmodel.set_fixed_parameters(amici.DoubleVector(fp))
-        rdata = amici.run_simulation(testmodel, solver)
+    for fp in fixed_parameters:
+        testmodel.set_fixed_parameters(fp)
+        rdata = asd.run_simulation(testmodel, solver)
         rdatas.append(rdata)
-        edatas.append(amici.ExpData(rdata, 1.0, 0))
+        edatas.append(asd.ExpData(rdata, 1.0, 0))
 
     return testmodel, solver, edatas
 
