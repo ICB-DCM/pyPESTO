@@ -225,7 +225,7 @@ class InnerCalculatorCollector(AmiciCalculator):
     ) -> list[np.ndarray]:
         # transform experimental data
         edatas = [
-            amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
+            amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas
         ]
 
         quantitative_data_mask = [
@@ -558,7 +558,7 @@ def calculate_quantitative_result(
 
     # transform experimental data
     edatas = [
-        amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
+        amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas
     ]
 
     # calculate the function value

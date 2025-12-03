@@ -331,9 +331,7 @@ def spline_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [
-        amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
-    ]
+    data = [amici.numpy.ExpDataView(edata)["measurements"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
