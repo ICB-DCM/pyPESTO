@@ -47,6 +47,11 @@ def get_covariance_matrix_predictions(
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)
 
+    # For a covariance matrix, we need to reshape the dataset.
+    # To the form (n_samples, n_features).
+    n_samples = dataset.shape[0]
+    dataset = dataset.reshape(n_samples, -1)
+
     # call lowlevel routine using the prediction ensemble
     return np.cov(dataset)
 

@@ -315,6 +315,36 @@ class Optimizer(abc.ABC):
         """Check whether optimizer supports x0, return boolean."""
         return True
 
+    def supports_maxtime(self) -> bool:
+        """
+        Check whether optimizer supports time limits.
+
+        Returns
+        -------
+        True if optimizer supports setting a maximum wall time,
+        False otherwise.
+        """
+        return False
+
+    def set_maxtime(self, seconds: float) -> None:
+        """
+        Set the maximum wall time for optimization.
+
+        Parameters
+        ----------
+        seconds
+            Maximum wall time in seconds.
+
+        Raises
+        ------
+        NotImplementedError
+            If the optimizer does not support time limits.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support time limits. "
+            f"Check supports_maxtime() before calling set_maxtime()."
+        )
+
 
 class ScipyOptimizer(Optimizer):
     """
@@ -634,6 +664,25 @@ class IpoptOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def supports_maxtime(self) -> bool:
+        """Check whether optimizer supports time limits."""
+        try:
+            import cyipopt
+
+            return cyipopt.IPOPT_VERSION >= (3, 14, 0)
+        except (ImportError, AttributeError):
+            return False
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        if not self.supports_maxtime():
+            raise NotImplementedError(
+                "IpoptOptimizer time limits require Ipopt version >= 3.14.0."
+            )
+        if self.options is None:
+            self.options = {}
+        self.options["max_wall_time"] = seconds
 
 
 class DlibOptimizer(Optimizer):
@@ -1301,6 +1350,14 @@ class NLoptOptimizer(Optimizer):
             return False
         return True
 
+    def supports_maxtime(self) -> bool:
+        """Check whether optimizer supports time limits."""
+        return True
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        self.options["maxtime"] = seconds
+
 
 class FidesOptimizer(Optimizer):
     """
@@ -1492,3 +1549,16 @@ class FidesOptimizer(Optimizer):
         return messages.get(
             opt.exitflag, f"exitflag={opt.exitflag} is not defined in fides."
         )
+
+    def supports_maxtime(self) -> bool:
+        """Check whether optimizer supports time limits."""
+        return True
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        try:
+            from fides.constants import Options as FidesOptions
+
+            self.options[FidesOptions.MAXTIME] = seconds
+        except ImportError:
+            raise OptimizerImportError("fides") from None
