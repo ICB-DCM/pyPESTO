@@ -41,7 +41,8 @@ class OptimizerHistory:
         History object to attach to this container. This history object
         implements the storage of the actual history.
     x0:
-        Initial values for optimization.
+        Initial values for optimization. Can be None for optimizers that do not
+        require or support a starting point.
     lb, ub:
         Lower and upper bound. Used for checking validity of optimal points.
     generate_from_history:
@@ -55,7 +56,7 @@ class OptimizerHistory:
     def __init__(
         self,
         history: HistoryBase,
-        x0: np.ndarray,
+        x0: np.ndarray | None,
         lb: np.ndarray,
         ub: np.ndarray,
         generate_from_history: bool = False,
@@ -64,7 +65,7 @@ class OptimizerHistory:
 
         # initial point
         self.fval0: Union[float, None] = None
-        self.x0: np.ndarray = x0
+        self.x0: np.ndarray | None = x0
 
         # bounds
         self.lb: np.ndarray = lb
@@ -174,7 +175,11 @@ class OptimizerHistory:
     def _update_vals(self, x: np.ndarray, result: ResultDict) -> None:
         """Update initial and best function values."""
         # update initial point
-        if is_none_or_nan(self.fval0) and np.array_equal(x, self.x0):
+        if (
+            is_none_or_nan(self.fval0)
+            and self.x0 is not None
+            and np.array_equal(x, self.x0)
+        ):
             self.fval0 = result.get(FVAL)
 
         # don't update optimal point if point is not admissible

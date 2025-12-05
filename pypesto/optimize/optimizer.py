@@ -46,8 +46,8 @@ def hierarchical_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -88,8 +88,8 @@ def history_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -101,6 +101,13 @@ def history_decorator(minimize):
         # initialize the objective
         objective.initialize()
 
+        # Check if x0 should be used: optimizer supports it and x0 is valid
+        use_x0 = (
+            x0 is not None
+            and not np.all(np.isnan(x0))
+            and self.check_x0_support(x0)
+        )
+
         # initialize the history
         history = objective.create_history(
             id=id,
@@ -109,7 +116,7 @@ def history_decorator(minimize):
         )
         optimizer_history = OptimizerHistory(
             history=history,
-            x0=x0,
+            x0=x0 if use_x0 else None,
             lb=problem.lb,
             ub=problem.ub,
         )
@@ -176,8 +183,8 @@ def time_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -208,8 +215,8 @@ def fix_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -247,8 +254,8 @@ def minimize_decorator_collection(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -280,8 +287,8 @@ class Optimizer(abc.ABC):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -293,7 +300,8 @@ class Optimizer(abc.ABC):
         problem:
             The problem to find optimal parameters for.
         x0:
-            The starting parameters.
+            The starting parameters. Can be None for optimizers that do not
+            require or support a starting point.
         id:
             Multistart id.
         history_options:
@@ -385,8 +393,8 @@ class ScipyOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -616,8 +624,8 @@ class IpoptOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -708,8 +716,8 @@ class DlibOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -782,8 +790,8 @@ class PyswarmOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -858,8 +866,8 @@ class CmaOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -952,8 +960,8 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1026,8 +1034,8 @@ class PyswarmsOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1244,8 +1252,8 @@ class NLoptOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1434,8 +1442,8 @@ class FidesOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
         id: str,
+        x0: np.ndarray | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
