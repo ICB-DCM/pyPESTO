@@ -777,3 +777,11 @@ class ESSOptimizer:
                 f"Num local solutions: {len(self.local_solutions)}."
             )
             self.logger.debug(f"Final refset: {np.sort(self.refset.fx)} ")
+
+    def supports_maxtime(self) -> bool:
+        """Check whether optimizer supports time limits."""
+        return True
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        self.max_walltime_s = seconds
