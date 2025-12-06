@@ -660,8 +660,8 @@ class ESSOptimizer:
         # actual local search
         optimizer_result: OptimizerResult = optimizer.minimize(
             problem=self.evaluator.problem,
-            x0=x0,
             id="0",
+            x0=x0,
         )
 
         # add function evaluations during the local search to our function

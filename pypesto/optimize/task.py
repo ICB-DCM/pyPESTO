@@ -59,8 +59,8 @@ class OptimizerTask(Task):
 
         optimizer_result = self.optimizer.minimize(
             problem=self.problem,
-            x0=self.x0,
             id=self.id,
+            x0=self.x0,
             history_options=self.history_options,
             optimize_options=self.optimize_options,
         )
