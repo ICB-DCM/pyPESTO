@@ -564,7 +564,7 @@ class ESSOptimizer:
             self.n_iter >= self.local_n1
             and self.n_iter - self.last_local_search_niter >= self.local_n2
         ):
-            quality_order = np.argsort(fx_best_children)
+            quality_order = np.argsort(fx_best_children).argsort()
             # compute minimal distance between the best children and all local
             #  optima found so far
             min_distances = (
@@ -588,7 +588,7 @@ class ESSOptimizer:
                 else np.zeros(len(x_best_children))
             )
             # sort by furthest distance to existing local optima
-            diversity_order = np.argsort(min_distances)[::-1]
+            diversity_order = np.argsort(min_distances)[::-1].argsort()
             # compute priority, balancing quality and diversity
             #  (smaller value = higher priority)
             priority = (
