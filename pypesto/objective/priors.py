@@ -19,7 +19,7 @@ class NegLogPriors(AggregatedObjective):
     Aggregates different forms of negative log-prior distributions.
 
     Allows to distinguish priors from the likelihood by testing the type of
-    an objective.
+    the objective.
 
     Consists basically of a list of individual negative log-priors,
     given in self.objectives.
@@ -37,7 +37,7 @@ class NegLogParameterPriors(ObjectiveBase):
      'density_fun': [Callable],
      'density_dx': [Callable],
      'density_ddx': [Callable],
-     'type': str,  # e.g. 'normal', 'uniform', 'parameterScaleNormal', 'laplace', ...
+     'type': str,  # e.g. C.NORMAL, C.UNIFORM, C.PARAMETER_SCALE_NORMAL, C.LAPLACE, ...
      'parameters': [float, float],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab)
      }
 
@@ -232,7 +232,7 @@ class NegLogParameterPriors(ObjectiveBase):
         self, n_samples: int = 1, seed: int = None
     ) -> dict[str, np.ndarray]:
         """
-        Sample from the prior distribution.
+        Sample from the prior distribution. Parameters are not transformed.
 
         Parameters
         ----------
@@ -644,12 +644,7 @@ def _sample_from_prior(
         high = prior_parameters[1]
         return rng.uniform(low, high, n_samples)
 
-    elif prior_type == C.NORMAL:
-        mean = prior_parameters[0]
-        std = prior_parameters[1]
-        return rng.normal(mean, std, n_samples)
-
-    elif prior_type == C.PARAMETER_SCALE_NORMAL:
+    elif prior_type in [C.NORMAL, C.PARAMETER_SCALE_NORMAL]:
         mean = prior_parameters[0]
         std = prior_parameters[1]
         return rng.normal(mean, std, n_samples)
