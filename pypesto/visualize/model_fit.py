@@ -14,8 +14,10 @@ import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import petab.v1 as petab
-from amici.importers.petab.v1.conditions import fill_in_parameters
-from amici.importers.petab.v1.simulations import rdatas_to_simulation_df
+from amici.sim.sundials.petab.v1 import (
+    fill_in_parameters,
+    rdatas_to_simulation_df,
+)
 from amici.sim.sundials.plotting import (
     plot_observable_trajectories,
     plot_state_trajectories,

@@ -9,7 +9,7 @@ import numpy as np
 
 try:
     import amici.sim.sundials as asd
-    from amici.importers.petab.v1.conditions import fill_in_parameters
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
     from petab.v1.C import OBSERVABLE_ID
 
     from ..hierarchical.ordinal.calculator import OrdinalCalculator

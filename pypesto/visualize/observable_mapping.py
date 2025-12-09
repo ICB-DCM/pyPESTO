@@ -25,7 +25,7 @@ from ..result import Result
 
 try:
     import amici.sim.sundials as asd
-    from amici.importers.petab.v1.conditions import fill_in_parameters
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
 
     from ..hierarchical import InnerCalculatorCollector
     from ..hierarchical.base_problem import scale_back_value_dict

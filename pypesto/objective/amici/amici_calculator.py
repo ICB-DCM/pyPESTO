@@ -92,7 +92,7 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        from amici.importers.petab.v1.conditions import fill_in_parameters
+        from amici.sim.sundials.petab.v1 import fill_in_parameters
 
         # set order in solver
         sensi_order = 0

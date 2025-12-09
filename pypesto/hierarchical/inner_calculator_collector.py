@@ -334,7 +334,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        from amici.importers.petab.v1.conditions import fill_in_parameters
+        from amici.sim.sundials.petab.v1 import fill_in_parameters
 
         if mode == MODE_RES and any(
             data_type in self.data_types

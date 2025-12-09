@@ -7,8 +7,8 @@ import numpy as np
 
 try:
     import amici.sim.sundials as asd
-    from amici.importers.petab.v1.conditions import fill_in_parameters
     from amici.importers.petab.v1.parameter_mapping import ParameterMapping
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
 except ImportError:
     pass
 

@@ -249,7 +249,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         verbose: bool = True,
     ) -> list[asd.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
-        from amici.importers.petab.v1.conditions import create_edatas
+        from amici.sim.sundials.petab.v1 import create_edatas
 
         # create model
         if model is None:
@@ -295,10 +295,10 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         -------
         A :class:`pypesto.objective.AmiciObjective` for the model and the data.
         """
-        from amici.importers.petab.v1.conditions import fill_in_parameters
         from amici.importers.petab.v1.parameter_mapping import (
             create_parameter_mapping,
         )
+        from amici.sim.sundials.petab.v1 import fill_in_parameters
 
         simulation_conditions = petab.get_simulation_conditions(
             self.petab_problem.measurement_df
@@ -518,7 +518,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
         """
-        from amici.importers.petab.v1.simulations import (
+        from amici.sim.sundials.petab.v1 import (
             rdatas_to_measurement_df,
         )
 

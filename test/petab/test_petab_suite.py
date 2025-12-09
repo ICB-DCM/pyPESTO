@@ -5,7 +5,7 @@ import logging
 import petab.v1 as petab
 import petabtests
 import pytest
-from amici.importers.petab.v1.simulations import rdatas_to_measurement_df
+from amici.sim.sundials.petab.v1 import rdatas_to_measurement_df
 
 import pypesto
 import pypesto.petab
