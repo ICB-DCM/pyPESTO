@@ -51,6 +51,7 @@ class PriorStartpoints(CheckedStartpoints):
         lb: np.ndarray,
         ub: np.ndarray,
         priors: Union[NegLogParameterPriors, NegLogPriors, None] = None,
+        max_iterations: int = 100,
     ) -> np.ndarray:
         """Sample startpoints from prior or uniform distribution.
 
@@ -61,107 +62,68 @@ class PriorStartpoints(CheckedStartpoints):
         ub: Upper parameter bound.
         priors: Parameter priors. If available, samples from priors;
             otherwise falls back to uniform sampling.
+        max_iterations: Maximum number of resampling iterations to ensure
+            all samples are within bounds.
 
         Returns
         -------
         xs: Startpoints, shape (n_starts, n_par).
         """
-        # If priors are available, use prior.sample()
-        if priors is not None:
-            # Initialize full array with correct number of parameters
-            n_par = len(lb)
-            samples = np.zeros((n_starts, n_par))
-
-            # Sample from priors where available
-            prior_samples_dict = priors.sample(n_samples=n_starts)
-            for i in prior_samples_dict.keys():
-                samples[:, i] = prior_samples_dict[i]
-
-            # Fill in uniform samples for parameters without priors
-            for i in range(n_par):
-                if i not in prior_samples_dict.keys():
-                    samples[:, i] = np.random.uniform(lb[i], ub[i], n_starts)
-
-            # Check bounds and resample out-of-bounds values
-            samples = self._resample_out_of_bounds(samples, lb, ub, priors)
-
-            return samples
-
         # Fallback to uniform sampling if no priors available
-        return uniform(n_starts=n_starts, lb=lb, ub=ub)
+        if priors is None:
+            return uniform(n_starts=n_starts, lb=lb, ub=ub)
 
-    def _resample_out_of_bounds(
-        self,
-        samples: np.ndarray,
-        lb: np.ndarray,
-        ub: np.ndarray,
-        priors: Union[NegLogParameterPriors, NegLogPriors],
-    ) -> np.ndarray:
-        """Resample any samples that are out of bounds.
-
-        Parameters
-        ----------
-        samples: Current samples, shape (n_samples, n_par).
-        lb: Lower parameter bound.
-        ub: Upper parameter bound.
-        priors: Parameter priors for resampling.
-
-        Returns
-        -------
-        samples: Samples with out-of-bounds values replaced, shape (n_samples, n_par).
-        """
+        n_par = len(lb)
         lb_reshaped = lb.reshape(1, -1)
         ub_reshaped = ub.reshape(1, -1)
 
-        # Identify out-of-bounds samples
-        out_of_bounds = np.logical_or(
-            samples < lb_reshaped, samples > ub_reshaped
-        )
+        # Initialize samples and mark all rows for initial sampling
+        samples = np.zeros((n_starts, n_par))
+        rows_to_resample = np.ones(n_starts, dtype=bool)
 
-        # Resample until all samples are within bounds
-        max_iterations = 1000
         iteration = 0
-
-        while np.any(out_of_bounds) and iteration < max_iterations:
-            # Identify which samples need resampling
-            rows_to_resample = np.any(out_of_bounds, axis=1)
+        while True:
             n_resample = rows_to_resample.sum()
-
             if n_resample == 0:
                 break
 
-            # Initialize full array for new samples
-            n_par = len(lb)
+            # Generate new samples for the selected rows
             new_samples = np.zeros((n_resample, n_par))
 
-            # Generate new samples from priors
+            # Sample from priors where available
             prior_samples_dict = priors.sample(n_samples=n_resample)
-            for i in prior_samples_dict.keys():
-                new_samples[:, i] = prior_samples_dict[i]
+            for param_index in prior_samples_dict.keys():
+                new_samples[:, param_index] = prior_samples_dict[param_index]
 
             # Fill in uniform samples for parameters without priors
-            for i in range(n_par):
-                if i not in prior_samples_dict.keys():
-                    new_samples[:, i] = np.random.uniform(
-                        lb[i], ub[i], n_resample
+            for param_index in range(n_par):
+                if param_index not in prior_samples_dict.keys():
+                    new_samples[:, param_index] = np.random.uniform(
+                        lb[param_index], ub[param_index], n_resample
                     )
 
-            # Replace out-of-bounds samples
+            # Replace selected rows in the main array
             samples[rows_to_resample] = new_samples
 
-            # Check bounds again
+            # Check bounds
             out_of_bounds = np.logical_or(
                 samples < lb_reshaped, samples > ub_reshaped
             )
-            iteration += 1
 
-        if iteration >= max_iterations:
-            # If we still have out-of-bounds samples after max iterations,
-            # clip them to bounds
-            samples = np.clip(samples, lb_reshaped, ub_reshaped)
-            logger.warning(
-                "Maximum startpoint resampling iterations reached. "
-                "Some samples were clipped to bounds."
-            )
+            # If all samples are within bounds, we are done
+            if not np.any(out_of_bounds):
+                break
+
+            iteration += 1
+            if iteration >= max_iterations:
+                samples = np.clip(samples, lb_reshaped, ub_reshaped)
+                logger.warning(
+                    "Maximum startpoint resampling iterations reached. "
+                    "Some samples were clipped to bounds."
+                )
+                break
+
+            # Resample only rows that are still out-of-bounds
+            rows_to_resample = np.any(out_of_bounds, axis=1)
 
         return samples

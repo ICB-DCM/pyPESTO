@@ -644,7 +644,12 @@ def _sample_from_prior(
         high = prior_parameters[1]
         return rng.uniform(low, high, n_samples)
 
-    elif prior_type in [C.NORMAL, C.PARAMETER_SCALE_NORMAL]:
+    elif prior_type == C.NORMAL:
+        mean = prior_parameters[0]
+        std = prior_parameters[1]
+        return rng.normal(mean, std, n_samples)
+
+    elif prior_type == C.PARAMETER_SCALE_NORMAL:
         mean = prior_parameters[0]
         std = prior_parameters[1]
         return rng.normal(mean, std, n_samples)
