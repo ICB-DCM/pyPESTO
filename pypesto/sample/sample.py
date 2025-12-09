@@ -109,7 +109,10 @@ def sample(
                 )[0]
                 x0 = warm_start * x0 + (1 - warm_start) * x0_prior
         else:
-            logger.info("No initial point provided.")
+            logger.info(
+                "No initial point provided and no optimization result found. Set warm_start to 0 "
+                "if you need initial points for sampling."
+            )
 
     # set sampler
     if sampler is None:

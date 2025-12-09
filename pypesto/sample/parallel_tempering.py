@@ -85,7 +85,7 @@ class ParallelTemperingSampler(Sampler):
             "show_progress": None,
             "beta_init": BETA_DECAY,  # replaced in adaptive PT
             "alpha": 0.3,
-            "warm_start_parallel_chains": 0.9,
+            "warm_start_parallel_chains": 0.9,  # heuristic, not starting all chains at equal position
         }
 
     def initialize(

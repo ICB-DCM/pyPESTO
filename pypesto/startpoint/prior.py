@@ -138,8 +138,6 @@ class PriorStartpoints(CheckedStartpoints):
             prior_samples_dict = priors.sample(n_samples=n_resample)
             for i in prior_samples_dict.keys():
                 new_samples[:, i] = prior_samples_dict[i]
-            # for i in prior_indices:
-            #    new_samples[:, i] = prior_samples[:, i]
 
             # Fill in uniform samples for parameters without priors
             for i in range(n_par):
