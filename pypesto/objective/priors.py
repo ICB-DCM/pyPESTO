@@ -38,7 +38,8 @@ class NegLogParameterPriors(ObjectiveBase):
      'density_dx': [Callable],
      'density_ddx': [Callable],
      'type': str,  # e.g. C.NORMAL, C.UNIFORM, C.PARAMETER_SCALE_NORMAL, C.LAPLACE, ...
-     'parameters': [float, float],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab)
+     'parameters': [float, float],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab),
+     'scale': str,  # C.LIN, C.LOG, C.LOG10
      }
 
     A prior instance can be added to e.g. an objective, that gives the
@@ -258,16 +259,26 @@ class NegLogParameterPriors(ObjectiveBase):
             index = prior["index"]
             prior_type = prior.get("type", None)
             prior_parameters = prior.get("parameters", None)
+            scales = prior.get("scales", None)
 
-            if prior_type is None or prior_parameters is None:
+            if (
+                prior_type is None
+                or prior_parameters is None
+                or scales is None
+            ):
                 raise ValueError(
-                    "Prior type and parameters must be specified for sampling. "
+                    "Prior type, parameters and scale must be specified for sampling. "
                     "Use 'get_parameter_prior_dict' to create proper prior dictionaries."
                 )
 
             prior_samples_dict[index] = _sample_from_prior(
                 prior_type, prior_parameters, n_samples, rng
             )
+            # transform samples if necessary
+            if scales == C.LOG:
+                prior_samples_dict[index] = np.log(prior_samples_dict[index])
+            elif scales == C.LOG10:
+                prior_samples_dict[index] = np.log10(prior_samples_dict[index])
 
         return prior_samples_dict
 
@@ -312,6 +323,7 @@ def get_parameter_prior_dict(
             "residual_dx": d_res_dx,
             "type": prior_type,
             "parameters": prior_parameters,
+            "scale": parameter_scale,
         }
 
     elif parameter_scale == C.LOG:
@@ -358,6 +370,7 @@ def get_parameter_prior_dict(
             "residual_dx": d_res_log,
             "type": prior_type,
             "parameters": prior_parameters,
+            "scale": parameter_scale,
         }
 
     elif parameter_scale == C.LOG10:
@@ -405,6 +418,7 @@ def get_parameter_prior_dict(
             "residual_dx": d_res_log,
             "type": prior_type,
             "parameters": prior_parameters,
+            "scale": parameter_scale,
         }
 
     else:
