@@ -73,9 +73,6 @@ class PriorStartpoints(CheckedStartpoints):
             n_par = len(lb)
             samples = np.zeros((n_starts, n_par))
 
-            # Identify which parameters have priors
-            # prior_samples_dict = {prior["index"]: np.zeros(n_starts) for prior in priors.prior_list}
-
             # Sample from priors where available
             prior_samples_dict = priors.sample(n_samples=n_starts)
             for i in prior_samples_dict.keys():
