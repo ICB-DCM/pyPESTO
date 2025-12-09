@@ -37,7 +37,7 @@ class NegLogParameterPriors(ObjectiveBase):
      'density_fun': [Callable],
      'density_dx': [Callable],
      'density_ddx': [Callable],
-     'type': [str],  # e.g. 'normal', 'uniform', 'parameterScaleNormal', 'laplace', ...
+     'type': str,  # e.g. 'normal', 'uniform', 'parameterScaleNormal', 'laplace', ...
      'parameters': [[#1, #2]],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab)
      }
 
