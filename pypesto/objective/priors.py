@@ -259,26 +259,45 @@ class NegLogParameterPriors(ObjectiveBase):
             index = prior["index"]
             prior_type = prior.get("type", None)
             prior_parameters = prior.get("parameters", None)
-            scales = prior.get("scales", None)
+            parameter_scale = prior.get("scale", None)
 
             if (
                 prior_type is None
                 or prior_parameters is None
-                or scales is None
+                or parameter_scale is None
             ):
                 raise ValueError(
                     "Prior type, parameters and scale must be specified for sampling. "
-                    "Use 'get_parameter_prior_dict' to create proper prior dictionaries."
+                    "Use 'get_parameter_prior_dict' to provide proper prior dictionaries to the objective."
                 )
 
             prior_samples_dict[index] = _sample_from_prior(
                 prior_type, prior_parameters, n_samples, rng
             )
             # transform samples if necessary
-            if scales == C.LOG:
-                prior_samples_dict[index] = np.log(prior_samples_dict[index])
-            elif scales == C.LOG10:
-                prior_samples_dict[index] = np.log10(prior_samples_dict[index])
+            if prior_type not in [
+                C.PARAMETER_SCALE_UNIFORM,
+                C.PARAMETER_SCALE_NORMAL,
+                C.PARAMETER_SCALE_LAPLACE,
+            ]:
+                if parameter_scale == C.LOG:
+                    if (prior_samples_dict[index] <= 0).any():
+                        logging.warning(
+                            "Sampling from prior resulted in non-positive value for log-scale parameter."
+                            " Returning -inf log-value. Consider adjusting prior."
+                        )
+                    prior_samples_dict[index] = np.log(
+                        prior_samples_dict[index]
+                    )
+                elif parameter_scale == C.LOG10:
+                    if (prior_samples_dict[index] <= 0).any():
+                        logging.warning(
+                            "Sampling from prior resulted in non-positive value for log-scale parameter."
+                            " Returning -inf log-value. Consider adjusting prior."
+                        )
+                    prior_samples_dict[index] = np.log10(
+                        prior_samples_dict[index]
+                    )
 
         return prior_samples_dict
 
