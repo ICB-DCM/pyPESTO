@@ -249,12 +249,10 @@ class NegLogParameterPriors(ObjectiveBase):
         """
         rng = np.random.default_rng(seed)
 
-        # Find the maximum index in prior_list
+        # Initialize sample arrays
         prior_samples_dict = {
             prior["index"]: np.zeros(n_samples) for prior in self.prior_list
         }
-        # n_parameters = max(prior["index"] for prior in self.prior_list) + 1
-        # samples = np.zeros((n_samples, n_parameters)) * np.nan
 
         for prior in self.prior_list:
             index = prior["index"]
