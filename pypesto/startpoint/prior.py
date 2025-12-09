@@ -60,8 +60,7 @@ class PriorStartpoints(CheckedStartpoints):
         lb: Lower parameter bound.
         ub: Upper parameter bound.
         priors: Parameter priors. If available, samples from priors;
-            otherwise falls back to uniform sampling. For parameters
-            without priors, uniform sampling is used.
+            otherwise falls back to uniform sampling.
 
         Returns
         -------
