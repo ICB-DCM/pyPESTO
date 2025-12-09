@@ -286,9 +286,9 @@ def get_parameter_prior_dict(
     prior_type:
         Prior is defined in LINEAR=untransformed parameter space,
         unless it starts with "parameterScale". prior_type
-        can be any of {"uniform", "normal", "laplace", "logNormal",
-        "parameterScaleUniform", "parameterScaleNormal",
-        "parameterScaleLaplace"}
+        can be any of {C.UNIFORM, C.NORMAL, C.LAPLACE, C.LOG_NORMAL,
+        C.PARAMETER_SCALE_UNIFORM, C.PARAMETER_SCALE_NORMAL,
+        C.PARAMETER_SCALE_LAPLACE}
     prior_parameters:
         Parameters of the priors. Parameters are defined in the parameter
         scale if the `prior_type` starts with ``parameterScale``, otherwise in
