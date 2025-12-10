@@ -285,9 +285,9 @@ class NegLogParameterPriors(ObjectiveBase):
                         "Sampling from prior resulted in non-positive value for log-scale parameter."
                         " Returning -inf log-value. Consider adjusting prior."
                     )
-                    prior_samples_dict[index] = getattr(np, parameter_scale)(
-                        prior_samples_dict[index]
-                    )
+                prior_samples_dict[index] = getattr(np, parameter_scale)(
+                    prior_samples_dict[index]
+                )
 
         return prior_samples_dict
 
