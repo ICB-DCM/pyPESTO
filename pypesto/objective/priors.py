@@ -233,7 +233,7 @@ class NegLogParameterPriors(ObjectiveBase):
         self, n_samples: int = 1, seed: int = None
     ) -> dict[str, np.ndarray]:
         """
-        Sample from the prior distribution. Parameters are not transformed.
+        Sample from the prior distribution. Parameters are returned on defined parameter scale.
 
         Parameters
         ----------
