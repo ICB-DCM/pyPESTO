@@ -1,7 +1,7 @@
 import logging
 import math
 from collections.abc import Sequence
-from typing import Callable, Union
+from typing import Callable
 
 import cloudpickle
 import numpy as np
@@ -444,8 +444,8 @@ def _prior_densities(
     Callable,
     Callable,
     Callable,
-    Union[Callable, None],
-    Union[Callable, None],
+    Callable | None,
+    Callable | None,
 ]:
     """
     Create prior density functions.
@@ -678,5 +678,5 @@ def _sample_from_prior(
         raise ValueError(
             f"Sampling from prior type {prior_type} is not supported."
         )
-    
+
     return sampler(*prior_parameters, n_samples)
