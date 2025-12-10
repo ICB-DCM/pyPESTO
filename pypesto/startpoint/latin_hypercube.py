@@ -116,7 +116,7 @@ class LatinHypercubeStartpoints(CheckedStartpoints):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
-        priors=None,
+        **kwargs,
     ) -> np.ndarray:
         """Call function."""
         return latin_hypercube(
