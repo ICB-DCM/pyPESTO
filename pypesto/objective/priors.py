@@ -33,10 +33,10 @@ class NegLogParameterPriors(ObjectiveBase):
     Contains a list of prior dictionaries for the individual parameters
     of the format
 
-    {'index': [int],
-     'density_fun': [Callable],
-     'density_dx': [Callable],
-     'density_ddx': [Callable],
+    {'index': int,
+     'density_fun': Callable,
+     'density_dx': Callable,
+     'density_ddx': Callable,
      'type': str,  # e.g. C.NORMAL, C.UNIFORM, C.PARAMETER_SCALE_NORMAL, C.LAPLACE, ...
      'parameters': [float, float],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab),
      'scale': str,  # C.LIN, C.LOG, C.LOG10
@@ -279,23 +279,13 @@ class NegLogParameterPriors(ObjectiveBase):
                 C.PARAMETER_SCALE_UNIFORM,
                 C.PARAMETER_SCALE_NORMAL,
                 C.PARAMETER_SCALE_LAPLACE,
-            ]:
-                if parameter_scale == C.LOG:
-                    if (prior_samples_dict[index] <= 0).any():
-                        logging.warning(
-                            "Sampling from prior resulted in non-positive value for log-scale parameter."
-                            " Returning -inf log-value. Consider adjusting prior."
-                        )
-                    prior_samples_dict[index] = np.log(
-                        prior_samples_dict[index]
+            ] and parameter_scale in [C.LOG, C.LOG10]:
+                if (prior_samples_dict[index] <= 0).any():
+                    logging.warning(
+                        "Sampling from prior resulted in non-positive value for log-scale parameter."
+                        " Returning -inf log-value. Consider adjusting prior."
                     )
-                elif parameter_scale == C.LOG10:
-                    if (prior_samples_dict[index] <= 0).any():
-                        logging.warning(
-                            "Sampling from prior resulted in non-positive value for log-scale parameter."
-                            " Returning -inf log-value. Consider adjusting prior."
-                        )
-                    prior_samples_dict[index] = np.log10(
+                    prior_samples_dict[index] = getattr(np, parameter_scale)(
                         prior_samples_dict[index]
                     )
 
@@ -673,34 +663,20 @@ def _sample_from_prior(
         Array of samples from the prior distribution.
     """
     if prior_type in [C.UNIFORM, C.PARAMETER_SCALE_UNIFORM]:
-        low = prior_parameters[0]
-        high = prior_parameters[1]
-        return rng.uniform(low, high, n_samples)
-
+        sampler = rng.uniform
     elif prior_type in [C.NORMAL, C.PARAMETER_SCALE_NORMAL]:
-        mean = prior_parameters[0]
-        std = prior_parameters[1]
-        return rng.normal(mean, std, n_samples)
-
+        sampler = rng.normal
     elif prior_type in [C.LAPLACE, C.PARAMETER_SCALE_LAPLACE]:
-        mean = prior_parameters[0]
-        scale = prior_parameters[1]
-        return rng.laplace(mean, scale, n_samples)
-
+        sampler = rng.laplace
     elif prior_type == C.LOG_NORMAL:
-        mean = prior_parameters[0]
-        sigma = prior_parameters[1]
-        return rng.lognormal(mean, sigma, n_samples)
-
-    elif prior_type == C.LOG_UNIFORM:
+        sampler = rng.lognormal
+    elif prior_type in [C.LOG_UNIFORM, C.LOG_LAPLACE]:
         raise NotImplementedError(
-            "Log-uniform distribution sampling is not yet implemented"
-        )
-    elif prior_type == C.LOG_LAPLACE:
-        raise NotImplementedError(
-            "Log-Laplace distribution sampling is not yet implemented"
+            f"{prior_type} distribution sampling is not yet implemented."
         )
     else:
         raise ValueError(
-            f"Sampling from prior type {prior_type} is not supported"
+            f"Sampling from prior type {prior_type} is not supported."
         )
+    
+    return sampler(*prior_parameters, n_samples)
