@@ -48,7 +48,7 @@ def conversion_reaction_model():
             parameter.setName(f"observable_{obs_id}")
             parameter.constant = True
 
-            rule = sbml_importer.sbml.createAssignmentRule()
+            rule = sbml_importer.sbml_model.createAssignmentRule()
             rule.setId(f"observable_{obs_id}")
             rule.setName(f"observable_{obs_id}")
             rule.setVariable(f"observable_{obs_id}")
@@ -62,7 +62,7 @@ def conversion_reaction_model():
             parameter.setName(f"{spec_id}0")
             parameter.constant = True
 
-            assignment = sbml_importer.sbml.createInitialAssignment()
+            assignment = sbml_importer.sbml_model.createInitialAssignment()
             assignment.setSymbol(f"{spec_id}")
             math = (
                 '<math xmlns="http://www.w3.org/1998/Math/MathML"><ci>'
@@ -71,13 +71,13 @@ def conversion_reaction_model():
             assignment.setMath(libsbml.readMathMLFromString(math))
 
         for spec in ("A", "B"):
-            create_observable(sbml_importer.sbml, spec)
-            create_intial_assignment(sbml_importer.sbml, spec)
+            create_observable(sbml_importer.sbml_model, spec)
+            create_intial_assignment(sbml_importer.sbml_model, spec)
 
         # add fixed parameters and observables to AMICI model
         fixed_parameters = ["A0", "B0"]
         observables = amici.importers.sbml.assignment_rules_to_observables(
-            sbml_importer.sbml,  # the libsbml model object
+            sbml_importer.sbml_model,  # the libsbml model object
             filter_function=lambda variable: variable.getId().startswith(
                 "observable_"
             ),
