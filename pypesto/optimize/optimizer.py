@@ -691,11 +691,7 @@ class DlibOptimizer(Optimizer):
     def __init__(self, options: dict = None):
         super().__init__()
 
-        self.options = options
-        if self.options is None:
-            self.options = DlibOptimizer.get_default_options(self)
-        elif "maxiter" not in self.options:
-            raise KeyError("Dlib options are missing the keyword maxiter.")
+        self.options = self.extend_options_with_defaults(options)
 
     def __repr__(self) -> str:
         rep = f"<{self.__class__.__name__}"
@@ -753,6 +749,15 @@ class DlibOptimizer(Optimizer):
     def get_default_options(self):
         """Create default options specific for the optimizer."""
         return {"maxiter": 10000, "solver_epsilon": 0.0}
+
+    def extend_options_with_defaults(
+        self, options: dict | None = None
+    ) -> dict:
+        """Extend options with default values if not provided."""
+        default_options = DlibOptimizer.get_default_options()
+        if options is None:
+            return default_options
+        return default_options | options  # prefer options over defaults
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports x0."""
