@@ -1,7 +1,6 @@
 """Track optimal values during an optimization."""
 
 import logging
-from typing import Union
 
 import numpy as np
 
@@ -64,7 +63,7 @@ class OptimizerHistory:
         self.history: HistoryBase = history
 
         # initial point
-        self.fval0: Union[float, None] = None
+        self.fval0: float | None = None
         self.x0: np.ndarray | None = x0
 
         # bounds
@@ -73,11 +72,11 @@ class OptimizerHistory:
 
         # minimum point
         self.fval_min: float = np.inf
-        self.x_min: Union[np.ndarray, None] = None
-        self.grad_min: Union[np.ndarray, None] = None
-        self.hess_min: Union[np.ndarray, None] = None
-        self.res_min: Union[np.ndarray, None] = None
-        self.sres_min: Union[np.ndarray, None] = None
+        self.x_min: np.ndarray | None = None
+        self.grad_min: np.ndarray | None = None
+        self.hess_min: np.ndarray | None = None
+        self.res_min: np.ndarray | None = None
+        self.sres_min: np.ndarray | None = None
 
         if generate_from_history:
             self._maybe_compute_init_and_min_vals_from_trace()
@@ -108,8 +107,8 @@ class OptimizerHistory:
 
     def finalize(
         self,
-        message: Union[str, None] = None,
-        exitflag: Union[int, None] = None,
+        message: str | None = None,
+        exitflag: int | None = None,
     ):
         """
         Finalize history.
