@@ -974,7 +974,7 @@ class CmaOptimizer(Optimizer):
         super().__init__()
 
         if options is None:
-            options = {"maxiter": 10000}
+            options = {"maxiter": 10000, "verbose": -10}
         self.options = options
         self.par_sigma0 = par_sigma0
 
