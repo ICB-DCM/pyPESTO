@@ -781,3 +781,55 @@ def test_assign_ids():
 
     ids = assign_ids(n_starts=n_starts, ids=None, result=result)
     assert ids == [str(i) for i in range(n_starts, n_starts * 2)]
+
+
+def test_cma_no_outcmaes_directory():
+    """Test that CmaOptimizer does not create outcmaes/ directory by default."""
+    # Create a simple test problem
+    obj = rosen_for_sensi(max_sensi_order=2, integrated=False)["obj"]
+    lb = 0 * np.ones((1, 2))
+    ub = 1 * np.ones((1, 2))
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub)
+
+    # Create optimizer with default options
+    optimizer = optimize.CmaOptimizer()
+
+    # Get current working directory to check for outcmaes/
+    import tempfile
+
+    # Run in a temporary directory to avoid polluting the test directory
+    with tempfile.TemporaryDirectory() as tmpdir:
+        original_dir = os.getcwd()
+        try:
+            os.chdir(tmpdir)
+
+            # Run optimization with very few iterations
+            result = pypesto.optimize.minimize(
+                problem=problem,
+                optimizer=optimizer,
+                n_starts=1,
+                progress_bar=False,
+            )
+
+            # Verify optimization ran successfully
+            assert result is not None
+            assert len(result.optimize_result.list) == 1
+
+            # Check that outcmaes/ directory was NOT created
+            assert not os.path.exists("outcmaes"), (
+                "outcmaes/ directory should not be created with default options"
+            )
+
+            # Also check that no cmaes-related files were created
+            files_in_dir = os.listdir(".")
+            cma_files = [
+                f
+                for f in files_in_dir
+                if "cma" in f.lower() or "outcmaes" in f.lower()
+            ]
+            assert len(cma_files) == 0, (
+                f"No CMA-ES files should be created, found: {cma_files}"
+            )
+
+        finally:
+            os.chdir(original_dir)
