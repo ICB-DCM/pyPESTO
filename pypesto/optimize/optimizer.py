@@ -353,6 +353,66 @@ class Optimizer(abc.ABC):
             f"Check supports_maxtime() before calling set_maxtime()."
         )
 
+    def supports_maxiter(self) -> bool:
+        """
+        Check whether optimizer supports iteration limits.
+
+        Returns
+        -------
+        True if optimizer supports setting a maximum number of iterations,
+        False otherwise.
+        """
+        return False
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+
+        Raises
+        ------
+        NotImplementedError
+            If the optimizer does not support iteration limits.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support iteration limits. "
+            f"Check supports_maxiter() before calling set_maxiter()."
+        )
+
+    def supports_maxeval(self) -> bool:
+        """
+        Check whether optimizer supports evaluation limits.
+
+        Returns
+        -------
+        True if optimizer supports setting a maximum number of function
+        evaluations, False otherwise.
+        """
+        return False
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+
+        Raises
+        ------
+        NotImplementedError
+            If the optimizer does not support evaluation limits.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support evaluation limits. "
+            f"Check supports_maxeval() before calling set_maxeval()."
+        )
+
 
 class ScipyOptimizer(Optimizer):
     """
@@ -590,6 +650,26 @@ class ScipyOptimizer(Optimizer):
 
         return options
 
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        if self.method.lower() == "tnc":
+            self.options["maxfun"] = iterations
+        else:
+            self.options["maxiter"] = iterations
+
 
 class IpoptOptimizer(Optimizer):
     """Use Ipopt (https://pypi.org/project/cyipopt/) for optimization."""
@@ -692,6 +772,23 @@ class IpoptOptimizer(Optimizer):
             self.options = {}
         self.options["max_wall_time"] = seconds
 
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["max_iter"] = iterations
+
 
 class DlibOptimizer(Optimizer):
     """Use the Dlib toolbox for optimization."""
@@ -768,6 +865,23 @@ class DlibOptimizer(Optimizer):
             logger.warning("The Dlib optimizer does not support x0.")
         return False
 
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
+
 
 class PyswarmOptimizer(Optimizer):
     """Global optimization using pyswarm."""
@@ -825,6 +939,23 @@ class PyswarmOptimizer(Optimizer):
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The pyswarm optimizer does not support x0.")
         return False
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
 
 
 class CmaOptimizer(Optimizer):
@@ -904,6 +1035,40 @@ class CmaOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
+
+    def supports_maxeval(self) -> bool:
+        """Check whether optimizer supports evaluation limits."""
+        return True
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxfevals"] = evaluations
 
 
 class CmaesOptimizer(CmaOptimizer):
@@ -988,6 +1153,23 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports/needs x0."""
         return True
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
 
 
 class PyswarmsOptimizer(Optimizer):
@@ -1112,6 +1294,23 @@ class PyswarmsOptimizer(Optimizer):
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The pyswarms optimizer does not support x0.")
         return False
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
 
 
 class NLoptOptimizer(Optimizer):
@@ -1370,6 +1569,21 @@ class NLoptOptimizer(Optimizer):
         """Set the maximum wall time for optimization."""
         self.options["maxtime"] = seconds
 
+    def supports_maxeval(self) -> bool:
+        """Check whether optimizer supports evaluation limits."""
+        return True
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+        """
+        self.options["maxeval"] = evaluations
+
 
 class FidesOptimizer(Optimizer):
     """
@@ -1572,5 +1786,25 @@ class FidesOptimizer(Optimizer):
             from fides.constants import Options as FidesOptions
 
             self.options[FidesOptions.MAXTIME] = seconds
+        except ImportError:
+            raise OptimizerImportError("fides") from None
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        try:
+            from fides.constants import Options as FidesOptions
+
+            self.options[FidesOptions.MAXITER] = iterations
         except ImportError:
             raise OptimizerImportError("fides") from None
