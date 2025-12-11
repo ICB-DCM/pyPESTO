@@ -41,7 +41,7 @@ class OptimizerHistory:
         History object to attach to this container. This history object
         implements the storage of the actual history.
     x0:
-        Initial values for optimization. Can be None for optimizers that do not
+        Initial values for optimization. Can be ``None`` for optimizers that do not
         require or support a starting point.
     lb, ub:
         Lower and upper bound. Used for checking validity of optimal points.

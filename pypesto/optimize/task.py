@@ -33,7 +33,7 @@ class OptimizerTask(Task):
         problem:
             The problem to solve.
         x0:
-            The point from which to start. Can be None for optimizers that do not
+            The point from which to start. Can be ``None`` for optimizers that do not
             require or support a starting point.
         id:
             The multistart id.
@@ -59,8 +59,8 @@ class OptimizerTask(Task):
 
         optimizer_result = self.optimizer.minimize(
             problem=self.problem,
-            id=self.id,
             x0=self.x0,
+            id=self.id,
             history_options=self.history_options,
             optimize_options=self.optimize_options,
         )

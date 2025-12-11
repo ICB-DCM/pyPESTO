@@ -114,8 +114,8 @@ def walk_along_profile(
             if startpoint.size > 0:
                 optimizer_result = optimizer.minimize(
                     problem=problem,
-                    id=str(0),
                     x0=startpoint,
+                    id=str(0),
                     optimize_options=OptimizeOptions(
                         allow_failed_starts=False
                     ),
@@ -194,8 +194,8 @@ def walk_along_profile(
 
             optimizer_result = optimizer.minimize(
                 problem=problem,
-                id=str(0),
                 x0=startpoint,
+                id=str(0),
                 optimize_options=OptimizeOptions(allow_failed_starts=False),
             )
 
@@ -239,8 +239,8 @@ def walk_along_profile(
 
                 optimizer_result = optimizer.minimize(
                     problem=problem,
-                    id=str(i_optimize_attempt),
                     x0=startpoint,
+                    id=str(i_optimize_attempt),
                     optimize_options=OptimizeOptions(
                         allow_failed_starts=False
                     ),

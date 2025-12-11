@@ -46,8 +46,8 @@ def hierarchical_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -88,13 +88,15 @@ def history_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
         if history_options is None:
             history_options = HistoryOptions()
+        if id is None:
+            raise ValueError("id must be provided for history tracking.")
 
         objective = problem.objective
 
@@ -102,11 +104,7 @@ def history_decorator(minimize):
         objective.initialize()
 
         # Check if x0 should be used: optimizer supports it and x0 is valid
-        use_x0 = (
-            x0 is not None
-            and not np.all(np.isnan(x0))
-            and self.check_x0_support(x0)
-        )
+        use_x0 = self.check_x0_support(x0)
 
         # initialize the history
         history = objective.create_history(
@@ -183,8 +181,8 @@ def time_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -215,8 +213,8 @@ def fix_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -254,8 +252,8 @@ def minimize_decorator_collection(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -287,8 +285,8 @@ class Optimizer(abc.ABC):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -300,7 +298,7 @@ class Optimizer(abc.ABC):
         problem:
             The problem to find optimal parameters for.
         x0:
-            The starting parameters. Can be None for optimizers that do not
+            The starting parameters. Can be ``None`` for optimizers that do not
             require or support a starting point.
         id:
             Multistart id.
@@ -320,7 +318,9 @@ class Optimizer(abc.ABC):
         return None
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0, return boolean."""
+        """Check whether optimizer supports/needs x0, return boolean."""
+        if x_guesses is None or x_guesses.size == 0:
+            raise ValueError("x_guesses must be provided.")
         return True
 
     def supports_maxtime(self) -> bool:
@@ -393,8 +393,8 @@ class ScipyOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -624,8 +624,8 @@ class IpoptOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -716,8 +716,8 @@ class DlibOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -763,7 +763,7 @@ class DlibOptimizer(Optimizer):
         return {"maxiter": 10000}
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0."""
+        """Check whether optimizer supports/needs x0."""
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The Dlib optimizer does not support x0.")
         return False
@@ -790,8 +790,8 @@ class PyswarmOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -821,7 +821,7 @@ class PyswarmOptimizer(Optimizer):
         return False
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0."""
+        """Check whether optimizer supports/needs x0."""
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The pyswarm optimizer does not support x0.")
         return False
@@ -866,8 +866,8 @@ class CmaOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -960,8 +960,8 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -984,6 +984,10 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports/needs x0."""
+        return True
 
 
 class PyswarmsOptimizer(Optimizer):
@@ -1034,8 +1038,8 @@ class PyswarmsOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1104,7 +1108,7 @@ class PyswarmsOptimizer(Optimizer):
         return False
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0."""
+        """Check whether optimizer supports/needs x0."""
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The pyswarms optimizer does not support x0.")
         return False
@@ -1252,8 +1256,8 @@ class NLoptOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1335,7 +1339,7 @@ class NLoptOptimizer(Optimizer):
         return False
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports multiple initial guesses."""
+        """Check whether optimizer supports/needs initial guesses."""
         import nlopt
 
         if self.method in (
@@ -1356,7 +1360,7 @@ class NLoptOptimizer(Optimizer):
                     "not support x0."
                 )
             return False
-        return True
+        return super().check_x0_support(x_guesses)
 
     def supports_maxtime(self) -> bool:
         """Check whether optimizer supports time limits."""
@@ -1442,8 +1446,8 @@ class FidesOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        id: str,
         x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
