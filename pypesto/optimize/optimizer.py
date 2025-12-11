@@ -754,7 +754,7 @@ class DlibOptimizer(Optimizer):
         self, options: dict | None = None
     ) -> dict:
         """Extend options with default values if not provided."""
-        default_options = DlibOptimizer.get_default_options()
+        default_options = self.get_default_options()
         if options is None:
             return default_options
         return default_options | options  # prefer options over defaults
