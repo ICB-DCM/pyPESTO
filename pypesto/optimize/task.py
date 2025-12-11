@@ -55,7 +55,7 @@ class OptimizerTask(Task):
         """Execute the task."""
         logger.debug(f"Executing task {self.id}.")
         # check for supplied x_guess support
-        self.optimizer.check_x0_support(self.problem.x_guesses)
+        self.optimizer.check_x0_support(self.x0)
 
         optimizer_result = self.optimizer.minimize(
             problem=self.problem,

@@ -724,7 +724,7 @@ def test_correct_startpoint_usage(optimizer):
 
     opt = get_optimizer(*optimizer)
     # return if the optimizer knowingly does not support x_guesses
-    if not opt.check_x0_support():
+    if not opt.check_x0_support(np.array([0.1, 0.1])):
         return
 
     # define a problem with an x_guess
