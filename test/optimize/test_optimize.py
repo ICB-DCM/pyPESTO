@@ -822,13 +822,8 @@ def test_cma_no_outcmaes_directory():
 
             # Also check that no cmaes-related files were created
             files_in_dir = os.listdir(".")
-            cma_files = [
-                f
-                for f in files_in_dir
-                if "cma" in f.lower() or "outcmaes" in f.lower()
-            ]
-            assert len(cma_files) == 0, (
-                f"No CMA-ES files should be created, found: {cma_files}"
+            assert len(files_in_dir) == 0, (
+                f"No files should be created, found: {files_in_dir}"
             )
 
         finally:
