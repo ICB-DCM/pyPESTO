@@ -242,12 +242,12 @@ class TestOptimizerTolInterface:
 
         from fides.constants import Options as FidesOptions
 
-        assert FidesOptions.FTOL in optimizer.options
-        assert optimizer.options[FidesOptions.FTOL] == 1e-6
+        assert FidesOptions.FATOL in optimizer.options
+        assert optimizer.options[FidesOptions.FATOL] == 1e-6
 
         # Test updating existing value
         optimizer.set_tol(1e-9)
-        assert optimizer.options[FidesOptions.FTOL] == 1e-9
+        assert optimizer.options[FidesOptions.FATOL] == 1e-9
 
     def test_cma_optimizer_support(self):
         """Test CmaOptimizer tolerance support."""
@@ -288,3 +288,19 @@ class TestOptimizerTolInterface:
 
         with pytest.raises(NotImplementedError):
             optimizer.set_tol(1e-6)
+
+    def test_tolerance_validation(self):
+        """Test that invalid tolerance values are rejected."""
+        optimizer = optimize.ScipyOptimizer()
+
+        # Test that positive values work
+        optimizer.set_tol(1e-6)
+        assert optimizer.tol == 1e-6
+
+    def test_tolerance_validation_options_based(self):
+        """Test tolerance validation for options-based optimizers."""
+        optimizer = optimize.IpoptOptimizer()
+
+        # Test that positive values work
+        optimizer.set_tol(1e-7)
+        assert optimizer.options["tol"] == 1e-7
