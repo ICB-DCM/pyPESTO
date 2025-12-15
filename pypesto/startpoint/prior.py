@@ -50,7 +50,7 @@ class PriorStartpoints(CheckedStartpoints):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
-        priors: Union[NegLogParameterPriors, NegLogPriors, None] = None,
+        priors: NegLogParameterPriors | NegLogPriors | None = None,
         max_iterations: int = 100,
     ) -> np.ndarray:
         """Sample startpoints from prior or uniform distribution.
