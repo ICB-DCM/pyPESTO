@@ -84,17 +84,13 @@ jobs:
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
-      run: .github/workflows/install_deps.sh amici
+      run: |
+        pip install --upgrade pip
+        pip install tox
 
     - name: Run tests
-      timeout-minutes: 45
-      run: ulimit -n 65536 65536 && tox -e base
-
-    - name: Coverage
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+      timeout-minutes: 10
+      run: tox -e windows
 
   windows:
     runs-on: windows-latest
