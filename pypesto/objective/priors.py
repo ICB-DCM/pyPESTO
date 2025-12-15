@@ -230,7 +230,7 @@ class NegLogParameterPriors(ObjectiveBase):
         return sres
 
     def sample(
-        self, n_samples: int = 1, seed: int = None
+        self, n_samples: int = 1, rng: int = None
     ) -> dict[str, np.ndarray]:
         """
         Sample from the prior distribution. Parameters are returned on defined parameter scale.
@@ -239,8 +239,8 @@ class NegLogParameterPriors(ObjectiveBase):
         ----------
         n_samples:
             Number of samples to draw.
-        seed:
-            Random seed for reproducibility.
+        rng:
+            Random number generator or seed for reproducibility.
 
         Returns
         -------
@@ -248,7 +248,7 @@ class NegLogParameterPriors(ObjectiveBase):
             Dictionary of samples from the prior distributions for each
             parameter index.
         """
-        rng = np.random.default_rng(seed)
+        rng = np.random.default_rng(rng)
 
         # Initialize sample arrays
         prior_samples_dict = {
