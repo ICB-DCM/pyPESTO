@@ -34,7 +34,7 @@ class NegLogParameterPriors(ObjectiveBase):
     of the format
 
     .. code-block:: python
-    
+
        {
          'index': int,
          'density_fun': Callable,
@@ -233,7 +233,7 @@ class NegLogParameterPriors(ObjectiveBase):
         return sres
 
     def sample(
-        self, n_samples: int = 1, rng: int = None
+        self, n_samples: int = 1, rng: int | np.random.Generator = None
     ) -> dict[str, np.ndarray]:
         """
         Sample from the prior distribution. Parameters are returned on defined parameter scale.
