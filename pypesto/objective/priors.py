@@ -33,14 +33,17 @@ class NegLogParameterPriors(ObjectiveBase):
     Contains a list of prior dictionaries for the individual parameters
     of the format
 
-    {'index': int,
-     'density_fun': Callable,
-     'density_dx': Callable,
-     'density_ddx': Callable,
-     'type': str,  # e.g. C.NORMAL, C.UNIFORM, C.PARAMETER_SCALE_NORMAL, C.LAPLACE, ...
-     'parameters': [float, float],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab),
-     'scale': str,  # C.LIN, C.LOG, C.LOG10
-     }
+    .. code-block:: python
+    
+       {
+         'index': int,
+         'density_fun': Callable,
+         'density_dx': Callable,
+         'density_ddx': Callable,
+         'type': str,  # e.g. C.NORMAL, C.UNIFORM, C.PARAMETER_SCALE_NORMAL, C.LAPLACE, ...
+         'parameters': [float, float],  # e.g. [mean, std] for normal or [lower, upper] for uniform (as in petab),
+         'scale': str,  # C.LIN, C.LOG, C.LOG10
+        }
 
     A prior instance can be added to e.g. an objective, that gives the
     likelihood, by an AggregatedObjective.
