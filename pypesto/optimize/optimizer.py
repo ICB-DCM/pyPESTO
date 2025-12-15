@@ -405,6 +405,36 @@ class Optimizer(abc.ABC):
             f"Check supports_maxeval() before calling set_maxeval()."
         )
 
+    def supports_tol(self) -> bool:
+        """
+        Check whether optimizer supports absolute tolerance.
+
+        Returns
+        -------
+        True if optimizer supports setting an absolute tolerance,
+        False otherwise.
+        """
+        return False
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+
+        Raises
+        ------
+        NotImplementedError
+            If the optimizer does not support absolute tolerance.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support absolute tolerance. "
+            f"Check supports_tol() before calling set_tol()."
+        )
+
 
 class ScipyOptimizer(Optimizer):
     """
@@ -662,6 +692,21 @@ class ScipyOptimizer(Optimizer):
         else:
             self.options["maxiter"] = iterations
 
+    def supports_tol(self) -> bool:
+        """Check whether optimizer supports absolute tolerance."""
+        return True
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+        """
+        self.tol = tol
+
 
 class IpoptOptimizer(Optimizer):
     """Use Ipopt (https://pypi.org/project/cyipopt/) for optimization."""
@@ -780,6 +825,23 @@ class IpoptOptimizer(Optimizer):
         if self.options is None:
             self.options = {}
         self.options["max_iter"] = iterations
+
+    def supports_tol(self) -> bool:
+        """Check whether optimizer supports absolute tolerance."""
+        return True
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["tol"] = tol
 
 
 class DlibOptimizer(Optimizer):
@@ -949,6 +1011,23 @@ class PyswarmOptimizer(Optimizer):
             self.options = {}
         self.options["maxiter"] = iterations
 
+    def supports_tol(self) -> bool:
+        """Check whether optimizer supports absolute tolerance."""
+        return True
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["minfunc"] = tol
+
 
 class CmaOptimizer(Optimizer):
     """
@@ -1062,6 +1141,23 @@ class CmaOptimizer(Optimizer):
             self.options = {}
         self.options["maxfevals"] = evaluations
 
+    def supports_tol(self) -> bool:
+        """Check whether optimizer supports absolute tolerance."""
+        return True
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["tolfun"] = tol
+
 
 class CmaesOptimizer(CmaOptimizer):
     """Deprecated, use CmaOptimizer instead."""
@@ -1158,6 +1254,23 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         if self.options is None:
             self.options = {}
         self.options["maxiter"] = iterations
+
+    def supports_tol(self) -> bool:
+        """Check whether optimizer supports absolute tolerance."""
+        return True
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["atol"] = tol
 
 
 class PyswarmsOptimizer(Optimizer):
@@ -1572,6 +1685,21 @@ class NLoptOptimizer(Optimizer):
         """
         self.options["maxeval"] = evaluations
 
+    def supports_tol(self) -> bool:
+        """Check whether optimizer supports absolute tolerance."""
+        return True
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+        """
+        self.options["ftol_abs"] = tol
+
 
 class FidesOptimizer(Optimizer):
     """
@@ -1794,5 +1922,25 @@ class FidesOptimizer(Optimizer):
             from fides.constants import Options as FidesOptions
 
             self.options[FidesOptions.MAXITER] = iterations
+        except ImportError:
+            raise OptimizerImportError("fides") from None
+
+    def supports_tol(self) -> bool:
+        """Check whether optimizer supports absolute tolerance."""
+        return True
+
+    def set_tol(self, tol: float) -> None:
+        """
+        Set the absolute tolerance for optimization.
+
+        Parameters
+        ----------
+        tol
+            Absolute tolerance for termination.
+        """
+        try:
+            from fides.constants import Options as FidesOptions
+
+            self.options[FidesOptions.FTOL] = tol
         except ImportError:
             raise OptimizerImportError("fides") from None
