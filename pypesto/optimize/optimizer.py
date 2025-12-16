@@ -691,7 +691,7 @@ class DlibOptimizer(Optimizer):
     def __init__(self, options: dict = None):
         super().__init__()
 
-        self.options = self.extend_options_with_defaults(options)
+        self.options = self._extend_options_with_defaults(options)
 
     def __repr__(self) -> str:
         rep = f"<{self.__class__.__name__}"
@@ -750,7 +750,7 @@ class DlibOptimizer(Optimizer):
         """Create default options specific for the optimizer."""
         return {"maxiter": 10000, "solver_epsilon": 0.0}
 
-    def extend_options_with_defaults(
+    def _extend_options_with_defaults(
         self, options: dict | None = None
     ) -> dict:
         """Extend options with default values if not provided."""
