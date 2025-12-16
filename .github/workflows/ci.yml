@@ -61,7 +61,7 @@ jobs:
         files: ./coverage.xml
 
   mac:
-    runs-on: macos-15
+    runs-on: macos-14
     strategy:
       matrix:
         python-version: ['3.13']
@@ -84,13 +84,17 @@ jobs:
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
-      run: |
-        pip install --upgrade pip
-        pip install tox
+      run: .github/workflows/install_deps.sh amici
 
     - name: Run tests
-      timeout-minutes: 10
-      run: tox -e windows
+      timeout-minutes: 45
+      run: ulimit -n 65536 65536 && tox -e base
+
+    - name: Coverage
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
 
   windows:
     runs-on: windows-latest
