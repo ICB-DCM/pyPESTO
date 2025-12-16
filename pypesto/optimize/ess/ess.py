@@ -564,7 +564,7 @@ class ESSOptimizer:
             self.n_iter >= self.local_n1
             and self.n_iter - self.last_local_search_niter >= self.local_n2
         ):
-            quality_order = np.argsort(fx_best_children)
+            quality_order = np.argsort(fx_best_children).argsort()
             # compute minimal distance between the best children and all local
             #  optima found so far
             min_distances = (
@@ -588,7 +588,7 @@ class ESSOptimizer:
                 else np.zeros(len(x_best_children))
             )
             # sort by furthest distance to existing local optima
-            diversity_order = np.argsort(min_distances)[::-1]
+            diversity_order = np.argsort(min_distances)[::-1].argsort()
             # compute priority, balancing quality and diversity
             #  (smaller value = higher priority)
             priority = (
@@ -785,3 +785,33 @@ class ESSOptimizer:
     def set_maxtime(self, seconds: float) -> None:
         """Set the maximum wall time for optimization."""
         self.max_walltime_s = seconds
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        self.max_iter = iterations
+
+    def supports_maxeval(self) -> bool:
+        """Check whether optimizer supports evaluation limits."""
+        return True
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+        """
+        self.max_eval = evaluations

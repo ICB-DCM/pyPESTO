@@ -288,7 +288,7 @@ def waterfall_lowlevel(
     if offset_y == 0.0:
         ax.set_ylabel("Function value")
     else:
-        ax.set_ylabel("Objective value (offset={offset_y:0.3e})")
+        ax.set_ylabel(f"Objective value (offset={offset_y:0.3e})")
     ax.set_title("Waterfall plot")
     if legend_text is not None:
         ax.legend()

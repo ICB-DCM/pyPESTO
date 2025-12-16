@@ -4,22 +4,25 @@ import sys
 from collections.abc import Iterable
 from typing import (
     Callable,
-    Optional,
     SupportsFloat,
     SupportsInt,
-    Union,
 )
 
 import numpy as np
 import pandas as pd
 
 from ..objective import ObjectiveBase
-from ..objective.priors import NegLogParameterPriors
-from ..startpoint import StartpointMethod, to_startpoint_method, uniform
+from ..objective.priors import NegLogParameterPriors, NegLogPriors
+from ..startpoint import (
+    PriorStartpoints,
+    StartpointMethod,
+    to_startpoint_method,
+    uniform,
+)
 from ..version import __version__
 
-SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
-SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
+SupportsFloatIterableOrValue = Iterable[SupportsFloat] | SupportsFloat
+SupportsIntIterableOrValue = Iterable[SupportsInt] | SupportsInt
 
 logger = logging.getLogger(__name__)
 
@@ -91,19 +94,19 @@ class Problem:
     def __init__(
         self,
         objective: ObjectiveBase,
-        lb: Union[np.ndarray, list[float]],
-        ub: Union[np.ndarray, list[float]],
-        dim_full: Optional[int] = None,
-        x_fixed_indices: Optional[SupportsIntIterableOrValue] = None,
-        x_fixed_vals: Optional[SupportsFloatIterableOrValue] = None,
-        x_guesses: Optional[Iterable[float]] = None,
-        x_names: Optional[Iterable[str]] = None,
-        x_scales: Optional[Iterable[str]] = None,
-        x_priors_defs: Optional[NegLogParameterPriors] = None,
-        lb_init: Union[np.ndarray, list[float], None] = None,
-        ub_init: Union[np.ndarray, list[float], None] = None,
+        lb: np.ndarray | list[float],
+        ub: np.ndarray | list[float],
+        dim_full: int | None = None,
+        x_fixed_indices: SupportsIntIterableOrValue | None = None,
+        x_fixed_vals: SupportsFloatIterableOrValue | None = None,
+        x_guesses: Iterable[float] | None = None,
+        x_names: Iterable[str] | None = None,
+        x_scales: Iterable[str] | None = None,
+        x_priors_defs: NegLogParameterPriors | NegLogPriors | None = None,
+        lb_init: np.ndarray | list[float] | None = None,
+        ub_init: np.ndarray | list[float] | None = None,
         copy_objective: bool = True,
-        startpoint_method: Union[StartpointMethod, Callable, bool] = None,
+        startpoint_method: StartpointMethod | Callable | bool = None,
     ):
         if copy_objective:
             objective = copy.deepcopy(objective)
@@ -164,6 +167,9 @@ class Problem:
         # startpoint method
         if startpoint_method is None:
             startpoint_method = uniform
+            if x_priors_defs is not None:
+                startpoint_method = PriorStartpoints()
+
         # convert startpoint method to class instance
         self.startpoint_method = to_startpoint_method(startpoint_method)
         # save python and pypesto version
@@ -267,7 +273,7 @@ class Problem:
         if np.any(self.lb >= self.ub):
             raise ValueError("lb<ub not fulfilled.")
 
-    def _check_x_guesses(self):
+    def _check_x_guesses(self) -> None:
         """Check whether the supplied x_guesses adhere to the bounds."""
         if self.x_guesses.size == 0:
             return
@@ -281,7 +287,7 @@ class Problem:
                 "set for this problem."
             )
 
-    def set_x_guesses(self, x_guesses: Iterable[float]):
+    def set_x_guesses(self, x_guesses: Iterable[float]) -> None:
         """
         Set the x_guesses of a problem.
 
@@ -347,10 +353,10 @@ class Problem:
 
     def get_full_vector(
         self,
-        x: Union[np.ndarray, None],
-        x_fixed_vals: Iterable[float] = None,
+        x: np.ndarray | None,
+        x_fixed_vals: Iterable[float] | None = None,
         x_is_grad: bool = False,
-    ) -> Union[np.ndarray, None]:
+    ) -> np.ndarray | None:
         """
         Map vector from dim to dim_full. Usually used for x, grad.
 
@@ -385,8 +391,9 @@ class Problem:
         return x_full
 
     def get_full_matrix(
-        self, x: Union[np.ndarray, None]
-    ) -> Union[np.ndarray, None]:
+        self,
+        x: np.ndarray | None,
+    ) -> np.ndarray | None:
         """
         Map matrix from dim to dim_full. Usually used for hessian.
 
@@ -412,9 +419,9 @@ class Problem:
 
     def get_reduced_vector(
         self,
-        x_full: Union[np.ndarray, None],
-        x_indices: Optional[list[int]] = None,
-    ) -> Union[np.ndarray, None]:
+        x_full: np.ndarray | None,
+        x_indices: list[int] | None = None,
+    ) -> np.ndarray | None:
         """
         Keep only those elements, which indices are specified in x_indices.
 
@@ -440,8 +447,8 @@ class Problem:
         return np.array(x)
 
     def get_reduced_matrix(
-        self, x_full: Union[np.ndarray, None]
-    ) -> Union[np.ndarray, None]:
+        self, x_full: np.ndarray | None
+    ) -> np.ndarray | None:
         """
         Map matrix from dim_full to dim, i.e. delete fixed indices.
 
@@ -460,7 +467,7 @@ class Problem:
 
         return x
 
-    def full_index_to_free_index(self, full_index: int):
+    def full_index_to_free_index(self, full_index: int) -> int:
         """
         Calculate index in reduced vector from index in full vector.
 
@@ -541,10 +548,10 @@ _convtypes = {
 
 def _type_conversion_with_check(
     index: int,
-    value: Union[SupportsFloat, SupportsInt],
+    value: SupportsFloat | SupportsInt,
     valuename: str,
     convtype: str,
-) -> Union[float, int]:
+) -> float | int:
     """
     Convert values to the requested type.
 
@@ -572,9 +579,9 @@ def _type_conversion_with_check(
 
 
 def _make_iterable_if_value(
-    value: Union[SupportsFloatIterableOrValue, SupportsIntIterableOrValue],
+    value: SupportsFloatIterableOrValue | SupportsIntIterableOrValue,
     convtype: str,
-) -> Union[Iterable[SupportsFloat], Iterable[SupportsInt]]:
+) -> Iterable[SupportsFloat] | Iterable[SupportsInt]:
     """Convert scalar values to iterables for scalar input, may update type."""
     if convtype not in _convtypes:
         raise ValueError(f"Unsupported type {convtype}")

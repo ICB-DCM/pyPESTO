@@ -84,8 +84,6 @@ class FunctionEvaluator:
         The objective function values in the same order as the inputs.
         """
         res = np.fromiter(map(self.single, xs), dtype=float)
-        self.n_eval += len(xs)
-        self.n_eval_round += len(xs)
         return res
 
     def single_random(self) -> tuple[np.array, float]:
@@ -222,10 +220,10 @@ class FunctionEvaluatorMT(FunctionEvaluator):
                 ),
                 dtype=float,
             )
+            self.n_eval += len(xs)
+            self.n_eval_round += len(xs)
         else:
             res = np.fromiter(map(self.single, xs), dtype=float)
-        self.n_eval += len(xs)
-        self.n_eval_round += len(xs)
         return res
 
 
