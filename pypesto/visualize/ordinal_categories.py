@@ -96,7 +96,7 @@ def plot_categories_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = amici.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -116,7 +116,7 @@ def plot_categories_from_pypesto_result(
     sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
     sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
     timepoints = [rdata[AMICI_T] for rdata in inner_rdatas]
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
     condition_ids = [edata.id for edata in edatas]
     petab_condition_ordering = list(petab_problem.condition_df.index)
 

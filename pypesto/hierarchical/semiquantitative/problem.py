@@ -331,7 +331,9 @@ def spline_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
+    data = [
+        amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
+    ]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -356,7 +358,7 @@ def spline_inner_parameters_from_measurement_df(
     """Create list of inner free spline parameters from PEtab measurement table."""
     df = df.reset_index()
 
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     par_type = SPLINE_PAR_TYPE
     estimate = True
@@ -407,7 +409,7 @@ def noise_inner_parameters_from_parameter_df(
         measurement_df[MEASUREMENT_TYPE] == SEMIQUANTITATIVE
     ]
 
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     # Create a dictionary with unique pairs of observable id
     # and noise parameter from the measurement table.
@@ -461,7 +463,7 @@ def spline_ixs_for_measurement_specific_parameters(
     a sorted list of non-unique time points for which there are measurements.
     """
     ixs_for_par = {}
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()

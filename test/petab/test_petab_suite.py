@@ -18,7 +18,11 @@ logger = logging.getLogger(__name__)
     "case, model_type, version",
     [
         (case, model_type, version)
-        for (model_type, version) in (("sbml", "v1.0.0"), ("pysb", "v2.0.0"))
+        for (model_type, version) in (
+            ("sbml", "v1.0.0"),
+            ("sbml", "v2.0.0"),
+            ("pysb", "v2.0.0"),
+        )
         for case in petabtests.get_cases(format_=model_type, version=version)
     ],
 )
@@ -65,29 +69,33 @@ def _execute_case(case, model_type, version):
     model_name = (
         f"petab_test_case_{case}_{model_type}_{version.replace('.', '_')}"
     )
-    output_folder = f"amici_models/{model_name}"
 
     # import and create objective function
     if case.startswith("0006"):
+        if version == "v2.0.0":
+            pytest.skip("TODO")
         petab_problem = petab.Problem.from_yaml(yaml_file)
         petab.flatten_timepoint_specific_output_overrides(petab_problem)
         importer = pypesto.petab.PetabImporter(
             petab_problem=petab_problem,
-            output_folder=output_folder,
             model_name=model_name,
         )
         petab_problem = petab.Problem.from_yaml(yaml_file)
     else:
         importer = pypesto.petab.PetabImporter.from_yaml(
-            yaml_file, output_folder=output_folder
+            yaml_file, model_name=model_name
         )
         petab_problem = importer.petab_problem
+
     factory = importer.create_objective_creator()
     model = factory.create_model(generate_sensitivity_code=False)
     obj = factory.create_objective(model=model)
 
-    # the scaled parameters
-    problem_parameters = factory.petab_problem.x_nominal_scaled
+    if version == "v1.0.0":
+        # the scaled parameters
+        problem_parameters = factory.petab_problem.x_nominal_scaled
+    else:
+        problem_parameters = importer.petab_problem.x_nominal
 
     # simulate
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
@@ -96,20 +104,24 @@ def _execute_case(case, model_type, version):
     rdatas = ret["rdatas"]
     chi2 = sum(rdata["chi2"] for rdata in rdatas)
     llh = -ret["fval"]
-    simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
-        rdatas, model, importer.petab_problem.measurement_df
-    )
 
-    if case.startswith("0006"):
-        simulation_df = petab.unflatten_simulation_df(
-            simulation_df, petab_problem
+    if version == "v1.0.0":
+        simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
+            rdatas, model, importer.petab_problem.measurement_df
         )
 
-    petab.check_measurement_df(simulation_df, petab_problem.observable_df)
-    simulation_df = simulation_df.rename(
-        columns={petab.MEASUREMENT: petab.SIMULATION}
-    )
-    simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
+        if case.startswith("0006"):
+            simulation_df = petab.unflatten_simulation_df(
+                simulation_df, petab_problem
+            )
+
+        petab.check_measurement_df(simulation_df, petab_problem.observable_df)
+        simulation_df = simulation_df.rename(
+            columns={petab.MEASUREMENT: petab.SIMULATION}
+        )
+        simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
+    else:
+        simulation_df = obj.rdatas_to_simulation_df(rdatas)
 
     # check if matches
     chi2s_match = petabtests.evaluate_chi2(chi2, gt_chi2, tol_chi2)

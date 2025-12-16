@@ -14,6 +14,7 @@ from typing import (
 
 import pandas as pd
 import petab.v1 as petab
+from petab import v2
 
 try:
     import roadrunner
@@ -39,6 +40,7 @@ from ..result import PredictionResult
 from ..startpoint import StartpointMethod
 from .objective_creator import (
     AmiciObjectiveCreator,
+    AmiciPetabV2ObjectiveCreator,
     ObjectiveCreator,
     PetabSimulatorObjectiveCreator,
     RoadRunnerObjectiveCreator,
@@ -70,7 +72,7 @@ class PetabImporter:
 
     def __init__(
         self,
-        petab_problem: petab.Problem,
+        petab_problem: petab.Problem | v2.Problem,
         output_folder: str | None = None,
         model_name: str | None = None,
         validate_petab: bool = True,
@@ -149,8 +151,18 @@ class PetabImporter:
 
         self.validate_petab = validate_petab
         if self.validate_petab:
-            if petab.lint_problem(petab_problem):
+            if isinstance(petab_problem, petab.Problem) and petab.lint_problem(
+                petab_problem
+            ):
                 raise ValueError("Invalid PEtab problem.")
+            if (
+                isinstance(petab_problem, v2.Problem)
+                and (
+                    validation_result := petab_problem.validate()
+                ).has_errors()
+            ):
+                validation_result.log(logger=logger)
+                raise ValueError("Invalid PEtab v2 problem.")
         if self._hierarchical and validate_petab_hierarchical:
             from ..hierarchical.petab import (
                 validate_hierarchical_petab_problem,
@@ -186,7 +198,15 @@ class PetabImporter:
         simulator_type: str = AMICI,
     ) -> PetabImporter:
         """Simplified constructor using a petab yaml file."""
-        petab_problem = petab.Problem.from_yaml(yaml_config)
+        from petab.versions import get_major_version
+
+        match get_major_version(yaml_config):
+            case 1:
+                petab_problem = petab.Problem.from_yaml(yaml_config)
+            case 2:
+                petab_problem = v2.Problem.from_yaml(yaml_config)
+            case _:
+                raise ValueError("Only PEtab v1 and v2 are supported.")
 
         return PetabImporter(
             petab_problem=petab_problem,
@@ -278,6 +298,42 @@ class PetabImporter:
         else:
             return None
 
+    def _create_prior_v2(self) -> NegLogParameterPriors | None:
+        """Create prior for PEtab v2 problem."""
+        import petab.v2.C as petab_c
+
+        import pypesto.C as pypesto_c
+
+        petab_to_pypesto = {
+            petab_c.LAPLACE: pypesto_c.LAPLACE,
+            petab_c.LOG_LAPLACE: pypesto_c.LOG_LAPLACE,
+            petab_c.LOG_NORMAL: pypesto_c.LOG_NORMAL,
+            petab_c.LOG_UNIFORM: pypesto_c.LOG_UNIFORM,
+            petab_c.NORMAL: pypesto_c.NORMAL,
+            petab_c.UNIFORM: pypesto_c.UNIFORM,
+        }
+
+        prior_list = []
+        for parameter in self.petab_problem.parameters:
+            if not parameter.estimate or parameter.prior_distribution is None:
+                continue
+
+            prior_list.append(
+                get_parameter_prior_dict(
+                    index=len(prior_list),
+                    # TODO map names
+                    prior_type=petab_to_pypesto.get(
+                        str(parameter.prior_distribution),
+                        str(parameter.prior_distribution),
+                    ),
+                    prior_parameters=parameter.prior_parameters,
+                    parameter_scale="lin",
+                )
+            )
+        if prior_list:
+            return NegLogParameterPriors(prior_list)
+        return None
+
     def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
 
@@ -307,6 +363,22 @@ class PetabImporter:
             has to be provided. Otherwise the argument is not used.
 
         """
+        if isinstance(self.petab_problem, v2.Problem):
+            if simulator_type != AMICI:
+                raise ValueError(
+                    "Only 'amici' simulator type is supported for PEtab v2 "
+                    "problems."
+                )
+            return AmiciPetabV2ObjectiveCreator(
+                petab_problem=self.petab_problem,
+                output_folder=self.output_folder,
+                model_name=self.model_name,
+                hierarchical=self._hierarchical,
+                inner_options=self.inner_options,
+                non_quantitative_data_types=self._non_quantitative_data_types,
+                validate_petab=self.validate_petab,
+            )
+
         if simulator_type == AMICI:
             return AmiciObjectiveCreator(
                 petab_problem=self.petab_problem,
@@ -365,10 +437,26 @@ class PetabImporter:
             objective = self.objective_constructor.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
-        x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
         x_ids = self.petab_problem.x_ids
-        lb = self.petab_problem.lb_scaled
-        ub = self.petab_problem.ub_scaled
+        if isinstance(self.petab_problem, petab.Problem):
+            # PEtab v1
+            x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
+            lb = self.petab_problem.lb_scaled
+            ub = self.petab_problem.ub_scaled
+            x_scales = [
+                self.petab_problem.parameter_df.loc[
+                    x_id, petab.PARAMETER_SCALE
+                ]
+                for x_id in x_ids
+            ]
+            prior = self.create_prior()
+        else:
+            # PEtab v2 -- no parameter scaling
+            x_fixed_vals = self.petab_problem.x_nominal_fixed
+            lb = self.petab_problem.lb
+            ub = self.petab_problem.ub
+            x_scales = [petab.LIN for x_id in x_ids]
+            prior = self._create_prior_v2()
 
         # Raise error if the correct calculator is not used.
         if self._hierarchical:
@@ -388,18 +476,11 @@ class PetabImporter:
                 map(x_ids.index, self.petab_problem.x_fixed_ids)
             )
 
-        x_scales = [
-            self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
-            for x_id in x_ids
-        ]
-
         if problem_kwargs is None:
             problem_kwargs = {}
 
         if startpoint_kwargs is None:
             startpoint_kwargs = {}
-
-        prior = self.create_prior()
 
         if prior is not None:
             if self._hierarchical:

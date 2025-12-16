@@ -225,7 +225,7 @@ class InnerCalculatorCollector(AmiciCalculator):
     ) -> list[np.ndarray]:
         # transform experimental data
         edatas = [
-            amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
+            amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
         ]
 
         quantitative_data_mask = [
@@ -357,8 +357,8 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
 
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
+            amici_solver.get_sensitivity_method()
+            == amici.SensitivityMethod.adjoint
             and any(
                 data_type in self.data_types
                 for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
@@ -374,8 +374,8 @@ class InnerCalculatorCollector(AmiciCalculator):
         # non-quantitative data type is relative data. In this case, we
         # use the relative calculator directly.
         if (
-            amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod_adjoint
+            amici_solver.get_sensitivity_method()
+            == amici.SensitivityMethod.adjoint
             or 2 in sensi_orders
             or mode == MODE_RES
         ):
@@ -409,7 +409,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         if sensi_orders:
             sensi_order = max(sensi_orders)
 
-        amici_solver.setSensitivityOrder(sensi_order)
+        amici_solver.set_sensitivity_order(sensi_order)
 
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.necessary_par_dummy_values)
@@ -429,7 +429,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
 
         # run amici simulation
-        rdatas = amici.runAmiciSimulations(
+        rdatas = amici.run_simulations(
             amici_model,
             amici_solver,
             edatas,
@@ -461,7 +461,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             and mode == MODE_RES
             and 1 in sensi_orders
         ):
-            if not amici_model.getAddSigmaResiduals() and any(
+            if not amici_model.get_add_sigma_residuals() and any(
                 (
                     (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
                     or (
@@ -515,7 +515,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 dim=dim,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.getParameterIds(),
+                par_sim_ids=amici_model.get_parameter_ids(),
             )
             nllh += quantitative_result[FVAL]
             if 1 in sensi_orders:
@@ -558,7 +558,7 @@ def calculate_quantitative_result(
 
     # transform experimental data
     edatas = [
-        amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas
+        amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
     ]
 
     # calculate the function value

@@ -500,7 +500,9 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
+    data = [
+        amici.numpy.ExpDataView(edata)["observed_data"] for edata in edatas
+    ]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -525,7 +527,7 @@ def optimal_scaling_inner_parameters_from_measurement_df(
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
 
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     estimate = get_estimate_for_method(method)
     par_types = [CAT_LB, CAT_UB]
@@ -634,7 +636,7 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
     a sorted list of non-unique time points for which there are measurements.
     """
     ixs_for_par = {}
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()

@@ -110,7 +110,7 @@ def visualize_estimated_observable_mapping(
 
     # Get observable indices for both relative and semi-quantitative observables.
     rel_and_semiquant_obs_indices = [
-        amici_model.getObservableIds().index(observable_id)
+        amici_model.get_observable_ids().index(observable_id)
         for observable_id in relative_obs_ids + semiquant_obs_ids
     ]
     rel_and_semiquant_obs_indices.sort()
@@ -221,7 +221,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     # Get the relative observable ids and indices.
     relative_observable_ids = pypesto_problem.relative_observable_ids
     relative_observable_indices = [
-        amici_model.getObservableIds().index(observable_id)
+        amici_model.get_observable_ids().index(observable_id)
         for observable_id in relative_observable_ids
     ]
 
@@ -276,7 +276,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = amici.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -464,7 +464,7 @@ def plot_splines_from_pypesto_result(
     amici_model = pypesto_result.problem.objective.amici_model
     amici_solver = pypesto_result.problem.objective.amici_solver
     n_threads = pypesto_result.problem.objective.n_threads
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     # Fill in the parameters.
     fill_in_parameters(
@@ -476,7 +476,7 @@ def plot_splines_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = amici.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -761,7 +761,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = amici.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -795,7 +795,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
 
     # Get the observable ids.
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     for inner_result, group in zip(inner_results, inner_problem.groups):
         observable_id = observable_ids[group - 1]
@@ -910,7 +910,7 @@ def _obtain_regularization_for_start(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = amici.run_simulations(
         amici_model,
         amici_solver,
         edatas,
