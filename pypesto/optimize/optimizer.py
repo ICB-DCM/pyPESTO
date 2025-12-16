@@ -796,11 +796,7 @@ class DlibOptimizer(Optimizer):
     def __init__(self, options: dict = None):
         super().__init__()
 
-        self.options = options
-        if self.options is None:
-            self.options = DlibOptimizer.get_default_options(self)
-        elif "maxiter" not in self.options:
-            raise KeyError("Dlib options are missing the keyword maxiter.")
+        self.options = self._extend_options_with_defaults(options)
 
     def __repr__(self) -> str:
         rep = f"<{self.__class__.__name__}"
@@ -844,7 +840,7 @@ class DlibOptimizer(Optimizer):
             list(lb),
             list(ub),
             int(self.options["maxiter"]),
-            0.002,
+            self.options["solver_epsilon"],
         )
 
         optimizer_result = OptimizerResult(optimizer=str(self))
@@ -857,7 +853,41 @@ class DlibOptimizer(Optimizer):
 
     def get_default_options(self):
         """Create default options specific for the optimizer."""
-        return {"maxiter": 10000}
+        return {"maxiter": 10000, "solver_epsilon": 0.0}
+
+    def _validate_options(self, options: dict) -> None:
+        """
+        Validate that provided options are valid for DlibOptimizer.
+
+        Parameters
+        ----------
+        options
+            Options dictionary to validate.
+
+        Raises
+        ------
+        ValueError
+            If invalid options are provided.
+        """
+        valid_options = set(self.get_default_options().keys())
+        provided_options = set(options.keys())
+        invalid_options = provided_options - valid_options
+
+        if invalid_options:
+            raise ValueError(
+                f"Invalid options for DlibOptimizer: {sorted(invalid_options)}. "
+                f"Valid options are: {sorted(valid_options)}"
+            )
+
+    def _extend_options_with_defaults(
+        self, options: dict | None = None
+    ) -> dict:
+        """Extend options with default values if not provided."""
+        default_options = self.get_default_options()
+        if options is None:
+            return default_options
+        self._validate_options(options)
+        return default_options | options  # prefer options over defaults
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
         """Check whether optimizer supports/needs x0."""
