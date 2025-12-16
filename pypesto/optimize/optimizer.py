@@ -451,7 +451,7 @@ class Optimizer(abc.ABC):
         ValueError
             If tolerance is not positive.
         """
-        if tol <= 0:
+        if tol < 0:
             raise ValueError(f"Tolerance must be positive, got {tol}")
         if self.options is None:
             self.options = {}
@@ -1703,7 +1703,7 @@ class NLoptOptimizer(Optimizer):
         tol
             Absolute tolerance for termination.
         """
-        self.options["ftol_abs"] = tol
+        self._set_option_tol(tol, "ftol_abs")
 
 
 class FidesOptimizer(Optimizer):
@@ -1942,6 +1942,6 @@ class FidesOptimizer(Optimizer):
         try:
             from fides.constants import Options as FidesOptions
 
-            self.options[FidesOptions.FATOL] = tol
+            self._set_option_tol(tol, FidesOptions.FATOL)
         except ImportError:
             raise OptimizerImportError("fides") from None
