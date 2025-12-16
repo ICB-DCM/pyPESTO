@@ -61,7 +61,7 @@ jobs:
         files: ./coverage.xml
 
   mac:
-    runs-on: macos-15
+    runs-on: macos-14
     strategy:
       matrix:
         python-version: ['3.13']
