@@ -750,6 +750,30 @@ class DlibOptimizer(Optimizer):
         """Create default options specific for the optimizer."""
         return {"maxiter": 10000, "solver_epsilon": 0.0}
 
+    def _validate_options(self, options: dict) -> None:
+        """
+        Validate that provided options are valid for DlibOptimizer.
+
+        Parameters
+        ----------
+        options
+            Options dictionary to validate.
+
+        Raises
+        ------
+        ValueError
+            If invalid options are provided.
+        """
+        valid_options = set(self.get_default_options().keys())
+        provided_options = set(options.keys())
+        invalid_options = provided_options - valid_options
+
+        if invalid_options:
+            raise ValueError(
+                f"Invalid options for DlibOptimizer: {sorted(invalid_options)}. "
+                f"Valid options are: {sorted(valid_options)}"
+            )
+
     def _extend_options_with_defaults(
         self, options: dict | None = None
     ) -> dict:
@@ -757,6 +781,7 @@ class DlibOptimizer(Optimizer):
         default_options = self.get_default_options()
         if options is None:
             return default_options
+        self._validate_options(options)
         return default_options | options  # prefer options over defaults
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
