@@ -1,14 +1,13 @@
 import logging
 import warnings
 from collections.abc import Iterable
-from typing import Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 from ..C import (
-    RGBA,
+    COLOR,
     TRACE_X_STEPS,
     TRACE_X_TIME,
     TRACE_Y_FVAL,
@@ -24,20 +23,22 @@ logger = logging.getLogger(__name__)
 
 
 def optimizer_history(
-    results: Union[Result, list[Result]],
-    ax: Optional[plt.Axes] = None,
+    results: Result | list[Result],
+    ax: plt.Axes | None = None,
     size: tuple = (18.5, 10.5),
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
     scale_y: str = "log10",
-    offset_y: Optional[float] = None,
-    colors: Optional[Union[RGBA, list[RGBA]]] = None,
-    y_limits: Optional[Union[float, list[float], np.ndarray]] = None,
-    start_indices: Optional[Union[int, list[int]]] = None,
-    reference: Optional[
-        Union[ReferencePoint, dict, list[ReferencePoint], list[dict]]
-    ] = None,
-    legends: Optional[Union[str, list[str]]] = None,
+    offset_y: float | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    y_limits: float | list[float] | np.ndarray | None = None,
+    start_indices: int | list[int] | None = None,
+    reference: ReferencePoint
+    | dict
+    | list[ReferencePoint]
+    | list[dict]
+    | None = None,
+    legends: str | list[str] | None = None,
 ) -> plt.Axes:
     """
     Plot history of optimizer.
@@ -51,7 +52,7 @@ def optimizer_history(
         Optimization result obtained by 'optimize.py' or list of those
     ax:
         Axes object to use.
-    size: tuple, optional
+    size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
     trace_x:
@@ -67,9 +68,8 @@ def optimizer_history(
     offset_y:
         Offset for the y-axis-values, as these are plotted on a log10-scale
         Will be computed automatically if necessary
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Color recognized by matplotlib or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
     y_limits:
         maximum value to be plotted on the y-axis, or y-limits
@@ -128,12 +128,12 @@ def optimizer_history(
 def optimizer_history_lowlevel(
     vals: list[np.ndarray],
     scale_y: str = "log10",
-    colors: Optional[Union[RGBA, list[RGBA]]] = None,
-    ax: Optional[plt.Axes] = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    ax: plt.Axes | None = None,
     size: tuple = (18.5, 10.5),
     x_label: str = "Optimizer steps",
     y_label: str = "Objective value",
-    legend_text: Optional[str] = None,
+    legend_text: str | None = None,
 ) -> plt.Axes:
     """
     Plot optimizer history using list of numpy arrays.
@@ -144,9 +144,8 @@ def optimizer_history_lowlevel(
         list of 2xn-arrays (x_values and y_values of the trace)
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Color recognized by matplotlib or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
     ax:
         Axes object to use.
@@ -227,7 +226,7 @@ def optimizer_history_lowlevel(
 
 
 def get_trace(
-    result: Result, trace_x: Optional[str], trace_y: Optional[str]
+    result: Result, trace_x: str | None, trace_y: str | None
 ) -> list[np.ndarray]:
     """
     Get the values of the optimizer trace from the pypesto.Result object.
@@ -309,7 +308,7 @@ def get_trace(
 
 def get_vals(
     vals: list[np.ndarray],
-    scale_y: Optional[str],
+    scale_y: str | None,
     offset_y: float,
     trace_y: str,
     start_indices: Iterable[int],
@@ -416,7 +415,7 @@ def handle_options(
     vals: list[np.ndarray],
     trace_y: str,
     ref: list[ReferencePoint],
-    y_limits: Union[float, np.ndarray, None],
+    y_limits: float | np.ndarray | None,
     offset_y: float,
 ) -> plt.Axes:
     """
@@ -479,9 +478,69 @@ def handle_options(
     return ax
 
 
+def monotonic_history(
+    histories: list[HistoryBase],
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Get the overall monotonically decreasing history from multiple histories.
+
+    Parameters
+    ----------
+    histories:
+        List of histories to merge.
+        The histories are expected to have time and function value traces,
+        and that the function values are monotonically decreasing within each
+        history.
+
+    Returns
+    -------
+    t:
+        Time points of overall history.
+    fx:
+        Objective values of overall history.
+    """
+    if len(histories) == 0:
+        warnings.warn("No histories to process.", stacklevel=2)
+        return np.array([], dtype="float"), np.array([], dtype="float")
+
+    for history in histories:
+        fvals = history.get_fval_trace()
+        if not np.all(fvals[:-1] >= fvals[1:]):
+            raise ValueError(
+                "Each history is expected to have monotonically "
+                "decreasing function values."
+            )
+
+    # merge results
+    t = np.hstack([history.get_time_trace() for history in histories])
+    fx = np.hstack([history.get_fval_trace() for history in histories])
+    time_order = np.argsort(t)
+    t = t[time_order]
+    fx = fx[time_order]
+
+    # get the monotonously decreasing sequence
+    monotone = np.where(fx == np.fmin.accumulate(fx))[0]
+    t_mono, fx_mono = t[monotone], fx[monotone]
+
+    # remove duplicates
+    # convert to np.recarray for multi-level sorting
+    # so that we can use np.unique later to remove duplicates
+    records = np.rec.fromarrays([t_mono, fx_mono], names="t,fx")
+    records.sort(order=["t", "fx"])
+    t_mono, unique_idx = np.unique(records.t, return_index=True, sorted=True)
+    fx_mono = records.fx[unique_idx]
+
+    # extend from last decrease to last timepoint
+    if t_mono[-1] != (t_max := t.max()):
+        t_mono = np.append(t_mono, [t_max])
+        fx_mono = np.append(fx_mono, [fx_mono.min()])
+
+    return t_mono, fx_mono
+
+
 def sacess_history(
     histories: list[HistoryBase],
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
 ) -> plt.Axes:
     """Plot `SacessOptimizer` history.
 
@@ -506,23 +565,10 @@ def sacess_history(
         warnings.warn("No histories to plot.", stacklevel=2)
 
     # plot overall minimum
-    # merge results
-    t = np.hstack([history.get_time_trace() for history in histories])
-    fx = np.hstack([history.get_fval_trace() for history in histories])
-    time_order = np.argsort(t)
-    t = t[time_order]
-    fx = fx[time_order]
-
-    # get the monotonously decreasing sequence
-    monotone = np.where(fx <= np.fmin.accumulate(fx))[0]
-    x, y = t[monotone], fx[monotone]
-
-    # extend from last decrease to last timepoint
-    x = np.append(x, [t.max()])
-    y = np.append(y, [y.min()])
+    t_overall, fx_overall = monotonic_history(histories)
     ax.step(
-        x,
-        y,
+        t_overall,
+        fx_overall,
         linestyle="dotted",
         color="grey",
         where="post",
@@ -537,7 +583,7 @@ def sacess_history(
             warnings.warn(f"No trace for worker #{worker_idx}.", stacklevel=2)
             continue
         # extend from last decrease to last timepoint
-        x = np.append(x, [np.max(t)])
+        x = np.append(x, [np.max(t_overall)])
         y = np.append(y, [np.min(y)])
         lines = ax.step(
             x, y, ".-", where="post", label=f"worker {worker_idx}", alpha=0.8

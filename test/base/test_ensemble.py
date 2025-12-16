@@ -5,6 +5,8 @@ import numpy as np
 import scipy.optimize as so
 
 import pypesto
+import pypesto.ensemble.covariance_analysis as cov
+import pypesto.ensemble.dimension_reduction as dr
 import pypesto.optimize as optimize
 import pypesto.sample as sample
 from pypesto.C import (
@@ -382,3 +384,227 @@ def test_hpd_calculation():
             for x in result.sample_result.trace_x[0][burn_in:][x_indices]
         ]
     )
+
+
+def test_covariance_matrix_parameters():
+    """Test computing covariance matrix for a parameter ensemble runs without errors."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Test covariance matrix computation runs
+    cov_matrix = cov.get_covariance_matrix_parameters(ens)
+
+    # Basic checks
+    assert cov_matrix is not None
+    assert isinstance(cov_matrix, np.ndarray)
+
+
+def test_spectral_decomposition_parameters():
+    """Test spectral decomposition for a parameter ensemble runs without errors."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Test spectral decomposition runs
+    eigenvalues, eigenvectors = cov.get_spectral_decomposition_parameters(ens)
+
+    # Basic checks
+    assert eigenvalues is not None
+    assert eigenvectors is not None
+    assert isinstance(eigenvalues, np.ndarray)
+    assert isinstance(eigenvectors, np.ndarray)
+
+
+def test_pca_representation_parameters():
+    """Test PCA representation of a parameter ensemble runs without errors."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Test PCA with default n_components
+    pca_repr, pca_object = dr.get_pca_representation_parameters(ens)
+
+    # Basic checks
+    assert pca_repr is not None
+    assert pca_object is not None
+    assert isinstance(pca_repr, np.ndarray)
+
+
+def test_umap_representation_parameters():
+    """Test UMAP representation of a parameter ensemble runs without errors."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Test UMAP with default n_components
+    umap_repr, umap_object = dr.get_umap_representation_parameters(ens)
+
+    # Basic checks
+    assert umap_repr is not None
+    assert umap_object is not None
+    assert isinstance(umap_repr, np.ndarray)
+
+
+def test_covariance_matrix_predictions():
+    """Test computing covariance matrix for ensemble predictions runs without errors."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    ens = Ensemble.from_optimization_endpoints(result=result, max_size=10)
+
+    # Create predictor
+    predictor = AmiciPredictor(problem.objective)
+
+    # Get predictions
+    ensemble_prediction = ens.predict(
+        predictor,
+        prediction_id="test_pred",
+        progress_bar=False,
+    )
+
+    # Test covariance matrix computation runs
+    cov_matrix = cov.get_covariance_matrix_predictions(ensemble_prediction)
+
+    # Basic checks
+    assert cov_matrix is not None
+    assert isinstance(cov_matrix, np.ndarray)
+
+
+def test_pca_representation_predictions():
+    """Test PCA representation of ensemble predictions runs without errors."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    ens = Ensemble.from_optimization_endpoints(result=result, max_size=10)
+
+    # Create predictor
+    predictor = AmiciPredictor(problem.objective)
+
+    # Get predictions
+    ensemble_prediction = ens.predict(
+        predictor,
+        prediction_id="test_pred",
+        progress_bar=False,
+    )
+
+    # Test PCA representation runs
+    pca_repr, pca_object = dr.get_pca_representation_predictions(
+        ensemble_prediction
+    )
+
+    # Basic checks
+    assert pca_repr is not None
+    assert pca_object is not None
+    assert isinstance(pca_repr, np.ndarray)
+
+
+def test_umap_representation_predictions():
+    """Test UMAP representation of ensemble predictions runs without errors."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=5,
+        progress_bar=False,
+    )
+
+    ens = Ensemble.from_optimization_endpoints(result=result, max_size=10)
+
+    # Create predictor
+    predictor = AmiciPredictor(problem.objective)
+
+    # Get predictions
+    ensemble_prediction = ens.predict(
+        predictor,
+        prediction_id="test_pred",
+        progress_bar=False,
+    )
+
+    # Test UMAP representation runs
+    umap_repr, umap_object = dr.get_umap_representation_predictions(
+        ensemble_prediction
+    )
+
+    # Basic checks
+    assert umap_repr is not None
+    assert umap_object is not None
+    assert isinstance(umap_repr, np.ndarray)

@@ -7,9 +7,7 @@ from .util import rescale
 
 
 def uniform(
-    n_starts: int,
-    lb: np.ndarray,
-    ub: np.ndarray,
+    n_starts: int, lb: np.ndarray, ub: np.ndarray, **kwargs
 ) -> np.ndarray:
     """Generate uniform points.
 

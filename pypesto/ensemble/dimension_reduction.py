@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from collections.abc import Callable
 
 import numpy as np
 
@@ -46,7 +46,7 @@ def get_umap_representation_parameters(
 
 
 def get_umap_representation_predictions(
-    ens: Union[Ensemble, EnsemblePrediction],
+    ens: Ensemble | EnsemblePrediction,
     prediction_index: int = 0,
     n_components: int = 2,
     normalize_data: bool = False,
@@ -83,6 +83,11 @@ def get_umap_representation_predictions(
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)
 
+    # For a UMAP representation, we need to reshape the dataset.
+    # To the form (n_samples, n_features).
+    n_samples = dataset.shape[0]
+    dataset = dataset.reshape(n_samples, -1)
+
     # call lowlevel routine using the prediction ensemble
     return _get_umap_representation_lowlevel(
         dataset=dataset,
@@ -96,7 +101,7 @@ def get_pca_representation_parameters(
     ens: Ensemble,
     n_components: int = 2,
     rescale_data: bool = True,
-    rescaler: Union[Callable, None] = None,
+    rescaler: Callable | None = None,
 ) -> tuple:
     """
     PCA of parameter ensemble.
@@ -134,11 +139,11 @@ def get_pca_representation_parameters(
 
 
 def get_pca_representation_predictions(
-    ens: Union[Ensemble, EnsemblePrediction],
+    ens: Ensemble | EnsemblePrediction,
     prediction_index: int = 0,
     n_components: int = 2,
     rescale_data: bool = True,
-    rescaler: Union[Callable, None] = None,
+    rescaler: Callable | None = None,
 ) -> tuple:
     """
     PCA of ensemble prediction.
@@ -173,6 +178,11 @@ def get_pca_representation_predictions(
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)
+
+    # For a PCA representation, we need to reshape the dataset.
+    # To the form (n_samples, n_features).
+    n_samples = dataset.shape[0]
+    dataset = dataset.reshape(n_samples, -1)
 
     # call lowlevel routine using the prediction ensemble
     return _get_pca_representation_lowlevel(
@@ -238,7 +248,7 @@ def _get_pca_representation_lowlevel(
     dataset: np.ndarray,
     n_components: int = 2,
     rescale_data: bool = True,
-    rescaler: Union[Callable, None] = None,
+    rescaler: Callable | None = None,
 ) -> tuple:
     """
     Low level PCA of parameter ensemble.
