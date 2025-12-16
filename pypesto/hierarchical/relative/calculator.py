@@ -6,9 +6,9 @@ from collections.abc import Sequence
 import numpy as np
 
 try:
-    import amici
-    from amici.petab.conditions import fill_in_parameters
-    from amici.petab.parameter_mapping import ParameterMapping
+    import amici.sim.sundials as asd
+    from amici.importers.petab.v1.parameter_mapping import ParameterMapping
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
 except ImportError:
     pass
 
@@ -77,12 +77,12 @@ class RelativeAmiciCalculator(AmiciCalculator):
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list[amici.ReturnData] = None,
+        rdatas: list[asd.ReturnData] = None,
     ):
         """Perform the actual AMICI call, with hierarchical optimization.
 
@@ -132,8 +132,8 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         if (
             1 in sensi_orders
-            and amici_solver.getSensitivityMethod()
-            == amici.SensitivityMethod.adjoint
+            and amici_solver.get_sensitivity_method()
+            == asd.SensitivityMethod.adjoint
         ) or 2 in sensi_orders:
             inner_result, inner_parameters = self.call_amici_twice(
                 x_dct=x_dct,
@@ -182,7 +182,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -216,7 +216,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
             # if the gradient was requested, we need to provide some value
             # for it
             if 1 in sensi_orders:
@@ -263,12 +263,12 @@ class RelativeAmiciCalculator(AmiciCalculator):
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list[amici.ReturnData] = None,
+        rdatas: list[asd.ReturnData] = None,
     ):
         """Calculate directly via solver calculate methods.
 
@@ -292,7 +292,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if AMICI ReturnData is not provided, we need to simulate the model
         if rdatas is None:
-            amici_solver.setSensitivityOrder(sensi_order)
+            amici_solver.set_sensitivity_order(sensi_order)
             x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
             # fill in parameters
             fill_in_parameters(
@@ -303,7 +303,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 amici_model=amici_model,
             )
             # run amici simulation
-            rdatas = amici.runAmiciSimulations(
+            rdatas = asd.run_simulations(
                 amici_model,
                 amici_solver,
                 edatas,
@@ -321,7 +321,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(
@@ -355,7 +355,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 inner_parameters=inner_parameters,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.getParameterIds(),
+                par_sim_ids=amici_model.get_free_parameter_ids(),
                 snllh=snllh,
             )
         # apply the computed inner parameters to the ReturnData
