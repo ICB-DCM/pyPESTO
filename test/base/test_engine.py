@@ -153,3 +153,57 @@ def test_pickle_objective():
         == objective2.amici_solver.getSensitivityMethod()
     )
     assert len(objective.edatas) == len(objective2.edatas)
+
+
+def test_multiprocess_result_order():
+    """Test that MultiProcessEngine returns results in correct order.
+
+    This is important because the engine uses as_completed() internally,
+    which doesn't guarantee order. The engine must track indices to
+    return results in the same order as input tasks.
+    """
+    for engine in [
+        pypesto.engine.MultiProcessEngine(n_procs=2),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="spawn"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="fork"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="forkserver"),
+    ]:
+        _test_multiprocess_result_order(engine)
+
+
+def _test_multiprocess_result_order(engine):
+    """Helper function to test result ordering for a given engine."""
+    # Set up problem
+    objective = rosen_for_sensi(max_sensi_order=2)["obj"]
+    lb = 0 * np.ones((1, 2))
+    ub = 1 * np.ones((1, 2))
+    problem = pypesto.Problem(objective, lb, ub)
+    optimizer = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
+
+    # Define specific starting points with different x0 values
+    # This helps us verify ordering by checking the starting points
+    n_starts = 5
+    startpoints = [
+        np.array([0.1 * i, 0.1 * i]) for i in range(1, n_starts + 1)
+    ]
+
+    # Run optimization with specific starting points
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        n_starts=n_starts,
+        startpoint_method=lambda *args, **kwargs: startpoints.pop(0),
+        engine=engine,
+        optimizer=optimizer,
+        progress_bar=False,
+    )
+
+    # Verify we got all results
+    assert len(result.optimize_result) == n_starts
+
+    # Verify results are in order by checking the IDs
+    # IDs should be sequential: '0', '1', '2', '3', '4'
+    for i, opt_result in enumerate(result.optimize_result):
+        assert opt_result.id == str(i), (
+            f"Result at index {i} has ID {opt_result.id}, expected {str(i)}. "
+            "Results are not in the correct order."
+        )
