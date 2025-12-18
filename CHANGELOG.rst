@@ -14,16 +14,16 @@ Release notes
     - Unified interface for maxiter and maxeval parameters (#1648)
     - Unified interface for time limits across optimizers (#1638)
     - Make DlibOptimizer solver_epsilon configurable (#1637)
-    - Default verbosity for CMA optimizer (#1656)
+    - Verbosity for CMA optimizer, producing no more outputfiles per default (#1656)
     - Fix startpoint selection and neval in scatter search (#1644)
 - Visualize
     - Fix waterfall axis bug (#1640)
 - Ensemble
-    - Fix dataset umap pca cov (#1628)
+    - Fix Plotting uf UMAP and PCA (#1628)
 - Store
     - Updated HDF5 loading (#1636)
 - Sampling
-    - Add prior sampling support (#1622)
+    - Add support for sampling parameter values from prior distributions (#1622)
 - Documentation
     - Reintroduce pymc to documentation (#1643)
 
