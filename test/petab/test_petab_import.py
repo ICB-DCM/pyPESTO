@@ -128,8 +128,10 @@ class PetabImportTest(unittest.TestCase):
         )
         objective.amici_solver.setAbsoluteTolerance(1e-10)
         objective.amici_solver.setRelativeTolerance(1e-12)
+        # enable least squares solver with residual mode
+        objective.amici_model.setAddSigmaResiduals(True)
 
-        self.assertFalse(
+        self.assertTrue(
             objective.check_gradients_match_finite_differences(
                 multi_eps=[1e-3, 1e-4, 1e-5]
             )
