@@ -3,6 +3,7 @@
 import logging
 import multiprocessing
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Any, Union
 
 import cloudpickle as pickle
@@ -57,6 +58,8 @@ class MultiProcessEngine(Engine):
     ) -> list[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
+        Tasks are pickled on-demand as workers become available.
+
         Parameters
         ----------
         tasks:
@@ -69,21 +72,29 @@ class MultiProcessEngine(Engine):
         A list of results.
         """
         n_tasks = len(tasks)
-
-        pickled_tasks = [pickle.dumps(task) for task in tasks]
-
         n_procs = min(self.n_procs, n_tasks)
         logger.debug(f"Parallelizing on {n_procs} processes.")
 
         ctx = multiprocessing.get_context(method=self.method)
 
-        with ctx.Pool(processes=n_procs) as pool:
-            results = list(
-                tqdm(
-                    pool.imap(work, pickled_tasks),
-                    total=len(pickled_tasks),
-                    enable=progress_bar,
-                ),
-            )
+        # Use ProcessPoolExecutor for on-demand pickling
+        with ProcessPoolExecutor(
+            max_workers=n_procs, mp_context=ctx
+        ) as executor:
+            # Submit tasks and track futures
+            future_to_index = {
+                executor.submit(work, pickle.dumps(task)): i
+                for i, task in enumerate(tasks)
+            }
+
+            # Collect results in original order
+            results = [None] * n_tasks
+            for future in tqdm(
+                as_completed(future_to_index),
+                total=n_tasks,
+                enable=progress_bar,
+            ):
+                index = future_to_index[future]
+                results[index] = future.result()
 
         return results
