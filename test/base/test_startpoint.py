@@ -137,3 +137,109 @@ def test_startpoints_from_problem():
     assert xs.shape == (n_starts, problem.dim)
     assert np.all(xs >= problem.lb)
     assert np.all(xs <= problem.ub)
+
+
+def test_prior_startpoints_with_priors():
+    """Test PriorStartpoints with full priors on all parameters."""
+    from pypesto.objective import NegLogParameterPriors
+    from pypesto.objective.priors import get_parameter_prior_dict
+    from pypesto.startpoint import PriorStartpoints
+
+    dim = 3
+    lb = np.array([-2.0, -1.0, 0.0])
+    ub = np.array([2.0, 3.0, 5.0])
+
+    # Create priors for all parameters
+    prior_list = [
+        get_parameter_prior_dict(0, "normal", [0.0, 1.0], "lin"),
+        get_parameter_prior_dict(1, "uniform", [-1.0, 3.0], "lin"),
+        get_parameter_prior_dict(2, "normal", [2.0, 0.5], "lin"),
+    ]
+    priors = NegLogParameterPriors(prior_list)
+
+    # Create objective and problem
+    obj = pypesto.Objective(fun=lambda x: np.sum(x**2))
+    problem = pypesto.Problem(
+        objective=obj,
+        lb=lb,
+        ub=ub,
+        x_priors_defs=priors,
+    )
+
+    # Create PriorStartpoints instance
+    startpoint_method = PriorStartpoints(use_guesses=False)
+
+    # Generate startpoints
+    xs = startpoint_method(n_starts=50, problem=problem)
+
+    # Check shape and bounds
+    assert xs.shape == (50, dim)
+    assert np.all(xs >= lb)
+    assert np.all(xs <= ub)
+
+
+def test_prior_startpoints_partial_priors():
+    """Test PriorStartpoints with priors only on some parameters."""
+    from pypesto.objective import NegLogParameterPriors
+    from pypesto.objective.priors import get_parameter_prior_dict
+    from pypesto.startpoint import PriorStartpoints
+
+    dim = 4
+    lb = np.array([-2.0, -1.0, 0.0, -3.0])
+    ub = np.array([2.0, 3.0, 5.0, 1.0])
+
+    # Create priors only for parameters 0 and 2 (not 1 and 3)
+    prior_list = [
+        get_parameter_prior_dict(0, "normal", [0.0, 1.0], "lin"),
+        get_parameter_prior_dict(2, "normal", [2.0, 0.5], "lin"),
+    ]
+    priors = NegLogParameterPriors(prior_list)
+
+    # Create objective and problem
+    obj = pypesto.Objective(fun=lambda x: np.sum(x**2))
+    problem = pypesto.Problem(
+        objective=obj,
+        lb=lb,
+        ub=ub,
+        x_priors_defs=priors,
+    )
+
+    # Create PriorStartpoints instance
+    startpoint_method = PriorStartpoints(use_guesses=False)
+
+    # Generate startpoints
+    xs = startpoint_method(n_starts=50, problem=problem)
+
+    # Check shape and bounds
+    assert xs.shape == (50, dim)
+    assert np.all(xs >= lb)
+    assert np.all(xs <= ub)
+
+    # Parameters without priors should be uniformly distributed
+    # Check that parameters 1 and 3 vary across samples
+    assert np.var(xs[:, 1]) > 0
+    assert np.var(xs[:, 3]) > 0
+
+
+def test_prior_startpoints_no_priors():
+    """Test PriorStartpoints falls back to uniform when no priors available."""
+    from pypesto.startpoint import PriorStartpoints
+
+    dim = 2
+    lb = -2 * np.ones(dim)
+    ub = 3 * np.ones(dim)
+
+    # Create objective and problem without priors
+    obj = pypesto.Objective(fun=lambda x: np.sum(x**2))
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub)
+
+    # Create PriorStartpoints instance
+    startpoint_method = PriorStartpoints(use_guesses=False)
+
+    # Generate startpoints
+    xs = startpoint_method(n_starts=20, problem=problem)
+
+    # Check shape and bounds
+    assert xs.shape == (20, dim)
+    assert np.all(xs >= lb)
+    assert np.all(xs <= ub)
