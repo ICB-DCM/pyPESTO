@@ -432,13 +432,11 @@ def _time_trajectory_model_with_states(
             rdata=rdata,
             state_indices=state_indices,
             ax=axes[i_cond, 0],
-            model=model,
         )
         plot_observable_trajectories(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond, 1],
-            model=model,
         )
     return axes
 
@@ -485,6 +483,5 @@ def _time_trajectory_model_without_states(
             rdata=rdata,
             observable_indices=observable_indices,
             ax=axes[i_cond] if len(rdatas) > 1 else axes,
-            model=model,
         )
     return axes
