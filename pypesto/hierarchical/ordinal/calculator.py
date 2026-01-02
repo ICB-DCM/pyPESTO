@@ -33,9 +33,9 @@ from .problem import OrdinalProblem
 from .solver import OrdinalInnerSolver
 
 try:
-    import amici
-    from amici.petab.conditions import fill_in_parameters
-    from amici.petab.parameter_mapping import ParameterMapping
+    import amici.sim.sundials as asd
+    from amici.importers.petab.v1.parameter_mapping import ParameterMapping
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
 except ImportError:
     pass
 
@@ -88,12 +88,12 @@ class OrdinalCalculator(AmiciCalculator):
         mode: str,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
-        rdatas: list[amici.ReturnData] = None,
+        rdatas: list[asd.ReturnData] = None,
     ):
         """Perform the actual AMICI call.
 
@@ -153,7 +153,7 @@ class OrdinalCalculator(AmiciCalculator):
 
         # If AMICI ReturnData is not provided, we need to simulate the model
         if rdatas is None:
-            amici_solver.setSensitivityOrder(sensi_order)
+            amici_solver.set_sensitivity_order(sensi_order)
 
             x_dct = copy.deepcopy(x_dct)
 
@@ -166,7 +166,7 @@ class OrdinalCalculator(AmiciCalculator):
                 amici_model=amici_model,
             )
             # run amici simulation
-            rdatas = amici.runAmiciSimulations(
+            rdatas = asd.run_simulations(
                 amici_model,
                 amici_solver,
                 edatas,
@@ -184,7 +184,7 @@ class OrdinalCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != amici.AMICI_SUCCESS for rdata in rdatas):
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
             inner_result[FVAL] = np.inf
             # if the gradient was requested,
             # we need to provide some value for it
@@ -216,7 +216,7 @@ class OrdinalCalculator(AmiciCalculator):
                 ssigma=ssigma,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.getParameterIds(),
+                par_sim_ids=amici_model.get_free_parameter_ids(),
                 par_edatas_indices=[edata.plist for edata in edatas],
                 snllh=snllh,
             )
