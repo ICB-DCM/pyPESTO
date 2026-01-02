@@ -225,7 +225,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         import_petab_problem(
             petab_problem=self.petab_problem,
             model_name=self.model_name,
-            model_output_dir=self.output_folder,
+            output_dir=self.output_folder,
             **kwargs,
         )
 
