@@ -46,8 +46,8 @@ def hierarchical_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -88,18 +88,23 @@ def history_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
         if history_options is None:
             history_options = HistoryOptions()
+        if id is None:
+            raise ValueError("id must be provided for history tracking.")
 
         objective = problem.objective
 
         # initialize the objective
         objective.initialize()
+
+        # Check if x0 should be used: optimizer supports it and x0 is valid
+        use_x0 = self.check_x0_support(x0)
 
         # initialize the history
         history = objective.create_history(
@@ -109,7 +114,7 @@ def history_decorator(minimize):
         )
         optimizer_history = OptimizerHistory(
             history=history,
-            x0=x0,
+            x0=x0 if use_x0 else None,
             lb=problem.lb,
             ub=problem.ub,
         )
@@ -176,8 +181,8 @@ def time_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -208,8 +213,8 @@ def fix_decorator(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -247,8 +252,8 @@ def minimize_decorator_collection(minimize):
     def wrapped_minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ):
@@ -280,8 +285,8 @@ class Optimizer(abc.ABC):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -293,7 +298,8 @@ class Optimizer(abc.ABC):
         problem:
             The problem to find optimal parameters for.
         x0:
-            The starting parameters.
+            The starting parameters. Can be ``None`` for optimizers that do not
+            require or support a starting point.
         id:
             Multistart id.
         history_options:
@@ -312,7 +318,9 @@ class Optimizer(abc.ABC):
         return None
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0, return boolean."""
+        """Check whether optimizer supports/needs x0, return boolean."""
+        if x_guesses is None or x_guesses.size == 0:
+            raise ValueError("x_guesses must be provided.")
         return True
 
     def supports_maxtime(self) -> bool:
@@ -343,6 +351,66 @@ class Optimizer(abc.ABC):
         raise NotImplementedError(
             f"{self.__class__.__name__} does not support time limits. "
             f"Check supports_maxtime() before calling set_maxtime()."
+        )
+
+    def supports_maxiter(self) -> bool:
+        """
+        Check whether optimizer supports iteration limits.
+
+        Returns
+        -------
+        True if optimizer supports setting a maximum number of iterations,
+        False otherwise.
+        """
+        return False
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+
+        Raises
+        ------
+        NotImplementedError
+            If the optimizer does not support iteration limits.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support iteration limits. "
+            f"Check supports_maxiter() before calling set_maxiter()."
+        )
+
+    def supports_maxeval(self) -> bool:
+        """
+        Check whether optimizer supports evaluation limits.
+
+        Returns
+        -------
+        True if optimizer supports setting a maximum number of function
+        evaluations, False otherwise.
+        """
+        return False
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+
+        Raises
+        ------
+        NotImplementedError
+            If the optimizer does not support evaluation limits.
+        """
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not support evaluation limits. "
+            f"Check supports_maxeval() before calling set_maxeval()."
         )
 
 
@@ -385,8 +453,8 @@ class ScipyOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -582,6 +650,26 @@ class ScipyOptimizer(Optimizer):
 
         return options
 
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        if self.method.lower() == "tnc":
+            self.options["maxfun"] = iterations
+        else:
+            self.options["maxiter"] = iterations
+
 
 class IpoptOptimizer(Optimizer):
     """Use Ipopt (https://pypi.org/project/cyipopt/) for optimization."""
@@ -616,8 +704,8 @@ class IpoptOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -684,6 +772,23 @@ class IpoptOptimizer(Optimizer):
             self.options = {}
         self.options["max_wall_time"] = seconds
 
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["max_iter"] = iterations
+
 
 class DlibOptimizer(Optimizer):
     """Use the Dlib toolbox for optimization."""
@@ -691,11 +796,7 @@ class DlibOptimizer(Optimizer):
     def __init__(self, options: dict = None):
         super().__init__()
 
-        self.options = options
-        if self.options is None:
-            self.options = DlibOptimizer.get_default_options(self)
-        elif "maxiter" not in self.options:
-            raise KeyError("Dlib options are missing the keyword maxiter.")
+        self.options = self._extend_options_with_defaults(options)
 
     def __repr__(self) -> str:
         rep = f"<{self.__class__.__name__}"
@@ -708,8 +809,8 @@ class DlibOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -739,7 +840,7 @@ class DlibOptimizer(Optimizer):
             list(lb),
             list(ub),
             int(self.options["maxiter"]),
-            0.002,
+            self.options["solver_epsilon"],
         )
 
         optimizer_result = OptimizerResult(optimizer=str(self))
@@ -752,13 +853,64 @@ class DlibOptimizer(Optimizer):
 
     def get_default_options(self):
         """Create default options specific for the optimizer."""
-        return {"maxiter": 10000}
+        return {"maxiter": 10000, "solver_epsilon": 0.0}
+
+    def _validate_options(self, options: dict) -> None:
+        """
+        Validate that provided options are valid for DlibOptimizer.
+
+        Parameters
+        ----------
+        options
+            Options dictionary to validate.
+
+        Raises
+        ------
+        ValueError
+            If invalid options are provided.
+        """
+        valid_options = set(self.get_default_options().keys())
+        provided_options = set(options.keys())
+        invalid_options = provided_options - valid_options
+
+        if invalid_options:
+            raise ValueError(
+                f"Invalid options for DlibOptimizer: {sorted(invalid_options)}. "
+                f"Valid options are: {sorted(valid_options)}"
+            )
+
+    def _extend_options_with_defaults(
+        self, options: dict | None = None
+    ) -> dict:
+        """Extend options with default values if not provided."""
+        default_options = self.get_default_options()
+        if options is None:
+            return default_options
+        self._validate_options(options)
+        return default_options | options  # prefer options over defaults
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0."""
+        """Check whether optimizer supports/needs x0."""
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The Dlib optimizer does not support x0.")
         return False
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
 
 
 class PyswarmOptimizer(Optimizer):
@@ -782,8 +934,8 @@ class PyswarmOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -813,10 +965,27 @@ class PyswarmOptimizer(Optimizer):
         return False
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0."""
+        """Check whether optimizer supports/needs x0."""
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The pyswarm optimizer does not support x0.")
         return False
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
 
 
 class CmaOptimizer(Optimizer):
@@ -843,7 +1012,7 @@ class CmaOptimizer(Optimizer):
         super().__init__()
 
         if options is None:
-            options = {"maxiter": 10000}
+            options = {"maxiter": 10000, "verbose": -10}
         self.options = options
         self.par_sigma0 = par_sigma0
 
@@ -858,8 +1027,8 @@ class CmaOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -896,6 +1065,40 @@ class CmaOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
+
+    def supports_maxeval(self) -> bool:
+        """Check whether optimizer supports evaluation limits."""
+        return True
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxfevals"] = evaluations
 
 
 class CmaesOptimizer(CmaOptimizer):
@@ -952,8 +1155,8 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -976,6 +1179,27 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
+        """Check whether optimizer supports/needs x0."""
+        return True
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
 
 
 class PyswarmsOptimizer(Optimizer):
@@ -1026,8 +1250,8 @@ class PyswarmsOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1096,10 +1320,27 @@ class PyswarmsOptimizer(Optimizer):
         return False
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports x0."""
+        """Check whether optimizer supports/needs x0."""
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The pyswarms optimizer does not support x0.")
         return False
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        if self.options is None:
+            self.options = {}
+        self.options["maxiter"] = iterations
 
 
 class NLoptOptimizer(Optimizer):
@@ -1244,8 +1485,8 @@ class NLoptOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1327,7 +1568,7 @@ class NLoptOptimizer(Optimizer):
         return False
 
     def check_x0_support(self, x_guesses: np.ndarray = None) -> bool:
-        """Check whether optimizer supports multiple initial guesses."""
+        """Check whether optimizer supports/needs initial guesses."""
         import nlopt
 
         if self.method in (
@@ -1348,7 +1589,7 @@ class NLoptOptimizer(Optimizer):
                     "not support x0."
                 )
             return False
-        return True
+        return super().check_x0_support(x_guesses)
 
     def supports_maxtime(self) -> bool:
         """Check whether optimizer supports time limits."""
@@ -1357,6 +1598,21 @@ class NLoptOptimizer(Optimizer):
     def set_maxtime(self, seconds: float) -> None:
         """Set the maximum wall time for optimization."""
         self.options["maxtime"] = seconds
+
+    def supports_maxeval(self) -> bool:
+        """Check whether optimizer supports evaluation limits."""
+        return True
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+        """
+        self.options["maxeval"] = evaluations
 
 
 class FidesOptimizer(Optimizer):
@@ -1434,8 +1690,8 @@ class FidesOptimizer(Optimizer):
     def minimize(
         self,
         problem: Problem,
-        x0: np.ndarray,
-        id: str,
+        x0: np.ndarray | None = None,
+        id: str | None = None,
         history_options: HistoryOptions = None,
         optimize_options: OptimizeOptions = None,
     ) -> OptimizerResult:
@@ -1560,5 +1816,25 @@ class FidesOptimizer(Optimizer):
             from fides.constants import Options as FidesOptions
 
             self.options[FidesOptions.MAXTIME] = seconds
+        except ImportError:
+            raise OptimizerImportError("fides") from None
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        try:
+            from fides.constants import Options as FidesOptions
+
+            self.options[FidesOptions.MAXITER] = iterations
         except ImportError:
             raise OptimizerImportError("fides") from None
