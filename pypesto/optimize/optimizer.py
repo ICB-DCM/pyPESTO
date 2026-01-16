@@ -1066,6 +1066,14 @@ class CmaOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
+    def supports_maxtime(self):
+        """Check whether optimizer supports time limits."""
+        return True
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        self.options["timeout"] = seconds
+
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
         return True
@@ -1324,6 +1332,9 @@ class PyswarmsOptimizer(Optimizer):
         if x_guesses is not None and x_guesses.size > 0:
             logger.warning("The pyswarms optimizer does not support x0.")
         return False
+
+    def supports_maxtime(self) -> bool:
+        """Check whether optimizer supports time limits."""
 
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
