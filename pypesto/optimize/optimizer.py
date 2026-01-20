@@ -1118,6 +1118,14 @@ class CmaOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
+    def supports_maxtime(self):
+        """Check whether optimizer supports time limits."""
+        return True
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        self.options["timeout"] = seconds
+
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
         return True

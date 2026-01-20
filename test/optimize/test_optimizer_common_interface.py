@@ -136,6 +136,11 @@ class TestOptimizerMaxiterInterface:
         optimizer.set_maxiter(5000)
         assert optimizer.options["maxiter"] == 5000
 
+        assert optimizer.supports_maxtime() is True
+        optimizer.set_maxtime(1000)
+
+        assert optimizer.options["timeout"] == 1000
+
     def test_scipy_de_optimizer_support(self):
         """Test ScipyDifferentialEvolutionOptimizer iteration limit support."""
         optimizer = optimize.ScipyDifferentialEvolutionOptimizer()
