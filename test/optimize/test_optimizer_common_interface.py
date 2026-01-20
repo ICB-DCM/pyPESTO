@@ -1,20 +1,15 @@
 """Test unified interface for optimizer limits (time, iterations, evaluations)."""
 
+import numpy as np
 import pytest
+import scipy.optimize as so
 
+import pypesto
 import pypesto.optimize as optimize
 
 
 class TestOptimizerMaxtimeInterface:
     """Test the unified maxtime interface for optimizers."""
-
-    def test_scipy_optimizer_no_support(self):
-        """Test that ScipyOptimizer does not support time limits."""
-        optimizer = optimize.ScipyOptimizer()
-        assert optimizer.supports_maxtime() is False
-
-        with pytest.raises(NotImplementedError):
-            optimizer.set_maxtime(10.0)
 
     def test_ipopt_optimizer_support(self):
         """Test IpoptOptimizer time limit support."""
@@ -70,6 +65,32 @@ class TestOptimizerMaxtimeInterface:
 
         optimizer.set_maxtime(10.0)
         assert optimizer.max_walltime_s == 10.0
+
+    def test_scipy_optimizer_support(self):
+        """Test ScipyOptimizer time limit support."""
+        optimizer = optimize.ScipyOptimizer()
+        assert optimizer.supports_maxtime() is True
+        optimizer.set_maxtime(1.0)
+
+        def fun(x):
+            import time
+
+            time.sleep(0.1)
+            return so.rosen(x)
+
+        objective = pypesto.Objective(fun=fun, grad=so.rosen_der)
+        dim_full = 2
+        lb = -5 * np.ones((dim_full, 1))
+        ub = 5 * np.ones((dim_full, 1))
+
+        problem = pypesto.Problem(
+            objective=objective,
+            lb=lb,
+            ub=ub,
+        )
+
+        result = optimizer.minimize(problem, id="test", x0=np.zeros(dim_full))
+        assert "StopIteration" in result.message
 
 
 class TestOptimizerMaxiterInterface:
