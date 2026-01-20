@@ -1333,9 +1333,6 @@ class PyswarmsOptimizer(Optimizer):
             logger.warning("The pyswarms optimizer does not support x0.")
         return False
 
-    def supports_maxtime(self) -> bool:
-        """Check whether optimizer supports time limits."""
-
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
         return True
