@@ -822,7 +822,10 @@ class IpoptOptimizer(Optimizer):
             )
         if self.options is None:
             self.options = {}
-        self.options["max_wall_time"] = seconds
+        # We explictly cast to float, as the IpoptOptimizer requires
+        # that the option max_wall_time limit is provided as float.
+        # (Type annotations do only hint but not enforce a type)
+        self.options["max_wall_time"] = float(seconds)
 
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
