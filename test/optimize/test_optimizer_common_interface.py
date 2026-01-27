@@ -297,6 +297,14 @@ class TestOptimizerTolInterface:
         optimizer.set_tol(1e-6)
         assert optimizer.tol == 1e-6
 
+        # Test that zero is allowed (optimize as accurately as possible)
+        optimizer.set_tol(0.0)
+        assert optimizer.tol == 0.0
+
+        # Test that negative values are rejected
+        with pytest.raises(ValueError, match="must be non-negative"):
+            optimizer.set_tol(-1e-6)
+
     def test_tolerance_validation_options_based(self):
         """Test tolerance validation for options-based optimizers."""
         optimizer = optimize.IpoptOptimizer()
@@ -304,3 +312,11 @@ class TestOptimizerTolInterface:
         # Test that positive values work
         optimizer.set_tol(1e-7)
         assert optimizer.options["tol"] == 1e-7
+
+        # Test that zero is allowed
+        optimizer.set_tol(0.0)
+        assert optimizer.options["tol"] == 0.0
+
+        # Test that negative values are rejected
+        with pytest.raises(ValueError, match="must be positive"):
+            optimizer.set_tol(-1e-7)

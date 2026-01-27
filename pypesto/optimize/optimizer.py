@@ -413,34 +413,34 @@ class Optimizer(abc.ABC):
             f"Check supports_maxeval() before calling set_maxeval()."
         )
 
-    def supports_tol(self) -> bool:
+    def supports_f_abs_tol(self) -> bool:
         """
-        Check whether optimizer supports absolute tolerance.
+        Check whether optimizer supports absolute function value tolerance.
 
         Returns
         -------
-        True if optimizer supports setting an absolute tolerance,
-        False otherwise.
+        True if optimizer supports setting an absolute tolerance on the
+        objective function value, False otherwise.
         """
         return True
 
-    def set_tol(self, tol: float) -> None:
+    def set_f_abs_tol(self, tol: float) -> None:
         """
-        Set the absolute tolerance for optimization.
+        Set the absolute tolerance on function value for optimization.
 
         Parameters
         ----------
         tol
-            Absolute tolerance for termination.
+            Absolute tolerance on objective function value for termination.
 
         Raises
         ------
         NotImplementedError
-            If the optimizer does not support absolute tolerance.
+            If the optimizer does not support absolute function tolerance.
         """
         raise NotImplementedError(
-            f"{self.__class__.__name__} does not support absolute tolerance. "
-            f"Check supports_tol() before calling set_tol()."
+            f"{self.__class__.__name__} does not support absolute function tolerance. "
+            f"Check supports_f_abs_tol() before calling set_f_abs_tol()."
         )
 
     def _set_option_tol(self, tol: float, option_key: str) -> None:
@@ -722,22 +722,22 @@ class ScipyOptimizer(Optimizer):
         else:
             self.options["maxiter"] = iterations
 
-    def set_tol(self, tol: float) -> None:
+    def set_f_abs_tol(self, tol: float) -> None:
         """
-        Set the absolute tolerance for optimization.
+        Set the absolute tolerance on function value for optimization.
 
         Parameters
         ----------
         tol
-            Absolute tolerance for termination.
+            Absolute tolerance on objective function value for termination.
 
         Raises
         ------
         ValueError
-            If tolerance is not positive.
+            If tolerance is negative.
         """
-        if tol <= 0:
-            raise ValueError(f"Tolerance must be positive, got {tol}")
+        if tol < 0:
+            raise ValueError(f"Tolerance must be non-negative, got {tol}")
         self.tol = tol
 
 
@@ -859,14 +859,20 @@ class IpoptOptimizer(Optimizer):
             self.options = {}
         self.options["max_iter"] = iterations
 
-    def set_tol(self, tol: float) -> None:
+    def supports_f_abs_tol(self) -> bool:
+        """Check whether optimizer supports absolute function tolerance."""
+        return False
+
+    def set_f_rel_tol(self, tol: float) -> None:
         """
-        Set the absolute tolerance for optimization.
+        Set the relative tolerance on function value for optimization.
+
+        Ipopt uses relative convergence tolerance, not absolute.
 
         Parameters
         ----------
         tol
-            Absolute tolerance for termination.
+            Relative tolerance on objective function value for termination.
         """
         self._set_option_tol(tol, "tol")
 
