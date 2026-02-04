@@ -824,7 +824,6 @@ class IpoptOptimizer(Optimizer):
             self.options = {}
         # We explicitly cast to float, as the IpoptOptimizer requires
         # the provision of a float for the max_wall_time option.
-        # (Type annotations do only hint but not enforce a type)
         self.options["max_wall_time"] = float(seconds)
 
     def supports_maxiter(self) -> bool:
