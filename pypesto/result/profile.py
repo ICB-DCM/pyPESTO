@@ -87,7 +87,14 @@ class ProfilerResult(dict):
         if exitflag_path is None:
             self.exitflag_path = np.full(x_path.shape[1], np.nan)
         else:
-            self.exitflag_path = exitflag_path.copy()
+            # Convert any None values to np.nan to ensure HDF5 compatibility
+            exitflag_array = np.asarray(exitflag_path)
+            if exitflag_array.dtype == object:
+                exitflag_array = np.array(
+                    [x if x is not None else np.nan for x in exitflag_array],
+                    dtype=float,
+                )
+            self.exitflag_path = exitflag_array
 
         if time_path is None:
             self.time_path = np.full(x_path.shape[1], np.nan)
@@ -175,7 +182,9 @@ class ProfilerResult(dict):
         self.fval_path = np.hstack((self.fval_path, fval))
         self.ratio_path = np.hstack((self.ratio_path, ratio))
         self.gradnorm_path = np.hstack((self.gradnorm_path, gradnorm))
-        self.exitflag_path = np.hstack((self.exitflag_path, exitflag))
+        self.exitflag_path = np.hstack(
+            (self.exitflag_path, exitflag if exitflag is not None else np.nan)
+        )
         self.time_path = np.hstack((self.time_path, time))
         self.color_path = np.vstack((self.color_path, color))
 

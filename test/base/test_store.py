@@ -31,6 +31,7 @@ from pypesto.C import (
     X,
 )
 from pypesto.optimize import optimization_result_from_history
+from pypesto.result import ProfilerResult
 from pypesto.store import (
     OptimizationResultHDF5Reader,
     OptimizationResultHDF5Writer,
@@ -632,3 +633,54 @@ def test_with_history_lazy(hdf5_file, optimized_result_with_history):
             result_with_history.optimize_result[i]["fval"]
             == result_without_history.optimize_result[i]["fval"]
         )
+
+
+def test_profile_exitflag_with_none_values_to_hdf5():
+    """Test that profile results with None values in exitflag_path can be saved to HDF5.
+
+    This test reproduces the real-world scenario where exitflag_path contains
+    None values mixed with integers (e.g., [1, None, None, 1]), which happens
+    when some profile optimization points fail.
+
+    After the fix, None values should be automatically converted to np.nan
+    during ProfilerResult initialization, allowing successful HDF5 writing.
+    """
+    # Create a ProfilerResult with None values in exitflag_path
+    # This simulates what happens when optimizer_result["exitflag"] is None
+    n_points = 4
+    n_par = 2
+
+    x_path = np.random.randn(n_par, n_points)
+    fval_path = np.random.randn(n_points)
+    ratio_path = np.random.randn(n_points)
+
+    # This is the problematic case from the error message: [1, None, None, 1]
+    # This happens when some profile points fail during optimization
+    exitflag_path = np.array([1, None, None, 1], dtype=object)
+
+    # Create ProfilerResult - after fix, this should convert None to np.nan
+    profiler_result = ProfilerResult(
+        x_path=x_path,
+        fval_path=fval_path,
+        ratio_path=ratio_path,
+        exitflag_path=exitflag_path,
+    )
+
+    # Create a Result object with the profile
+    result = pypesto.Result()
+    result.profile_result = pypesto.result.ProfileResult()
+    result.profile_result.append_empty_profile_list()
+    result.profile_result.append_profiler_result(profiler_result)
+
+    # Try to write to HDF5 - should succeed after fix
+    fn = "test_profile_exitflag_none.hdf5"
+    try:
+        writer = ProfileResultHDF5Writer(fn)
+        writer.write(result)  # Should not raise
+
+        # Verify file was created successfully
+        assert os.path.exists(fn)
+        assert os.path.getsize(fn) > 0
+    finally:
+        if os.path.exists(fn):
+            os.remove(fn)
