@@ -12,6 +12,89 @@ from .options import ProfileOptions
 logger = logging.getLogger(__name__)
 
 
+def profile_multistart_optimize(
+    optimizer: Optimizer,
+    problem: Problem,
+    startpoint: np.ndarray,
+    options: ProfileOptions,
+) -> OptimizerResult:
+    """
+    Perform multi-start optimization at a profile point.
+
+    Parameters
+    ----------
+    optimizer:
+        The optimizer to use.
+    problem:
+        The problem with profiling parameter already fixed.
+    startpoint:
+        The predicted starting point for optimization.
+    options:
+        Profile options containing n_starts and sampling_sigma.
+
+    Returns
+    -------
+    The best optimization result from all starts. If all fail, returns
+    the result from the original startpoint.
+    """
+    n_starts = options.profile_n_starts
+
+    if n_starts == 1:
+        # Single start (original behavior)
+        return optimizer.minimize(
+            problem=problem,
+            x0=startpoint,
+            id=str(0),
+            optimize_options=OptimizeOptions(allow_failed_starts=False),
+        )
+
+    # Multi-start: sample around predicted starting point
+    samples = np.random.normal(
+        loc=startpoint,
+        scale=options.profile_sampling_sigma * np.ones_like(startpoint),
+        size=(n_starts - 1, len(startpoint)),
+    )
+    # Clip sampled points to parameter bounds
+    # startpoint is already reduced (only free parameters), so use problem.lb/ub directly
+    lb = problem.lb
+    ub = problem.ub
+    samples = np.clip(samples, lb, ub)
+
+    # Add original startpoint as LAST sample (so it's used if all others fail)
+    samples = np.vstack((samples, startpoint[np.newaxis, :]))
+
+    # Optimize from all starting points and keep best result
+    best_fval = np.inf
+    best_optimizer_result = None
+    last_optimizer_result = (
+        None  # Keep track of last result (from original startpoint)
+    )
+
+    for i_start, sample in enumerate(samples):
+        optimizer_result_trial = optimizer.minimize(
+            problem=problem,
+            x0=sample,
+            id=str(i_start),
+            optimize_options=OptimizeOptions(allow_failed_starts=False),
+        )
+
+        # Keep last result (from original startpoint)
+        if i_start == len(samples) - 1:
+            last_optimizer_result = optimizer_result_trial
+
+        # Track best finite result
+        if np.isfinite(optimizer_result_trial.fval):
+            if optimizer_result_trial.fval < best_fval:
+                best_fval = optimizer_result_trial.fval
+                best_optimizer_result = optimizer_result_trial
+
+    # Return best result, or if all failed, return the result from original startpoint
+    if best_optimizer_result is not None:
+        return best_optimizer_result
+    else:
+        return last_optimizer_result
+
+
 def walk_along_profile(
     current_profile: ProfilerResult,
     problem: Problem,
@@ -112,13 +195,12 @@ def walk_along_profile(
             startpoint = x_next[problem.x_free_indices]
 
             if startpoint.size > 0:
-                optimizer_result = optimizer.minimize(
+                # Multi-start optimization for robustness
+                optimizer_result = profile_multistart_optimize(
+                    optimizer=optimizer,
                     problem=problem,
-                    x0=startpoint,
-                    id=str(0),
-                    optimize_options=OptimizeOptions(
-                        allow_failed_starts=False
-                    ),
+                    startpoint=startpoint,
+                    options=options,
                 )
 
                 if np.isfinite(optimizer_result.fval):
@@ -192,11 +274,12 @@ def walk_along_profile(
             problem.fix_parameters(i_par, x_next[i_par])
             startpoint = x_next[problem.x_free_indices]
 
-            optimizer_result = optimizer.minimize(
+            # Multi-start optimization for robustness
+            optimizer_result = profile_multistart_optimize(
+                optimizer=optimizer,
                 problem=problem,
-                x0=startpoint,
-                id=str(0),
-                optimize_options=OptimizeOptions(allow_failed_starts=False),
+                startpoint=startpoint,
+                options=options,
             )
 
             if np.isfinite(optimizer_result.fval):

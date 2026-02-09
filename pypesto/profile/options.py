@@ -30,14 +30,28 @@ class ProfileOptions(dict):
         Number of profile points used for regression in regression based
         adaptive profile points proposal.
     reg_order:
-        Maximum degree of regression polynomial used in regression based
-        adaptive profile points proposal.
+        Polynomial degree for regression-based extrapolation.
+        Default: 1 (linear regression for stability).
+        Higher values may cause extrapolation instability.
     adaptive_target_scaling_factor:
         The scaling factor of the next_obj_target in next guess generation.
         Larger values result in larger next_guess step size (must be > 1).
     whole_path:
         Whether to profile the whole bounds or only till we get below the
         ratio.
+    correlation_threshold:
+        Minimum absolute correlation coefficient for extrapolating a parameter
+        in regression-based methods. Parameters with |correlation| below this
+        threshold will be kept at their current values instead of extrapolated.
+        Default: 0.7
+    profile_n_starts:
+        Number of multi-start optimizations at each profile point.
+        Default: 1 (single start). Higher values improve robustness but
+        increase computational cost.
+    profile_sampling_sigma:
+        Standard deviation for Gaussian sampling around predicted starting
+        point in multi-start optimization (relative to parameter scale).
+        Default: 0.01
     """
 
     def __init__(
@@ -49,9 +63,12 @@ class ProfileOptions(dict):
         delta_ratio_max: float = 0.1,
         ratio_min: float = 0.145,
         reg_points: int = 10,
-        reg_order: int = 4,
+        reg_order: int = 1,
         adaptive_target_scaling_factor: float = 1.5,
         whole_path: bool = False,
+        correlation_threshold: float = 0.7,
+        profile_n_starts: int = 1,
+        profile_sampling_sigma: float = 0.01,
     ):
         super().__init__()
 
@@ -65,6 +82,9 @@ class ProfileOptions(dict):
         self.reg_order = reg_order
         self.adaptive_target_scaling_factor = adaptive_target_scaling_factor
         self.whole_path = whole_path
+        self.correlation_threshold = correlation_threshold
+        self.profile_n_starts = profile_n_starts
+        self.profile_sampling_sigma = profile_sampling_sigma
 
         self.validate()
 
@@ -114,3 +134,12 @@ class ProfileOptions(dict):
 
         if self.adaptive_target_scaling_factor < 1:
             raise ValueError("adaptive_target_scaling_factor must be > 1.")
+
+        if self.correlation_threshold < 0 or self.correlation_threshold > 1:
+            raise ValueError("correlation_threshold must be in [0, 1].")
+
+        if self.profile_n_starts < 1:
+            raise ValueError("profile_n_starts must be >= 1.")
+
+        if self.profile_sampling_sigma <= 0:
+            raise ValueError("profile_sampling_sigma must be > 0.")

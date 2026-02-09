@@ -444,6 +444,74 @@ def get_reg_polynomial(
     reg_order = min(reg_max_order, options.reg_order)
     reg_points = min(n_profile_points, options.reg_points)
 
+    # Fast vectorized path for linear regression (reg_order=1)
+    if reg_order == 1:
+        # Build design matrix X for linear regression: y = slope * x + intercept
+        x_prof = current_profile.x_path[par_index, -reg_points:]
+        X = np.column_stack([np.ones(reg_points), x_prof])
+
+        # Collect all free parameters into matrix Y
+        free_indices = [
+            i
+            for i in range(problem.dim_full)
+            if i not in problem.x_fixed_indices
+        ]
+        Y = current_profile.x_path[free_indices, -reg_points:].T
+
+        # Compute correlations for all free parameters at once
+        correlations = np.zeros(len(free_indices))
+        for idx, i_par in enumerate(free_indices):
+            y_par = current_profile.x_path[i_par, -reg_points:]
+            # Check if either array has zero variance (constant values)
+            # to avoid division by zero warnings in correlation calculation
+            if np.std(x_prof) == 0 or np.std(y_par) == 0:
+                # If constant, set correlation to 0 (no linear relationship to extrapolate)
+                correlations[idx] = 0.0
+            else:
+                corr_matrix = np.corrcoef(x_prof, y_par)
+                # Check for NaN in case of numerical issues
+                if np.isnan(corr_matrix[0, 1]):
+                    correlations[idx] = 0.0
+                else:
+                    correlations[idx] = corr_matrix[0, 1]
+
+        # Solve for all parameters at once: coeffs = (X^T X)^{-1} X^T Y
+        # coeffs[0,:] = intercepts, coeffs[1,:] = slopes
+        coeffs = np.linalg.lstsq(X, Y, rcond=None)[
+            0
+        ]  # Shape: (2, n_free_params)
+
+        # Build reg_par list with np.nan for fixed params and low-correlation params
+        reg_par = []
+        free_param_idx = 0
+        for i_par in range(problem.dim_full):
+            if i_par in problem.x_fixed_indices:
+                reg_par.append(np.nan)
+            else:
+                # Only extrapolate if correlation is above threshold
+                if (
+                    abs(correlations[free_param_idx])
+                    > options.correlation_threshold
+                ):
+                    # Store polynomial coefficients [slope, intercept] to match np.polyfit format
+                    reg_par.append(
+                        np.array(
+                            [
+                                coeffs[1, free_param_idx],
+                                coeffs[0, free_param_idx],
+                            ]
+                        )
+                    )
+                else:
+                    # Low correlation: keep parameter at current value (zero slope)
+                    reg_par.append(
+                        np.array([0.0, current_profile.x_path[i_par, -1]])
+                    )
+                free_param_idx += 1
+
+        return reg_par
+
+    # Original polynomial path for reg_order > 1
     # set up matrix of regression parameters
     reg_par = []
     for i_par in range(problem.dim_full):
