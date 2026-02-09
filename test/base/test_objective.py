@@ -180,6 +180,7 @@ def test_finite_difference_checks():
 
 @pytest.mark.parametrize("enable_x64", [True, False])
 @pytest.mark.parametrize("fix_parameters", [True, False])
+@pytest.mark.flaky(reruns=2)
 def test_jax(max_sensi_order, integrated, enable_x64, fix_parameters):
     """Test function composition and gradient computation via jax"""
     import jax

@@ -8,6 +8,7 @@ import numpy as np
 from ..C import BETA_DECAY, EXPONENTIAL_DECAY
 from ..problem import Problem
 from ..result import McmcPtResult
+from ..startpoint import PriorStartpoints
 from ..util import tqdm
 from .sampler import InternalSampler, Sampler
 
@@ -84,6 +85,7 @@ class ParallelTemperingSampler(Sampler):
             "show_progress": None,
             "beta_init": BETA_DECAY,  # replaced in adaptive PT
             "alpha": 0.3,
+            "warm_start_parallel_chains": 0.9,  # heuristic, not starting all chains at equal position
         }
 
     def initialize(
@@ -93,8 +95,30 @@ class ParallelTemperingSampler(Sampler):
         n_chains = len(self.samplers)
         if isinstance(x0, list):
             x0s = x0
+            if len(x0s) != n_chains and isinstance(x0s[0], np.ndarray):
+                raise ValueError(
+                    "If x0 is a list, its length must match the number of chains."
+                )
         else:
-            x0s = [x0 for _ in range(n_chains)]
+            if self.options["warm_start_parallel_chains"] < 1.0:
+                logger.info(
+                    f"Initializing parallel chains with a combination of the starting point "
+                    f"and prior samples with weight: {self.options['warm_start_parallel_chains']}."
+                )
+                get_start_params = PriorStartpoints(check_fval=True)
+                x0_prior = get_start_params.sample(
+                    n_starts=n_chains,
+                    lb=problem.lb,
+                    ub=problem.ub,
+                    priors=problem.x_priors,
+                )
+                x0s = (
+                    self.options["warm_start_parallel_chains"] * x0
+                    + (1 - self.options["warm_start_parallel_chains"])
+                    * x0_prior
+                )
+            else:
+                x0s = [x0 for _ in range(n_chains)]
         for sampler, x0 in zip(self.samplers, x0s):
             _problem = copy.deepcopy(problem)
             sampler.initialize(_problem, x0)
