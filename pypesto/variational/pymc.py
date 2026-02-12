@@ -82,7 +82,9 @@ class PymcVariational(PymcSampler):
         if self.x0 is not None:
             x0 = {
                 x_name: val
-                for x_name, val in zip(problem.x_names, self.x0, strict=True)
+                # FIXME: address https://github.com/ICB-DCM/pyPESTO/issues/1681
+                #  and change to strict=True
+                for x_name, val in zip(problem.x_names, self.x0, strict=False)
                 if x_name in x_names_free
             }
 
