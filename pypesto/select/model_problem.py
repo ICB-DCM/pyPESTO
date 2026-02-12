@@ -183,7 +183,9 @@ class ModelProblem:
                 zip(
                     self.pypesto_problem.x_names,
                     self.best_start.x,
-                    strict=True,
+                    # FIXME: Address https://github.com/ICB-DCM/pyPESTO/issues/1682
+                    #  and change to strict=True
+                    strict=False,
                 )
             )
             if index in self.pypesto_problem.x_free_indices
