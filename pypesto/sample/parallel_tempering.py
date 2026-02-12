@@ -116,7 +116,7 @@ class ParallelTemperingSampler(Sampler):
                 )
             else:
                 x0s = [x0 for _ in range(n_chains)]
-        for sampler, x0 in zip(self.samplers, x0s):
+        for sampler, x0 in zip(self.samplers, x0s, strict=True):
             _problem = copy.deepcopy(problem)
             sampler.initialize(_problem, x0)
         self.betas = self.betas0
@@ -128,7 +128,7 @@ class ParallelTemperingSampler(Sampler):
         for i_sample in tqdm(range(int(n_samples)), enable=show_progress):
             # TODO test
             # sample
-            for sampler, beta in zip(self.samplers, self.betas):
+            for sampler, beta in zip(self.samplers, self.betas, strict=True):
                 sampler.sample(n_samples=1, beta=beta)
 
             # swap samples
@@ -168,7 +168,9 @@ class ParallelTemperingSampler(Sampler):
 
         # loop over chains from highest temperature down
         for dbeta, sampler1, sampler2 in reversed(
-            list(zip(dbetas, self.samplers[:-1], self.samplers[1:]))
+            list(
+                zip(dbetas, self.samplers[:-1], self.samplers[1:], strict=True)
+            )
         ):
             # extract samples
             sample1 = sampler1.get_last_sample()

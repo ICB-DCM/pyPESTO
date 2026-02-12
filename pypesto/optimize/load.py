@@ -275,7 +275,7 @@ def optimization_result_from_history(
         ids = list(f[HISTORY].keys())
         x0s = [f[f"{HISTORY}/{id}/{TRACE}/0/{X}"][()] for id in ids]
 
-    for id, x0 in zip(ids, x0s):
+    for id, x0 in zip(ids, x0s, strict=True):
         history = Hdf5History(id=id, file=filename)
         history.recover_options(filename)
         optimizer_history = OptimizerHistory(

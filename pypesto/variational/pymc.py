@@ -82,7 +82,7 @@ class PymcVariational(PymcSampler):
         if self.x0 is not None:
             x0 = {
                 x_name: val
-                for x_name, val in zip(problem.x_names, self.x0)
+                for x_name, val in zip(problem.x_names, self.x0, strict=True)
                 if x_name in x_names_free
             }
 
@@ -92,9 +92,7 @@ class PymcVariational(PymcSampler):
             _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
-                    x_names_free,
-                    problem.lb,
-                    problem.ub,
+                    x_names_free, problem.lb, problem.ub, strict=True
                 )
             ]
 

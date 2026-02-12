@@ -259,7 +259,7 @@ def get_spectral_decomposition_lowlevel(
                     i_eig_abs > cutoff_absolute_separable
                     and i_eig_rel > cutoff_relative_separable
                     for i_eig_abs, i_eig_rel in zip(
-                        eigenvalues, rel_eigenvalues
+                        eigenvalues, rel_eigenvalues, strict=True
                     )
                 ]
             )
@@ -291,7 +291,9 @@ def get_spectral_decomposition_lowlevel(
             [
                 1 / i_eig_abs > cutoff_absolute_identifiable
                 and 1 / i_eig_rel > cutoff_relative_identifiable
-                for i_eig_abs, i_eig_rel in zip(eigenvalues, rel_eigenvalues)
+                for i_eig_abs, i_eig_rel in zip(
+                    eigenvalues, rel_eigenvalues, strict=True
+                )
             ]
         )
     elif cutoff_absolute_identifiable is not None:

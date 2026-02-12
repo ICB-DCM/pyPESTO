@@ -1224,7 +1224,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
 
         See :meth:`Optimizer.minimize`.
         """
-        bounds = list(zip(problem.lb, problem.ub))
+        bounds = list(zip(problem.lb, problem.ub, strict=True))
 
         result = scipy.optimize.differential_evolution(
             problem.objective.get_fval, bounds, x0=x0, **self.options

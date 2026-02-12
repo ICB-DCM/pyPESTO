@@ -1061,7 +1061,7 @@ def sampling_parameter_cis(
     # handle legend
     plt.gca().invert_yaxis()
     handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
+    by_label = dict(zip(labels, handles, strict=True))
     ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1))
 
     return ax
@@ -1130,7 +1130,7 @@ def sampling_parameter_traces(
     else:
         fig = ax.get_figure()
 
-    par_ax = dict(zip(param_names, ax.flat))
+    par_ax = dict(zip(param_names, ax.flat, strict=True))
 
     sns.set(style="ticks")
     kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
@@ -1301,7 +1301,7 @@ def sampling_1d_marginals(
 
     fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
 
-    par_ax = dict(zip(param_names, ax.flat))
+    par_ax = dict(zip(param_names, ax.flat, strict=True))
     sns.set(style="ticks")
 
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]

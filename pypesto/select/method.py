@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import numpy as np
@@ -25,7 +25,7 @@ from ..problem import Problem
 from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
 
 
-class MethodSignalProceed(str, Enum):
+class MethodSignalProceed(StrEnum):
     """Indicators for how a model selection method should proceed."""
 
     # TODO move to PEtab Select?

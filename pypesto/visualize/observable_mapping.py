@@ -258,6 +258,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         zip(
             pypesto_problem.objective.x_ids,
             pypesto_result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
 
@@ -297,6 +298,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         zip(
             pypesto_problem.inner_x_names,
             pypesto_result.optimize_result.list[start_index][INNER_PARAMETERS],
+            strict=True,
         )
     )
 
@@ -318,7 +320,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
 
     # plot the linear observable mapping for each relative_observable_id
     for observable_index, observable_id in zip(
-        relative_observable_indices, relative_observable_ids
+        relative_observable_indices, relative_observable_ids, strict=True
     ):
         # Get the ax for the current observable.
         if rel_and_semiquant_obs_indices is not None:
@@ -450,6 +452,7 @@ def plot_splines_from_pypesto_result(
         zip(
             pypesto_result.problem.objective.x_ids,
             pypesto_result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
 
@@ -593,7 +596,7 @@ def plot_splines_from_inner_result(
             axes = axes.flatten()
 
     # for each result and group, plot the inner solution
-    for result, group in zip(results, inner_problem.groups):
+    for result, group in zip(results, inner_problem.groups, strict=True):
         if rel_and_semiquant_obs_indices is not None:
             ax_index = rel_and_semiquant_obs_indices.index(group - 1)
         else:
@@ -738,6 +741,7 @@ def _add_spline_mapped_simulations_to_model_fit(
         zip(
             pypesto_problem.objective.x_ids,
             result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
     x_dct.update(
@@ -796,7 +800,9 @@ def _add_spline_mapped_simulations_to_model_fit(
     # Get the observable ids.
     observable_ids = amici_model.getObservableIds()
 
-    for inner_result, group in zip(inner_results, inner_problem.groups):
+    for inner_result, group in zip(
+        inner_results, inner_problem.groups, strict=True
+    ):
         observable_id = observable_ids[group - 1]
         # Get the ax for the current observable.
         ax = [
@@ -885,6 +891,7 @@ def _obtain_regularization_for_start(
         zip(
             pypesto_result.problem.objective.x_ids,
             pypesto_result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
 
@@ -946,7 +953,7 @@ def _obtain_regularization_for_start(
     reg_term_sum = 0
 
     # for each result and group, plot the inner solution
-    for result, group in zip(inner_results, inner_problem.groups):
+    for result, group in zip(inner_results, inner_problem.groups, strict=True):
         # For each group get the inner parameters and simulation
         s = result[SCIPY_X]
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]

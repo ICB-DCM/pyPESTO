@@ -142,7 +142,7 @@ def minimize(
 
     # define tasks
     tasks = []
-    for startpoint, id in zip(startpoints, ids):
+    for startpoint, id in zip(startpoints, ids, strict=True):
         task = OptimizerTask(
             optimizer=optimizer,
             problem=problem,

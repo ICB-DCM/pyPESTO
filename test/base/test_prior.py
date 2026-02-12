@@ -92,7 +92,7 @@ def test_mode(scale, prior_type_list):
 
     topt = []
     # test uniform distribution:
-    for prior_type, prior in zip(prior_type_list, prior_list):
+    for prior_type, prior in zip(prior_type_list, prior_list, strict=True):
         if prior_type.startswith("parameterScale"):
             scale = C.LIN
         if prior_type in [C.UNIFORM, C.PARAMETER_SCALE_UNIFORM]:

@@ -103,9 +103,7 @@ def visualize_optimized_model_fit(
                 amici_models.append(objective.amici_model)
                 # objective expects full vector here
                 objective_results.append(objective(x, return_dict=True))
-            elif isinstance(
-                objective, Union[NegLogParameterPriors, NegLogPriors]
-            ):
+            elif isinstance(objective, NegLogParameterPriors | NegLogPriors):
                 # priors are not used for simulation
                 pass
             else:
@@ -125,7 +123,9 @@ def visualize_optimized_model_fit(
         )
 
     axes_list, simulation_df_list = [], []
-    for amici_model, objective_result in zip(amici_models, objective_results):
+    for amici_model, objective_result in zip(
+        amici_models, objective_results, strict=True
+    ):
         # get simulation results
         simulation_df = rdatas_to_simulation_df(
             objective_result[RDATAS],
@@ -177,7 +177,7 @@ def visualize_optimized_model_fit(
     if return_dict:
         dict_list = []
         for axes, simulation_df, objective_result in zip(
-            axes_list, simulation_df_list, objective_results
+            axes_list, simulation_df_list, objective_results, strict=True
         ):
             dict_list.append(
                 {
@@ -309,7 +309,11 @@ def _get_simulation_rdatas(
     if isinstance(problem, HierarchicalProblem):
         # get parameter dictionary
         x_dct = dict(
-            zip(problem.x_names, result.optimize_result.list[start_index].x)
+            zip(
+                problem.x_names,
+                result.optimize_result.list[start_index].x,
+                strict=True,
+            )
         )
 
         # evaluate objective with return dict = True to get inner parameters
@@ -319,7 +323,7 @@ def _get_simulation_rdatas(
 
         # update parameter dictionary with inner parameters
         inner_parameter_dict = dict(
-            zip(problem.inner_x_names, ret["inner_parameters"])
+            zip(problem.inner_x_names, ret["inner_parameters"], strict=True)
         )
         x_dct.update(inner_parameter_dict)
 

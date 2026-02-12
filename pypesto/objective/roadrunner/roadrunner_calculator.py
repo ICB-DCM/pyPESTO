@@ -124,7 +124,9 @@ class RoadRunnerCalculator:
         solver_options.apply_to_roadrunner(roadrunner_instance)
         simulation_results = {}
         llh_tot = 0
-        for edata, mapping_per_condition in zip(edatas, parameter_mapping):
+        for edata, mapping_per_condition in zip(
+            edatas, parameter_mapping, strict=True
+        ):
             sim_res, llh = self.simulate_per_condition(
                 x_dct, roadrunner_instance, edata, mapping_per_condition
             )

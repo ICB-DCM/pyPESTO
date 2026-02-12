@@ -1,13 +1,13 @@
 import logging
 from collections.abc import Iterable
-from typing import SupportsFloat, SupportsInt, Union
+from typing import SupportsFloat, SupportsInt
 
 import numpy as np
 
 from .base import Problem
 
-SupportsFloatIterableOrValue = Union[Iterable[SupportsFloat], SupportsFloat]
-SupportsIntIterableOrValue = Union[Iterable[SupportsInt], SupportsInt]
+SupportsFloatIterableOrValue = Iterable[SupportsFloat] | SupportsFloat
+SupportsIntIterableOrValue = Iterable[SupportsInt] | SupportsInt
 
 logger = logging.getLogger(__name__)
 
