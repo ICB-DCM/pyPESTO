@@ -1,6 +1,7 @@
 """Various methods for estimating the log evidence of a model."""
 
 import logging
+from collections.abc import Callable
 
 import numpy as np
 from scipy import stats
@@ -56,7 +57,7 @@ def laplace_approximation_log_evidence(
 def harmonic_mean_log_evidence(
     result: Result,
     prior_samples: np.ndarray | None = None,
-    neg_log_likelihood_fun: callable | None = None,
+    neg_log_likelihood_fun: Callable | None = None,
 ) -> float:
     """
     Compute the log evidence using the harmonic mean estimator.
