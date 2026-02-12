@@ -343,7 +343,7 @@ def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
     data[0::2] -= expected_values["sigma_"]
     data[1::2] += expected_values["sigma_"]
 
-    mask = np.full(data.shape, True)
+    mask = [np.full(data.shape, True)]
 
     inner_parameters = [
         InnerParameter(
