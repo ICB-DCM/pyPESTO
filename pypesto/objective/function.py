@@ -1,5 +1,4 @@
-from collections.abc import Sequence
-from typing import Callable, Union
+from collections.abc import Callable, Sequence
 
 import numpy as np
 
@@ -71,11 +70,11 @@ class Objective(ObjectiveBase):
     def __init__(
         self,
         fun: Callable = None,
-        grad: Union[Callable, bool] = None,
+        grad: Callable | bool = None,
         hess: Callable = None,
         hessp: Callable = None,
         res: Callable = None,
-        sres: Union[Callable, bool] = None,
+        sres: Callable | bool = None,
         x_names: Sequence[str] = None,
     ):
         self.fun = fun

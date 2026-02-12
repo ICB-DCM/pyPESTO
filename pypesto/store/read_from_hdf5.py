@@ -3,7 +3,6 @@
 import ast
 import logging
 from pathlib import Path
-from typing import Union
 
 import h5py
 import numpy as np
@@ -111,7 +110,7 @@ class ProblemHDF5Reader:
         HDF5 problem file name
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: str | Path):
         """Initialize reader.
 
         Parameters
@@ -179,7 +178,7 @@ class OptimizationResultHDF5Reader:
 
     def __init__(
         self,
-        storage_filename: Union[str, Path],
+        storage_filename: str | Path,
         lazy: bool = False,
         with_history: bool = True,
     ):
@@ -230,7 +229,7 @@ class SamplingResultHDF5Reader:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: str | Path):
         """Initialize reader.
 
         Parameters
@@ -269,7 +268,7 @@ class ProfileResultHDF5Reader:
         HDF5 result file name
     """
 
-    def __init__(self, storage_filename: Union[str, Path]):
+    def __init__(self, storage_filename: str | Path):
         """
         Initialize reader.
 
@@ -304,7 +303,7 @@ class ProfileResultHDF5Reader:
 
 
 def read_result(
-    filename: Union[Path, str],
+    filename: Path | str,
     problem: bool = True,
     optimize: bool = False,
     profile: bool = False,
@@ -394,7 +393,7 @@ def read_result(
     return result
 
 
-def load_objective_config(filename: Union[str, Path]):
+def load_objective_config(filename: str | Path):
     """Load the objective information stored in f.
 
     Parameters

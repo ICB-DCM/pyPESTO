@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Iterable
-from typing import Optional, SupportsFloat, SupportsInt, Union
+from typing import SupportsFloat, SupportsInt, Union
 
 import numpy as np
 
@@ -49,9 +49,9 @@ class HierarchicalProblem(Problem):
 
     def __init__(
         self,
-        inner_x_names: Optional[Iterable[str]] = None,
-        inner_lb: Optional[Union[np.ndarray, list[float]]] = None,
-        inner_ub: Optional[Union[np.ndarray, list[float]]] = None,
+        inner_x_names: Iterable[str] | None = None,
+        inner_lb: np.ndarray | list[float] | None = None,
+        inner_ub: np.ndarray | list[float] | None = None,
         **problem_kwargs: dict,
     ):
         super().__init__(**problem_kwargs)

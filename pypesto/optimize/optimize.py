@@ -1,6 +1,5 @@
 import logging
-from collections.abc import Iterable
-from typing import Callable, Union
+from collections.abc import Callable, Iterable
 from warnings import warn
 
 from ..engine import Engine, SingleCoreEngine
@@ -27,13 +26,13 @@ def minimize(
     optimizer: Optimizer = None,
     n_starts: int = 100,
     ids: Iterable[str] = None,
-    startpoint_method: Union[StartpointMethod, Callable, bool] = None,
+    startpoint_method: StartpointMethod | Callable | bool = None,
     result: Result = None,
     engine: Engine = None,
     progress_bar: bool = None,
     options: OptimizeOptions = None,
     history_options: HistoryOptions = None,
-    filename: Union[str, Callable, None] = None,
+    filename: str | Callable | None = None,
     overwrite: bool = False,
 ) -> Result:
     """

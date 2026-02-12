@@ -8,13 +8,14 @@ import logging.handlers
 import multiprocessing
 import os
 import time
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from math import ceil, sqrt
 from multiprocessing import get_context
 from multiprocessing.managers import SyncManager
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid1
 from warnings import warn
 

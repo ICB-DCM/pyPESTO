@@ -1,7 +1,6 @@
 """Various Sampler classes."""
 
 import abc
-from typing import Union
 
 import numpy as np
 
@@ -30,9 +29,7 @@ class Sampler(abc.ABC):
         self.options = self.__class__.translate_options(options)
 
     @abc.abstractmethod
-    def initialize(
-        self, problem: Problem, x0: Union[np.ndarray, list[np.ndarray]]
-    ):
+    def initialize(self, problem: Problem, x0: np.ndarray | list[np.ndarray]):
         """Initialize the sampler.
 
         Parameters

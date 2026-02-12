@@ -1,6 +1,5 @@
 import warnings
 from collections.abc import Sequence
-from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -46,7 +45,7 @@ def visualize_estimated_observable_mapping(
     pypesto_result: Result,
     pypesto_problem: HierarchicalProblem,
     start_index: int = 0,
-    axes: Optional[plt.Axes] = None,
+    axes: plt.Axes | None = None,
     **kwargs,
 ):
     """Visualize the estimated observable mapping for relative and semi-quantitative observables.
@@ -165,8 +164,8 @@ def plot_linear_observable_mappings_from_pypesto_result(
     pypesto_result: Result,
     pypesto_problem: HierarchicalProblem,
     start_index=0,
-    axes: Optional[plt.Axes] = None,
-    rel_and_semiquant_obs_indices: Optional[list[int]] = None,
+    axes: plt.Axes | None = None,
+    rel_and_semiquant_obs_indices: list[int] | None = None,
     **kwargs,
 ):
     """Plot the linear observable mappings from a pyPESTO result.
@@ -529,8 +528,8 @@ def plot_splines_from_inner_result(
     results: list[dict],
     sim: list[np.ndarray],
     observable_ids=None,
-    axes: Optional[plt.Axes] = None,
-    rel_and_semiquant_obs_indices: Optional[list[int]] = None,
+    axes: plt.Axes | None = None,
+    rel_and_semiquant_obs_indices: list[int] | None = None,
     **kwargs,
 ):
     """Plot the estimated spline approximations from inner results.
@@ -716,11 +715,11 @@ def _calculate_optimal_regularization(
 
 
 def _add_spline_mapped_simulations_to_model_fit(
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     pypesto_problem: Problem,
     start_index: int = 0,
-    axes: Optional[plt.Axes] = None,
-) -> Union[matplotlib.axes.Axes, None]:
+    axes: plt.Axes | None = None,
+) -> matplotlib.axes.Axes | None:
     """Visualize the spline optimized model fit.
 
     Adds the spline-mapped simulation to the axes given by
@@ -864,7 +863,7 @@ def _add_spline_mapped_simulations_to_model_fit(
 
 def _obtain_regularization_for_start(
     pypesto_result: Result, start_index=0
-) -> Optional[float]:
+) -> float | None:
     """Obtain the regularization for the start index.
 
     Calculates and returns the spline linear regularization

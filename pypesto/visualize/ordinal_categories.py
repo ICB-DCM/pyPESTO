@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pypesto
@@ -41,7 +41,7 @@ from ..result import Result
 def plot_categories_from_pypesto_result(
     pypesto_result: Result,
     start_index=0,
-    axes: Optional[plt.Axes] = None,
+    axes: plt.Axes | None = None,
     **kwargs,
 ):
     """Plot the inner solutions from a pypesto result.
@@ -164,7 +164,7 @@ def plot_categories_from_inner_result(
     condition_ids: list[str] = None,
     petab_condition_ordering: list[str] = None,
     measurement_df_observable_ordering: list[str] = None,
-    axes: Optional[plt.Axes] = None,
+    axes: plt.Axes | None = None,
     **kwargs,
 ):
     """Plot the inner solutions.

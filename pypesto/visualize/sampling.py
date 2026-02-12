@@ -2,7 +2,6 @@ import logging
 import warnings
 from collections.abc import Sequence
 from colorsys import rgb_to_hls
-from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -515,7 +514,7 @@ def _get_condition_and_output_ids(
 def _handle_legends(
     fig: matplotlib.figure.Figure,
     axes: matplotlib.axes.Axes,
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     labels: dict[str, str],
     level_opacities: Sequence[float],
     variable_names: Sequence[str],
@@ -525,9 +524,8 @@ def _handle_legends(
     n_col: int,
     average: str,
     add_sd: bool,
-    grouped_measurements: Optional[
-        dict[tuple[str, str], Sequence[Sequence[float]]]
-    ],
+    grouped_measurements: dict[tuple[str, str], Sequence[Sequence[float]]]
+    | None,
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -680,7 +678,7 @@ def _handle_legends(
 
 
 def _handle_colors(
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     n_variables: int,
     reverse: bool = False,
 ) -> tuple[Sequence[float], Sequence[RGB]]:
@@ -718,7 +716,7 @@ def _handle_colors(
 
 def sampling_prediction_trajectories(
     ensemble_prediction: EnsemblePrediction,
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     title: str = None,
     size: tuple[float, float] = None,
     axes: matplotlib.axes.Axes = None,

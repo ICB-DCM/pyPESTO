@@ -1,9 +1,8 @@
 import copy
 import logging
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import (
-    Callable,
     SupportsFloat,
     SupportsInt,
 )

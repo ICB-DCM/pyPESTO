@@ -1,7 +1,8 @@
 """Calibrate a PEtab Select model with pyPESTO."""
 
 import time
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 from petab_select import Criterion, Model
 
@@ -71,7 +72,7 @@ class ModelProblem:
         autorun: bool = True,
         x_guess: list[float] = None,
         minimize_options: dict = None,
-        objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
+        objective_customizer: OBJECTIVE_CUSTOMIZER_TYPE | None = None,
         postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
         minimize_method: Callable[[Problem], Result] = None,

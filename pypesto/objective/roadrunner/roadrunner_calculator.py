@@ -38,31 +38,38 @@ except ImportError:
     roadrunner = None
 
 LLH_TYPES = {
-    "lin_normal": lambda measurement, simulation, sigma: -0.5
-    * (
-        np.log(2 * np.pi * (sigma**2))
-        + ((measurement - simulation) / sigma) ** 2
+    "lin_normal": lambda measurement, simulation, sigma: (
+        -0.5
+        * (
+            np.log(2 * np.pi * (sigma**2))
+            + ((measurement - simulation) / sigma) ** 2
+        )
     ),
-    "log_normal": lambda measurement, simulation, sigma: -0.5
-    * (
-        np.log(2 * np.pi * (sigma**2) * (measurement**2))
-        + ((np.log(measurement) - np.log(simulation)) / sigma) ** 2
+    "log_normal": lambda measurement, simulation, sigma: (
+        -0.5
+        * (
+            np.log(2 * np.pi * (sigma**2) * (measurement**2))
+            + ((np.log(measurement) - np.log(simulation)) / sigma) ** 2
+        )
     ),
-    "log10_normal": lambda measurement, simulation, sigma: -0.5
-    * (
-        np.log(2 * np.pi * (sigma**2) * (measurement**2) * np.log(10) ** 2)
-        + ((np.log10(measurement) - np.log10(simulation)) / sigma) ** 2
+    "log10_normal": lambda measurement, simulation, sigma: (
+        -0.5
+        * (
+            np.log(2 * np.pi * (sigma**2) * (measurement**2) * np.log(10) ** 2)
+            + ((np.log10(measurement) - np.log10(simulation)) / sigma) ** 2
+        )
     ),
-    "lin_laplace": lambda measurement, simulation, sigma: -np.log(2 * sigma)
-    - (np.abs(measurement - simulation) / sigma),
-    "log_laplace": lambda measurement, simulation, sigma: -np.log(
-        2 * sigma * simulation
-    )
-    - (np.abs(np.log(measurement) - np.log(simulation)) / sigma),
-    "log10_laplace": lambda measurement, simulation, sigma: -np.log(
-        2 * sigma * simulation * np.log(10)
-    )
-    - (np.abs(np.log10(measurement) - np.log10(simulation)) / sigma),
+    "lin_laplace": lambda measurement, simulation, sigma: (
+        -np.log(2 * sigma) - (np.abs(measurement - simulation) / sigma)
+    ),
+    "log_laplace": lambda measurement, simulation, sigma: (
+        -np.log(2 * sigma * simulation)
+        - (np.abs(np.log(measurement) - np.log(simulation)) / sigma)
+    ),
+    "log10_laplace": lambda measurement, simulation, sigma: (
+        -np.log(2 * sigma * simulation * np.log(10))
+        - (np.abs(np.log10(measurement) - np.log10(simulation)) / sigma)
+    ),
 }
 
 

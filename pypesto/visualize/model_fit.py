@@ -41,13 +41,13 @@ logger = logging.getLogger(__name__)
 
 def visualize_optimized_model_fit(
     petab_problem: petab.Problem,
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     pypesto_problem: Problem,
     start_index: int = 0,
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
-) -> Union[matplotlib.axes.Axes, dict, list[matplotlib.axes.Axes], list[dict]]:
+) -> matplotlib.axes.Axes | dict | list[matplotlib.axes.Axes] | list[dict]:
     """
     Visualize the optimized model fit of a PEtab problem.
 
@@ -195,16 +195,16 @@ def visualize_optimized_model_fit(
 
 
 def time_trajectory_model(
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     problem: Problem = None,
     # TODO: conditions: Union[str, Sequence[str]] = None,
-    timepoints: Union[np.ndarray, Sequence[np.ndarray]] = None,
+    timepoints: np.ndarray | Sequence[np.ndarray] = None,
     n_timepoints: int = 1000,
     start_index: int = 0,
-    state_ids: Union[str, Sequence[str]] = None,
-    state_names: Union[str, Sequence[str]] = None,
-    observable_ids: Union[str, Sequence[str]] = None,
-) -> Union[matplotlib.axes.Axes, None]:
+    state_ids: str | Sequence[str] = None,
+    state_names: str | Sequence[str] = None,
+    observable_ids: str | Sequence[str] = None,
+) -> matplotlib.axes.Axes | None:
     """
     Visualize the time trajectory of the model with given timepoints.
 
@@ -270,7 +270,7 @@ def time_trajectory_model(
 
 
 def _get_simulation_rdatas(
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     problem: Problem,
     start_index: int = 0,
     simulation_timepoints: np.ndarray = None,
@@ -367,7 +367,7 @@ def _time_trajectory_model_with_states(
     rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
     state_ids: Sequence[str],
     state_names: Sequence[str],
-    observable_ids: Union[str, Sequence[str]],
+    observable_ids: str | Sequence[str],
 ):
     """
     Visualizes both, states and observables.
@@ -440,7 +440,7 @@ def _time_trajectory_model_with_states(
 def _time_trajectory_model_without_states(
     model: AmiciModel,
     rdatas: Union["amici.ReturnData", Sequence["amici.ReturnData"]],
-    observable_ids: Union[str, Sequence[str]],
+    observable_ids: str | Sequence[str],
 ):
     """
     Visualize both, states and observables.

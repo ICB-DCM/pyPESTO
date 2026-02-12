@@ -9,11 +9,10 @@ import re
 import shutil
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
 )
 
 import numpy as np

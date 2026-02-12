@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 
 from .ensemble import Ensemble, EnsemblePrediction
@@ -25,7 +23,7 @@ def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:
 
 
 def get_covariance_matrix_predictions(
-    ens: Union[Ensemble, EnsemblePrediction], prediction_index: int = 0
+    ens: Ensemble | EnsemblePrediction, prediction_index: int = 0
 ) -> np.ndarray:
     """
     Compute the covariance of ensemble predictions.

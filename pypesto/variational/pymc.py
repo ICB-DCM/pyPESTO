@@ -35,7 +35,7 @@ class PymcVariational(PymcSampler):
         self,
         n_iterations: int,
         method: str = "advi",
-        random_seed: Optional[int] = None,
+        random_seed: int | None = None,
         start_sigma: Optional = None,
         inf_kwargs: Optional = None,
         beta: float = 1.0,
