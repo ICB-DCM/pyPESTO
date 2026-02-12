@@ -9,6 +9,218 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "pypesto"
+description = "python-based Parameter EStimation TOolbox"
+requires-python = ">=3.11"
+dynamic = ["version", "readme"]
+authors = [
+  { name = "The pyPESTO developers", email = "yannik.schaelte@gmail.com" },
+]
+maintainers = [
+  { name = "Paul Jonas Jost", email = "paul.jost@uni-bonn.de" },
+  { name = "Domagoj Dorešić", email = "domagoj.doresic@uni-bonn.de" },
+  { name = "Vincent Wieland", email = "vwieland@uni-bonn.de" },
+  { name = "Fabian Fröhlich", email = "fabian.frohlich@crick.ac.uk" },
+]
+license-files = ["LICENSE"]
+keywords = [
+  "parameter inference",
+  "optimization",
+  "sampling",
+  "profiles",
+  "ODE",
+  "AMICI",
+  "systems biology",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.11",
+]
+
+dependencies = [
+  "numpy>=1.19.1,!=1.24.0",
+  "scipy>=1.5.2",
+  "pandas>=1.5.0",
+  "cloudpickle>=1.5.0",
+  "matplotlib>=3.6.2",
+  "more-itertools>=9.0.0",
+  "seaborn>=0.11.2",
+  "h5py>=3.1.0,!=3.15.0",
+  "tqdm>=4.46.0",
+  "tabulate>=0.8.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/icb-dcm/pypesto"
+Download = "https://github.com/icb-dcm/pypesto/releases"
+"Bug Tracker" = "https://github.com/icb-dcm/pypesto/issues"
+Documentation = "https://pypesto.readthedocs.io"
+Changelog = "https://pypesto.readthedocs.io/en/latest/changelog.html"
+
+[project.optional-dependencies]
+amici = [
+  "amici>=0.21.0,<1.0.0",
+]
+
+petab = [
+  "petab>=0.4.0",
+]
+
+ipopt = [
+  "cyipopt>=1.3.0",
+]
+
+dlib = [
+  "dlib>=19.19.0",
+]
+
+nlopt = [
+  # != 2.9.0: https://github.com/stevengj/nlopt/issues/575
+  "nlopt>=2.6.2,!=2.9.0",
+]
+
+pyswarm = [
+  "pyswarm>=0.6",
+]
+
+cma = [
+  "cma>=3.0.3",
+]
+
+pyswarms = [
+  "pyswarms>=1.3.0",
+]
+
+fides = [
+  "fides>=0.6.1",
+]
+
+mpi = [
+  "mpi4py>=3.0.3",
+]
+
+pymc = [
+  "arviz>=0.12.1",
+  "pymc>=4.2.1",
+]
+
+jax = [
+  "jax>=0.4.1",
+  "jaxlib>=0.4.1",
+]
+
+emcee = [
+  "emcee>=3.0.2",
+]
+
+dynesty = [
+  "dynesty>=2.0.3",
+]
+
+mltools = [
+  "umap-learn[plot]>=0.5.3",
+  "scikit-learn>=0.24.1",
+]
+
+julia = [
+  "julia>=0.5.7",
+  "ipython>=8.4.0",
+  "pygments>=2.12.0",
+]
+
+select = [
+  "petab-select[plot]>=0.3.3",
+]
+
+test = [
+  "pytest>=5.4.3",
+  "pytest-cov>=2.10.0",
+  "gitpython>=3.1.7",
+  "pytest-rerunfailures>=9.1.1",
+  "autograd>=1.3",
+]
+
+roadrunner = [
+  "libroadrunner>=2.7.0",
+  "pypesto[petab]",
+  "python-libsbml>=5.20.2",
+]
+
+all_optimizers = [
+  "pypesto[ipopt]",
+  "pypesto[dlib]",
+  "pypesto[nlopt]",
+  "pypesto[pyswarm]",
+  "pypesto[cma]",
+  "pypesto[pyswarms]",
+  "pypesto[fides]",
+]
+
+example = [
+  "pypesto[julia]",
+  "pypesto[pymc]",
+  "pypesto[emcee]",
+  "pypesto[dynesty]",
+  "pypesto[nlopt]",
+  "pypesto[pyswarms]",
+  "notebook>=6.1.4",
+  "ipywidgets>=8.1.5",
+  "benchmark_models_petab @ git+https://github.com/Benchmarking-Initiative/Benchmark-Models-PEtab.git@master#subdirectory=src/python",
+]
+
+doc = [
+  "sphinx>=6.2.1",
+  "nbsphinx>=0.8.9",
+  "nbconvert>=6.5.0",
+  "sphinx-rtd-theme>=1.2.0",
+  "sphinx-autodoc-typehints>=1.18.3",
+  "sphinxcontrib-bibtex>=2.5.0",
+  "ipython>=8.4.0",
+  "myst-parser>=0.18.0",
+  # pin to avoid `zmq.error.ZMQError: Too many open files` issues
+  "ipykernel==6.23.1",
+  "pypesto[example]",
+  "pypesto[select]",
+  "pypesto[fides]",
+  "pypesto[amici]",
+  "pypesto[petab]",
+  "pypesto[jax]",
+  "pypesto[roadrunner]",
+]
+
+all = [
+  "pypesto[amici]",
+  "pypesto[petab]",
+  "pypesto[all_optimizers]",
+  "pypesto[mpi]",
+  "pypesto[pymc]",
+  "pypesto[jax]",
+  "pypesto[julia]",
+  "pypesto[emcee]",
+  "pypesto[dynesty]",
+  "pypesto[mltools]",
+  "pypesto[doc]",
+  "pypesto[example]",
+  "pypesto[select]",
+  "pypesto[test]",
+  "pypesto[roadrunner]",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["pypesto*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pypesto.version.__version__" }
+readme = { file = ["README.md"], content-type = "text/markdown" }
+
 [tool.ruff]
 line-length = 79
 exclude = ["amici_models"]
@@ -66,7 +278,8 @@ convention = "pep257"
     "D400",
     "D205",
 ]
-"doc/example/*.py" = [  # ignore docstyle in example pthon files.
+# ignore docstyle in example python files.
+"doc/example/*.py" = [
     "D",
 ]
 "doc/conf.py" = [
