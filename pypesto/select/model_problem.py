@@ -176,12 +176,28 @@ class ModelProblem:
         self.model.set_criterion(Criterion.NLLH, float(self.best_start.fval))
         self.model.compute_criterion(criterion=self.criterion)
 
+        # TODO quickfix while pyPESTO returns an empty list in the case
+        # of no estimated parameters.
+        best_start_x = self.best_start.x
+        if len(self.pypesto_problem.x_names) != len(self.best_start.x):
+            # Assume only fixed parameters
+            if (
+                len(self.pypesto_problem.x_names)
+                != len(self.pypesto_problem.x_fixed_vals)
+            ):
+                raise ValueError("Unknown issue. Contact us.")
+            # Assume empty best optimized point.
+            if len(self.best_start.x):
+                raise ValueError("Unknown issue. Contact us.")
+            best_start_x = list(self.pypesto_problem.x_fixed_vals)
+
         estimated_parameters = {
             id: float(value)
             for index, (id, value) in enumerate(
                 zip(
                     self.pypesto_problem.x_names,
-                    self.best_start.x,
+                    best_start_x,
+                    strict=True,
                 )
             )
             if index in self.pypesto_problem.x_free_indices
