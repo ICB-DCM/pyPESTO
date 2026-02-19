@@ -390,7 +390,7 @@ def test_model_problem_fake_result():
 
     expected_x = expected_x_fixed_vals
     test_x = fake_start.x.tolist()
-    # The fake start has the expected zero estimated parameters.
+    # The fake start has the expected parameters.
     assert test_x == expected_x
 
     test_fval = fake_start.fval
