@@ -134,6 +134,7 @@ class ModelProblem:
                     self.set_result(
                         create_fake_pypesto_result_from_fval(
                             fval=fake_result_fval,
+                            x_fixed_vals=self.pypesto_problem.x_fixed_vals,
                             evaluation_time=fake_result_evaluation_time,
                         )
                     )
@@ -176,27 +177,12 @@ class ModelProblem:
         self.model.set_criterion(Criterion.NLLH, float(self.best_start.fval))
         self.model.compute_criterion(criterion=self.criterion)
 
-        # TODO quickfix while pyPESTO returns an empty list in the case
-        # of no estimated parameters.
-        best_start_x = self.best_start.x
-        if len(self.pypesto_problem.x_names) != len(self.best_start.x):
-            # Assume only fixed parameters
-            if (
-                len(self.pypesto_problem.x_names)
-                != len(self.pypesto_problem.x_fixed_vals)
-            ):
-                raise ValueError("Unknown issue. Contact us.")
-            # Assume empty best optimized point.
-            if len(self.best_start.x):
-                raise ValueError("Unknown issue. Contact us.")
-            best_start_x = list(self.pypesto_problem.x_fixed_vals)
-
         estimated_parameters = {
             id: float(value)
             for index, (id, value) in enumerate(
                 zip(
                     self.pypesto_problem.x_names,
-                    best_start_x,
+                    self.best_start.x,
                     strict=True,
                 )
             )
@@ -213,6 +199,7 @@ class ModelProblem:
 
 def create_fake_pypesto_result_from_fval(
     fval: float,
+    x_fixed_vals: list[float],
     evaluation_time: float = 0.0,
 ) -> Result:
     """Create a result for problems with no estimated parameters.
@@ -232,7 +219,7 @@ def create_fake_pypesto_result_from_fval(
 
     optimizer_result = OptimizerResult(
         id="fake_result_for_problem_with_no_estimated_parameters",
-        x=[],
+        x=x_fixed_vals,
         fval=fval,
         grad=None,
         hess=None,
@@ -243,7 +230,7 @@ def create_fake_pypesto_result_from_fval(
         n_hess=0,
         n_res=0,
         n_sres=0,
-        x0=[],
+        x0=x_fixed_vals,
         fval0=fval,
         history=None,
         exitflag=0,
