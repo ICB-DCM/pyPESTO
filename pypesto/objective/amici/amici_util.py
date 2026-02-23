@@ -137,7 +137,7 @@ def create_identity_parameter_mapping(
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
             x_id: amici_to_petab_scale(x_scale)
-            for x_id, x_scale in zip(x_ids, x_scales)
+            for x_id, x_scale in zip(x_ids, x_scales, strict=True)
         }
         # assumes fixed parameters are filled in already
         mapping_for_condition = ParameterMappingForCondition(
@@ -203,7 +203,8 @@ def par_index_slices(
             )
             for par_sim_id, par_opt_id in condition_map_sim_var.items()
             if isinstance(par_opt_id, str) and par_opt_id in par_opt_id_to_idx
-        )
+        ),
+        strict=True,
     )
     par_sim_slice = np.fromiter(next(zip_iterator), dtype=int)
     par_opt_slice = np.fromiter(next(zip_iterator), dtype=int)

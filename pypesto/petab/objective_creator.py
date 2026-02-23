@@ -9,11 +9,10 @@ import re
 import shutil
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
 )
 
 import numpy as np
@@ -326,7 +325,11 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         # fill in dummy parameters (this is needed since some objective
         #  initialization e.g. checks for preeq parameters)
         problem_parameters = dict(
-            zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
+            zip(
+                self.petab_problem.x_ids,
+                self.petab_problem.x_nominal_scaled,
+                strict=True,
+            )
         )
         fill_in_parameters(
             edatas=edatas,
@@ -657,7 +660,7 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
         to_change = []
         # check that noise formulae are valid
         for i_edata, (edata, par_map) in enumerate(
-            zip(edatas, parameter_mapping)
+            zip(edatas, parameter_mapping, strict=True)
         ):
             for j_formula, noise_formula in enumerate(edata.noise_formulae):
                 # constant values are allowed
@@ -769,7 +772,7 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
         if not overrides:
             return mapping
         for (_, condition), mapping_per_condition in zip(
-            simulation_conditions.iterrows(), mapping
+            simulation_conditions.iterrows(), mapping, strict=True
         ):
             for override in overrides:
                 preeq_id = condition.get(PREEQUILIBRATION_CONDITION_ID)

@@ -228,7 +228,7 @@ class SemiquantInnerSolver(InnerSolver):
                         else np.zeros(sy_cond[:, 0, :].shape)
                     )
                     for sy_cond, par_edata_indices in zip(
-                        sy, par_edatas_indices
+                        sy, par_edatas_indices, strict=True
                     )
                 ]
                 ssigma_for_outer_parameter = [
@@ -238,7 +238,7 @@ class SemiquantInnerSolver(InnerSolver):
                         else np.zeros(ssigma_cond[:, 0, :].shape)
                     )
                     for ssigma_cond, par_edata_indices in zip(
-                        amici_ssigma, par_edatas_indices
+                        amici_ssigma, par_edatas_indices, strict=True
                     )
                 ]
 
@@ -802,7 +802,7 @@ def _calculate_residuals_for_group(
     """
     obj = 0
 
-    for y_k, z_k, n_k in zip(sim_all, measurements, n):
+    for y_k, z_k, n_k in zip(sim_all, measurements, n, strict=True):
         i = n_k - 1
         sum_s = 0
         sum_s = np.sum(s[:i])
@@ -829,7 +829,7 @@ def _calculate_residuals_gradient_for_group(
 
     gradient = np.zeros(N)
 
-    for y_k, z_k, n_k in zip(sim_all, measurements, n):
+    for y_k, z_k, n_k in zip(sim_all, measurements, n, strict=True):
         sum_s = 0
         i = n_k - 1  # just the iterator to go over the Jacobian array
         sum_s = np.sum(s[:i])
@@ -956,7 +956,7 @@ def get_spline_mapped_simulations(
     lower_trian = np.tril(np.ones((N, N)))
     xi = np.dot(lower_trian, s)
 
-    for y_k, n_k, index in zip(sim_all, n, range(len(sim_all))):
+    for y_k, n_k, index in zip(sim_all, n, range(len(sim_all)), strict=True):
         interval_index = n_k - 1
         if interval_index == 0 or interval_index == N:
             mapped_simulations[index] = xi[interval_index]
@@ -981,7 +981,7 @@ def calculate_inner_hessian(
 
     hessian = np.zeros((N, N))
 
-    for y_k, sigma_k, n_k in zip(sim_all, sigma, n):
+    for y_k, sigma_k, n_k in zip(sim_all, sigma, n, strict=True):
         sum_s = 0
         i = n_k - 1  # just the iterator to go over the Hessian matrix
         for j in range(i):
@@ -1012,7 +1012,9 @@ def calculate_dy_term(
     """Calculate the derivative of the objective function for one group with respect to the simulations."""
     df_dy = 0
 
-    for y_k, z_k, y_dot_k, n_k in zip(sim_all, measurements, sy_all, n):
+    for y_k, z_k, y_dot_k, n_k in zip(
+        sim_all, measurements, sy_all, n, strict=True
+    ):
         i = n_k - 1
         sum_s = np.sum(s[:i])
         if i > 0 and i < N:
@@ -1127,7 +1129,7 @@ def get_monotonicity_measure(measurement, simulation):
     ordered_simulation = [
         x
         for _, x in sorted(
-            zip(measurement, simulation), key=lambda pair: pair[0]
+            zip(measurement, simulation, strict=True), key=lambda pair: pair[0]
         )
     ]
     ordered_measurement = sorted(simulation)

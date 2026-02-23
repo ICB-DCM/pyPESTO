@@ -1,5 +1,3 @@
-from typing import Optional
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -12,8 +10,8 @@ from ..ensemble import Ensemble
 
 def ensemble_identifiability(
     ensemble: Ensemble,
-    ax: Optional[plt.Axes] = None,
-    size: Optional[tuple[float]] = (12, 6),
+    ax: plt.Axes | None = None,
+    size: tuple[float] | None = (12, 6),
 ):
     """
     Visualize identifiablity of parameter ensemble.
@@ -57,8 +55,8 @@ def ensemble_identifiability_lowlevel(
     lb_hit: np.ndarray,
     ub_hit: np.ndarray,
     both_hit: np.ndarray,
-    ax: Optional[plt.Axes] = None,
-    size: Optional[tuple[float]] = (16, 10),
+    ax: plt.Axes | None = None,
+    size: tuple[float] | None = (16, 10),
 ):
     """
     Low-level identifiablity routine.

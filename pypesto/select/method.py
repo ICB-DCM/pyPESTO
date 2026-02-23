@@ -1,9 +1,10 @@
 """Functionality related to using a PEtab Select model selection method."""
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum
-from typing import Any, Callable
+from enum import StrEnum
+from typing import Any
 
 import numpy as np
 import petab_select
@@ -24,7 +25,7 @@ from ..problem import Problem
 from .model_problem import TYPE_POSTPROCESSOR, ModelProblem
 
 
-class MethodSignalProceed(str, Enum):
+class MethodSignalProceed(StrEnum):
     """Indicators for how a model selection method should proceed."""
 
     # TODO move to PEtab Select?

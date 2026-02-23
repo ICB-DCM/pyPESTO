@@ -693,7 +693,7 @@ def get_sy_all(
     sy_all = []
     for inner_parameter in inner_parameters:
         for sy_i, mask_i, edata_idx in zip(
-            sy, inner_parameter.ixs, par_edata_idx
+            sy, inner_parameter.ixs, par_edata_idx, strict=True
         ):
             if edata_idx is not None:
                 sim_sy = sy_i[:, edata_idx, :][mask_i]
@@ -708,7 +708,7 @@ def get_sim_all(inner_parameters, sim: list[np.ndarray]) -> list:
     """Return model simulations for inner parameters."""
     sim_all = []
     for inner_parameter in inner_parameters:
-        for sim_i, mask_i in zip(sim, inner_parameter.ixs):
+        for sim_i, mask_i in zip(sim, inner_parameter.ixs, strict=True):
             sim_x = sim_i[mask_i]
             for sim_x_i in sim_x:
                 sim_all.append(sim_x_i)
@@ -738,7 +738,7 @@ def get_surrogate_all(
         upper_bound, lower_bound = get_bounds_for_category(
             inner_parameter, optimal_scaling_bounds, interval_gap, options
         )
-        for sim_i, mask_i in zip(sim, inner_parameter.ixs):
+        for sim_i, mask_i in zip(sim, inner_parameter.ixs, strict=True):
             y_sim = sim_i[mask_i]
             for y_sim_i in y_sim:
                 if lower_bound > y_sim_i:
@@ -889,7 +889,7 @@ def obj_surrogate_data(
         x_upper, x_lower = get_bounds_for_category(
             x, optimal_scaling_bounds, interval_gap, options
         )
-        for sim_i, mask_i in zip(sim, x.ixs):
+        for sim_i, mask_i in zip(sim, x.ixs, strict=True):
             y_sim = sim_i[mask_i]
             for y_sim_i in y_sim:
                 if x_lower > y_sim_i:
@@ -927,7 +927,7 @@ def grad_surrogate_data(
             x_lower = optimal_scaling_bounds[2 * x_category - 2]
             x_upper = optimal_scaling_bounds[2 * x_category - 1]
 
-            for sim_i, mask_i in zip(sim, x.ixs):
+            for sim_i, mask_i in zip(sim, x.ixs, strict=True):
                 y_sim = sim_i[mask_i]
                 for y_sim_i in y_sim:
                     if x_lower > y_sim_i:
@@ -947,7 +947,7 @@ def grad_surrogate_data(
             else:
                 x_lower = optimal_scaling_bounds[x_category - 2] + interval_gap
 
-            for sim_i, mask_i in zip(sim, x.ixs):
+            for sim_i, mask_i in zip(sim, x.ixs, strict=True):
                 y_sim = sim_i[mask_i]
                 for y_sim_i in y_sim:
                     if x_lower > y_sim_i and x_category != 1:
@@ -1106,11 +1106,11 @@ def calculate_censored_obj(
     obj = 0
     # Calculate the objective function for censored data.
     for cat_lb, cat_ub, cat_ub_par in zip(
-        cat_lb_values,
-        cat_ub_values,
-        category_upper_bounds,
+        cat_lb_values, cat_ub_values, category_upper_bounds, strict=True
     ):
-        for sim_i, sigma_i, mask_i in zip(sim, sigma, cat_ub_par.ixs):
+        for sim_i, sigma_i, mask_i in zip(
+            sim, sigma, cat_ub_par.ixs, strict=True
+        ):
             y_sim = sim_i[mask_i]
             if len(y_sim) == 0:
                 continue
@@ -1129,10 +1129,16 @@ def calculate_censored_obj(
 
     # Gather the simulation and sigma values for the quantitative data.
     quantitative_sim = np.concatenate(
-        [sim_i[mask_i] for sim_i, mask_i in zip(sim, quantitative_ixs)]
+        [
+            sim_i[mask_i]
+            for sim_i, mask_i in zip(sim, quantitative_ixs, strict=True)
+        ]
     )
     quantitative_sigma = np.concatenate(
-        [sigma_i[mask_i] for sigma_i, mask_i in zip(sigma, quantitative_ixs)]
+        [
+            sigma_i[mask_i]
+            for sigma_i, mask_i in zip(sigma, quantitative_ixs, strict=True)
+        ]
     )
 
     # Calculate the objective function for uncensored, quantitative data.
@@ -1193,11 +1199,11 @@ def calculate_censored_grad(
     # Gather the surrogate data, the simulation data
     # and the noise parameter arrays across categories.
     for cat_lb, cat_ub, cat_ub_par in zip(
-        cat_lb_values,
-        cat_ub_values,
-        category_upper_bounds,
+        cat_lb_values, cat_ub_values, category_upper_bounds, strict=True
     ):
-        for sim_i, sigma_i, mask_i in zip(sim, sigma, cat_ub_par.ixs):
+        for sim_i, sigma_i, mask_i in zip(
+            sim, sigma, cat_ub_par.ixs, strict=True
+        ):
             y_sim = sim_i[mask_i]
             if len(y_sim) == 0:
                 continue
@@ -1229,10 +1235,16 @@ def calculate_censored_grad(
 
     # Gather the simulation, sigma values and sensitivities for the quantitative data.
     quantitative_sim = np.concatenate(
-        [sim_i[mask_i] for sim_i, mask_i in zip(sim, quantitative_ixs)]
+        [
+            sim_i[mask_i]
+            for sim_i, mask_i in zip(sim, quantitative_ixs, strict=True)
+        ]
     )
     quantitative_sigma = np.concatenate(
-        [sigma_i[mask_i] for sigma_i, mask_i in zip(sigma, quantitative_ixs)]
+        [
+            sigma_i[mask_i]
+            for sigma_i, mask_i in zip(sigma, quantitative_ixs, strict=True)
+        ]
     )
     quantitative_sy = np.concatenate(
         [
@@ -1242,7 +1254,7 @@ def calculate_censored_grad(
                 else np.full(sy_i[:, 0, :][mask_i].shape, 0)
             )
             for sy_i, mask_i, edata_idx in zip(
-                sy, quantitative_ixs, par_edata_idx
+                sy, quantitative_ixs, par_edata_idx, strict=True
             )
         ]
     )
@@ -1254,7 +1266,7 @@ def calculate_censored_grad(
                 else np.full(ssigma_i[:, 0, :][mask_i].shape, 0)
             )
             for ssigma_i, mask_i, edata_idx in zip(
-                ssigma, quantitative_ixs, par_edata_idx
+                ssigma, quantitative_ixs, par_edata_idx, strict=True
             )
         ]
     )

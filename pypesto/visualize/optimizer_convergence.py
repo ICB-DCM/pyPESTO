@@ -1,5 +1,3 @@
-from typing import Optional
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -9,7 +7,7 @@ from ..result import Result
 
 def optimizer_convergence(
     result: Result,
-    ax: Optional[plt.Axes] = None,
+    ax: plt.Axes | None = None,
     xscale: str = "symlog",
     yscale: str = "log",
     size: tuple[float] = (18.5, 10.5),

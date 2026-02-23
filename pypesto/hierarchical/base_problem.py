@@ -207,7 +207,7 @@ class AmiciInnerProblem(InnerProblem):
         if len(self.data) != len(data):
             return False
 
-        for data0, data1 in zip(self.data, data):
+        for data0, data1 in zip(self.data, data, strict=True):
             if not np.array_equal(data0, data1, equal_nan=True):
                 return False
 

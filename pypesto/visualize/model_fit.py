@@ -46,13 +46,13 @@ logger = logging.getLogger(__name__)
 
 def visualize_optimized_model_fit(
     petab_problem: petab.Problem,
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     pypesto_problem: Problem,
     start_index: int = 0,
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
-) -> Union[matplotlib.axes.Axes, dict, list[matplotlib.axes.Axes], list[dict]]:
+) -> matplotlib.axes.Axes | dict | list[matplotlib.axes.Axes] | list[dict]:
     """
     Visualize the optimized model fit of a PEtab problem.
 
@@ -108,9 +108,7 @@ def visualize_optimized_model_fit(
                 amici_models.append(objective.amici_model)
                 # objective expects full vector here
                 objective_results.append(objective(x, return_dict=True))
-            elif isinstance(
-                objective, Union[NegLogParameterPriors, NegLogPriors]
-            ):
+            elif isinstance(objective, NegLogParameterPriors | NegLogPriors):
                 # priors are not used for simulation
                 pass
             else:
@@ -130,7 +128,9 @@ def visualize_optimized_model_fit(
         )
 
     axes_list, simulation_df_list = [], []
-    for amici_model, objective_result in zip(amici_models, objective_results):
+    for amici_model, objective_result in zip(
+        amici_models, objective_results, strict=True
+    ):
         # get simulation results
         simulation_df = rdatas_to_simulation_df(
             objective_result[RDATAS],
@@ -182,7 +182,7 @@ def visualize_optimized_model_fit(
     if return_dict:
         dict_list = []
         for axes, simulation_df, objective_result in zip(
-            axes_list, simulation_df_list, objective_results
+            axes_list, simulation_df_list, objective_results, strict=True
         ):
             dict_list.append(
                 {
@@ -200,16 +200,16 @@ def visualize_optimized_model_fit(
 
 
 def time_trajectory_model(
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     problem: Problem = None,
     # TODO: conditions: Union[str, Sequence[str]] = None,
-    timepoints: Union[np.ndarray, Sequence[np.ndarray]] = None,
+    timepoints: np.ndarray | Sequence[np.ndarray] = None,
     n_timepoints: int = 1000,
     start_index: int = 0,
-    state_ids: Union[str, Sequence[str]] = None,
-    state_names: Union[str, Sequence[str]] = None,
-    observable_ids: Union[str, Sequence[str]] = None,
-) -> Union[matplotlib.axes.Axes, None]:
+    state_ids: str | Sequence[str] = None,
+    state_names: str | Sequence[str] = None,
+    observable_ids: str | Sequence[str] = None,
+) -> matplotlib.axes.Axes | None:
     """
     Visualize the time trajectory of the model with given timepoints.
 
@@ -275,7 +275,7 @@ def time_trajectory_model(
 
 
 def _get_simulation_rdatas(
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     problem: Problem,
     start_index: int = 0,
     simulation_timepoints: np.ndarray = None,
@@ -314,7 +314,11 @@ def _get_simulation_rdatas(
     if isinstance(problem, HierarchicalProblem):
         # get parameter dictionary
         x_dct = dict(
-            zip(problem.x_names, result.optimize_result.list[start_index].x)
+            zip(
+                problem.x_names,
+                result.optimize_result.list[start_index].x,
+                strict=True,
+            )
         )
 
         # evaluate objective with return dict = True to get inner parameters
@@ -324,7 +328,7 @@ def _get_simulation_rdatas(
 
         # update parameter dictionary with inner parameters
         inner_parameter_dict = dict(
-            zip(problem.inner_x_names, ret["inner_parameters"])
+            zip(problem.inner_x_names, ret["inner_parameters"], strict=True)
         )
         x_dct.update(inner_parameter_dict)
 
@@ -372,7 +376,7 @@ def _time_trajectory_model_with_states(
     rdatas: Union["asd.ReturnData", Sequence["asd.ReturnData"]],
     state_ids: Sequence[str],
     state_names: Sequence[str],
-    observable_ids: Union[str, Sequence[str]],
+    observable_ids: str | Sequence[str],
 ):
     """
     Visualizes both, states and observables.

@@ -241,7 +241,9 @@ class InnerCalculatorCollector(AmiciCalculator):
                     condition_mask[inner_par.ixs[cond_idx]] = False
 
         # Put to False all entries that have a nan value in the edata
-        for condition_mask, edata in zip(quantitative_data_mask, edatas):
+        for condition_mask, edata in zip(
+            quantitative_data_mask, edatas, strict=True
+        ):
             condition_mask[np.isnan(edata)] = False
 
         # If there is no quantitative data, return None
@@ -558,7 +560,9 @@ def calculate_quantitative_result(
     edatas = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
     # calculate the function value
-    for rdata, edata, mask in zip(rdatas, edatas, quantitative_data_mask):
+    for rdata, edata, mask in zip(
+        rdatas, edatas, quantitative_data_mask, strict=True
+    ):
         data_i = edata[mask]
         sim_i = rdata[AMICI_Y][mask]
         sigma_i = rdata[AMICI_SIGMAY][mask]
@@ -583,6 +587,7 @@ def calculate_quantitative_result(
             edatas,
             quantitative_data_mask,
             parameter_map_sim_var,
+            strict=True,
         ):
             data_i = edata[mask]
             sim_i = rdata[AMICI_Y][mask]

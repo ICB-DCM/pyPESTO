@@ -136,7 +136,9 @@ class OrdinalProblem(AmiciInnerProblem):
                     [
                         data_i[mask_i]
                         for data_i, mask_i in zip(
-                            self.data, self.groups[group][QUANTITATIVE_IXS]
+                            self.data,
+                            self.groups[group][QUANTITATIVE_IXS],
+                            strict=True,
                         )
                     ]
                 )
@@ -469,7 +471,9 @@ class OrdinalProblem(AmiciInnerProblem):
 
         # Set to False for all censored datapoints.
         for x in xs:
-            for ixs_i, quantitative_ixs_i in zip(x.ixs, quantitative_ixs):
+            for ixs_i, quantitative_ixs_i in zip(
+                x.ixs, quantitative_ixs, strict=True
+            ):
                 quantitative_ixs_i[ixs_i] = False
 
         return quantitative_ixs
@@ -540,7 +544,9 @@ def optimal_scaling_inner_parameters_from_measurement_df(
 
         if all(observable_df[MEASUREMENT_TYPE] == ORDINAL):
             # Add optimal scaling parameters for ordinal measurements.
-            for par_type, par_estimate in zip(par_types, estimate):
+            for par_type, par_estimate in zip(
+                par_types, estimate, strict=True
+            ):
                 for _, row in observable_df.iterrows():
                     par_id = f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{int(row[MEASUREMENT_CATEGORY])}"
 

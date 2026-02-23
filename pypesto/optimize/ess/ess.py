@@ -331,7 +331,7 @@ class ESSOptimizer:
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
         )
         # initialize global best from initial refset
-        for x, fx in zip(self.refset.x, self.refset.fx):
+        for x, fx in zip(self.refset.x, self.refset.fx, strict=True):
             self._maybe_update_global_best(x, fx)
 
     def minimize(
