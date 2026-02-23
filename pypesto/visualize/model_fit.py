@@ -448,7 +448,7 @@ def _time_trajectory_model_with_states(
 def _time_trajectory_model_without_states(
     model: AmiciModel,
     rdatas: Union["asd.ReturnData", Sequence["asd.ReturnData"]],
-    observable_ids: Union[str, Sequence[str]],
+    observable_ids: str | Sequence[str],
 ):
     """
     Visualize both, states and observables.
