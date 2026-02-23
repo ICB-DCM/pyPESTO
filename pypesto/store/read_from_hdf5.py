@@ -285,11 +285,13 @@ class ProfileResultHDF5Reader:
         """Read HDF5 result file and return pyPESTO result object."""
         profiling_list = []
         with h5py.File(self.storage_filename, "r") as f:
-            for profile_id in f["/profiling"]:
+            for profile_id in sorted(f["/profiling"], key=int):
                 profiling_list.append(
                     [None for _ in f[f"/profiling/{profile_id}"]]
                 )
-                for parameter_id in f[f"/profiling/{profile_id}"]:
+                for parameter_id in sorted(
+                    f[f"/profiling/{profile_id}"], key=int
+                ):
                     if f[f"/profiling/{profile_id}/{parameter_id}"].attrs[
                         "IsNone"
                     ]:
