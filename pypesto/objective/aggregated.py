@@ -116,7 +116,9 @@ class AggregatedObjective(ObjectiveBase):
                 "The length of `kwargs_list` must match the number of "
                 "objectives you are aggregating."
             )
-        for objective_, objective_kwargs in zip(self._objectives, kwargs_list):
+        for objective_, objective_kwargs in zip(
+            self._objectives, kwargs_list, strict=True
+        ):
             if (
                 "return_dict"
                 in inspect.signature(objective_.call_unprocessed).parameters
@@ -139,7 +141,9 @@ class AggregatedObjective(ObjectiveBase):
                     **kwargs,
                     **cur_kwargs,
                 )
-                for objective, cur_kwargs in zip(self._objectives, kwargs_list)
+                for objective, cur_kwargs in zip(
+                    self._objectives, kwargs_list, strict=True
+                )
             ]
         )
 

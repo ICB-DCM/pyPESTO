@@ -1,7 +1,7 @@
 """Manage all components of a pyPESTO model selection problem."""
 
 import warnings
-from typing import Any, Optional
+from typing import Any
 
 import petab_select
 from petab_select import Model, Models
@@ -39,7 +39,7 @@ class Problem:
     def __init__(
         self,
         petab_select_problem: petab_select.Problem,
-        model_postprocessor: Optional[TYPE_POSTPROCESSOR] = None,
+        model_postprocessor: TYPE_POSTPROCESSOR | None = None,
         model_problem_options: dict = None,
     ):
         self.petab_select_problem = petab_select_problem
@@ -101,7 +101,7 @@ class Problem:
 
     def update_with_newly_calibrated_models(
         self,
-        newly_calibrated_models: Optional[Models] = None,
+        newly_calibrated_models: Models | None = None,
     ) -> None:
         """Update the state of the problem with newly calibrated models.
 

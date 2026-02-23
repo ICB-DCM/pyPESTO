@@ -1,6 +1,5 @@
 import warnings
 from collections.abc import Sequence
-from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -46,7 +45,7 @@ def visualize_estimated_observable_mapping(
     pypesto_result: Result,
     pypesto_problem: HierarchicalProblem,
     start_index: int = 0,
-    axes: Optional[plt.Axes] = None,
+    axes: plt.Axes | None = None,
     **kwargs,
 ):
     """Visualize the estimated observable mapping for relative and semi-quantitative observables.
@@ -165,8 +164,8 @@ def plot_linear_observable_mappings_from_pypesto_result(
     pypesto_result: Result,
     pypesto_problem: HierarchicalProblem,
     start_index=0,
-    axes: Optional[plt.Axes] = None,
-    rel_and_semiquant_obs_indices: Optional[list[int]] = None,
+    axes: plt.Axes | None = None,
+    rel_and_semiquant_obs_indices: list[int] | None = None,
     **kwargs,
 ):
     """Plot the linear observable mappings from a pyPESTO result.
@@ -259,6 +258,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         zip(
             pypesto_problem.objective.x_ids,
             pypesto_result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
 
@@ -298,6 +298,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         zip(
             pypesto_problem.inner_x_names,
             pypesto_result.optimize_result.list[start_index][INNER_PARAMETERS],
+            strict=True,
         )
     )
 
@@ -319,7 +320,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
 
     # plot the linear observable mapping for each relative_observable_id
     for observable_index, observable_id in zip(
-        relative_observable_indices, relative_observable_ids
+        relative_observable_indices, relative_observable_ids, strict=True
     ):
         # Get the ax for the current observable.
         if rel_and_semiquant_obs_indices is not None:
@@ -451,6 +452,7 @@ def plot_splines_from_pypesto_result(
         zip(
             pypesto_result.problem.objective.x_ids,
             pypesto_result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
 
@@ -529,8 +531,8 @@ def plot_splines_from_inner_result(
     results: list[dict],
     sim: list[np.ndarray],
     observable_ids=None,
-    axes: Optional[plt.Axes] = None,
-    rel_and_semiquant_obs_indices: Optional[list[int]] = None,
+    axes: plt.Axes | None = None,
+    rel_and_semiquant_obs_indices: list[int] | None = None,
     **kwargs,
 ):
     """Plot the estimated spline approximations from inner results.
@@ -594,7 +596,7 @@ def plot_splines_from_inner_result(
             axes = axes.flatten()
 
     # for each result and group, plot the inner solution
-    for result, group in zip(results, inner_problem.groups):
+    for result, group in zip(results, inner_problem.groups, strict=True):
         if rel_and_semiquant_obs_indices is not None:
             ax_index = rel_and_semiquant_obs_indices.index(group - 1)
         else:
@@ -716,11 +718,11 @@ def _calculate_optimal_regularization(
 
 
 def _add_spline_mapped_simulations_to_model_fit(
-    result: Union[Result, Sequence[Result]],
+    result: Result | Sequence[Result],
     pypesto_problem: Problem,
     start_index: int = 0,
-    axes: Optional[plt.Axes] = None,
-) -> Union[matplotlib.axes.Axes, None]:
+    axes: plt.Axes | None = None,
+) -> matplotlib.axes.Axes | None:
     """Visualize the spline optimized model fit.
 
     Adds the spline-mapped simulation to the axes given by
@@ -739,6 +741,7 @@ def _add_spline_mapped_simulations_to_model_fit(
         zip(
             pypesto_problem.objective.x_ids,
             result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
     x_dct.update(
@@ -797,7 +800,9 @@ def _add_spline_mapped_simulations_to_model_fit(
     # Get the observable ids.
     observable_ids = amici_model.getObservableIds()
 
-    for inner_result, group in zip(inner_results, inner_problem.groups):
+    for inner_result, group in zip(
+        inner_results, inner_problem.groups, strict=True
+    ):
         observable_id = observable_ids[group - 1]
         # Get the ax for the current observable.
         ax = [
@@ -864,7 +869,7 @@ def _add_spline_mapped_simulations_to_model_fit(
 
 def _obtain_regularization_for_start(
     pypesto_result: Result, start_index=0
-) -> Optional[float]:
+) -> float | None:
     """Obtain the regularization for the start index.
 
     Calculates and returns the spline linear regularization
@@ -886,6 +891,7 @@ def _obtain_regularization_for_start(
         zip(
             pypesto_result.problem.objective.x_ids,
             pypesto_result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
 
@@ -947,7 +953,7 @@ def _obtain_regularization_for_start(
     reg_term_sum = 0
 
     # for each result and group, plot the inner solution
-    for result, group in zip(inner_results, inner_problem.groups):
+    for result, group in zip(inner_results, inner_problem.groups, strict=True):
         # For each group get the inner parameters and simulation
         s = result[SCIPY_X]
         simulation = inner_problem.groups[group][CURRENT_SIMULATION]

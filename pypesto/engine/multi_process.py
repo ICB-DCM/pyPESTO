@@ -3,7 +3,7 @@
 import logging
 import multiprocessing
 import os
-from typing import Any, Union
+from typing import Any
 
 import cloudpickle as pickle
 
@@ -39,8 +39,8 @@ class MultiProcessEngine(Engine):
 
     def __init__(
         self,
-        n_procs: Union[int, None] = None,
-        method: Union[str, None] = None,
+        n_procs: int | None = None,
+        method: str | None = None,
     ):
         super().__init__()
 

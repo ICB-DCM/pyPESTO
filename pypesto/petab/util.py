@@ -138,6 +138,7 @@ class PetabStartpoints(CheckedStartpoints):
                 petab.parameters.get_priors_from_df(
                     self._parameter_df, mode=petab.INITIALIZATION
                 ),
+                strict=True,
             )
         )
 

@@ -621,9 +621,9 @@ def test_thermodynamic_integration():
 
     # compute evidence
     evidence = quad(
-        lambda x: 1
-        / (problem.ub[0] - problem.lb[0])
-        * np.exp(gaussian_llh(x)),
+        lambda x: (
+            1 / (problem.ub[0] - problem.lb[0]) * np.exp(gaussian_llh(x))
+        ),
         a=problem.lb[0],
         b=problem.ub[0],
     )
@@ -672,7 +672,7 @@ def test_bridge_sampling():
         [
             {
                 "index": 0,
-                "density_fun": lambda x: (1 / (10 + 10)),
+                "density_fun": lambda x: 1 / (10 + 10),
                 "density_dx": lambda x: 0,
                 "density_ddx": lambda x: 0,
             },

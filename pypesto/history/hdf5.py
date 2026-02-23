@@ -5,7 +5,6 @@ import time
 from collections.abc import Sequence
 from functools import wraps
 from pathlib import Path
-from typing import Union
 
 import h5py
 import numpy as np
@@ -108,15 +107,15 @@ class Hdf5History(HistoryBase):
     def __init__(
         self,
         id: str,
-        file: Union[str, Path],
-        options: Union[HistoryOptions, dict, None] = None,
+        file: str | Path,
+        options: HistoryOptions | dict | None = None,
     ):
         super().__init__(options=options)
         self.id: str = id
         self.file: str = str(file)
 
         # filled during file access
-        self._f: Union[h5py.File, None] = None
+        self._f: h5py.File | None = None
 
         # to check whether the trace can be edited
         self.editable: bool = self._editable()
@@ -152,8 +151,8 @@ class Hdf5History(HistoryBase):
     @staticmethod
     def load(
         id: str,
-        file: Union[str, Path],
-        options: Union[HistoryOptions, dict] = None,
+        file: str | Path,
+        options: HistoryOptions | dict = None,
     ) -> "Hdf5History":
         """Load the History object from memory."""
         history = Hdf5History(id=id, file=file, options=options)
@@ -161,7 +160,7 @@ class Hdf5History(HistoryBase):
             history.recover_options(file)
         return history
 
-    def recover_options(self, file: Union[str, Path]):
+    def recover_options(self, file: str | Path):
         """Recover options when loading the hdf5 history from memory.
 
         Done by testing which entries were recorded.
@@ -373,7 +372,7 @@ class Hdf5History(HistoryBase):
     def _get_hdf5_entries(
         self,
         entry_id: str,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
     ) -> Sequence:
         """
         Get entries for field `entry_id` from HDF5 file, for indices `ix`.
@@ -411,50 +410,50 @@ class Hdf5History(HistoryBase):
 
     @trace_wrap
     def get_x_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[np.ndarray] | np.ndarray:
         """See :meth:`HistoryBase.get_x_trace`."""
         return self._get_hdf5_entries(X, ix)
 
     @trace_wrap
     def get_fval_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """See :meth:`HistoryBase.get_fval_trace`."""
         return self._get_hdf5_entries(FVAL, ix)
 
     @trace_wrap
     def get_grad_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_grad_trace`."""
         return self._get_hdf5_entries(GRAD, ix)
 
     @trace_wrap
     def get_hess_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_hess_trace`."""
         return self._get_hdf5_entries(HESS, ix)
 
     @trace_wrap
     def get_res_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_res_trace`."""
         return self._get_hdf5_entries(RES, ix)
 
     @trace_wrap
     def get_sres_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_sres_trace`."""
         return self._get_hdf5_entries(SRES, ix)
 
     @trace_wrap
     def get_time_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """See :meth:`HistoryBase.get_time_trace`."""
         return self._get_hdf5_entries(TIME, ix)
 
