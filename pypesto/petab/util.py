@@ -6,8 +6,10 @@ try:
     import petab.v1 as petab
     from petab.v1.C import (
         ESTIMATE,
+        LIN,
         NOISE_PARAMETERS,
         OBSERVABLE_ID,
+        PARAMETER_SCALE_UNIFORM,
     )
 except ImportError:
     petab = None
@@ -140,6 +142,7 @@ class PetabStartpoints(CheckedStartpoints):
                     petab.parameters.get_priors_from_df(
                         parameter_df, mode=petab.INITIALIZATION
                     ),
+                    strict=True,
                 )
             )
         else:

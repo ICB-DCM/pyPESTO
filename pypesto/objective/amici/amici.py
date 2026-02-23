@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     try:
         import amici
         import amici.petab.petab_importer
-        import pandas as pd
         from amici.petab.parameter_mapping import ParameterMapping
     except ImportError:
         pass
@@ -705,7 +704,7 @@ class AmiciObjective(ObjectiveBase):
 
         id_to_val = {
             self.x_ids[x_idx]: x_val
-            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals)
+            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals, strict=True)
         }
         for condition_mapping in self.parameter_mapping:
             for (
