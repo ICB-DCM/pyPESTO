@@ -32,6 +32,7 @@ nbs_1=(
   'getting_started.ipynb'
   'roadrunner.ipynb'
   'gradient_check.ipynb'
+  'example_amici_splines_swameye/example_amici_splines_Swameye2003.ipynb'
 )
 
 # Sampling notebooks

@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 try:
-    import amici
-    from amici.petab.conditions import fill_in_parameters
+    import amici.sim.sundials as asd
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
     from petab.v1.C import OBSERVABLE_ID
 
     from ..hierarchical.ordinal.calculator import OrdinalCalculator
@@ -97,7 +97,7 @@ def plot_categories_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = asd.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -105,7 +105,7 @@ def plot_categories_from_pypesto_result(
     )
 
     # If any amici simulation failed, raise warning and return None.
-    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+    if any(rdata.status != asd.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
             "solutions.",
@@ -117,7 +117,7 @@ def plot_categories_from_pypesto_result(
     sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
     sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
     timepoints = [rdata[AMICI_T] for rdata in inner_rdatas]
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
     condition_ids = [edata.id for edata in edatas]
     petab_condition_ordering = list(petab_problem.condition_df.index)
 
