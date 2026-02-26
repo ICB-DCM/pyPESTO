@@ -254,7 +254,7 @@ def test_jax(max_sensi_order, integrated, enable_x64, fix_parameters):
         # also need to account for roundoff errors in input, so we
         # can't use rtol = 1e-8 for 32bit
         rtol = 1e-16 if enable_x64 else 1e-4
-        for x, rref, rj in zip(xx, rvals_ref, rvals_jax):
+        for x, rref, rj in zip(xx, rvals_ref, rvals_jax, strict=True):
             assert isinstance(rj, jnp.ndarray)
             if max_sensi_order == 0:
                 np.testing.assert_allclose(

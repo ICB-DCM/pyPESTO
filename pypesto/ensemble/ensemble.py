@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -372,7 +372,7 @@ class EnsemblePrediction:
                     tmp_output, percentiles_list, tmp_weights, tmp_sigmas
                 )
             else:
-                output_summary = {i_key: None for i_key in cond_lists.keys()}
+                output_summary = dict.fromkeys(cond_lists.keys())
 
             # handle output sensitivities
             if tmp_output_sensi is not None:
@@ -380,9 +380,7 @@ class EnsemblePrediction:
                     tmp_output_sensi, percentiles_list
                 )
             else:
-                output_sensi_summary = {
-                    i_key: None for i_key in cond_lists.keys()
-                }
+                output_sensi_summary = dict.fromkeys(cond_lists.keys())
 
             # create some PredictionConditionResult to have an easier creation
             # of PredictionResults for the summaries later on

@@ -1,6 +1,6 @@
 """Interface to Julia via pyjulia."""
 
-from typing import Callable, Union
+from collections.abc import Callable
 
 import numpy as np
 
@@ -128,7 +128,7 @@ class JuliaObjective(Objective):
         fun, grad, hess, res, sres = self._get_callables()
         super().__init__(fun=fun, grad=grad, hess=hess, res=res, sres=sres)
 
-    def get(self, name: str, as_array: bool = False) -> Union[Callable, None]:
+    def get(self, name: str, as_array: bool = False) -> Callable | None:
         """Get variable from Julia module.
 
         Use this function to access any variable from the Julia module.

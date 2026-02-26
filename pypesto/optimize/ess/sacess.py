@@ -8,13 +8,14 @@ import logging.handlers
 import multiprocessing
 import os
 import time
+from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass
 from math import ceil, sqrt
 from multiprocessing import get_context
 from multiprocessing.managers import SyncManager
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from uuid import uuid1
 from warnings import warn
 
@@ -244,6 +245,19 @@ class SacessOptimizer:
             included. Additional results may be included - this is subject to
             change.
         """
+        if problem.x_guesses.shape[0]:
+            # We'll use problem.startpoint_method to sample random points
+            #  later on. Depending on the startpoint method, this will return
+            #  the provided guesses, meaning that we'll always get the same
+            #  points. This means, we won't explore the parameter space, or
+            #  potentially even get stuck if the provided guesses are not
+            #  evaluable.
+            raise ValueError(
+                "Providing startpoints in `problem.x_guesses` "
+                f"is not supported by {self.__class__.__name__}. "
+                "Unset `problem.x_guesses`."
+            )
+
         if startpoint_method is not None:
             warn(
                 "Passing `startpoint_method` directly is deprecated, "

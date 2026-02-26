@@ -4,7 +4,7 @@ Constants
 Package-wide consistent constant definitions.
 """
 
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Literal
 
 ###############################################################################
@@ -97,7 +97,7 @@ PARAMETER_TYPE = "parameterType"
 RELATIVE = "relative"
 
 
-class InnerParameterType(str, Enum):
+class InnerParameterType(StrEnum):
     """Specifies different inner parameter types."""
 
     OFFSET = "offset"

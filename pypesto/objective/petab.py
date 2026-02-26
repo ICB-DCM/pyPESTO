@@ -53,7 +53,7 @@ class PetabSimulatorObjective(ObjectiveBase):
         x:
             Parameter vector for optimization.
         """
-        x_dict = OrderedDict(zip(self._x_names, x))
+        x_dict = OrderedDict(zip(self._x_names, x, strict=True))
         x_unscaled = self.petab_problem.unscale_parameters(x_dict)
         par_df = self.petab_problem.parameter_df
         par_df["nominalValue"] = par_df.index.map(x_unscaled)

@@ -1,6 +1,6 @@
 """ReferenceSet functionality for scatter search."""
 
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -29,8 +29,8 @@ class RefSet:
         self,
         dim: int,
         evaluator: FunctionEvaluator,
-        x: Optional[np.ndarray] = None,
-        fx: Optional[np.ndarray] = None,
+        x: np.ndarray | None = None,
+        fx: np.ndarray | None = None,
     ):
         """Construct.
 
