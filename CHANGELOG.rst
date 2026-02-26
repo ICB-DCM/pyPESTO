@@ -6,6 +6,22 @@ Release notes
 ..........
 
 
+0.5.9 (2026-02-26)
+------------------
+
+- Optimization
+    - Support walltime limit in ScipyOptimizer (#1671)
+    - Adding wall time limit option for CMAOptimizer (#1670)
+    - Fix ipopt wall time limit (#1674)
+    - Scatter search: refuse Problem with x_guesses (#1677)
+- Profiling
+    - Lexiographic order in parameter profiles (#1683)
+- Select
+    - Set optimal point to fixed vals if no parameters are estimated (#1685)
+- Visualize
+    - Plot scatter points in reverse order to ensure that the best points are plotted on top (#1680)
+
+
 0.5.8 (2025-12-18)
 ------------------
 
