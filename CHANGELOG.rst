@@ -9,8 +9,6 @@ Release notes
 0.5.9 (2026-02-26)
 ------------------
 
-- Documentation
-    - Update references (#1655)
 - Optimization
     - Support walltime limit in ScipyOptimizer (#1671)
     - Adding wall time limit option for CMAOptimizer (#1670)
