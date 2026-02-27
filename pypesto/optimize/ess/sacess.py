@@ -176,6 +176,15 @@ class SacessOptimizer:
         options:
             Further optimizer hyperparameters, see :class:`SacessOptions`.
         """
+        warn(
+            "Using pypesto.optimize.ess.SacessOptimizer is deprecated "
+            "and will be removed in a future release. "
+            "Use pyscat.SacessOptimizer instead "
+            "(https://github.com/ICB-DCM/pyscat/, `pip install pyscat`).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if (num_workers is None and ess_init_args is None) or (
             num_workers is not None and ess_init_args is not None
         ):
