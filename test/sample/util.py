@@ -35,7 +35,7 @@ def gaussian_llh(x):
 
 def gaussian_nllh_grad(x):
     """Negative log-likelihood gradient for Gaussian."""
-    return np.array([((x - MU) / (SIGMA**2))])
+    return (x - MU) / (SIGMA**2)
 
 
 def gaussian_nllh_hess(x):
@@ -50,6 +50,19 @@ def gaussian_problem():
         return -gaussian_llh(x)
 
     objective = pypesto.Objective(fun=nllh)
+    problem = pypesto.Problem(
+        objective=objective, lb=LB_GAUSSIAN, ub=UB_GAUSSIAN
+    )
+    return problem
+
+
+def gaussian_problem_with_grad():
+    """Defines a simple Gaussian problem."""
+
+    def nllh(x):
+        return -gaussian_llh(x)
+
+    objective = pypesto.Objective(fun=nllh, grad=gaussian_nllh_grad)
     problem = pypesto.Problem(
         objective=objective, lb=LB_GAUSSIAN, ub=UB_GAUSSIAN
     )

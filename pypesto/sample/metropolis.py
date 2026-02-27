@@ -45,6 +45,7 @@ class MetropolisSampler(InternalSampler):
         self.trace_neglogpost: Sequence[float] | None = None
         self.trace_neglogprior: Sequence[float] | None = None
         self.temper_lpost: bool = False
+        self._current_x_grad: Union[np.ndarray] = np.nan
 
     @classmethod
     def default_options(cls):
@@ -110,7 +111,7 @@ class MetropolisSampler(InternalSampler):
         Propose new parameter, evaluate and check whether to accept.
         """
         # propose step
-        x_new: np.ndarray = self._propose_parameter(x)
+        x_new, x_new_grad = self._propose_parameter(x, beta=beta)
 
         # check if step lies within bounds
         if any(x_new < self.problem.lb) or any(x_new > self.problem.ub):
@@ -150,6 +151,16 @@ class MetropolisSampler(InternalSampler):
             # log acceptance probability (temper log posterior)
             log_p_acc = min(beta * (lpost_new - lpost), 0)
 
+        # This accounts for an asymmetric proposal distribution
+        log_q_forward = self._compute_transition_log_prob(
+            x, x_new, beta * self._current_x_grad
+        )
+        log_q_backward = self._compute_transition_log_prob(
+            x_new, x, beta * x_new_grad
+        )
+        proposal_correction = log_q_backward - log_q_forward
+        log_p_acc = min(log_p_acc + proposal_correction, 0)
+
         # flip a coin
         u = np.random.uniform(0, 1)
 
@@ -159,6 +170,7 @@ class MetropolisSampler(InternalSampler):
             x = x_new
             lpost = lpost_new
             lprior = lprior_new
+            self._current_x_grad = x_new_grad
 
         # update proposal
         self._update_proposal(
@@ -167,15 +179,27 @@ class MetropolisSampler(InternalSampler):
 
         return x, lpost, lprior
 
-    def _propose_parameter(self, x: np.ndarray):
+    def _propose_parameter(self, x: np.ndarray, beta: float):
         """Propose a step."""
         x_new: np.ndarray = x + self.options["std"] * np.random.randn(len(x))
-        return x_new
+        return x_new, np.nan  # no gradient needed
 
     def _update_proposal(
         self, x: np.ndarray, lpost: float, log_p_acc: float, n_sample_cur: int
     ):
         """Update the proposal density. Default: Do nothing."""
+
+    def _compute_transition_log_prob(
+        self,
+        x_from: np.ndarray,
+        x_to: np.ndarray,
+        x_from_grad: Union[np.ndarray, None],
+    ):
+        """Compute the transition log probability for symmetric proposal.
+
+        For a symmetric proposal distribution, this is zero.
+        """
+        return 0.0
 
     def get_last_sample(self) -> InternalSample:
         """Get the last sample in the chain.
