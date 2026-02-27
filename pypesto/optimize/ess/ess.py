@@ -199,6 +199,15 @@ class ESSOptimizer:
             RefSet, or just the local search results and the overall best
             parameters.
         """
+        warn(
+            "Using pypesto.optimize.ess.ESSOptimizer is deprecated "
+            "and will be removed in a future release. "
+            "Use pyscat.ESSOptimizer instead "
+            "(https://github.com/ICB-DCM/pyscat/, `pip install pyscat`).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
             raise ValueError(
