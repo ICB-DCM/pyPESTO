@@ -40,12 +40,18 @@ if TYPE_CHECKING:
 
     try:
         import amici
+        import amici.petab.petab_importer
         from amici.petab.parameter_mapping import ParameterMapping
     except ImportError:
         pass
+try:
+    import amici.sim.sundials as asd
+    from amici.importers.petab.v1.parameter_mapping import ParameterMapping
+except ImportError:
+    pass
 
-AmiciModel = Union["amici.Model", "amici.ModelPtr"]
-AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
+AmiciModel = Union["asd.Model", "asd.ModelPtr"]
+AmiciSolver = Union["asd.Solver", "asd.SolverPtr"]
 
 
 class AmiciObjectBuilder(abc.ABC):
@@ -65,7 +71,7 @@ class AmiciObjectBuilder(abc.ABC):
         """Create an AMICI solver."""
 
     @abc.abstractmethod
-    def create_edatas(self, model: AmiciModel) -> Sequence[amici.ExpData]:
+    def create_edatas(self, model: AmiciModel) -> Sequence[asd.ExpData]:
         """Create AMICI experimental data."""
 
 
@@ -78,7 +84,7 @@ class AmiciObjective(ObjectiveBase):
         self,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: Sequence[amici.ExpData] | amici.ExpData,
+        edatas: Sequence[asd.ExpData] | asd.ExpData,
         max_sensi_order: int | None = None,
         x_ids: Sequence[str] | None = None,
         x_names: Sequence[str] | None = None,
@@ -88,7 +94,7 @@ class AmiciObjective(ObjectiveBase):
         fim_for_hess: bool | None = True,
         amici_object_builder: AmiciObjectBuilder | None = None,
         calculator: AmiciCalculator | InnerCalculatorCollector | None = None,
-        amici_reporting: amici.RDataReporting | None = None,
+        amici_reporting: asd.RDataReporting | None = None,
     ):
         """
         Initialize objective.
@@ -113,7 +119,7 @@ class AmiciObjective(ObjectiveBase):
         parameter_mapping:
             Mapping of optimization parameters to model parameters. Format
             as created by
-            `amici.petab.parameter_mapping.create_parameter_mapping`.
+            `amici.importers.petab.v1.parameter_mapping.create_parameter_mapping`.
             The default is just to assume that optimization and simulation
             parameters coincide.
         guess_steadystate:
@@ -147,15 +153,17 @@ class AmiciObjective(ObjectiveBase):
         if amici is None:
             raise ImportError(
                 "This objective requires an installation of amici "
-                "(https://github.com/icb-dcm/amici). "
+                "(https://github.com/AMICI-dev/AMICI). "
                 "Install via `pip3 install amici`."
             )
+
+        import amici.sim.sundials as asd
 
         self.amici_model = amici_model.clone()
         self.amici_solver = amici_solver.clone()
 
         # make sure the edatas are a list of edata objects
-        if isinstance(edatas, amici.amici.ExpData):
+        if isinstance(edatas, asd.ExpData):
             edatas = [edatas]
 
         # set the experimental data container
@@ -169,7 +177,7 @@ class AmiciObjective(ObjectiveBase):
         # optimization parameter ids
         if x_ids is None:
             # use model parameter ids as ids
-            x_ids = list(self.amici_model.getParameterIds())
+            x_ids = list(self.amici_model.get_free_parameter_ids())
         self.x_ids = x_ids
 
         # mapping of parameters
@@ -204,8 +212,8 @@ class AmiciObjective(ObjectiveBase):
 
         if (
             self.guess_steadystate is not False
-            and self.amici_model.getSteadyStateSensitivityMode()
-            == amici.SteadyStateSensitivityMode.integrationOnly
+            and self.amici_model.get_steady_state_sensitivity_mode()
+            == asd.SteadyStateSensitivityMode.integrationOnly
         ):
             if self.guess_steadystate:
                 raise ValueError(
@@ -226,7 +234,7 @@ class AmiciObjective(ObjectiveBase):
                 "data": {
                     iexp: {}
                     for iexp, edata in enumerate(self.edatas)
-                    if len(edata.fixedParametersPreequilibration)
+                    if len(edata.fixed_parameters_pre_equilibration)
                 },
             }
         # optimization parameter names
@@ -252,7 +260,7 @@ class AmiciObjective(ObjectiveBase):
         """Return basic information of the objective configuration."""
         info = super().get_config()
         info["x_names"] = self.x_names
-        info["model_name"] = self.amici_model.getName()
+        info["model_name"] = self.amici_model.get_name()
         info["solver"] = str(type(self.amici_solver))
         info["sensi_order"] = self.max_sensi_order
 
@@ -292,8 +300,6 @@ class AmiciObjective(ObjectiveBase):
         self.calculator.initialize()
 
     def __deepcopy__(self, memodict: dict = None) -> AmiciObjective:
-        import amici
-
         other = self.__class__.__new__(self.__class__)
 
         for key in set(self.__dict__.keys()) - {
@@ -306,13 +312,11 @@ class AmiciObjective(ObjectiveBase):
         # copy objects that do not have __deepcopy__
         other.amici_model = self.amici_model.clone()
         other.amici_solver = self.amici_solver.clone()
-        other.edatas = [amici.ExpData(data) for data in self.edatas]
+        other.edatas = [asd.ExpData(data) for data in self.edatas]
 
         return other
 
     def __getstate__(self) -> dict:
-        import amici
-
         if self.amici_object_builder is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __getstate__ without "
@@ -331,7 +335,7 @@ class AmiciObjective(ObjectiveBase):
         try:
             # write amici solver settings to file
             try:
-                amici.writeSolverSettingsToHDF5(self.amici_solver, _file)
+                asd.write_solver_settings_to_hdf5(self.amici_solver, _file)
             except AttributeError as e:
                 e.args += (
                     "Pickling the AmiciObjective requires an AMICI "
@@ -346,15 +350,13 @@ class AmiciObjective(ObjectiveBase):
             os.close(_fd)
             os.remove(_file)
 
-        state["AMICI_model_settings"] = amici.get_model_settings(
+        state["AMICI_model_settings"] = asd.get_model_settings(
             self.amici_model
         )
 
         return state
 
     def __setstate__(self, state: dict) -> None:
-        import amici
-
         if state["amici_object_builder"] is None:
             raise NotImplementedError(
                 "AmiciObjective does not support __setstate__ without "
@@ -374,7 +376,7 @@ class AmiciObjective(ObjectiveBase):
                 f.write(state["amici_solver_settings"])
             # read in solver settings
             try:
-                amici.readSolverSettingsFromHDF5(_file, solver)
+                amici.read_solver_settings_from_hdf5(_file, solver)
             except AttributeError as err:
                 if not err.args:
                     err.args = ("",)
@@ -415,10 +417,10 @@ class AmiciObjective(ObjectiveBase):
         if max_sensi_order is None:
             max_sensi_order = 1
             # check whether it is ok to request 2nd order
-            sensi_mthd = self.amici_solver.getSensitivityMethod()
-            mthd_fwd = amici.SensitivityMethod_forward
+            sensi_mthd = self.amici_solver.get_sensitivity_method()
+            mthd_fwd = amici.SensitivityMethod.forward
             if mode == MODE_FUN and (
-                self.amici_model.o2mode
+                self.amici_model.get_second_order_mode()
                 or (sensi_mthd == mthd_fwd and self.fim_for_hess)
             ):
                 max_sensi_order = 2
@@ -469,7 +471,7 @@ class AmiciObjective(ObjectiveBase):
                     if mode == MODE_FUN
                     else amici.RDataReporting.residuals
                 )
-        self.amici_solver.setReturnDataReportingMode(amici_reporting)
+        self.amici_solver.set_return_data_reporting_mode(amici_reporting)
 
         # update steady state
         if (
@@ -601,7 +603,9 @@ class AmiciObjective(ObjectiveBase):
         """
         if self.custom_timepoints is not None:
             for index in range(len(self.edatas)):
-                self.edatas[index].setTimepoints(self.custom_timepoints[index])
+                self.edatas[index].set_timepoints(
+                    self.custom_timepoints[index]
+                )
 
     def set_custom_timepoints(
         self,

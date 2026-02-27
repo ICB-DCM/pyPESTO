@@ -1,0 +1,9 @@
+parameterId	parameterScale	lowerBound	upperBound	nominalValue	estimate
+k1	log10	0.001	100000	1.95	1
+k2	log10	0.001	100000	0.11	1
+k3	log10	0.001	1000000	98400	1
+k4	log10	0.001	100000	1.49	1
+scale_tSTAT5	log10	0.01	100	0.95	1
+scale_pSTAT5	log10	0.01	100	1.25	1
+sigma_pEpoR_abs	log10	0.001	1	0.0274	0
+sigma_pEpoR_rel	log10	0.001	1	0.10	0

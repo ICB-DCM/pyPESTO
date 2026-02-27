@@ -282,6 +282,10 @@ convention = "pep257"
 "doc/example/*.py" = [
     "D",
 ]
+"doc/example/*.ipynb" = [
+    "S101",  # use of assert
+    "C408",  # unnecessary dict call
+]
 "doc/conf.py" = [
     "E402",
 ]

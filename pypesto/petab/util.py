@@ -6,8 +6,10 @@ try:
     import petab.v1 as petab
     from petab.v1.C import (
         ESTIMATE,
+        LIN,
         NOISE_PARAMETERS,
         OBSERVABLE_ID,
+        PARAMETER_SCALE_UNIFORM,
     )
 except ImportError:
     petab = None
@@ -132,15 +134,33 @@ class PetabStartpoints(CheckedStartpoints):
 
         # update priors
         self._free_ids = current_free_ids
-        id_to_prior = dict(
-            zip(
-                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
-                petab.parameters.get_priors_from_df(
-                    self._parameter_df, mode=petab.INITIALIZATION
-                ),
-                strict=True,
+        if isinstance(self._petab_problem, petab.Problem):
+            parameter_df = self._petab_problem.parameter_df
+            id_to_prior = dict(
+                zip(
+                    parameter_df.index[parameter_df[ESTIMATE] == 1],
+                    petab.parameters.get_priors_from_df(
+                        parameter_df, mode=petab.INITIALIZATION
+                    ),
+                    strict=True,
+                )
             )
-        )
+        else:
+            id_to_prior = {
+                parameter.id: (
+                    # prior_type, prior_pars, par_scale, par_bounds
+                    PARAMETER_SCALE_UNIFORM
+                    if parameter.prior_distribution is None
+                    else parameter.prior_distribution,
+                    (parameter.lb, parameter.ub)
+                    if parameter.prior_distribution is None
+                    else parameter.prior_parameters,
+                    LIN,
+                    (parameter.lb, parameter.ub),
+                )
+                for parameter in self._petab_problem.parameters
+                if parameter.estimate
+            }
 
         self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
 
@@ -160,7 +180,6 @@ class PetabStartpoints(CheckedStartpoints):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
-        priors=None,
     ) -> np.ndarray:
         """Actual startpoint sampling.
 

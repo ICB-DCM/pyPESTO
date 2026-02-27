@@ -1,0 +1,4 @@
+observableId	observableFormula	observableTransformation	noiseFormula	noiseDistribution
+tSTAT5_au	scale_tSTAT5 * (STAT5 + pSTAT5 + 2 * pSTAT5_pSTAT5)	lin	noiseParameter1_tSTAT5_au	normal
+pSTAT5_au	scale_pSTAT5 * (pSTAT5 + 2 * pSTAT5_pSTAT5)	lin	noiseParameter1_pSTAT5_au	normal
+pEpoR_au	pEpoR	lin	sigma_pEpoR_abs + sigma_pEpoR_rel * pEpoR	normal

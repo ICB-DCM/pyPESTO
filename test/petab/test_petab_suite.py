@@ -96,20 +96,24 @@ def _execute_case(case, model_type, version):
     rdatas = ret["rdatas"]
     chi2 = sum(rdata["chi2"] for rdata in rdatas)
     llh = -ret["fval"]
-    simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
-        rdatas, model, importer.petab_problem.measurement_df
-    )
 
-    if case.startswith("0006"):
-        simulation_df = petab.unflatten_simulation_df(
-            simulation_df, petab_problem
+    if version == "v1.0.0":
+        simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
+            rdatas, model, importer.petab_problem.measurement_df
         )
 
-    petab.check_measurement_df(simulation_df, petab_problem.observable_df)
-    simulation_df = simulation_df.rename(
-        columns={petab.MEASUREMENT: petab.SIMULATION}
-    )
-    simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
+        if case.startswith("0006"):
+            simulation_df = petab.unflatten_simulation_df(
+                simulation_df, petab_problem
+            )
+
+        petab.check_measurement_df(simulation_df, petab_problem.observable_df)
+        simulation_df = simulation_df.rename(
+            columns={petab.MEASUREMENT: petab.SIMULATION}
+        )
+        simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
+    else:
+        simulation_df = obj.rdatas_to_simulation_df(rdatas)
 
     # check if matches
     chi2s_match = petabtests.evaluate_chi2(chi2, gt_chi2, tol_chi2)

@@ -433,7 +433,7 @@ class EnsemblePrediction:
         chi_2 = []
         for i_cond in range(n_conditions):
             # get measurements and put into right form
-            y_meas = amici_objective.edatas[i_cond].getObservedData()
+            y_meas = amici_objective.edatas[i_cond].get_measurements()
             y_meas = np.array(y_meas)
             # bring into shape (n_t,n_y)
             y_meas = y_meas.reshape(
