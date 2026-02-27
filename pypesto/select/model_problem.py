@@ -1,7 +1,8 @@
 """Calibrate a PEtab Select model with pyPESTO."""
 
 import time
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any, Optional
 
 from petab_select import Criterion, Model
 
@@ -71,7 +72,7 @@ class ModelProblem:
         autorun: bool = True,
         x_guess: list[float] = None,
         minimize_options: dict = None,
-        objective_customizer: Optional[OBJECTIVE_CUSTOMIZER_TYPE] = None,
+        objective_customizer: OBJECTIVE_CUSTOMIZER_TYPE | None = None,
         postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
         minimize_method: Callable[[Problem], Result] = None,
@@ -134,6 +135,7 @@ class ModelProblem:
                     self.set_result(
                         create_fake_pypesto_result_from_fval(
                             fval=fake_result_fval,
+                            x_fixed_vals=self.pypesto_problem.x_fixed_vals,
                             evaluation_time=fake_result_evaluation_time,
                         )
                     )
@@ -182,6 +184,7 @@ class ModelProblem:
                 zip(
                     self.pypesto_problem.x_names,
                     self.best_start.x,
+                    strict=True,
                 )
             )
             if index in self.pypesto_problem.x_free_indices
@@ -197,6 +200,7 @@ class ModelProblem:
 
 def create_fake_pypesto_result_from_fval(
     fval: float,
+    x_fixed_vals: list[float],
     evaluation_time: float = 0.0,
 ) -> Result:
     """Create a result for problems with no estimated parameters.
@@ -216,7 +220,7 @@ def create_fake_pypesto_result_from_fval(
 
     optimizer_result = OptimizerResult(
         id="fake_result_for_problem_with_no_estimated_parameters",
-        x=[],
+        x=x_fixed_vals,
         fval=fval,
         grad=None,
         hess=None,
@@ -227,7 +231,7 @@ def create_fake_pypesto_result_from_fval(
         n_hess=0,
         n_res=0,
         n_sres=0,
-        x0=[],
+        x0=x_fixed_vals,
         fval0=fval,
         history=None,
         exitflag=0,

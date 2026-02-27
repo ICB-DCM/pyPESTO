@@ -77,7 +77,9 @@ class PetabImportTest(unittest.TestCase):
 
     def test_3_startpoints(self):
         # test startpoint sampling
-        for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
+        for obj_edatas, importer in zip(
+            self.obj_edatas, self.petab_importers, strict=True
+        ):
             obj = obj_edatas[0]
             problem = importer.create_problem(obj)
 
@@ -98,7 +100,9 @@ class PetabImportTest(unittest.TestCase):
 
     def test_4_optimize(self):
         # run optimization
-        for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
+        for obj_edatas, importer in zip(
+            self.obj_edatas, self.petab_importers, strict=True
+        ):
             obj = obj_edatas[0]
             optimizer = pypesto.optimize.ScipyOptimizer(
                 options={"maxiter": 10}

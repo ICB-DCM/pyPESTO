@@ -521,7 +521,7 @@ class AmiciObjective(ObjectiveBase):
 
     def par_arr_to_dct(self, x: Sequence[float]) -> dict[str, float]:
         """Create dict from parameter vector."""
-        return OrderedDict(zip(self.x_ids, x))
+        return OrderedDict(zip(self.x_ids, x, strict=True))
 
     def apply_steadystate_guess(self, condition_ix: int, x_dct: dict) -> None:
         """
@@ -700,7 +700,7 @@ class AmiciObjective(ObjectiveBase):
 
         id_to_val = {
             self.x_ids[x_idx]: x_val
-            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals)
+            for x_idx, x_val in zip(x_fixed_indices, x_fixed_vals, strict=True)
         }
         for condition_mapping in self.parameter_mapping:
             for (

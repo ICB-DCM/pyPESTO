@@ -128,7 +128,7 @@ def edata_objects(conversion_reaction_model):
     ]
     # create rdatas and edatas from those
     for fp in fixedParameters:
-        testmodel.setFixedParameters(amici.DoubleVector(fp))
+        testmodel.setFixedParameters(fp)
         rdata = amici.runAmiciSimulation(testmodel, solver)
         rdatas.append(rdata)
         edatas.append(amici.ExpData(rdata, 1.0, 0))

@@ -500,7 +500,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
             _sim = copy.deepcopy(sim)
             _sigma = copy.deepcopy(sigma)
             _data = copy.deepcopy(data)
-            for x_val, par in zip(x, pars):
+            for x_val, par in zip(x, pars, strict=True):
                 mask = par.ixs
                 if par.inner_parameter_type == InnerParameterType.OFFSET:
                     apply_offset(x_val, _data, mask)
@@ -552,7 +552,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
                 f"or extremely small (<={self.dummy_lb}). Consider changing the inner parameter bounds."
             )
 
-        x_opt = dict(zip(pypesto_problem.x_names, best_par))
+        x_opt = dict(zip(pypesto_problem.x_names, best_par, strict=True))
 
         # cache
         self.x_guesses = np.array(

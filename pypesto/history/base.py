@@ -4,7 +4,6 @@ import numbers
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Union
 
 import numpy as np
 
@@ -39,7 +38,7 @@ class HistoryBase(ABC):
     # all possible history entries
     ALL_KEYS = (X, *RESULT_KEYS, TIME)
 
-    def __init__(self, options: Union[HistoryOptions, None] = None):
+    def __init__(self, options: HistoryOptions | None = None):
         if options is None:
             options = HistoryOptions()
         options = HistoryOptions.assert_instance(options)
@@ -71,8 +70,8 @@ class HistoryBase(ABC):
 
     def finalize(
         self,
-        message: Union[str, None] = None,
-        exitflag: Union[str, None] = None,
+        message: str | None = None,
+        exitflag: str | None = None,
     ) -> None:
         """
         Finalize history. Called after a run. Default: Do nothing.
@@ -132,9 +131,9 @@ class HistoryBase(ABC):
     @abstractmethod
     def get_x_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+    ) -> Sequence[np.ndarray] | np.ndarray:
         """
         Return parameters.
 
@@ -145,9 +144,9 @@ class HistoryBase(ABC):
     @abstractmethod
     def get_fval_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[float], float]:
+    ) -> Sequence[float] | float:
         """
         Return function values.
 
@@ -158,9 +157,9 @@ class HistoryBase(ABC):
     @abstractmethod
     def get_grad_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """
         Return gradients.
 
@@ -171,9 +170,9 @@ class HistoryBase(ABC):
     @abstractmethod
     def get_hess_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """
         Return hessians.
 
@@ -184,9 +183,9 @@ class HistoryBase(ABC):
     @abstractmethod
     def get_res_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """
         Residuals.
 
@@ -197,9 +196,9 @@ class HistoryBase(ABC):
     @abstractmethod
     def get_sres_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """
         Residual sensitivities.
 
@@ -209,9 +208,9 @@ class HistoryBase(ABC):
 
     def get_chi2_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[float], float]:
+    ) -> Sequence[float] | float:
         """
         Chi2 values.
 
@@ -227,9 +226,9 @@ class HistoryBase(ABC):
 
     def get_schi2_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """
         Chi2 sensitivities.
 
@@ -246,9 +245,9 @@ class HistoryBase(ABC):
     @abstractmethod
     def get_time_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[float], float]:
+    ) -> Sequence[float] | float:
         """
         Cumulative execution times [s].
 
@@ -324,38 +323,38 @@ class NoHistory(HistoryBase):
         raise NotImplementedError()
 
     def get_x_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[np.ndarray] | np.ndarray:
         raise NotImplementedError()
 
     def get_fval_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         raise NotImplementedError()
 
     def get_grad_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_hess_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_res_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_sres_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_time_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         raise NotImplementedError()
 
 
@@ -365,7 +364,7 @@ class CountHistoryBase(HistoryBase):
     Needs a separate implementation of trace.
     """
 
-    def __init__(self, options: Union[HistoryOptions, dict] = None):
+    def __init__(self, options: HistoryOptions | dict = None):
         super().__init__(options)
         self._n_fval: int = 0
         self._n_grad: int = 0
@@ -452,38 +451,38 @@ class CountHistory(CountHistoryBase):
         raise NotImplementedError()
 
     def get_x_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[np.ndarray] | np.ndarray:
         raise NotImplementedError()
 
     def get_fval_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         raise NotImplementedError()
 
     def get_grad_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_hess_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_res_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_sres_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         raise NotImplementedError()
 
     def get_time_trace(  # noqa: D102
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         raise NotImplementedError()
 
 
