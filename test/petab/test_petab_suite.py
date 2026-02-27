@@ -2,10 +2,10 @@
 
 import logging
 
-import amici.petab.simulations
 import petab.v1 as petab
 import petabtests
 import pytest
+from amici.sim.sundials.petab.v1 import rdatas_to_measurement_df
 
 import pypesto
 import pypesto.petab
@@ -18,7 +18,11 @@ logger = logging.getLogger(__name__)
     "case, model_type, version",
     [
         (case, model_type, version)
-        for (model_type, version) in (("sbml", "v1.0.0"), ("pysb", "v2.0.0"))
+        for (model_type, version) in (
+            ("sbml", "v1.0.0"),
+            # FIXME: disabled until there is proper PEtab v2 support https://github.com/ICB-DCM/pyPESTO/pull/1634
+            # ("pysb", "v2.0.0")
+        )
         for case in petabtests.get_cases(format_=model_type, version=version)
     ],
 )
@@ -96,7 +100,7 @@ def _execute_case(case, model_type, version):
     rdatas = ret["rdatas"]
     chi2 = sum(rdata["chi2"] for rdata in rdatas)
     llh = -ret["fval"]
-    simulation_df = amici.petab.simulations.rdatas_to_measurement_df(
+    simulation_df = rdatas_to_measurement_df(
         rdatas, model, importer.petab_problem.measurement_df
     )
 

@@ -33,7 +33,7 @@ from .util import (
 
 try:
     import amici
-    from amici.petab.parameter_mapping import ParameterMapping
+    from amici.sim._parameter_mapping import ParameterMapping
 except ImportError:
     pass
 

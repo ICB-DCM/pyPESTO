@@ -26,15 +26,20 @@ from .amici_util import (
     sim_sres_to_opt_sres,
 )
 
+try:
+    import amici
+    import amici.sim.sundials as asd
+except ImportError:
+    amici = None
+
 if TYPE_CHECKING:
     try:
-        import amici
-        from amici.petab.parameter_mapping import ParameterMapping
+        from amici.sim._parameter_mapping import ParameterMapping
     except ImportError:
         ParameterMapping = None
 
-AmiciModel = Union["amici.Model", "amici.ModelPtr"]
-AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
+AmiciModel = Union["asd.Model", "asd.ModelPtr"]
+AmiciSolver = Union["asd.Solver", "asd.SolverPtr"]
 
 
 class AmiciCalculator:
@@ -53,7 +58,7 @@ class AmiciCalculator:
         mode: ModeType,
         amici_model: AmiciModel,
         amici_solver: AmiciSolver,
-        edatas: list[amici.ExpData],
+        edatas: list[asd.ExpData],
         n_threads: int,
         x_ids: Sequence[str],
         parameter_mapping: ParameterMapping,
@@ -87,7 +92,7 @@ class AmiciCalculator:
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        import amici.petab.conditions
+        from amici.sim.sundials.petab.v1 import fill_in_parameters
 
         # set order in solver
         sensi_order = 0
@@ -96,12 +101,12 @@ class AmiciCalculator:
 
         if sensi_order == 2 and fim_for_hess:
             # we use the FIM
-            amici_solver.setSensitivityOrder(sensi_order - 1)
+            amici_solver.set_sensitivity_order(sensi_order - 1)
         else:
-            amici_solver.setSensitivityOrder(sensi_order)
+            amici_solver.set_sensitivity_order(sensi_order)
 
         # fill in parameters
-        amici.petab.conditions.fill_in_parameters(
+        fill_in_parameters(
             edatas=edatas,
             problem_parameters=x_dct,
             scaled_parameters=True,
@@ -110,7 +115,7 @@ class AmiciCalculator:
         )
 
         # run amici simulation
-        rdatas = amici.runAmiciSimulations(
+        rdatas = asd.run_simulations(
             amici_model,
             amici_solver,
             edatas,
@@ -121,7 +126,7 @@ class AmiciCalculator:
             and mode == MODE_RES
             and 1 in sensi_orders
         ):
-            if not amici_model.getAddSigmaResiduals() and any(
+            if not amici_model.get_add_sigma_residuals() and any(
                 (
                     (r["ssigmay"] is not None and np.any(r["ssigmay"]))
                     or (r["ssigmaz"] is not None and np.any(r["ssigmaz"]))
@@ -155,13 +160,12 @@ def calculate_function_values(
     mode: ModeType,
     amici_model: AmiciModel,
     amici_solver: AmiciSolver,
-    edatas: list[amici.ExpData],
+    edatas: list[asd.ExpData],
     x_ids: Sequence[str],
     parameter_mapping: ParameterMapping,
     fim_for_hess: bool,
 ):
     """Calculate the function values from rdatas and return as dict."""
-    import amici
 
     # full optimization problem dimension (including fixed parameters)
     dim = len(x_ids)
@@ -176,8 +180,8 @@ def calculate_function_values(
         sensi_orders, mode, dim
     )
 
-    par_sim_ids = list(amici_model.getParameterIds())
-    sensi_method = amici_solver.getSensitivityMethod()
+    par_sim_ids = list(amici_model.get_free_parameter_ids())
+    sensi_method = amici_solver.get_sensitivity_method()
 
     # iterate over return data
     for data_ix, rdata in enumerate(rdatas):
@@ -213,7 +217,7 @@ def calculate_function_values(
                 # Hessian
             if 2 in sensi_orders:
                 if (
-                    sensi_method != amici.SensitivityMethod_forward
+                    sensi_method != asd.SensitivityMethod.forward
                     or not fim_for_hess
                 ):
                     raise ValueError("AMICI cannot compute Hessians yet.")
