@@ -915,7 +915,7 @@ class IpoptOptimizer(Optimizer):
         """Check whether optimizer supports absolute function tolerance."""
         return False
 
-    def set_f_rel_tol(self, tol: float) -> None:
+    def set_tol(self, tol: float) -> None:
         """
         Set the convergence tolerance.
 
