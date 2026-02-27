@@ -226,3 +226,99 @@ class TestOptimizerMaxevalInterface:
 
         with pytest.raises(NotImplementedError):
             optimizer.set_maxeval(100)
+
+
+class TestOptimizerTolInterface:
+    """Test the unified tolerance interface for optimizers."""
+
+    def test_scipy_optimizer_support(self):
+        """Test ScipyOptimizer tolerance support."""
+        optimizer = optimize.ScipyOptimizer()
+        assert optimizer.supports_f_abs_tol() is True
+
+        optimizer.set_f_abs_tol(1e-6)
+        assert optimizer.tol == 1e-6
+
+        # Test updating existing value
+        optimizer.set_f_abs_tol(1e-8)
+        assert optimizer.tol == 1e-8
+
+    def test_nlopt_optimizer_support(self):
+        """Test NLoptOptimizer tolerance support."""
+        optimizer = optimize.NLoptOptimizer()
+        assert optimizer.supports_f_abs_tol() is True
+
+        optimizer.set_f_abs_tol(1e-5)
+        assert optimizer.options["ftol_abs"] == 1e-5
+
+    def test_fides_optimizer_support(self):
+        """Test FidesOptimizer tolerance support."""
+        optimizer = optimize.FidesOptimizer()
+        assert optimizer.supports_f_abs_tol() is True
+
+        optimizer.set_f_abs_tol(1e-6)
+
+        from fides.constants import Options as FidesOptions
+
+        assert FidesOptions.FATOL in optimizer.options
+        assert optimizer.options[FidesOptions.FATOL] == 1e-6
+
+        # Test updating existing value
+        optimizer.set_f_abs_tol(1e-9)
+        assert optimizer.options[FidesOptions.FATOL] == 1e-9
+
+    def test_cma_optimizer_support(self):
+        """Test CmaOptimizer tolerance support."""
+        optimizer = optimize.CmaOptimizer()
+        assert optimizer.supports_f_abs_tol() is True
+
+        optimizer.set_f_abs_tol(1e-4)
+        assert optimizer.options["tolfun"] == 1e-4
+
+    def test_scipy_de_optimizer_support(self):
+        """Test ScipyDifferentialEvolutionOptimizer tolerance support."""
+        optimizer = optimize.ScipyDifferentialEvolutionOptimizer()
+        assert optimizer.supports_f_abs_tol() is True
+
+        optimizer.set_f_abs_tol(1e-5)
+        assert optimizer.options["atol"] == 1e-5
+
+    def test_pyswarm_optimizer_support(self):
+        """Test PyswarmOptimizer tolerance support."""
+        optimizer = optimize.PyswarmOptimizer()
+        assert optimizer.supports_f_abs_tol() is True
+
+        optimizer.set_f_abs_tol(1e-7)
+        assert optimizer.options["minfunc"] == 1e-7
+
+    def test_dlib_optimizer_no_support(self):
+        """Test that DlibOptimizer does not support tolerance."""
+        optimizer = optimize.DlibOptimizer()
+        assert optimizer.supports_f_abs_tol() is False
+
+        with pytest.raises(NotImplementedError):
+            optimizer.set_f_abs_tol(1e-6)
+
+    def test_pyswarms_optimizer_no_support(self):
+        """Test that PyswarmsOptimizer does not support tolerance."""
+        optimizer = optimize.PyswarmsOptimizer()
+        assert optimizer.supports_f_abs_tol() is False
+
+        with pytest.raises(NotImplementedError):
+            optimizer.set_f_abs_tol(1e-6)
+
+    def test_tolerance_validation(self):
+        """Test that invalid tolerance values are rejected."""
+        optimizer = optimize.ScipyOptimizer()
+
+        # Test that positive values work
+        optimizer.set_f_abs_tol(1e-6)
+        assert optimizer.tol == 1e-6
+
+        # Test that zero is allowed (optimize as accurately as possible)
+        optimizer.set_f_abs_tol(0.0)
+        assert optimizer.tol == 0.0
+
+        # Test that negative values are rejected
+        with pytest.raises(ValueError, match="must be non-negative"):
+            optimizer.set_f_abs_tol(-1e-6)
