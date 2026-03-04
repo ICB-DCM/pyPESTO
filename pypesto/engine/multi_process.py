@@ -15,8 +15,18 @@ from .task import Task
 logger = logging.getLogger(__name__)
 
 
-def work(pickled_task):
-    """Unpickle and execute task."""
+def work(pickled_task) -> Any:
+    """Unpickle and execute task.
+
+    Parameters
+    ----------
+    pickled_task:
+        A pickled Task object to execute.
+
+    Returns
+    -------
+    The result of executing the task.
+    """
     task = pickle.loads(pickled_task)
     return task.execute()
 
@@ -69,7 +79,7 @@ class MultiProcessEngine(Engine):
 
         Returns
         -------
-        A list of results.
+        A list of results in the same order as the input tasks.
         """
         n_tasks = len(tasks)
         n_procs = min(self.n_procs, n_tasks)
