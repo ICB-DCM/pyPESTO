@@ -66,6 +66,15 @@ class TestOptimizerMaxtimeInterface:
         optimizer.set_maxtime(10.0)
         assert optimizer.max_walltime_s == 10.0
 
+    def test_cma_optimizer_support(self):
+        """Test CmaOptimizer iteration limit support."""
+        optimizer = optimize.CmaOptimizer()
+
+        assert optimizer.supports_maxtime() is True
+        optimizer.set_maxtime(1000)
+
+        assert optimizer.options["timeout"] == 1000
+
     def test_scipy_optimizer_support(self):
         """Test ScipyOptimizer time limit support."""
         optimizer = optimize.ScipyOptimizer()
@@ -135,11 +144,6 @@ class TestOptimizerMaxiterInterface:
 
         optimizer.set_maxiter(5000)
         assert optimizer.options["maxiter"] == 5000
-
-        assert optimizer.supports_maxtime() is True
-        optimizer.set_maxtime(1000)
-
-        assert optimizer.options["timeout"] == 1000
 
     def test_scipy_de_optimizer_support(self):
         """Test ScipyDifferentialEvolutionOptimizer iteration limit support."""

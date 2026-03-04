@@ -1051,7 +1051,7 @@ class DlibOptimizer(Optimizer):
             self.options = {}
         self.options["maxiter"] = iterations
 
-    def supports_tol(self) -> bool:
+    def supports_f_abs_tol(self) -> bool:
         """Check whether optimizer supports absolute tolerance."""
         return False
 
@@ -1219,6 +1219,14 @@ class CmaOptimizer(Optimizer):
     def is_least_squares(self):
         """Check whether optimizer is a least squares optimizer."""
         return False
+
+    def supports_maxtime(self):
+        """Check whether optimizer supports time limits."""
+        return True
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        self.options["timeout"] = seconds
 
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
@@ -1518,7 +1526,7 @@ class PyswarmsOptimizer(Optimizer):
             self.options = {}
         self.options["maxiter"] = iterations
 
-    def supports_tol(self) -> bool:
+    def supports_f_abs_tol(self) -> bool:
         """Check whether optimizer supports absolute tolerance."""
         return False
 
