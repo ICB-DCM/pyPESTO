@@ -259,7 +259,7 @@ def walk_along_profile(
                     f"Computing profile point failed. Could not find a finite solution after {max_tries} attempts."
                 )
 
-        logger.info(
+        logger.debug(
             f"Optimization successful for {problem.x_names[i_par]}={x_next[i_par]:.4f}. "
             f"Start fval {problem.objective(x_next[problem.x_free_indices]):.6f}, end fval {optimizer_result.fval:.6f}."
         )
