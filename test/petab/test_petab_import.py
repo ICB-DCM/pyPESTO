@@ -11,6 +11,7 @@ import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
 import petab.v1 as petab
+import petab.v2 as v2
 import petabtests
 import pytest
 
@@ -296,6 +297,117 @@ def test_petab_pysb_optimization():
 
     # ensure objective after optimization is not worse than for true parameters
     assert np.all(fvals <= -solution[petabtests.LLH])
+
+
+def test_petab_v2_boehm():
+    import copy
+    import pickle
+
+    from pypesto.optimize.optimizer import ScipyOptimizer
+
+    # load test problem
+    problem_id = "Boehm_JProteomeRes2014"
+    petab_problem = v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    expected_fval_nominal = 138.22199693517703
+
+    # create model
+    importer = PetabImporter(petab_problem)
+    problem = importer.create_problem()
+    assert problem.x_names == petab_problem.x_ids
+    assert problem.dim == petab_problem.n_estimated == 9
+    assert problem.dim_full == len(petab_problem.parameters) == 11
+    # petab-non-estimated parameters are fixed in the pypesto problem
+    assert problem.x_fixed_indices == [
+        i for i, p in enumerate(petab_problem.parameters) if not p.estimate
+    ]
+    assert isinstance(
+        problem.objective, pypesto.objective.amici.amici.AmiciPetabV2Objective
+    )
+
+    # evaluate objective at nominal parameters
+    fval = problem.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # deepcopy works?
+    problem_deepcopy = copy.deepcopy(problem)
+    fval = problem_deepcopy.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # pickling works?
+    problem_pickled = pickle.loads(pickle.dumps(problem))  # noqa: S301
+    fval = problem_pickled.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # gradient works?
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+
+    # fixing parameters, ...
+    problem.unfix_parameters(petab_problem.x_fixed_indices)
+    assert problem.dim == len(petab_problem.parameters)
+    with pytest.raises(ValueError, match="Cannot compute gradient"):
+        # cannot compute sensitivities for fixed parameters
+        problem.objective(
+            np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
+        )
+    fval = problem.objective(np.asarray(petab_problem.x_nominal))
+    assert np.isclose(fval, expected_fval_nominal)
+    # re-fixing parameters
+    problem.fix_parameters(
+        petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
+    )
+    assert problem.dim == petab_problem.n_estimated
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+
+    # TODO mode=res/fun,
+    # TODO hess/fim...
+
+    # single optimization works?
+    optimizer = ScipyOptimizer()
+    result = optimizer.minimize(
+        id="1",
+        problem=problem,
+        x0=np.asarray(petab_problem.x_nominal_free) + 0.1,
+    )
+    print(result)
+    assert result.fval0 is not None, result.message
+    assert result.fval < result.fval0
+
+    # multi-processing optimization works?
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=4,
+        engine=pypesto.engine.MultiProcessEngine(),
+        progress_bar=False,
+    )
+    assert len(result.optimize_result.list) == 4
+    for local_result in result.optimize_result.list:
+        assert local_result.fval0 is not None, local_result.message
+        assert local_result.fval < local_result.fval0
+
+
+def test_petab_v2_schwen():
+    problem_id = "Schwen_PONE2014"
+    petab_problem = v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    assert petab_problem.n_priors
+    importer = PetabImporter(petab_problem)
+    problem = importer.create_problem()
+    assert problem.x_names == petab_problem.x_ids
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+    fval = problem.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isfinite(fval)
 
 
 if __name__ == "__main__":

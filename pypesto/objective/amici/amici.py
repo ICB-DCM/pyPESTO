@@ -9,7 +9,9 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
+import amici.importers.petab
 import numpy as np
+import pandas as pd
 
 from ...C import (
     FVAL,
@@ -718,3 +720,67 @@ class AmiciObjective(ObjectiveBase):
             ) in condition_mapping.map_preeq_fix.items():
                 if (val := id_to_val.get(mapped_to_par)) is not None:
                     condition_mapping.map_preeq_fix[model_par] = val
+
+
+class AmiciPetabV2Objective(AmiciObjective):
+    """An AMICI objective constructed from a PEtab v2 problem."""
+
+    def __init__(
+        self,
+        petab_importer: amici.importers.petab.PetabImporter,
+        **kwargs,
+    ) -> None:
+        from .amici_calculator import AmiciCalculatorPetabV2
+
+        self._petab_simulator: amici.petab.petab_importer.PetabSimulator = (
+            petab_importer.create_simulator()
+        )
+        self.petab_problem = petab_importer.petab_problem
+        amici_model = self._petab_simulator.model
+        amici_solver = self._petab_simulator.solver
+        edatas = self._petab_simulator.exp_man.create_edatas()
+
+        super().__init__(
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            calculator=AmiciCalculatorPetabV2(self._petab_simulator),
+            **kwargs,
+        )
+
+    def __deepcopy__(self, memo=None):
+        """Override AmiciObjective.__deepcopy__."""
+        if memo is None:
+            memo = {}
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, copy.deepcopy(v, memo))
+        return result
+
+    def __getstate__(self) -> dict:
+        """Use Python's default pickling semantics (shallow copy of instance dict)."""
+        return dict(self.__dict__)
+
+    def __setstate__(self, state: dict) -> None:
+        """Restore state using the instance dict (default unpickling behaviour)."""
+        self.__dict__.update(state)
+
+    def rdatas_to_simulation_df(
+        self,
+        rdatas: Sequence[amici.ReturnData],
+    ) -> pd.DataFrame:
+        """
+        See :meth:`rdatas_to_measurement_df`.
+
+        Except a petab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        from amici.importers.petab import rdatas_to_simulation_df
+
+        return rdatas_to_simulation_df(
+            rdatas,
+            self._petab_simulator._model,
+            self._petab_simulator._petab_problem,
+        )
