@@ -69,6 +69,7 @@ class SemiquantCalculator(AmiciCalculator):
             inner_solver = SemiquantInnerSolver()
         self.inner_solver = inner_solver
         self._can_use_same_plists_gradients = False
+        self._recalc_plists_and_scales = True
 
     def initialize(self):
         """Initialize."""
@@ -164,7 +165,10 @@ class SemiquantCalculator(AmiciCalculator):
                 scaled_parameters=True,
                 parameter_mapping=parameter_mapping,
                 amici_model=amici_model,
+                recalc_plists_and_scales=self._recalc_plists_and_scales,
             )
+            if self._recalc_plists_and_scales:
+                self._recalc_plists_and_scales = False
             # run amici simulation
             rdatas = amici.runAmiciSimulations(
                 amici_model,
@@ -190,8 +194,8 @@ class SemiquantCalculator(AmiciCalculator):
                 inner_result[GRAD] = np.full(shape=dim, fill_value=np.nan)
             return filter_return_dict(inner_result)
 
-        sim = [rdata[AMICI_Y] for rdata in rdatas]
-        sigma = [rdata[AMICI_SIGMAY] for rdata in rdatas]
+        sim = np.asarray([rdata[AMICI_Y] for rdata in rdatas])
+        sigma = np.asarray([rdata[AMICI_SIGMAY] for rdata in rdatas])
 
         # Clip negative simulation values to zero, to avoid numerical issues.
         for i in range(len(sim)):
@@ -204,9 +208,9 @@ class SemiquantCalculator(AmiciCalculator):
         )
         inner_result[SPLINE_KNOTS] = self.inner_problem.get_spline_knots()
 
-        inner_result[INNER_PARAMETERS] = (
-            self.inner_problem.get_inner_noise_parameters()
-        )
+        inner_result[
+            INNER_PARAMETERS
+        ] = self.inner_problem.get_inner_noise_parameters()
 
         # Calculate analytical gradients if requested
         if sensi_order > 0:
@@ -221,17 +225,19 @@ class SemiquantCalculator(AmiciCalculator):
                 == amici.SensitivityMethod_adjoint
             ):
                 sy = get_sensitivities_from_adjoint_gradient(rdatas, edatas)
+                sy = np.asarray(sy)
                 ssigma = [np.zeros_like(s) for s in sy]
+                ssigma = np.asarray(ssigma)
             # Check whether we can use the same plists gradients
-            if not self._can_use_same_plists_gradients:
-                self.inner_solver.check_if_can_use_gradients_same_plists(
-                    sy=sy,
-                    parameter_mapping=parameter_mapping,
-                    par_opt_ids=x_ids,
-                    par_sim_ids=amici_model.getParameterIds(),
-                    par_edatas_indices=[edata.plist for edata in edatas],
-                )
-                self._can_use_same_plists_gradients = True
+            # if not self._can_use_same_plists_gradients:
+            #     self.inner_solver.check_if_can_use_gradients_same_plists(
+            #         sy=sy,
+            #         parameter_mapping=parameter_mapping,
+            #         par_opt_ids=x_ids,
+            #         par_sim_ids=amici_model.getParameterIds(),
+            #         par_edatas_indices=[edata.plist for edata in edatas],
+            #     )
+            #     self._can_use_same_plists_gradients = True
 
             inner_result[GRAD] = (
                 self.inner_solver.calculate_gradients_same_plists(

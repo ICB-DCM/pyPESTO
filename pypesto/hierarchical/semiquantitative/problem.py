@@ -382,6 +382,7 @@ def spline_inner_parameters_from_measurement_df(
             n_spline_parameters = int(
                 np.ceil(len(df_for_group) * spline_ratio)
             )
+            # n_spline_parameters = 5  # override for specific model runs
             if n_spline_parameters < 2:
                 raise ValueError(
                     "The number of spline parameters must be at least 2."
