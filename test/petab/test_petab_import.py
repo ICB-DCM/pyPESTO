@@ -10,8 +10,7 @@ from itertools import chain
 import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
-import petab.v1 as petab
-import petab.v2 as v2
+import petab
 import petabtests
 import pytest
 
@@ -267,6 +266,7 @@ def test_max_sensi_order():
 
 
 def test_petab_pysb_optimization():
+    """Test optimization for a PySB-based PEtab 2.0 problem."""
     test_case = "0001"
     test_case_dir = petabtests.get_case_dir(
         test_case, version="v2.0.0", format_="pysb"
@@ -277,7 +277,7 @@ def test_petab_pysb_optimization():
         test_case, format="pysb", version="v2.0.0"
     )
 
-    petab_problem = petab.Problem.from_yaml(petab_yaml)
+    petab_problem = petab.v2.Problem.from_yaml(petab_yaml)
     importer = PetabImporter(petab_problem)
     problem = importer.create_problem()
 
@@ -307,7 +307,7 @@ def test_petab_v2_boehm():
 
     # load test problem
     problem_id = "Boehm_JProteomeRes2014"
-    petab_problem = v2.Problem.from_yaml(
+    petab_problem = petab.v2.Problem.from_yaml(
         models.get_problem_yaml_path(problem_id)
     )
     expected_fval_nominal = 138.22199693517703
@@ -398,7 +398,7 @@ def test_petab_v2_boehm():
 
 def test_petab_v2_schwen():
     problem_id = "Schwen_PONE2014"
-    petab_problem = v2.Problem.from_yaml(
+    petab_problem = petab.v2.Problem.from_yaml(
         models.get_problem_yaml_path(problem_id)
     )
     assert petab_problem.n_priors
