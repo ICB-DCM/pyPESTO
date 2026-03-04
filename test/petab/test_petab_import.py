@@ -396,6 +396,9 @@ def test_petab_v2_boehm():
         assert local_result.fval < local_result.fval0
 
 
+@pytest.mark.filterwarnings(
+    "ignore:.*distribution.*is not supported in PEtab v2.*:UserWarning"
+)
 def test_petab_v2_schwen():
     problem_id = "Schwen_PONE2014"
     petab_problem = petab.v2.Problem.from_yaml(
