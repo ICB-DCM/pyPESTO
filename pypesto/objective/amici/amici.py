@@ -9,7 +9,6 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
-import amici.importers.petab
 import numpy as np
 import pandas as pd
 
@@ -38,6 +37,8 @@ from .amici_util import (
 )
 
 if TYPE_CHECKING:
+    import amici.importers.petab
+
     from ...hierarchical import InnerCalculatorCollector
 
 try:

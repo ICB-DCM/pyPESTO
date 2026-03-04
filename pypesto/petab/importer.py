@@ -119,6 +119,12 @@ class PetabImporter:
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
 
+        if self._hierarchical and isinstance(self.petab_problem, v2.Problem):
+            raise NotImplementedError(
+                "Hierarchical optimization is not yet supported "
+                "for PEtab v2 problems."
+            )
+
         self._non_quantitative_data_types = (
             get_petab_non_quantitative_data_types(petab_problem)
         )
@@ -445,19 +451,11 @@ class PetabImporter:
             x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
             lb = self.petab_problem.lb_scaled
             ub = self.petab_problem.ub_scaled
-            x_scales = [
-                self.petab_problem.parameter_df.loc[
-                    x_id, petab.PARAMETER_SCALE
-                ]
-                for x_id in x_ids
-            ]
             prior = self.create_prior()
         else:
-            # PEtab v2 -- no parameter scaling
             x_fixed_vals = self.petab_problem.x_nominal_fixed
             lb = self.petab_problem.lb
             ub = self.petab_problem.ub
-            x_scales = [petab.LIN for x_id in x_ids]
             prior = self._create_prior_v2()
 
         # Raise error if the correct calculator is not used.
@@ -485,6 +483,19 @@ class PetabImporter:
             x_fixed_indices = list(
                 map(x_ids.index, self.petab_problem.x_fixed_ids)
             )
+
+        # parameter scales -- only for outer parameters
+        if isinstance(self.petab_problem, petab.Problem):
+            # PEtab v1
+            x_scales = [
+                self.petab_problem.parameter_df.loc[
+                    x_id, petab.PARAMETER_SCALE
+                ]
+                for x_id in x_ids
+            ]
+        else:
+            # PEtab v2 -- no parameter scaling
+            x_scales = [petab.LIN for x_id in x_ids]
 
         if problem_kwargs is None:
             problem_kwargs = {}
