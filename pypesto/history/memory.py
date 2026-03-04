@@ -2,7 +2,7 @@
 
 import time
 from collections.abc import Sequence
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
@@ -31,7 +31,7 @@ class MemoryHistory(CountHistoryBase):
         to `None`, which implies default options.
     """
 
-    def __init__(self, options: Union[HistoryOptions, dict, None] = None):
+    def __init__(self, options: HistoryOptions | dict | None = None):
         super().__init__(options=options)
         self._trace: dict[str, Any] = {key: [] for key in HistoryBase.ALL_KEYS}
 
@@ -69,62 +69,62 @@ class MemoryHistory(CountHistoryBase):
     @trace_wrap
     def get_x_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+    ) -> Sequence[np.ndarray] | np.ndarray:
         """See :meth:`HistoryBase.get_x_trace`."""
         return [self._trace[X][i] for i in ix]
 
     @trace_wrap
     def get_fval_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[float], float]:
+    ) -> Sequence[float] | float:
         """See :meth:`HistoryBase.get_fval_trace`."""
         return [self._trace[FVAL][i] for i in ix]
 
     @trace_wrap
     def get_grad_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_grad_trace`."""
         return [self._trace[GRAD][i] for i in ix]
 
     @trace_wrap
     def get_hess_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_hess_trace`."""
         return [self._trace[HESS][i] for i in ix]
 
     @trace_wrap
     def get_res_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_res_trace`."""
         return [self._trace[RES][i] for i in ix]
 
     @trace_wrap
     def get_sres_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_sres_trace`."""
         return [self._trace[SRES][i] for i in ix]
 
     @trace_wrap
     def get_time_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[float], float]:
+    ) -> Sequence[float] | float:
         """See :meth:`HistoryBase.get_time_trace`."""
         return [self._trace[TIME][i] for i in ix]

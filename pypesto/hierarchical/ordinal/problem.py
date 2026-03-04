@@ -44,7 +44,7 @@ from ..base_problem import (
 from .parameter import OrdinalParameter
 
 try:
-    import amici
+    import amici.sim.sundials as asd
     import petab.v1 as petab
     from petab.v1.C import OBSERVABLE_ID, PARAMETER_SEPARATOR
 except ImportError:
@@ -136,7 +136,9 @@ class OrdinalProblem(AmiciInnerProblem):
                     [
                         data_i[mask_i]
                         for data_i, mask_i in zip(
-                            self.data, self.groups[group][QUANTITATIVE_IXS]
+                            self.data,
+                            self.groups[group][QUANTITATIVE_IXS],
+                            strict=True,
                         )
                     ]
                 )
@@ -174,8 +176,8 @@ class OrdinalProblem(AmiciInnerProblem):
     @staticmethod
     def from_petab_amici(
         petab_problem: petab.Problem,
-        amici_model: amici.Model,
-        edatas: list[amici.ExpData],
+        amici_model: asd.Model,
+        edatas: list[asd.ExpData],
         method: str = None,
     ) -> OrdinalProblem:
         """Construct the inner problem from the `petab_problem`."""
@@ -469,7 +471,9 @@ class OrdinalProblem(AmiciInnerProblem):
 
         # Set to False for all censored datapoints.
         for x in xs:
-            for ixs_i, quantitative_ixs_i in zip(x.ixs, quantitative_ixs):
+            for ixs_i, quantitative_ixs_i in zip(
+                x.ixs, quantitative_ixs, strict=True
+            ):
                 quantitative_ixs_i[ixs_i] = False
 
         return quantitative_ixs
@@ -484,8 +488,8 @@ class OrdinalProblem(AmiciInnerProblem):
 
 def optimal_scaling_inner_problem_from_petab_problem(
     petab_problem: petab.Problem,
-    amici_model: amici.Model,
-    edatas: list[amici.ExpData],
+    amici_model: asd.Model,
+    edatas: list[asd.ExpData],
     method: str,
 ):
     """Construct the inner problem from the `petab_problem`."""
@@ -500,7 +504,7 @@ def optimal_scaling_inner_problem_from_petab_problem(
     )
 
     # transform experimental data
-    data = [amici.numpy.ExpDataView(edata)["observedData"] for edata in edatas]
+    data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
@@ -520,12 +524,12 @@ def optimal_scaling_inner_problem_from_petab_problem(
 def optimal_scaling_inner_parameters_from_measurement_df(
     df: pd.DataFrame,
     method: str,
-    amici_model: amici.Model,
+    amici_model: asd.Model,
 ) -> list[OrdinalParameter]:
     """Create list of inner free parameters from PEtab measurement table dependent on the method provided."""
     df = df.reset_index()
 
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     estimate = get_estimate_for_method(method)
     par_types = [CAT_LB, CAT_UB]
@@ -540,7 +544,9 @@ def optimal_scaling_inner_parameters_from_measurement_df(
 
         if all(observable_df[MEASUREMENT_TYPE] == ORDINAL):
             # Add optimal scaling parameters for ordinal measurements.
-            for par_type, par_estimate in zip(par_types, estimate):
+            for par_type, par_estimate in zip(
+                par_types, estimate, strict=True
+            ):
                 for _, row in observable_df.iterrows():
                     par_id = f"{par_type}_{observable_id}_{row[MEASUREMENT_TYPE]}_{int(row[MEASUREMENT_CATEGORY])}"
 
@@ -621,7 +627,7 @@ def get_estimate_for_method(method: str) -> tuple[bool, bool]:
 
 def optimal_scaling_ixs_for_measurement_specific_parameters(
     petab_problem: petab.Problem,
-    amici_model: amici.Model,
+    amici_model: asd.Model,
     inner_parameters: list[OrdinalParameter],
 ) -> dict[str, list[tuple[int, int, int]]]:
     """Create mapping of parameters to measurements.
@@ -634,7 +640,7 @@ def optimal_scaling_ixs_for_measurement_specific_parameters(
     a sorted list of non-unique time points for which there are measurements.
     """
     ixs_for_par = {}
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()

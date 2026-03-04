@@ -4,8 +4,8 @@ import binascii
 import datetime
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Union
 
 import h5py
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def autosave(
-    filename: Union[Path, str, Callable, None],
+    filename: Path | str | Callable | None,
     result: Result,
     store_type: str,
     overwrite: bool = False,

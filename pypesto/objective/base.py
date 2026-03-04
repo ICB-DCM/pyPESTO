@@ -4,7 +4,6 @@ import logging
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
-from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -13,7 +12,7 @@ from ..C import FVAL, GRAD, HESS, MODE_FUN, MODE_RES, RES, SRES, ModeType
 from ..history import NoHistory, create_history
 from .pre_post_process import FixedParametersProcessor, PrePostProcessor
 
-ResultDict = dict[str, Union[float, np.ndarray, dict]]
+ResultDict = dict[str, float | np.ndarray | dict]
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ class ObjectiveBase(ABC):
 
     def __init__(
         self,
-        x_names: Optional[Sequence[str]] = None,
+        x_names: Sequence[str] | None = None,
     ):
         self._x_names = x_names
 
@@ -92,7 +91,7 @@ class ObjectiveBase(ABC):
         return self.check_sensi_orders((1,), MODE_RES)
 
     @property
-    def x_names(self) -> Union[list[str], None]:
+    def x_names(self) -> list[str] | None:
         """Parameter names."""
         if self._x_names is None:
             return self._x_names
@@ -126,7 +125,7 @@ class ObjectiveBase(ABC):
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
-    ) -> Union[float, np.ndarray, tuple, ResultDict]:
+    ) -> float | np.ndarray | tuple | ResultDict:
         """
         Obtain arbitrary sensitivities.
 
@@ -333,7 +332,7 @@ class ObjectiveBase(ABC):
     def output_to_tuple(
         sensi_orders: tuple[int, ...],
         mode: ModeType,
-        **kwargs: Union[float, np.ndarray],
+        **kwargs: float | np.ndarray,
     ) -> tuple:
         """
         Return values as requested by the caller.
@@ -431,7 +430,7 @@ class ObjectiveBase(ABC):
     def check_grad_multi_eps(
         self,
         *args,
-        multi_eps: Optional[Iterable] = None,
+        multi_eps: Iterable | None = None,
         label: str = "rel_err",
         **kwargs,
     ):

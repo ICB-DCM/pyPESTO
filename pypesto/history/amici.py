@@ -1,6 +1,5 @@
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Union
 
 import numpy as np
 
@@ -38,16 +37,16 @@ class Hdf5AmiciHistory(Hdf5History):
     def __init__(
         self,
         id: str,
-        file: Union[str, Path],
-        options: Union[HistoryOptions, dict, None] = None,
+        file: str | Path,
+        options: HistoryOptions | dict | None = None,
     ):
         super().__init__(id, file, options=options)
 
     @staticmethod
     def load(
         id: str,
-        file: Union[str, Path],
-        options: Union[HistoryOptions, dict] = None,
+        file: str | Path,
+        options: HistoryOptions | dict = None,
     ) -> "Hdf5AmiciHistory":
         """Load the History object from memory."""
         history = Hdf5AmiciHistory(id=id, file=file, options=options)
@@ -73,8 +72,8 @@ class Hdf5AmiciHistory(Hdf5History):
 
     @trace_wrap
     def get_cpu_time_total_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative simulation CPU time [s].
 
@@ -85,8 +84,8 @@ class Hdf5AmiciHistory(Hdf5History):
 
     @trace_wrap
     def get_preeq_time_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative pre-equilibration time, [s].
 
@@ -97,8 +96,8 @@ class Hdf5AmiciHistory(Hdf5History):
 
     @trace_wrap
     def get_preeq_timeB_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative pre-equilibration time of the backward problem, [s].
 
@@ -109,8 +108,8 @@ class Hdf5AmiciHistory(Hdf5History):
 
     @trace_wrap
     def get_posteq_time_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative post-equilibration time [s].
 
@@ -121,8 +120,8 @@ class Hdf5AmiciHistory(Hdf5History):
 
     @trace_wrap
     def get_posteq_timeB_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative post-equilibration time of the backward problem [s].
 
@@ -155,7 +154,7 @@ class CsvAmiciHistory(CsvHistory):
         self,
         file: str,
         x_names: Sequence[str] = None,
-        options: Union[HistoryOptions, dict] = None,
+        options: HistoryOptions | dict = None,
         load_from_file: bool = False,
     ):
         super().__init__(file, x_names, options, load_from_file=load_from_file)
@@ -190,8 +189,8 @@ class CsvAmiciHistory(CsvHistory):
 
     @trace_wrap
     def get_cpu_time_total_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative simulation CPU time [s].
 
@@ -202,8 +201,8 @@ class CsvAmiciHistory(CsvHistory):
 
     @trace_wrap
     def get_preeq_time_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative pre-equilibration time [s].
 
@@ -214,8 +213,8 @@ class CsvAmiciHistory(CsvHistory):
 
     @trace_wrap
     def get_preeq_timeB_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative pre-equilibration time of the backward problem [s].
 
@@ -226,8 +225,8 @@ class CsvAmiciHistory(CsvHistory):
 
     @trace_wrap
     def get_posteq_time_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative post-equilibration time [s].
 
@@ -238,8 +237,8 @@ class CsvAmiciHistory(CsvHistory):
 
     @trace_wrap
     def get_posteq_timeB_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """
         Cumulative post-equilibration time of the backward problem [s].
 

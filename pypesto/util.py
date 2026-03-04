@@ -6,16 +6,16 @@ Package-wide utilities.
 
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from numbers import Number
 from operator import itemgetter
-from typing import Any, Callable, Optional, Union
+from typing import Any
 
 import numpy as np
 from tqdm import tqdm as _tqdm
 
 
-def _check_none(fun: Callable[..., Any]) -> Callable[..., Union[Any, None]]:
+def _check_none(fun: Callable[..., Any]) -> Callable[..., Any | None]:
     """Return None if any input argument is None; Wrapper function."""
 
     def checked_fun(*args, **kwargs):
@@ -102,7 +102,7 @@ def sres_to_fim(sres: np.ndarray) -> np.ndarray:
     return sres.transpose().dot(sres)
 
 
-def is_none_or_nan(x: Union[Number, None]) -> bool:
+def is_none_or_nan(x: Number | None) -> bool:
     """
     Check if x is None or NaN.
 
@@ -118,7 +118,7 @@ def is_none_or_nan(x: Union[Number, None]) -> bool:
     return x is None or np.isnan(x)
 
 
-def is_none_or_nan_array(x: Union[Number, np.ndarray, None]) -> bool:
+def is_none_or_nan_array(x: Number | np.ndarray | None) -> bool:
     """
     Check if x is None or NaN array.
 
@@ -134,9 +134,7 @@ def is_none_or_nan_array(x: Union[Number, np.ndarray, None]) -> bool:
     return x is None or np.isnan(x).all()
 
 
-def allclose(
-    x: Union[Number, np.ndarray], y: Union[Number, np.ndarray]
-) -> bool:
+def allclose(x: Number | np.ndarray, y: Number | np.ndarray) -> bool:
     """
     Check if two arrays are close.
 
@@ -155,9 +153,9 @@ def allclose(
 
 
 def isclose(
-    x: Union[Number, np.ndarray],
-    y: Union[Number, np.ndarray],
-) -> Union[bool, np.ndarray]:
+    x: Number | np.ndarray,
+    y: Number | np.ndarray,
+) -> bool | np.ndarray:
     """
     Check if two values or arrays are close, element-wise.
 
@@ -230,9 +228,9 @@ def assign_clusters(vals):
 
 def delete_nan_inf(
     fvals: np.ndarray,
-    x: Optional[Sequence[Union[np.ndarray, list[float]]]] = None,
-    xdim: Optional[int] = 1,
-    magnitude_bound: Optional[float] = np.inf,
+    x: Sequence[np.ndarray | list[float]] | None = None,
+    xdim: int | None = 1,
+    magnitude_bound: float | None = np.inf,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Delete nan and inf values in fvals.

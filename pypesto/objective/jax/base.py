@@ -7,8 +7,8 @@ combination of objective based methods and jax based autodiff.
 """
 
 import copy
+from collections.abc import Callable
 from functools import partial
-from typing import Callable, Union
 
 import numpy as np
 
@@ -185,7 +185,7 @@ class JaxObjective(ObjectiveBase):
         mode: ModeType = MODE_FUN,
         return_dict: bool = False,
         **kwargs,
-    ) -> Union[jnp.ndarray, tuple, ResultDict]:
+    ) -> jnp.ndarray | tuple | ResultDict:
         """
         See :class:`ObjectiveBase` for more documentation.
 

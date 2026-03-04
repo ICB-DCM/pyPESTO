@@ -275,6 +275,57 @@ def test_storage_profiling():
             os.remove(fn)
 
 
+def test_storage_profiling_high_profile_index():
+    """
+    Test for potential lexiographic-ordering bug raised in #1676.
+
+    ProfileResultHDF5Reader.read() may fail with an IndexError when there are
+    >= 10 profile runs stored, because HDF5 group keys are iterated in
+    lexicographic string order (e.g. "10" before "2").
+    """
+    objective = pypesto.Objective(
+        fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess
+    )
+    dim_full = 2
+    lb = -5 * np.ones(dim_full)
+    ub = 5 * np.ones(dim_full)
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
+
+    optimizer = optimize.ScipyOptimizer()
+    result = optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=1,
+        progress_bar=False,
+    )
+
+    result = profile.parameter_profile(
+        problem=problem,
+        result=result,
+        profile_index=[0],
+        optimizer=optimizer,
+        progress_bar=False,
+    )
+
+    # Append copies of the first profile run until there are 11 entries
+    # (profile_ids 0-10). Triggers potential lexiographic-ordering bug.
+    first_run = result.profile_result.list[0]
+    for _ in range(10):
+        result.profile_result.list.append(first_run)
+
+    assert len(result.profile_result.list) == 11
+
+    with TemporaryDirectory(dir=".") as tmp_dir:
+        fn = os.path.join(tmp_dir, "test_profile_high_index.hdf5")
+        writer = ProfileResultHDF5Writer(fn)
+        writer.write(result)
+
+        reader = ProfileResultHDF5Reader(fn)
+        read_result_obj = reader.read()
+
+        assert len(read_result_obj.profile_result.list) == 11
+
+
 def test_storage_sampling():
     """
     This test tests the saving and loading of samples

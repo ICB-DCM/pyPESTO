@@ -112,7 +112,7 @@ class PetabImporterRR:
         to_change = []
         # check that noise formulae are valid
         for i_edata, (edata, par_map) in enumerate(
-            zip(edatas, parameter_mapping)
+            zip(edatas, parameter_mapping, strict=True)
         ):
             for j_formula, noise_formula in enumerate(edata.noise_formulae):
                 # constant values are allowed
@@ -224,7 +224,7 @@ class PetabImporterRR:
         if not overrides:
             return mapping
         for (_, condition), mapping_per_condition in zip(
-            simulation_conditions.iterrows(), mapping
+            simulation_conditions.iterrows(), mapping, strict=True
         ):
             for override in overrides:
                 preeq_id = condition.get(PREEQUILIBRATION_CONDITION_ID)

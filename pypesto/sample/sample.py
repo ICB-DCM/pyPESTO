@@ -1,6 +1,6 @@
 import logging
+from collections.abc import Callable
 from time import process_time
-from typing import Callable, Optional, Union
 
 import numpy as np
 
@@ -17,12 +17,12 @@ logger = logging.getLogger(__name__)
 
 def sample(
     problem: Problem,
-    n_samples: Optional[int],
+    n_samples: int | None,
     sampler: Sampler = None,
-    x0: Union[np.ndarray, list[np.ndarray]] = None,
+    x0: np.ndarray | list[np.ndarray] = None,
     result: Result = None,
     warm_start: float = 1.0,
-    filename: Union[str, Callable, None] = None,
+    filename: str | Callable | None = None,
     overwrite: bool = False,
 ) -> Result:
     """

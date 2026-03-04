@@ -4,7 +4,7 @@ import copy
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Union
+from typing import Any
 
 from ..util import tqdm
 from .base import Engine
@@ -32,7 +32,7 @@ class MultiThreadEngine(Engine):
         `n_threads` and the number of tasks submitted.
     """
 
-    def __init__(self, n_threads: Union[int, None] = None):
+    def __init__(self, n_threads: int | None = None):
         super().__init__()
 
         if n_threads is None:

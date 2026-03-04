@@ -1,0 +1,47 @@
+observableId	simulationConditionId	measurement	time	noiseParameters	observableTransformation
+tSTAT5_au	condition1	1.0000	0	0.084	lin
+tSTAT5_au	condition1	0.9275	2	0.046	lin
+tSTAT5_au	condition1	0.7923	4	0.038	lin
+tSTAT5_au	condition1	0.7778	6	0.032	lin
+tSTAT5_au	condition1	0.7053	8	0.033	lin
+tSTAT5_au	condition1	0.6522	10	0.037	lin
+tSTAT5_au	condition1	0.5894	12	0.039	lin
+tSTAT5_au	condition1	0.5894	14	0.040	lin
+tSTAT5_au	condition1	0.6377	16	0.030	lin
+tSTAT5_au	condition1	0.6425	18	0.028	lin
+tSTAT5_au	condition1	0.6908	20	0.030	lin
+tSTAT5_au	condition1	0.6908	25	0.031	lin
+tSTAT5_au	condition1	0.7585	30	0.032	lin
+tSTAT5_au	condition1	0.8068	40	0.040	lin
+tSTAT5_au	condition1	0.9275	50	0.046	lin
+tSTAT5_au	condition1	0.9710	60	0.082	lin
+pSTAT5_au	condition1	0.3315	2	0.050	lin
+pSTAT5_au	condition1	0.8645	4	0.066	lin
+pSTAT5_au	condition1	0.9635	6	0.070	lin
+pSTAT5_au	condition1	0.9279	8	0.065	lin
+pSTAT5_au	condition1	0.8162	10	0.051	lin
+pSTAT5_au	condition1	0.7553	12	0.053	lin
+pSTAT5_au	condition1	0.7680	14	0.051	lin
+pSTAT5_au	condition1	0.8416	16	0.040	lin
+pSTAT5_au	condition1	0.7680	18	0.040	lin
+pSTAT5_au	condition1	0.8010	20	0.048	lin
+pSTAT5_au	condition1	0.7832	25	0.052	lin
+pSTAT5_au	condition1	0.8086	30	0.054	lin
+pSTAT5_au	condition1	0.4888	40	0.055	lin
+pSTAT5_au	condition1	0.2782	50	0.044	lin
+pSTAT5_au	condition1	0.2553	60	0.071	lin
+pEpoR_au	condition1	0.01713	0		lin
+pEpoR_au	condition1	0.145	2		lin
+pEpoR_au	condition1	0.2442	4		lin
+pEpoR_au	condition1	0.7659	6		lin
+pEpoR_au	condition1	1	8		lin
+pEpoR_au	condition1	0.8605	10		lin
+pEpoR_au	condition1	0.7829	12		lin
+pEpoR_au	condition1	0.5705	14		lin
+pEpoR_au	condition1	0.6217	16		lin
+pEpoR_au	condition1	0.331	18		lin
+pEpoR_au	condition1	0.3388	20		lin
+pEpoR_au	condition1	0.3116	25		lin
+pEpoR_au	condition1	0.05062	30		lin
+pEpoR_au	condition1	0.02504	40		lin
+pEpoR_au	condition1	0.01163	50		lin

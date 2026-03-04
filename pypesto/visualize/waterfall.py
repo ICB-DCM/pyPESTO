@@ -259,10 +259,11 @@ def waterfall_lowlevel(
         ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
 
     # Overlay with scatter points with individual colors
+    # plotting in reverse order to ensure that the best points are plotted on top
     ax.scatter(
-        start_indices,
-        fvals,
-        c=colors,
+        start_indices[::-1],
+        fvals[::-1],
+        c=colors[::-1],
         marker="o",
         linewidth=1.0,
         label=legend_text,

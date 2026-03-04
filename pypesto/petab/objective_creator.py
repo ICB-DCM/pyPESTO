@@ -9,11 +9,10 @@ import re
 import shutil
 import warnings
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
 )
 
 import numpy as np
@@ -43,11 +42,7 @@ from ..result import PredictionResult
 
 try:
     import amici
-    import amici.petab
-    import amici.petab.conditions
-    import amici.petab.parameter_mapping
-    import amici.petab.simulations
-    from amici.petab.import_helpers import check_model
+    import amici.sim.sundials as asd
 except ImportError:
     amici = None
 try:
@@ -115,7 +110,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
-    ) -> amici.Model:
+    ) -> asd.Model:
         """
         Import amici model.
 
@@ -164,13 +159,16 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
         return self._create_model()
 
-    def _create_model(self) -> amici.Model:
+    def _create_model(self) -> asd.Model:
         """Load model module and return the model, no checks/compilation."""
+        import amici
+        from amici.importers.petab.v1._import_helpers import check_model
+
         # load moduĺe
         module = amici.import_model_module(
             module_name=self.model_name, module_path=self.output_folder
         )
-        model = module.getModel()
+        model = module.get_model()
         check_model(
             amici_model=model,
             petab_problem=self.petab_problem,
@@ -217,42 +215,46 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
             Extra arguments passed to :meth:`amici.sbml_import.SbmlImporter.sbml2amici`
             or :func:`amici.pysb_import.pysb2amici`.
         """
+        from amici.importers.petab.v1 import import_petab_problem
+
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        amici.petab.import_petab_problem(
+        import_petab_problem(
             petab_problem=self.petab_problem,
             model_name=self.model_name,
-            model_output_dir=self.output_folder,
+            output_dir=self.output_folder,
             **kwargs,
         )
 
     def create_solver(
         self,
-        model: amici.Model = None,
+        model: asd.Model = None,
         verbose: bool = True,
-    ) -> amici.Solver:
+    ) -> asd.Solver:
         """Return model solver."""
         # create model
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        solver = model.getSolver()
+        solver = model.create_solver()
         return solver
 
     def create_edatas(
         self,
-        model: amici.Model = None,
+        model: asd.Model = None,
         simulation_conditions=None,
         verbose: bool = True,
-    ) -> list[amici.ExpData]:
+    ) -> list[asd.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
+        from amici.sim.sundials.petab.v1 import create_edatas
+
         # create model
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        return amici.petab.conditions.create_edatas(
+        return create_edatas(
             amici_model=model,
             petab_problem=self.petab_problem,
             simulation_conditions=simulation_conditions,
@@ -260,9 +262,9 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def create_objective(
         self,
-        model: amici.Model = None,
-        solver: amici.Solver = None,
-        edatas: Sequence[amici.ExpData] = None,
+        model: asd.Model = None,
+        solver: asd.Solver = None,
+        edatas: Sequence[asd.ExpData] = None,
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
@@ -292,6 +294,11 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         -------
         A :class:`pypesto.objective.AmiciObjective` for the model and the data.
         """
+        from amici.sim.sundials.petab.v1 import fill_in_parameters
+        from amici.sim.sundials.petab.v1._parameter_mapping import (
+            create_parameter_mapping,
+        )
+
         simulation_conditions = petab.get_simulation_conditions(
             self.petab_problem.measurement_df
         )
@@ -306,23 +313,25 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
             edatas = self.create_edatas(
                 model=model, simulation_conditions=simulation_conditions
             )
-        parameter_mapping = (
-            amici.petab.parameter_mapping.create_parameter_mapping(
-                petab_problem=self.petab_problem,
-                simulation_conditions=simulation_conditions,
-                scaled_parameters=True,
-                amici_model=model,
-                fill_fixed_parameters=False,
-            )
+        parameter_mapping = create_parameter_mapping(
+            petab_problem=self.petab_problem,
+            simulation_conditions=simulation_conditions,
+            scaled_parameters=True,
+            amici_model=model,
+            fill_fixed_parameters=False,
         )
         par_ids = self.petab_problem.x_ids
 
         # fill in dummy parameters (this is needed since some objective
         #  initialization e.g. checks for preeq parameters)
         problem_parameters = dict(
-            zip(self.petab_problem.x_ids, self.petab_problem.x_nominal_scaled)
+            zip(
+                self.petab_problem.x_ids,
+                self.petab_problem.x_nominal_scaled,
+                strict=True,
+            )
         )
-        amici.petab.conditions.fill_in_parameters(
+        fill_in_parameters(
             edatas=edatas,
             problem_parameters=problem_parameters,
             scaled_parameters=True,
@@ -350,7 +359,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
                 edatas,
                 inner_options,
             )
-            amici_reporting = amici.RDataReporting.full
+            amici_reporting = asd.RDataReporting.full
 
             # FIXME: currently not supported with hierarchical
             if "guess_steadystate" in kwargs and kwargs["guess_steadystate"]:
@@ -489,8 +498,8 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def rdatas_to_measurement_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
         """
@@ -512,20 +521,22 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
         """
+        from amici.sim.sundials.petab.v1 import (
+            rdatas_to_measurement_df,
+        )
+
         # create model
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        measurement_df = self.petab_problem.measurement_df
-
-        return amici.petab.simulations.rdatas_to_measurement_df(
-            rdatas, model, measurement_df
+        return rdatas_to_measurement_df(
+            rdatas, model, self.petab_problem.measurement_df
         )
 
     def rdatas_to_simulation_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
     ) -> pd.DataFrame:
         """
         See :meth:`rdatas_to_measurement_df`.
@@ -649,7 +660,7 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
         to_change = []
         # check that noise formulae are valid
         for i_edata, (edata, par_map) in enumerate(
-            zip(edatas, parameter_mapping)
+            zip(edatas, parameter_mapping, strict=True)
         ):
             for j_formula, noise_formula in enumerate(edata.noise_formulae):
                 # constant values are allowed
@@ -761,7 +772,7 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
         if not overrides:
             return mapping
         for (_, condition), mapping_per_condition in zip(
-            simulation_conditions.iterrows(), mapping
+            simulation_conditions.iterrows(), mapping, strict=True
         ):
             for override in overrides:
                 preeq_id = condition.get(PREEQUILIBRATION_CONDITION_ID)

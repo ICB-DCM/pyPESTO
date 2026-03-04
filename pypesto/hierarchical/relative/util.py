@@ -67,7 +67,9 @@ def compute_optimal_scaling(
     num, den = 0.0, 0.0
 
     # iterate over conditions
-    for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
+    for sim_i, data_i, sigma_i, mask_i in zip(
+        sim, data, sigma, mask, strict=True
+    ):
         # extract relevant values
         sim_x = sim_i[mask_i]  # \tilde{h}_i
         data_x = (
@@ -146,7 +148,9 @@ def compute_optimal_offset(
     num, den = 0.0, 0.0
 
     # iterate over conditions
-    for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
+    for sim_i, data_i, sigma_i, mask_i in zip(
+        sim, data, sigma, mask, strict=True
+    ):
         # extract relevant values
         sim_x = (
             optimal_scaling * sim_i[mask_i]
@@ -191,7 +195,9 @@ def compute_optimal_offset_coupled(
     h2 = 0.0
 
     # iterate over conditions
-    for sim_i, data_i, sigma_i, mask_i in zip(sim, data, sigma, mask):
+    for sim_i, data_i, sigma_i, mask_i in zip(
+        sim, data, sigma, mask, strict=True
+    ):
         if mask_i.max(initial=False) is False:
             continue
         # extract relevant values
@@ -278,7 +284,7 @@ def compute_optimal_sigma(
     num, den = 0.0, 0.0
 
     # iterate over conditions
-    for sim_i, data_i, mask_i in zip(sim, data, mask):
+    for sim_i, data_i, mask_i in zip(sim, data, mask, strict=True):
         # extract relevant values
         sim_x = sim_i[mask_i]
         data_x = data_i[mask_i]
@@ -465,7 +471,7 @@ def compute_nllh(
     """
     nllh = 0.0
     for data_i, sim_i, sigma_i, data_mask_i in zip(
-        data, sim, sigma, data_mask
+        data, sim, sigma, data_mask, strict=True
     ):
         # Mask the data, sim and sigma
         data_i = data_i[data_mask_i]
