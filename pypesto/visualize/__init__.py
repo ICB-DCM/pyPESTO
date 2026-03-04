@@ -44,7 +44,13 @@ from .parameters import (
     parameters_lowlevel,
 )
 from .profile_cis import profile_cis, profile_nested_cis
-from .profiles import profile_lowlevel, profiles, profiles_lowlevel
+from .profiles import (
+    profile_lowlevel,
+    profile_lowlevel_2d,
+    profiles,
+    profiles_lowlevel,
+    visualize_2d_profile,
+)
 from .reference_points import ReferencePoint, create_references
 from .sampling import (
     sampling_1d_marginals,
