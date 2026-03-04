@@ -23,8 +23,8 @@ from ..problem import HierarchicalProblem, Problem
 from ..result import Result
 
 try:
-    import amici
-    from amici.petab.conditions import fill_in_parameters
+    import amici.sim.sundials as asd
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
 
     from ..hierarchical import InnerCalculatorCollector
     from ..hierarchical.base_problem import scale_back_value_dict
@@ -109,7 +109,7 @@ def visualize_estimated_observable_mapping(
 
     # Get observable indices for both relative and semi-quantitative observables.
     rel_and_semiquant_obs_indices = [
-        amici_model.getObservableIds().index(observable_id)
+        amici_model.get_observable_ids().index(observable_id)
         for observable_id in relative_obs_ids + semiquant_obs_ids
     ]
     rel_and_semiquant_obs_indices.sort()
@@ -220,7 +220,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     # Get the relative observable ids and indices.
     relative_observable_ids = pypesto_problem.relative_observable_ids
     relative_observable_indices = [
-        amici_model.getObservableIds().index(observable_id)
+        amici_model.get_observable_ids().index(observable_id)
         for observable_id in relative_observable_ids
     ]
 
@@ -276,7 +276,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = asd.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -284,7 +284,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     )
 
     # If any amici simulation failed, raise warning and return None.
-    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+    if any(rdata.status != asd.AMICI_SUCCESS for rdata in inner_rdatas):
         raise ValueError(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
             "solutions."
@@ -466,7 +466,7 @@ def plot_splines_from_pypesto_result(
     amici_model = pypesto_result.problem.objective.amici_model
     amici_solver = pypesto_result.problem.objective.amici_solver
     n_threads = pypesto_result.problem.objective.n_threads
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     # Fill in the parameters.
     fill_in_parameters(
@@ -478,7 +478,7 @@ def plot_splines_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = asd.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -486,7 +486,7 @@ def plot_splines_from_pypesto_result(
     )
 
     # If any amici simulation failed, raise warning and return None.
-    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+    if any(rdata.status != asd.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
             "solutions.",
@@ -764,7 +764,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = asd.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -772,7 +772,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     )
 
     # If any amici simulation failed, raise warning and return None.
-    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+    if any(rdata.status != asd.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
             "solutions.",
@@ -798,7 +798,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     inner_results = inner_solver.solve(inner_problem, sim, sigma)
 
     # Get the observable ids.
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
 
     for inner_result, group in zip(
         inner_results, inner_problem.groups, strict=True
@@ -916,7 +916,7 @@ def _obtain_regularization_for_start(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = asd.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -924,7 +924,7 @@ def _obtain_regularization_for_start(
     )
 
     # If any amici simulation failed, raise warning and return None.
-    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+    if any(rdata.status != asd.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
             "solutions.",
