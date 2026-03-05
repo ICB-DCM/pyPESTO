@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, Literal
+from collections.abc import Callable
+from typing import Literal
 
 import numpy as np
 
@@ -97,7 +98,7 @@ def next_guess(
             max_step_reduce_factor,
         )
 
-    logger.info(
+    logger.debug(
         f"Next guess for {problem.x_names[par_index]} in direction "
         f"{par_direction} is {next_initial_guess[par_index]:.4f}. Step size: "
         f"{next_initial_guess[par_index] - x[par_index]:.4f}."

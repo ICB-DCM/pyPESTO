@@ -1,5 +1,5 @@
 from collections.abc import Sequence
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 
@@ -31,10 +31,10 @@ class ReferencePoint(dict):
     def __init__(
         self,
         reference: Union[None, dict, tuple, "ReferencePoint"] = None,
-        x: Optional[Sequence] = None,
-        fval: Optional[float] = None,
+        x: Sequence | None = None,
+        fval: float | None = None,
         color=None,
-        legend: Optional[str] = None,
+        legend: str | None = None,
     ):
         super().__init__()
 

@@ -255,7 +255,7 @@ class OptimizerHistory:
 
         if len(ixs_admit) == 0:
             # no admittable indices
-            return {key: None for key in OptimizerHistory.MIN_KEYS}
+            return dict.fromkeys(OptimizerHistory.MIN_KEYS)
 
         # index of minimum of fval values
         ix_min = np.nanargmin(self.history.get_fval_trace(ixs_admit))

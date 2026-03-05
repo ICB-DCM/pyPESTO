@@ -4,7 +4,7 @@ Constants
 Package-wide consistent constant definitions.
 """
 
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Literal
 
 ###############################################################################
@@ -97,7 +97,7 @@ PARAMETER_TYPE = "parameterType"
 RELATIVE = "relative"
 
 
-class InnerParameterType(str, Enum):
+class InnerParameterType(StrEnum):
     """Specifies different inner parameter types."""
 
     OFFSET = "offset"
@@ -239,9 +239,9 @@ SUFFIXES = SUFFIXES_CSV + SUFFIXES_HDF5
 
 CPU_TIME_TOTAL = "cpu_time_total"
 PREEQ_CPU_TIME = "preeq_cpu_time"
-PREEQ_CPU_TIME_BACKWARD = "preeq_cpu_timeB"
+PREEQ_CPU_TIME_BACKWARD = "preeq_cpu_time_b"
 POSTEQ_CPU_TIME = "posteq_cpu_time"
-POSTEQ_CPU_TIME_BACKWARD = "posteq_cpu_timeB"
+POSTEQ_CPU_TIME_BACKWARD = "posteq_cpu_time_b"
 
 
 ###############################################################################

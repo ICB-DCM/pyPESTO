@@ -199,6 +199,15 @@ class ESSOptimizer:
             RefSet, or just the local search results and the overall best
             parameters.
         """
+        warn(
+            "Using pypesto.optimize.ess.ESSOptimizer is deprecated "
+            "and will be removed in a future release. "
+            "Use pyscat.ESSOptimizer instead "
+            "(https://github.com/ICB-DCM/pyscat/, `pip install pyscat`).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
             raise ValueError(
@@ -290,6 +299,21 @@ class ESSOptimizer:
                 "Exactly one of `problem` or `refset` has to be provided."
             )
 
+        problem = problem if problem else refset.evaluator.problem
+
+        if problem.x_guesses.shape[0]:
+            # We'll use problem.startpoint_method to sample random points
+            #  later on. Depending on the startpoint method, this will return
+            #  the provided guesses, meaning that we'll always get the same
+            #  points. This means, we won't explore the parameter space, or
+            #  potentially even get stuck if the provided guesses are not
+            #  evaluable.
+            raise ValueError(
+                "Providing startpoints in `problem.x_guesses` "
+                f"is not supported by {self.__class__.__name__}. "
+                "Unset `problem.x_guesses`."
+            )
+
         # generate initial RefSet if not provided
         if refset is None:
             if self.dim_refset is None:
@@ -316,7 +340,7 @@ class ESSOptimizer:
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
         )
         # initialize global best from initial refset
-        for x, fx in zip(self.refset.x, self.refset.fx):
+        for x, fx in zip(self.refset.x, self.refset.fx, strict=True):
             self._maybe_update_global_best(x, fx)
 
     def minimize(

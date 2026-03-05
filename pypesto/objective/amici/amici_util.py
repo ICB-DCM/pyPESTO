@@ -24,7 +24,7 @@ from ...logging import log_level_active
 if TYPE_CHECKING:
     try:
         import amici
-        from amici.petab.parameter_mapping import (
+        from amici.sim._parameter_mapping import (
             ParameterMapping,
             ParameterMappingForCondition,
         )
@@ -62,7 +62,7 @@ def map_par_opt_to_par_sim(
     """
     par_sim_vals = [
         condition_map_sim_var[par_id]
-        for par_id in amici_model.getParameterIds()
+        for par_id in amici_model.get_free_parameter_ids()
     ]
 
     # iterate over simulation parameter indices
@@ -124,20 +124,22 @@ def create_identity_parameter_mapping(
     both in preequilibration and simulation, are assumed to be provided
     correctly in model or edatas already.
     """
-    from amici.petab.parameter_mapping import (
+    from amici.sim._parameter_mapping import (
         ParameterMapping,
         ParameterMappingForCondition,
+    )
+    from amici.sim.sundials.petab.v1._parameter_scaling import (
         amici_to_petab_scale,
     )
 
-    x_ids = list(amici_model.getParameterIds())
-    x_scales = list(amici_model.getParameterScale())
+    x_ids = list(amici_model.get_free_parameter_ids())
+    x_scales = list(amici_model.get_parameter_scale())
     parameter_mapping = ParameterMapping()
     for _ in range(n_conditions):
         condition_map_sim_var = {x_id: x_id for x_id in x_ids}
         condition_scale_map_sim_var = {
             x_id: amici_to_petab_scale(x_scale)
-            for x_id, x_scale in zip(x_ids, x_scales)
+            for x_id, x_scale in zip(x_ids, x_scales, strict=True)
         }
         # assumes fixed parameters are filled in already
         mapping_for_condition = ParameterMappingForCondition(
@@ -203,7 +205,8 @@ def par_index_slices(
             )
             for par_sim_id, par_opt_id in condition_map_sim_var.items()
             if isinstance(par_opt_id, str) and par_opt_id in par_opt_id_to_idx
-        )
+        ),
+        strict=True,
     )
     par_sim_slice = np.fromiter(next(zip_iterator), dtype=int)
     par_opt_slice = np.fromiter(next(zip_iterator), dtype=int)
@@ -382,7 +385,7 @@ def get_error_output(
             data.nt() if data.nt() else amici_model.nt() for data in edatas
         )
     n_res = nt * amici_model.nytrue
-    if amici_model.getAddSigmaResiduals():
+    if amici_model.get_add_sigma_residuals():
         n_res *= 2
 
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
