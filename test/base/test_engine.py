@@ -153,3 +153,39 @@ def test_pickle_objective():
         == objective2.amici_solver.get_sensitivity_method()
     )
     assert len(objective.edatas) == len(objective2.edatas)
+
+
+def test_result_ordering():
+    """Test MultiProcessEngine returns results in task submission order."""
+
+    class NumberedTask(pypesto.engine.Task):
+        """Simple task that returns its assigned number after execution."""
+
+        def __init__(self, number):
+            super().__init__()
+            self.number = number
+
+        def execute(self):
+            """Return the assigned number."""
+            return self.number
+
+    # Create tasks with identifiable outputs
+    n_tasks = 10
+    tasks = [NumberedTask(i) for i in range(n_tasks)]
+
+    # Test with different engine configurations
+    for engine in [
+        pypesto.engine.MultiProcessEngine(n_procs=2),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="spawn"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="fork"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="forkserver"),
+    ]:
+        results = engine.execute(tasks, progress_bar=False)
+
+        # Verify results are in the same order as tasks were submitted
+        assert len(results) == n_tasks
+        for i, result in enumerate(results):
+            assert result == i, (
+                f"Result order mismatch for {engine.__class__.__name__}: "
+                f"expected {i} at position {i}, got {result}"
+            )

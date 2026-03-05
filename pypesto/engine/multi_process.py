@@ -3,6 +3,7 @@
 import logging
 import multiprocessing
 import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Any
 
 import cloudpickle as pickle
@@ -14,8 +15,18 @@ from .task import Task
 logger = logging.getLogger(__name__)
 
 
-def work(pickled_task):
-    """Unpickle and execute task."""
+def work(pickled_task) -> Any:
+    """Unpickle and execute task.
+
+    Parameters
+    ----------
+    pickled_task:
+        A pickled Task object to execute.
+
+    Returns
+    -------
+    The result of executing the task.
+    """
     task = pickle.loads(pickled_task)
     return task.execute()
 
@@ -57,6 +68,8 @@ class MultiProcessEngine(Engine):
     ) -> list[Any]:
         """Pickle tasks and distribute work over parallel processes.
 
+        Tasks are pickled on-demand as workers become available.
+
         Parameters
         ----------
         tasks:
@@ -66,24 +79,32 @@ class MultiProcessEngine(Engine):
 
         Returns
         -------
-        A list of results.
+        A list of results in the same order as the input tasks.
         """
         n_tasks = len(tasks)
-
-        pickled_tasks = [pickle.dumps(task) for task in tasks]
-
         n_procs = min(self.n_procs, n_tasks)
         logger.debug(f"Parallelizing on {n_procs} processes.")
 
         ctx = multiprocessing.get_context(method=self.method)
 
-        with ctx.Pool(processes=n_procs) as pool:
-            results = list(
-                tqdm(
-                    pool.imap(work, pickled_tasks),
-                    total=len(pickled_tasks),
-                    enable=progress_bar,
-                ),
-            )
+        # Use ProcessPoolExecutor for on-demand pickling
+        with ProcessPoolExecutor(
+            max_workers=n_procs, mp_context=ctx
+        ) as executor:
+            # Submit tasks and track futures
+            future_to_index = {
+                executor.submit(work, pickle.dumps(task)): i
+                for i, task in enumerate(tasks)
+            }
+
+            # Collect results in original order
+            results = [None] * n_tasks
+            for future in tqdm(
+                as_completed(future_to_index),
+                total=n_tasks,
+                enable=progress_bar,
+            ):
+                index = future_to_index[future]
+                results[index] = future.result()
 
         return results
