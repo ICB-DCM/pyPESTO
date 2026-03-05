@@ -95,7 +95,7 @@ def history_decorator(minimize):
     ):
         if history_options is None:
             history_options = HistoryOptions()
-        if id is None:
+        if history_options.storage_file is not None and id is None:
             raise ValueError("id must be provided for history tracking.")
 
         objective = problem.objective
