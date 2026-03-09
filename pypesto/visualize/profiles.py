@@ -633,6 +633,8 @@ def profile_lowlevel_2d(
     cmap: str = "viridis",
     plot_objective_values: bool = False,
     x_labels: Sequence[str] = None,
+    vmin: float = None,
+    vmax: float = None,
 ) -> plt.Axes:
     """
     Lowlevel routine for plotting a two-parameter profile visualization.
@@ -665,6 +667,10 @@ def profile_lowlevel_2d(
     x_labels:
         Labels for the parameters (indexed by full parameter index).
         If None, labels are auto-generated from parameter names and scales.
+    vmin:
+        Minimum value for the color scale. If None, auto-scaled to the data.
+    vmax:
+        Maximum value for the color scale. If None, auto-scaled to the data.
 
     Returns
     -------
@@ -704,6 +710,8 @@ def profile_lowlevel_2d(
         s=30,
         edgecolors="black",
         linewidths=0.3,
+        vmin=vmin,
+        vmax=vmax,
     )
     ax.plot(x_values, y_values, "k-", alpha=0.2, linewidth=0.8, zorder=0)
 
@@ -741,6 +749,7 @@ def visualize_2d_profile(
     cmap: str = "viridis",
     plot_objective_values: bool = False,
     x_labels: Sequence[str] = None,
+    profile_color: COLOR | np.ndarray | None = None,
     reference: ReferencePoint | Sequence[ReferencePoint] = None,
 ) -> tuple[plt.Figure, np.ndarray]:
     """
@@ -765,13 +774,16 @@ def visualize_2d_profile(
     ratio_min:
         Minimum ratio below which to cut off.
     cmap:
-        Colormap to use for the 2D off-diagonal plots.
+        Colormap to use for the 2D off-diagonal scatter plots.
     plot_objective_values:
         Whether to plot the objective function values instead of the likelihood
         ratio values.
     x_labels:
         Labels for the parameters (indexed by full parameter index).
         If None, labels are auto-generated from parameter names and scales.
+    profile_color:
+        Color for the diagonal 1D profile lines. Passed directly to
+        :func:`profile_lowlevel`. If None, the default color is used.
     reference:
         List of reference points for optimization results, shown on diagonal
         1D plots.
@@ -817,6 +829,28 @@ def visualize_2d_profile(
             return x_labels[idx]
         return _parameter_label(result.problem, idx)
 
+    # Compute global color range across all 2D off-diagonal subplots so the
+    # shared colorbar is accurate for every panel.
+    all_color_values = []
+    for row_idx in profile_indices:
+        for col_idx in profile_indices:
+            if row_idx == col_idx or profile_list[col_idx] is None:
+                continue
+            profiler = profile_list[col_idx]
+            mask = profiler.ratio_path > ratio_min
+            vals = (
+                profiler.fval_path[mask]
+                if plot_objective_values
+                else profiler.ratio_path[mask]
+            )
+            if vals.size > 0:
+                all_color_values.append(vals)
+    if all_color_values:
+        all_vals = np.concatenate(all_color_values)
+        color_vmin, color_vmax = float(all_vals.min()), float(all_vals.max())
+    else:
+        color_vmin, color_vmax = None, None
+
     # Track the last successful 2D axes for the shared colorbar
     last_2d_ax = None
 
@@ -839,6 +873,7 @@ def visualize_2d_profile(
                         fvals[row_param_idx],
                         ax,
                         show_bounds=True,
+                        color=profile_color,
                         lb=result.problem.lb_full[row_param_idx],
                         ub=result.problem.ub_full[row_param_idx],
                     )
@@ -879,6 +914,8 @@ def visualize_2d_profile(
                         cmap=cmap,
                         plot_objective_values=plot_objective_values,
                         x_labels=x_labels,
+                        vmin=color_vmin,
+                        vmax=color_vmax,
                     )
                     last_2d_ax = ax
                 except (ValueError, IndexError):
