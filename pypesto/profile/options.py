@@ -13,6 +13,7 @@ class ProfileOptions(dict):
         and then refine the update).
     min_step_size:
         Lower bound for the step size in adaptive methods.
+        Default: 0.005.
     max_step_size:
         Upper bound for the step size in adaptive methods.
     step_size_factor:
@@ -46,8 +47,8 @@ class ProfileOptions(dict):
         Default: 0.7
     profile_n_starts:
         Number of multi-start optimizations at each profile point.
-        Default: 1 (single start). Higher values improve robustness but
-        increase computational cost.
+        Default: 3. Higher values improve robustness but increase
+        computational cost.
     profile_sampling_sigma:
         Standard deviation for Gaussian sampling around predicted starting
         point in multi-start optimization (relative to parameter scale).
@@ -57,7 +58,7 @@ class ProfileOptions(dict):
     def __init__(
         self,
         default_step_size: float = 0.01,
-        min_step_size: float = 0.001,
+        min_step_size: float = 0.005,
         max_step_size: float = 0.1,
         step_size_factor: float = 1.25,
         delta_ratio_max: float = 0.1,
@@ -67,7 +68,7 @@ class ProfileOptions(dict):
         adaptive_target_scaling_factor: float = 1.5,
         whole_path: bool = False,
         correlation_threshold: float = 0.7,
-        profile_n_starts: int = 1,
+        profile_n_starts: int = 3,
         profile_sampling_sigma: float = 0.01,
     ):
         super().__init__()

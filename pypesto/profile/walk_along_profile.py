@@ -142,6 +142,10 @@ def walk_along_profile(
     if par_direction not in (-1, 1):
         raise AssertionError("par_direction must be -1 or 1")
 
+    # Track which non-profiled parameters have already been warned about
+    # hitting a bound (once per parameter per direction to avoid spam).
+    warned_at_bound: set[int] = set()
+
     # while loop for profiling (will be exited by break command)
     while True:
         # get current position on the profile path
@@ -345,6 +349,28 @@ def walk_along_profile(
             f"Optimization successful for {problem.x_names[i_par]}={x_next[i_par]:.4f}. "
             f"Start fval {problem.objective(x_next[problem.x_free_indices]):.6f}, end fval {optimizer_result.fval:.6f}."
         )
+
+        # Check if any non-profiled free parameter hit a bound. This constrains
+        # the profile to a lower-dimensional subspace and may affect its shape.
+        # Warn once per parameter per profile direction to avoid repetitive output.
+        for k, j_par in enumerate(problem.x_free_indices):
+            x_j = optimizer_result.x[j_par]
+            lb_j = problem.lb[k]
+            ub_j = problem.ub[k]
+            at_lb = abs(x_j - lb_j) <= 1e-8
+            at_ub = abs(x_j - ub_j) <= 1e-8
+            if (at_lb or at_ub) and j_par not in warned_at_bound:
+                warned_at_bound.add(j_par)
+                bound_val = lb_j if at_lb else ub_j
+                logger.warning(
+                    f"Parameter '{problem.x_names[j_par]}' hit its "
+                    f"{'lower' if at_lb else 'upper'} bound "
+                    f"({bound_val:.4g}) while profiling "
+                    f"'{problem.x_names[i_par]}' at "
+                    f"{problem.x_names[i_par]}={optimizer_result.x[i_par]:.4g}. "
+                    f"The profile may be constrained near this region."
+                )
+
         if optimizer_result[GRAD] is not None:
             gradnorm = np.linalg.norm(
                 optimizer_result[GRAD][problem.x_free_indices]

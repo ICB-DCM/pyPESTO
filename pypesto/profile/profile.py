@@ -26,7 +26,7 @@ def parameter_profile(
     profile_index: Iterable[int] = None,
     profile_list: int = None,
     result_index: int = 0,
-    next_guess_method: Union[Callable, str] = "adaptive_step_regression",
+    next_guess_method: Union[Callable, str] = "adaptive_step_order_0",
     profile_options: ProfileOptions = None,
     progress_bar: bool = None,
     filename: Union[str, Callable, None] = None,
@@ -63,6 +63,9 @@ def parameter_profile(
         Method that creates the next starting point for optimization in profiling.
         One of the ``update_type`` options supported by
         :func:`pypesto.profile.profile_next_guess.next_guess`.
+        Default: ``"adaptive_step_order_0"`` (adaptive step size, no extrapolation
+        of other parameters). More robust than regression-based methods for
+        complex models.
     profile_options:
         Various options applied to the profile optimization.
         See :class:`pypesto.profile.options.ProfileOptions`.
@@ -188,6 +191,27 @@ def parameter_profile(
         # combine the two profile halves before assigning them to the profile result list
         result.profile_result.list[-1][p_index] = combine_profiles_halves(
             *paired_profiles[p_index]
+        )
+
+    # Check for ratio > 1, which indicates profiling found a better optimum
+    # than the one provided. Report all such parameters with their best fval.
+    better_optima = []
+    for i_par, profiler_result in enumerate(result.profile_result.list[-1]):
+        if profiler_result is None:
+            continue
+        if np.any(profiler_result.ratio_path > 1):
+            best_fval = np.min(profiler_result.fval_path)
+            better_optima.append((problem.x_names[i_par], best_fval))
+    if better_optima:
+        par_lines = "\n".join(
+            f"  {name}: best fval = {fval:.6g}" for name, fval in better_optima
+        )
+        logger.warning(
+            "Profiling found a better optimum than the one provided "
+            f"(global_opt fval = {global_opt:.6g}) for the following parameters:\n"
+            f"{par_lines}\n"
+            "This means the optimization result is not at the true global minimum. "
+            "Consider re-running optimization starting from the profile points above."
         )
 
     autosave(
