@@ -375,8 +375,10 @@ def test_model_problem_fake_result():
     """Test fake results for models with no estimated parameters."""
     expected_fval = 100.0
 
+    expected_x_fixed_vals = [0, 1, 2]
     fake_result = model_problem.create_fake_pypesto_result_from_fval(
         fval=expected_fval,
+        x_fixed_vals=expected_x_fixed_vals,
     )
     # There is only one start in the result.
     fake_start = one(fake_result.optimize_result.list)
@@ -386,9 +388,9 @@ def test_model_problem_fake_result():
     # The fake start has the expected fake ID.
     assert test_id == expected_id
 
-    expected_x = []
+    expected_x = expected_x_fixed_vals
     test_x = fake_start.x.tolist()
-    # The fake start has the expected zero estimated parameters.
+    # The fake start has the expected parameters.
     assert test_x == expected_x
 
     test_fval = fake_start.fval

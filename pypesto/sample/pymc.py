@@ -16,24 +16,24 @@ from .sampler import Sampler, SamplerImportError
 logger = logging.getLogger(__name__)
 
 # Lazy import of pymc, arviz, and pytensor
-# Only import if available, otherwise create dummy types for type checking
-if importlib.util.find_spec("pymc") is not None:
+# Check availability once at module load time
+_HAS_PYMC = importlib.util.find_spec("pymc") is not None
+_HAS_ARVIZ = importlib.util.find_spec("arviz") is not None
+
+if _HAS_PYMC:
     import pymc
     import pytensor.tensor as pt
 
     _PT_OP_BASE = pt.Op
 else:
-    pymc = type("", (), {})()
-    pymc.backends = type("", (), {})()
-    pymc.backends.Text = None
+    pymc = None
     pt = None
     _PT_OP_BASE = object
 
-if importlib.util.find_spec("arviz") is not None:
+if _HAS_ARVIZ:
     import arviz as az
 else:
-    az = type("", (), {})()
-    az.InferenceData = None
+    az = None
 
 # implementation based on:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
@@ -70,7 +70,7 @@ class PymcObjectiveOp(_PT_OP_BASE):
 
     def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
         # Check dependencies
-        if importlib.util.find_spec("pymc") is None:
+        if not _HAS_PYMC:
             raise SamplerImportError("pymc")
         self._objective: ObjectiveBase = objective
         self._beta: float = beta
@@ -109,7 +109,7 @@ class PymcGradientOp(_PT_OP_BASE):
 
     def __init__(self, objective: ObjectiveBase, beta: float):
         # Check dependencies
-        if importlib.util.find_spec("pymc") is None:
+        if not _HAS_PYMC:
             raise SamplerImportError("pymc")
         self._objective: ObjectiveBase = objective
         self._beta: float = beta
@@ -143,7 +143,7 @@ class PymcSampler(Sampler):
         **kwargs,
     ):
         # Check dependencies
-        if importlib.util.find_spec("pymc") is None:
+        if not _HAS_PYMC:
             raise SamplerImportError("pymc")
 
         super().__init__(kwargs)
@@ -208,7 +208,9 @@ class PymcSampler(Sampler):
         if self.x0 is not None:
             x0 = {
                 x_name: val
-                for x_name, val in zip(problem.x_names, self.x0)
+                # FIXME: address https://github.com/ICB-DCM/pyPESTO/issues/1681
+                #  and change to strict=True
+                for x_name, val in zip(problem.x_names, self.x0, strict=False)
                 if x_name in x_names_free
             }
 
@@ -218,9 +220,7 @@ class PymcSampler(Sampler):
             _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
-                    x_names_free,
-                    problem.lb,
-                    problem.ub,
+                    x_names_free, problem.lb, problem.ub, strict=True
                 )
             ]
 

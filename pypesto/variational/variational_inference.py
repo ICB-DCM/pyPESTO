@@ -1,8 +1,8 @@
 """Functions for variational inference accessible to the user. Currently only pymc is supported."""
 
 import logging
+from collections.abc import Callable
 from time import process_time
-from typing import Callable, Optional, Union
 
 import numpy as np
 
@@ -19,12 +19,12 @@ def variational_fit(
     problem: Problem,
     n_iterations: int,
     method: str = "advi",
-    n_samples: Optional[int] = None,
-    random_seed: Optional[int] = None,
-    start_sigma: Optional[dict[str, np.ndarray]] = None,
-    x0: Union[np.ndarray, list[np.ndarray]] = None,
+    n_samples: int | None = None,
+    random_seed: int | None = None,
+    start_sigma: dict[str, np.ndarray] | None = None,
+    x0: np.ndarray | list[np.ndarray] = None,
     result: Result = None,
-    filename: Union[str, Callable, None] = None,
+    filename: str | Callable | None = None,
     overwrite: bool = False,
     **kwargs,
 ) -> Result:

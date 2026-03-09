@@ -199,6 +199,15 @@ class ESSOptimizer:
             RefSet, or just the local search results and the overall best
             parameters.
         """
+        warn(
+            "Using pypesto.optimize.ess.ESSOptimizer is deprecated "
+            "and will be removed in a future release. "
+            "Use pyscat.ESSOptimizer instead "
+            "(https://github.com/ICB-DCM/pyscat/, `pip install pyscat`).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if max_eval is None and max_walltime_s is None and max_iter is None:
             # in this case, we'd run forever
             raise ValueError(
@@ -290,6 +299,21 @@ class ESSOptimizer:
                 "Exactly one of `problem` or `refset` has to be provided."
             )
 
+        problem = problem if problem else refset.evaluator.problem
+
+        if problem.x_guesses.shape[0]:
+            # We'll use problem.startpoint_method to sample random points
+            #  later on. Depending on the startpoint method, this will return
+            #  the provided guesses, meaning that we'll always get the same
+            #  points. This means, we won't explore the parameter space, or
+            #  potentially even get stuck if the provided guesses are not
+            #  evaluable.
+            raise ValueError(
+                "Providing startpoints in `problem.x_guesses` "
+                f"is not supported by {self.__class__.__name__}. "
+                "Unset `problem.x_guesses`."
+            )
+
         # generate initial RefSet if not provided
         if refset is None:
             if self.dim_refset is None:
@@ -316,7 +340,7 @@ class ESSOptimizer:
             shape=(self.evaluator.problem.dim,), fill_value=np.nan
         )
         # initialize global best from initial refset
-        for x, fx in zip(self.refset.x, self.refset.fx):
+        for x, fx in zip(self.refset.x, self.refset.fx, strict=True):
             self._maybe_update_global_best(x, fx)
 
     def minimize(
@@ -564,7 +588,7 @@ class ESSOptimizer:
             self.n_iter >= self.local_n1
             and self.n_iter - self.last_local_search_niter >= self.local_n2
         ):
-            quality_order = np.argsort(fx_best_children)
+            quality_order = np.argsort(fx_best_children).argsort()
             # compute minimal distance between the best children and all local
             #  optima found so far
             min_distances = (
@@ -588,7 +612,7 @@ class ESSOptimizer:
                 else np.zeros(len(x_best_children))
             )
             # sort by furthest distance to existing local optima
-            diversity_order = np.argsort(min_distances)[::-1]
+            diversity_order = np.argsort(min_distances)[::-1].argsort()
             # compute priority, balancing quality and diversity
             #  (smaller value = higher priority)
             priority = (
@@ -785,3 +809,33 @@ class ESSOptimizer:
     def set_maxtime(self, seconds: float) -> None:
         """Set the maximum wall time for optimization."""
         self.max_walltime_s = seconds
+
+    def supports_maxiter(self) -> bool:
+        """Check whether optimizer supports iteration limits."""
+        return True
+
+    def set_maxiter(self, iterations: int) -> None:
+        """
+        Set the maximum number of iterations for optimization.
+
+        Parameters
+        ----------
+        iterations
+            Maximum number of iterations.
+        """
+        self.max_iter = iterations
+
+    def supports_maxeval(self) -> bool:
+        """Check whether optimizer supports evaluation limits."""
+        return True
+
+    def set_maxeval(self, evaluations: int) -> None:
+        """
+        Set the maximum number of function evaluations for optimization.
+
+        Parameters
+        ----------
+        evaluations
+            Maximum number of function evaluations.
+        """
+        self.max_eval = evaluations

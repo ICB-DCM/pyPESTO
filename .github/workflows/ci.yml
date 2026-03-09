@@ -25,11 +25,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -37,7 +37,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -61,14 +61,14 @@ jobs:
         files: ./coverage.xml
 
   mac:
-    runs-on: macos-15
+    runs-on: macos-14
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -76,7 +76,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -100,11 +100,11 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -112,7 +112,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~\AppData\Local\pip\Cache
@@ -133,11 +133,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -145,7 +145,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -181,7 +181,7 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -189,7 +189,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache tox and cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -223,11 +223,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -235,7 +235,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -259,11 +259,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -271,7 +271,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -295,11 +295,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -307,7 +307,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -331,11 +331,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -343,7 +343,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -367,7 +367,7 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -375,7 +375,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -400,7 +400,7 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -408,7 +408,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip
@@ -430,7 +430,7 @@ jobs:
 
     steps:
     - name: Check out repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Prepare python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
@@ -438,7 +438,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/pip

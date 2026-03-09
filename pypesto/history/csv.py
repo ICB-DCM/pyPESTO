@@ -4,7 +4,6 @@ import copy
 import os
 import time
 from collections.abc import Sequence
-from typing import Union
 
 import numpy as np
 import pandas as pd
@@ -48,12 +47,12 @@ class CsvHistory(CountHistoryBase):
         self,
         file: str,
         x_names: Sequence[str] = None,
-        options: Union[HistoryOptions, dict] = None,
+        options: HistoryOptions | dict = None,
         load_from_file: bool = False,
     ):
         super().__init__(options=options)
         self.x_names: Sequence[str] = x_names
-        self._trace: Union[pd.DataFrame, None] = None
+        self._trace: pd.DataFrame | None = None
         self.file: str = os.path.abspath(file)
 
         # create trace file dirs
@@ -243,56 +242,56 @@ class CsvHistory(CountHistoryBase):
     @trace_wrap
     def get_x_trace(
         self,
-        ix: Union[int, Sequence[int], None] = None,
+        ix: int | Sequence[int] | None = None,
         trim: bool = False,
-    ) -> Union[Sequence[np.ndarray], np.ndarray]:
+    ) -> Sequence[np.ndarray] | np.ndarray:
         """See :meth:`HistoryBase.get_x_trace`."""
         return list(self._trace[X].values[ix])
 
     @trace_wrap
     def get_fval_trace(
-        self, ix: Union[int, Sequence[int], None], trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None, trim: bool = False
+    ) -> Sequence[float] | float:
         """See :meth:`HistoryBase.get_fval_trace`."""
         return list(self._trace[(FVAL, np.nan)].values[ix])
 
     @trace_wrap
     def get_grad_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_grad_trace`."""
         return list(self._trace[GRAD].values[ix])
 
     @trace_wrap
     def get_hess_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_hess_trace`."""
         return list(self._trace[(HESS, np.nan)].values[ix])
 
     @trace_wrap
     def get_res_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_res_trace`."""
         return list(self._trace[(RES, np.nan)].values[ix])
 
     @trace_wrap
     def get_sres_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[MaybeArray], MaybeArray]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[MaybeArray] | MaybeArray:
         """See :meth:`HistoryBase.get_sres_trace`."""
         return list(self._trace[(SRES, np.nan)].values[ix])
 
     @trace_wrap
     def get_time_trace(
-        self, ix: Union[int, Sequence[int], None] = None, trim: bool = False
-    ) -> Union[Sequence[float], float]:
+        self, ix: int | Sequence[int] | None = None, trim: bool = False
+    ) -> Sequence[float] | float:
         """See :meth:`HistoryBase.get_time_trace`."""
         return list(self._trace[(TIME, np.nan)].values[ix])
 
 
-def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
+def ndarray2string_full(x: np.ndarray | None) -> str | None:
     """
     Convert numpy array to string.
 
@@ -313,7 +312,7 @@ def ndarray2string_full(x: Union[np.ndarray, None]) -> Union[str, None]:
     )
 
 
-def string2ndarray(x: Union[str, float]) -> Union[np.ndarray, float]:
+def string2ndarray(x: str | float) -> np.ndarray | float:
     """
     Convert string to numpy array.
 

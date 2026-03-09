@@ -3,7 +3,7 @@
 import copy
 import os
 
-import amici
+import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import cloudpickle as pickle
 import numpy as np
@@ -87,32 +87,32 @@ def test_deepcopy_objective():
     )
     factory = petab_importer.create_objective_creator()
     amici_model = factory.create_model()
-    amici_model.setSteadyStateSensitivityMode(
-        amici.SteadyStateSensitivityMode.integrateIfNewtonFails
+    amici_model.set_steady_state_sensitivity_mode(
+        asd.SteadyStateSensitivityMode.integrateIfNewtonFails
     )
-    amici_model.setSteadyStateComputationMode(
-        amici.SteadyStateComputationMode.integrateIfNewtonFails
+    amici_model.set_steady_state_computation_mode(
+        asd.SteadyStateComputationMode.integrateIfNewtonFails
     )
     objective = factory.create_objective(model=amici_model)
 
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_adjoint
+    objective.amici_solver.set_sensitivity_method(
+        asd.SensitivityMethod.adjoint
     )
 
     objective2 = copy.deepcopy(objective)
 
     # test some properties
     assert (
-        objective.amici_model.getParameterIds()
-        == objective2.amici_model.getParameterIds()
+        objective.amici_model.get_free_parameter_ids()
+        == objective2.amici_model.get_free_parameter_ids()
     )
     assert (
-        objective.amici_solver.getSensitivityOrder()
-        == objective2.amici_solver.getSensitivityOrder()
+        objective.amici_solver.get_sensitivity_order()
+        == objective2.amici_solver.get_sensitivity_order()
     )
     assert (
-        objective.amici_solver.getSensitivityMethod()
-        == objective2.amici_solver.getSensitivityMethod()
+        objective.amici_solver.get_sensitivity_method()
+        == objective2.amici_solver.get_sensitivity_method()
     )
     assert len(objective.edatas) == len(objective2.edatas)
 
@@ -133,23 +133,59 @@ def test_pickle_objective():
     factory = petab_importer.create_objective_creator()
     objective = factory.create_objective()
 
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_adjoint
+    objective.amici_solver.set_sensitivity_method(
+        asd.SensitivityMethod.adjoint
     )
 
     objective2 = pickle.loads(pickle.dumps(objective))
 
     # test some properties
     assert (
-        objective.amici_model.getParameterIds()
-        == objective2.amici_model.getParameterIds()
+        objective.amici_model.get_free_parameter_ids()
+        == objective2.amici_model.get_free_parameter_ids()
     )
     assert (
-        objective.amici_solver.getSensitivityOrder()
-        == objective2.amici_solver.getSensitivityOrder()
+        objective.amici_solver.get_sensitivity_order()
+        == objective2.amici_solver.get_sensitivity_order()
     )
     assert (
-        objective.amici_solver.getSensitivityMethod()
-        == objective2.amici_solver.getSensitivityMethod()
+        objective.amici_solver.get_sensitivity_method()
+        == objective2.amici_solver.get_sensitivity_method()
     )
     assert len(objective.edatas) == len(objective2.edatas)
+
+
+def test_result_ordering():
+    """Test MultiProcessEngine returns results in task submission order."""
+
+    class NumberedTask(pypesto.engine.Task):
+        """Simple task that returns its assigned number after execution."""
+
+        def __init__(self, number):
+            super().__init__()
+            self.number = number
+
+        def execute(self):
+            """Return the assigned number."""
+            return self.number
+
+    # Create tasks with identifiable outputs
+    n_tasks = 10
+    tasks = [NumberedTask(i) for i in range(n_tasks)]
+
+    # Test with different engine configurations
+    for engine in [
+        pypesto.engine.MultiProcessEngine(n_procs=2),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="spawn"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="fork"),
+        pypesto.engine.MultiProcessEngine(n_procs=2, method="forkserver"),
+    ]:
+        results = engine.execute(tasks, progress_bar=False)
+
+        # Verify results are in the same order as tasks were submitted
+        assert len(results) == n_tasks
+        for i, result in enumerate(results):
+            assert result == i, (
+                f"Result order mismatch for {engine.__class__.__name__}: "
+                f"expected {i} at position {i}, got {result}"
+            )
