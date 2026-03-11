@@ -584,6 +584,7 @@ def parameters_correlation_matrix(
     cmap: Colormap | str = "bwr",
     return_table: bool = False,
     heatmap_kwargs: dict | None = None,
+    size: tuple[float, float] | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot correlation of optimized parameters.
@@ -609,6 +610,8 @@ def parameters_correlation_matrix(
         inspection.
     heatmap_kwargs:
         Additional keyword arguments to :func:`seaborn.heatmap`.
+    size:
+        Figure size (width, height) in inches.
 
     Returns
     -------
@@ -643,9 +646,13 @@ def parameters_correlation_matrix(
         "linewidth": 1,
     } | (heatmap_kwargs or {})
     if cluster:
+        if size is not None:
+            heatmap_kwargs["figsize"] = size
         ax = sns.clustermap(**heatmap_kwargs)
     else:
         ax = sns.heatmap(**heatmap_kwargs)
+        if size is not None:
+            ax.figure.set_size_inches(*size)
     if return_table:
         return ax, df
     return ax
