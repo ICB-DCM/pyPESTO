@@ -583,6 +583,7 @@ def parameters_correlation_matrix(
     cluster: bool = True,
     cmap: Colormap | str = "bwr",
     return_table: bool = False,
+    heatmap_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot correlation of optimized parameters.
@@ -597,8 +598,8 @@ def parameters_correlation_matrix(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
     method:
-        The method to compute correlation. Allowed are `pearson, kendall,
-        spearman` or a callable function.
+        The method to compute correlation. Allowed values are ``pearson``,
+        ``kendall``, ``spearman`` or a callable.
     cluster:
         Whether to cluster the correlation matrix.
     cmap:
@@ -606,6 +607,8 @@ def parameters_correlation_matrix(
     return_table:
         Whether to return the parameter table additionally for further
         inspection.
+    heatmap_kwargs:
+        Additional keyword arguments to `seaborn.heatmap`.
 
     Returns
     -------
@@ -631,14 +634,18 @@ def parameters_correlation_matrix(
     ]
     df = pd.DataFrame(parameters, columns=x_labels)
     corr_matrix = df.corr(method=method)
+    heatmap_kwargs = {
+        "data": corr_matrix,
+        "yticklabels": True,
+        "vmin": -1,
+        "vmax": 1,
+        "cmap": cmap,
+        "linewidth": 1,
+    } | (heatmap_kwargs or {})
     if cluster:
-        ax = sns.clustermap(
-            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
-        )
+        ax = sns.clustermap(**heatmap_kwargs)
     else:
-        ax = sns.heatmap(
-            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
-        )
+        ax = sns.heatmap(**heatmap_kwargs)
     if return_table:
         return ax, df
     return ax
