@@ -608,7 +608,7 @@ def parameters_correlation_matrix(
         Whether to return the parameter table additionally for further
         inspection.
     heatmap_kwargs:
-        Additional keyword arguments to `seaborn.heatmap`.
+        Additional keyword arguments to :func:`seaborn.heatmap`.
 
     Returns
     -------
