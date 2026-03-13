@@ -780,6 +780,46 @@ def test_nested_profile_cis():
 
 
 @close_fig
+def test_visualize_2d_profile():
+    result = create_profile_result()
+    # basic call — all profiles, default settings
+    visualize.visualize_2d_profile(result)
+    # explicit profile indices and ratio cutoff
+    visualize.visualize_2d_profile(
+        result, profile_indices=[0, 1], ratio_min=0.1
+    )
+    # objective values instead of ratio
+    visualize.visualize_2d_profile(result, plot_objective_values=True)
+    # custom figure size
+    visualize.visualize_2d_profile(result, size=(8, 8))
+
+
+@close_fig
+def test_profile_lowlevel_2d():
+    result = create_profile_result()
+    _, ax = plt.subplots()
+    visualize.profile_lowlevel_2d(
+        result, profile_index=0, second_par_index=1, ax=ax
+    )
+    _, ax = plt.subplots()
+    visualize.profile_lowlevel_2d(
+        result,
+        profile_index=0,
+        second_par_index=1,
+        ax=ax,
+        plot_objective_values=True,
+    )
+    _, ax = plt.subplots()
+    visualize.profile_lowlevel_2d(
+        result,
+        profile_index=0,
+        second_par_index=1,
+        ax=ax,
+        ratio_min=0.1,
+    )
+
+
+@close_fig
 def test_optimizer_history():
     # create the necessary results
     result_1 = create_optimization_history()
