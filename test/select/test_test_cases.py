@@ -45,7 +45,7 @@ minimize_options = {
 
 
 def objective_customizer(obj):
-    obj.amici_solver.setRelativeTolerance(1e-12)
+    obj.amici_solver.set_relative_tolerance(1e-12)
 
 
 model_problem_options = {

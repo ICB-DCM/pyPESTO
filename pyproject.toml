@@ -37,6 +37,7 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
+  "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.11",
@@ -64,11 +65,11 @@ Changelog = "https://pypesto.readthedocs.io/en/latest/changelog.html"
 
 [project.optional-dependencies]
 amici = [
-  "amici>=0.21.0,<1.0.0",
+  "amici>=1.0.0",
 ]
 
 petab = [
-  "petab>=0.4.0",
+  "petab>=0.8.1",
 ]
 
 ipopt = [
@@ -281,6 +282,10 @@ convention = "pep257"
 # ignore docstyle in example python files.
 "doc/example/*.py" = [
     "D",
+]
+"doc/example/*.ipynb" = [
+    "S101",  # use of assert
+    "C408",  # unnecessary dict call
 ]
 "doc/conf.py" = [
     "E402",

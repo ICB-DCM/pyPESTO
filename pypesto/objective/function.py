@@ -71,7 +71,7 @@ class Objective(ObjectiveBase):
         self,
         fun: Callable = None,
         grad: Callable | bool = None,
-        hess: Callable = None,
+        hess: Callable | bool = None,
         hessp: Callable = None,
         res: Callable = None,
         sres: Callable | bool = None,
