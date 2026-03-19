@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.14']
+        python-version: ['3.12', '3.14']
 
     steps:
     - name: Check out repository
@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.14']
+        python-version: ['3.12', '3.14']
 
     steps:
     - name: Check out repository
@@ -172,7 +172,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.12', '3.14']
 
     # needed to allow julia-actions/cache to delete old caches that it has created
     permissions:
@@ -259,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.14']
+        python-version: ['3.12', '3.14']
 
     steps:
     - name: Check out repository
@@ -295,7 +295,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.14']
+        python-version: ['3.12', '3.14']
 
     steps:
     - name: Check out repository
@@ -363,7 +363,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
@@ -396,7 +396,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     steps:
     - name: Check out repository
@@ -426,7 +426,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.12']
 
     steps:
     - name: Check out repository
