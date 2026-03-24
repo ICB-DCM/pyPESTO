@@ -443,28 +443,6 @@ class Optimizer(abc.ABC):
             f"Check supports_f_abs_tol() before calling set_f_abs_tol()."
         )
 
-    def _set_option_tol(self, tol: float, option_key: str) -> None:
-        """
-        Set tolerance in options dict with validation.
-
-        Parameters
-        ----------
-        tol
-            Absolute tolerance value (must be positive).
-        option_key
-            The key to use in the options dictionary.
-
-        Raises
-        ------
-        ValueError
-            If tolerance is not positive.
-        """
-        if tol < 0:
-            raise ValueError(f"Tolerance must be positive, got {tol}")
-        if self.options is None:
-            self.options = {}
-        self.options[option_key] = tol
-
 
 class ScipyOptimizer(Optimizer):
     """
@@ -892,7 +870,9 @@ class IpoptOptimizer(Optimizer):
             )
         if self.options is None:
             self.options = {}
-        self.options["max_wall_time"] = seconds
+        # We explicitly cast to float, as the IpoptOptimizer requires
+        # the provision of a float for the max_wall_time option.
+        self.options["max_wall_time"] = float(seconds)
 
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
@@ -914,19 +894,6 @@ class IpoptOptimizer(Optimizer):
     def supports_f_abs_tol(self) -> bool:
         """Check whether optimizer supports absolute function tolerance."""
         return False
-
-    def set_tol(self, tol: float) -> None:
-        """
-        Set the convergence tolerance.
-
-        See https://coin-or.github.io/Ipopt/OPTIONS.html for more information.
-
-        Parameters
-        ----------
-        tol
-            Tolerance value for termination.
-        """
-        self._set_option_tol(tol, "tol")
 
 
 class DlibOptimizer(Optimizer):
@@ -1138,8 +1105,17 @@ class PyswarmOptimizer(Optimizer):
         ----------
         tol
             Absolute tolerance for termination.
+
+        Raises
+        ------
+        ValueError
+            If tolerance is not positive.
         """
-        self._set_option_tol(tol, "minfunc")
+        if tol < 0:
+            raise ValueError(f"Tolerance must be positive, got {tol}")
+        if self.options is None:
+            self.options = {}
+        self.options["minfunc"] = tol
 
 
 class CmaOptimizer(Optimizer):
@@ -1382,8 +1358,17 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
         ----------
         tol
             Absolute tolerance for termination.
+
+        Raises
+        ------
+        ValueError
+            If tolerance is not positive.
         """
-        self._set_option_tol(tol, "atol")
+        if tol < 0:
+            raise ValueError(f"Tolerance must be positive, got {tol}")
+        if self.options is None:
+            self.options = {}
+        self.options["atol"] = tol
 
 
 class PyswarmsOptimizer(Optimizer):
@@ -1810,8 +1795,17 @@ class NLoptOptimizer(Optimizer):
         ----------
         tol
             Absolute tolerance for termination.
+
+        Raises
+        ------
+        ValueError
+            If tolerance is not positive.
         """
-        self._set_option_tol(tol, "ftol_abs")
+        if tol < 0:
+            raise ValueError(f"Tolerance must be positive, got {tol}")
+        if self.options is None:
+            self.options = {}
+        self.options["ftol_abs"] = tol
 
 
 class FidesOptimizer(Optimizer):
@@ -2046,10 +2040,19 @@ class FidesOptimizer(Optimizer):
         ----------
         tol
             Absolute tolerance for termination.
+
+        Raises
+        ------
+        ValueError
+            If tolerance is not positive.
         """
+        if tol < 0:
+            raise ValueError(f"Tolerance must be positive, got {tol}")
         try:
             from fides.constants import Options as FidesOptions
 
-            self._set_option_tol(tol, FidesOptions.FATOL)
+            if self.options is None:
+                self.options = {}
+            self.options[FidesOptions.FATOL] = tol
         except ImportError:
             raise OptimizerImportError("fides") from None
