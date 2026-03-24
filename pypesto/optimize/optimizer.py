@@ -1246,8 +1246,17 @@ class CmaOptimizer(Optimizer):
         ----------
         tol
             Absolute tolerance for termination.
+
+        Raises
+        ------
+        ValueError
+            If tolerance is not positive.
         """
-        self._set_option_tol(tol, "tolfun")
+        if tol < 0:
+            raise ValueError(f"Tolerance must be positive, got {tol}")
+        if self.options is None:
+            self.options = {}
+        self.options["tolfun"] = tol
 
 
 class CmaesOptimizer(CmaOptimizer):
