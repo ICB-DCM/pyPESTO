@@ -1700,9 +1700,14 @@ class FidesOptimizer(Optimizer):
             Optimizer options. See :meth:`fides.minimize.Optimizer.minimize`
             and :class:`fides.constants.Options` for details.
         hessian_update:
-            Hessian update strategy. If this is ``None``, a hybrid approximation
-            that switches from the ``problem.objective`` provided Hessian (
-            approximation) to a BFGS approximation will be used.
+            Hessian update strategy. Defaults to a BFGS approximation if
+            ``problem.objective`` does not provide a Hessian. Otherwise, a
+            hybrid scheme that starts with the ``problem.objective`` provided
+            Hessian but switches to a BFGS approximation in later iterations
+            will be used -- this is useful when the ``problem.objective``
+            Hessian is an approximation such as the Fisher information matrix.
+            Use ``None`` to specify that the ``problem.objective`` provided
+            Hessian should be used exclusively.
         """
         super().__init__()
 
@@ -1771,6 +1776,12 @@ class FidesOptimizer(Optimizer):
                 )
                 _hessian_update = fides.BFGS()
             else:
+                warnings.warn(
+                    "A hybrid Hessian approximation strategy will be "
+                    "employed. See the docstring for ``hessian_update`` in "
+                    "the class constructor for more details."
+                    stacklevel=1,
+                )
                 _hessian_update = fides.HybridFixed()
         else:
             _hessian_update = self.hessian_update
