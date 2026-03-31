@@ -1779,7 +1779,7 @@ class FidesOptimizer(Optimizer):
                 warnings.warn(
                     "A hybrid Hessian approximation strategy will be "
                     "employed. See the docstring for ``hessian_update`` in "
-                    "the class constructor for more details."
+                    "the class constructor for more details.",
                     stacklevel=1,
                 )
                 _hessian_update = fides.HybridFixed()
