@@ -687,6 +687,22 @@ def test_ensemble_identifiability():
     # test plotting from a collection object
     visualize.ensemble_identifiability(my_ensemble)
 
+@close_fig
+def test_ensemble_parameters_plot():
+    # creates a test problem
+    problem = create_problem(n_parameters=100)
+
+    my_ensemble = [
+        (1 + np.cos(ix) ** 2) * np.random.rand(500) - 1.0 + np.sin(ix)
+        for ix in range(100)
+    ]
+    my_ensemble = ensemble.Ensemble(
+        np.array(my_ensemble), lower_bound=problem.lb, upper_bound=problem.ub
+    )
+
+    visualize.ensemble_parameters_plot(my_ensemble)
+    visualize.ensemble_parameters_plot(my_ensemble, parameter_ids=[0,5,8,13,17,33,45,76,82,88,90])
+
 
 @close_fig
 def test_profiles():
