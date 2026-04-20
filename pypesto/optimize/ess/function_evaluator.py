@@ -5,7 +5,6 @@ import threading
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
-from typing import Optional
 from warnings import warn
 
 import numpy as np
@@ -183,7 +182,7 @@ class FunctionEvaluatorMT(FunctionEvaluator):
         #  objectives thread-safe.
         self._thread_local: threading.local = threading.local()
         # The thread-pool to be used for parallel objective evaluations
-        self._executor: Optional[ThreadPoolExecutor] = (
+        self._executor: ThreadPoolExecutor | None = (
             ThreadPoolExecutor(
                 max_workers=self._n_threads,
                 thread_name_prefix=__name__,

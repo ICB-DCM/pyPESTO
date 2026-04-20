@@ -95,7 +95,7 @@ def history_decorator(minimize):
     ):
         if history_options is None:
             history_options = HistoryOptions()
-        if id is None:
+        if history_options.storage_file is not None and id is None:
             raise ValueError("id must be provided for history tracking.")
 
         objective = problem.objective
@@ -439,6 +439,8 @@ class ScipyOptimizer(Optimizer):
         if self.options is None:
             self.options = ScipyOptimizer.get_default_options(self)
         self.tol = tol
+        #: maximum walltime in seconds
+        self._maxtime_seconds: float | None = None
 
     def __repr__(self) -> str:
         rep = f"<{self.__class__.__name__} method={self.method}"
@@ -601,6 +603,20 @@ class ScipyOptimizer(Optimizer):
             if hessp is not None:
                 hess = None
 
+            # Set callback for handling timelimit if necessary
+            callback = None
+            if self._maxtime_seconds is not None and np.isfinite(
+                self._maxtime_seconds
+            ):
+                start_time = time.time()
+
+                def callback(*args, **kwargs):
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time >= self._maxtime_seconds:
+                        raise StopIteration(
+                            f"Maximum time {self._maxtime_seconds}s exceeded."
+                        )
+
             # optimize
             res = scipy.optimize.minimize(
                 fun=fun,
@@ -612,6 +628,7 @@ class ScipyOptimizer(Optimizer):
                 bounds=bounds,
                 options=self.options,
                 tol=self.tol,
+                callback=callback,
             )
             # extract fval/grad from result
             grad = getattr(res, "jac", None)
@@ -669,6 +686,41 @@ class ScipyOptimizer(Optimizer):
             self.options["maxfun"] = iterations
         else:
             self.options["maxiter"] = iterations
+
+    def supports_maxtime(self) -> bool:
+        """
+        Check whether optimizer supports time limits.
+
+        Returns
+        -------
+        True if optimizer supports setting a maximum wall time,
+        False otherwise.
+        """
+        # TNC neither supports time limits nor callback functions
+        return self.method.lower() != "tnc"
+
+    def set_maxtime(self, seconds: float) -> None:
+        """
+        Set the maximum wall time for optimization.
+
+        Parameters
+        ----------
+        seconds
+            Maximum wall time in seconds.
+
+        Raises
+        ------
+        NotImplementedError
+            If the optimizer does not support time limits.
+        """
+        if not self.supports_maxtime():
+            raise NotImplementedError(
+                f"{self.__class__.__name__} method {self.method} does not "
+                "support time limits. "
+                f"Check supports_maxtime() before calling set_maxtime()."
+            )
+
+        self._maxtime_seconds = seconds
 
 
 class IpoptOptimizer(Optimizer):
@@ -770,7 +822,9 @@ class IpoptOptimizer(Optimizer):
             )
         if self.options is None:
             self.options = {}
-        self.options["max_wall_time"] = seconds
+        # We explicitly cast to float, as the IpoptOptimizer requires
+        # the provision of a float for the max_wall_time option.
+        self.options["max_wall_time"] = float(seconds)
 
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
@@ -1066,6 +1120,14 @@ class CmaOptimizer(Optimizer):
         """Check whether optimizer is a least squares optimizer."""
         return False
 
+    def supports_maxtime(self):
+        """Check whether optimizer supports time limits."""
+        return True
+
+    def set_maxtime(self, seconds: float) -> None:
+        """Set the maximum wall time for optimization."""
+        self.options["timeout"] = seconds
+
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
         return True
@@ -1164,7 +1226,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
 
         See :meth:`Optimizer.minimize`.
         """
-        bounds = list(zip(problem.lb, problem.ub))
+        bounds = list(zip(problem.lb, problem.ub, strict=True))
 
         result = scipy.optimize.differential_evolution(
             problem.objective.get_fval, bounds, x0=x0, **self.options
@@ -1638,9 +1700,15 @@ class FidesOptimizer(Optimizer):
             Optimizer options. See :meth:`fides.minimize.Optimizer.minimize`
             and :class:`fides.constants.Options` for details.
         hessian_update:
-            Hessian update strategy. If this is ``None``, a hybrid approximation
-            that switches from the ``problem.objective`` provided Hessian (
-            approximation) to a BFGS approximation will be used.
+            Hessian update strategy. Defaults to a BFGS approximation if
+            ``problem.objective`` does not provide a Hessian. Otherwise, it is
+            assumed that the ``problem.objective`` Hessian is actually the
+            Fisher information matrix (FIM), and hence a Hessian approximation
+            strategy is the default, which uses the FIM initially but switches
+            to BFGS during later iterations.
+            If your ``problem.objective`` Hessian is actually the Hessian,
+            then use ``None`` to have Fides use the ``problem.objective``
+            Hessian for all iterations.
         """
         super().__init__()
 
@@ -1700,15 +1768,23 @@ class FidesOptimizer(Optimizer):
 
         if self.hessian_update == "default":
             if not problem.objective.has_hess:
-                warnings.warn(
+                logger.debug(
                     "Fides is using BFGS as hessian approximation, "
                     "as the problem does not provide a Hessian. "
-                    "Specify a Hessian to use a more efficient "
-                    "hybrid approximation scheme.",
+                    "Specify a Hessian (or Fisher information matrix, to use "
+                    "a more efficient hybrid approximation scheme. See the "
+                    "docstring for `hessian_update` in the class constructor "
+                    "for more details.",
                     stacklevel=1,
                 )
                 _hessian_update = fides.BFGS()
             else:
+                logger.debug(
+                    "A hybrid Hessian approximation strategy will be "
+                    "employed. See the docstring for `hessian_update` in "
+                    "the class constructor for more details.",
+                    stacklevel=1,
+                )
                 _hessian_update = fides.HybridFixed()
         else:
             _hessian_update = self.hessian_update

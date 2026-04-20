@@ -1,9 +1,9 @@
 """Ensemble utilities."""
 
 import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Literal, Union
+from typing import Literal
 
 import h5py
 import numpy as np
@@ -228,7 +228,7 @@ def write_ensemble_prediction_to_h5(
 
 
 def get_prediction_dataset(
-    ens: Union[Ensemble, EnsemblePrediction], prediction_index: int = 0
+    ens: Ensemble | EnsemblePrediction, prediction_index: int = 0
 ) -> np.ndarray:
     """
     Extract an array of prediction.
@@ -267,7 +267,7 @@ def get_prediction_dataset(
 
 
 def read_ensemble_prediction_from_h5(
-    predictor: Union[Callable[[Sequence], PredictionResult], None],
+    predictor: Callable[[Sequence], PredictionResult] | None,
     input_file: str,
 ):
     """Read an ensemble prediction from an HDF5 File."""

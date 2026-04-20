@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 
 from .base_problem import InnerProblem
@@ -21,7 +19,7 @@ class InnerSolver:
         sim: list[np.ndarray],
         sigma: list[np.ndarray],
         scaled: bool,
-    ) -> Union[dict[str, float], list]:
+    ) -> dict[str, float] | list:
         """Solve the subproblem.
 
         Parameters

@@ -259,10 +259,11 @@ def waterfall_lowlevel(
         ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
 
     # Overlay with scatter points with individual colors
+    # plotting in reverse order to ensure that the best points are plotted on top
     ax.scatter(
-        start_indices,
-        fvals,
-        c=colors,
+        start_indices[::-1],
+        fvals[::-1],
+        c=colors[::-1],
         marker="o",
         linewidth=1.0,
         label=legend_text,
@@ -275,8 +276,8 @@ def waterfall_lowlevel(
     if scale_y == "log10":
         if np.log10(y_max) - np.log10(y_min) < 1.0:
             ax.set_ylim(
-                ax.dataLim.y0 - 0.001 * abs(ax.dataLim.y0),
-                ax.dataLim.y1 + 0.001 * abs(ax.dataLim.y1),
+                ax.dataLim.y0 - 0.05 * abs(ax.dataLim.y0),
+                ax.dataLim.y1 + 0.05 * abs(ax.dataLim.y1),
             )
     else:
         if y_max - y_min < 1.0:

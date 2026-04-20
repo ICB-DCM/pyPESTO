@@ -119,7 +119,7 @@ class ProfilerTest(unittest.TestCase):
             warnings.catch_warnings(),  # No warnings
             warnings.catch_warnings(),  # No warnings
         ]
-        for engine, expected_warn in zip(engines, expected_warns):
+        for engine, expected_warn in zip(engines, expected_warns, strict=True):
             # run profiling, profile results get appended
             # in self.result.profile_result
             with expected_warn:

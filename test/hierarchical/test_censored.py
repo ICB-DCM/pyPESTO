@@ -76,7 +76,9 @@ def test_ordinal_calculator_and_objective():
             fim_for_hess=False,
         )
 
-    x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
+    x_dct = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
 
     calculator_result = calculate(problem, x_dct=x_dct)
 
@@ -149,13 +151,17 @@ def _inner_problem_exp():
             censoring_type=censoring_type,
         )
         for inner_parameter_id, mask, inner_parameter_category, censoring_type in zip(
-            inner_parameter_ids, masks, categories, censoring_types
+            inner_parameter_ids,
+            masks,
+            categories,
+            censoring_types,
+            strict=True,
         )
     ]
 
     # Add values to the inner parameters
     values = [0, 2, 6, 8, 2, 4, 8, np.inf]
-    for inner_parameter, value in zip(inner_parameters, values):
+    for inner_parameter, value in zip(inner_parameters, values, strict=True):
         inner_parameter.value = value
 
     expected_values = np.asarray([0, 2, 2, 4, 6, 8, 8, np.inf])

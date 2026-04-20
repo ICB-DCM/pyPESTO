@@ -36,10 +36,11 @@ inner_options = [
             zip(
                 [METHOD, REPARAMETERIZED, INTERVAL_CONSTRAINTS],
                 [method, reparameterized, interval_constraints],
+                strict=True,
             )
         )
         for method, reparameterized in zip(
-            [STANDARD, REDUCED, REDUCED], [False, False, True]
+            [STANDARD, REDUCED, REDUCED], [False, False, True], strict=True
         )
     ]
     for interval_constraints in [MAX, MAXMIN]
@@ -163,7 +164,9 @@ def test_ordinal_calculator_and_objective():
             fim_for_hess=False,
         )
 
-    x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
+    x_dct = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
 
     calculator_results = {
         method: calculate(problems[method], x_dct=x_dct) for method in methods
@@ -275,7 +278,7 @@ def _inner_problem_exp():
             category=inner_parameter_category,
         )
         for inner_parameter_id, mask, inner_parameter_category in zip(
-            inner_parameter_ids, masks, categories
+            inner_parameter_ids, masks, categories, strict=True
         )
     ]
 

@@ -131,7 +131,7 @@ class RoadRunnerObjective(ObjectiveBase):
         if parameter_mapping is None:
             parameter_mapping = self.parameter_mapping
         # convert x to dictionary
-        x = OrderedDict(zip(self.x_ids, x))
+        x = OrderedDict(zip(self.x_ids, x, strict=True))
         ret = self.calculator(
             x_dct=x,
             mode=mode,
