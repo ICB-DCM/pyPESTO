@@ -25,6 +25,7 @@ from pypesto.testing.examples import (
     get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds,
 )
 from pypesto.visualize.model_fit import (
+    _get_simulation_rdatas,
     time_trajectory_model,
     visualize_optimized_model_fit,
 )
@@ -1183,6 +1184,22 @@ def test_sampling_prediction_trajectories():
 
 
 @close_fig
+def test_get_simulation_rdatas_default_timepoints():
+    """Regression test for default AMICI timepoint access in model-fit plots."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        progress_bar=False,
+    )
+
+    rdatas = _get_simulation_rdatas(result=result, problem=problem)
+
+    assert len(rdatas) == len(problem.objective.edatas)
+
+
+@close_fig
 def test_visualize_optimized_model_fit():
     """Test pypesto.visualize.visualize_optimized_model_fit"""
     current_path = os.path.dirname(os.path.realpath(__file__))
@@ -1291,7 +1308,41 @@ def test_time_trajectory_model():
     )
 
     # test call of time_trajectory_model
-    time_trajectory_model(result=result)
+    axes = time_trajectory_model(result=result)
+    assert axes is not None
+
+    # test call of time_trajectory_model for hierarchical problems
+    hierarchical_petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    importer = pypesto.petab.PetabImporter(
+        hierarchical_petab_problem, hierarchical=True
+    )
+    helper_problem = importer.create_problem()
+
+    x_guesses = np.asarray(hierarchical_petab_problem.x_nominal_scaled)[
+        helper_problem.x_free_indices
+    ]
+    problem = importer.create_problem(x_guesses=[x_guesses])
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        optimizer=optimize.ScipyOptimizer(
+            method="L-BFGS-B", options={"maxiter": 1}
+        ),
+        progress_bar=False,
+    )
+
+    first_state_name = problem.objective.amici_model.get_state_names()[0]
+
+    axes = time_trajectory_model(
+        result=result,
+        problem=problem,
+        state_names=[first_state_name],
+    )
+
+    assert axes is not None
 
 
 def test_monotonic_history():

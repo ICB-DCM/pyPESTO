@@ -236,7 +236,7 @@ class OrdinalInnerSolver(InnerSolver):
         par_sim_ids:
             Ids of outer simulation parameters, includes fixed parameters.
         par_edata_indices:
-            Indices of parameters from `amici_model.getParameterIds()` that are needed for
+            Indices of parameters from `amici_model.get_parameter_ids()` that are needed for
             sensitivity calculation. Comes from `edata.plist` for each condition.
         snllh:
             A zero-initialized vector of the same length as ``par_opt_ids`` to store the
