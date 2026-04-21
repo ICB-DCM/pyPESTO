@@ -3,7 +3,6 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import h5py
 import numpy as np
@@ -115,7 +114,7 @@ def fill_result_from_history(
 
 
 def read_history_from_file(
-    problem: Optional[Problem],
+    problem: Problem | None,
     history_options: HistoryOptions,
     identifier: str,
 ) -> OptimizerHistory:
@@ -171,7 +170,7 @@ def read_history_from_file(
 
 
 def read_result_from_file(
-    problem: Optional[Problem],
+    problem: Problem | None,
     history_options: HistoryOptions,
     identifier: str,
 ) -> OptimizerResult:
@@ -276,7 +275,7 @@ def optimization_result_from_history(
         ids = list(f[HISTORY].keys())
         x0s = [f[f"{HISTORY}/{id}/{TRACE}/0/{X}"][()] for id in ids]
 
-    for id, x0 in zip(ids, x0s):
+    for id, x0 in zip(ids, x0s, strict=True):
         history = Hdf5History(id=id, file=filename)
         history.recover_options(filename)
         optimizer_history = OptimizerHistory(

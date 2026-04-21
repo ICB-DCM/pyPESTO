@@ -1,9 +1,8 @@
 import copy
 import logging
 import sys
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import (
-    Callable,
     SupportsFloat,
     SupportsInt,
 )
@@ -314,7 +313,7 @@ class Problem:
 
         # first clean to-be-fixed indices to avoid redundancies
         for iter_index, (x_index, x_value) in enumerate(
-            zip(parameter_indices, parameter_vals)
+            zip(parameter_indices, parameter_vals, strict=True)
         ):
             # check if parameter was already fixed, otherwise add it to the
             # fixed parameters

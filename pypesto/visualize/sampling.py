@@ -2,7 +2,6 @@ import logging
 import warnings
 from collections.abc import Sequence
 from colorsys import rgb_to_hls
-from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -515,7 +514,7 @@ def _get_condition_and_output_ids(
 def _handle_legends(
     fig: matplotlib.figure.Figure,
     axes: matplotlib.axes.Axes,
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     labels: dict[str, str],
     level_opacities: Sequence[float],
     variable_names: Sequence[str],
@@ -525,9 +524,8 @@ def _handle_legends(
     n_col: int,
     average: str,
     add_sd: bool,
-    grouped_measurements: Optional[
-        dict[tuple[str, str], Sequence[Sequence[float]]]
-    ],
+    grouped_measurements: dict[tuple[str, str], Sequence[Sequence[float]]]
+    | None,
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -680,7 +678,7 @@ def _handle_legends(
 
 
 def _handle_colors(
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     n_variables: int,
     reverse: bool = False,
 ) -> tuple[Sequence[float], Sequence[RGB]]:
@@ -718,7 +716,7 @@ def _handle_colors(
 
 def sampling_prediction_trajectories(
     ensemble_prediction: EnsemblePrediction,
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     title: str = None,
     size: tuple[float, float] = None,
     axes: matplotlib.axes.Axes = None,
@@ -1063,7 +1061,7 @@ def sampling_parameter_cis(
     # handle legend
     plt.gca().invert_yaxis()
     handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
+    by_label = dict(zip(labels, handles, strict=True))
     ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1))
 
     return ax
@@ -1132,7 +1130,7 @@ def sampling_parameter_traces(
     else:
         fig = ax.get_figure()
 
-    par_ax = dict(zip(param_names, ax.flat))
+    par_ax = dict(zip(param_names, ax.flat, strict=True))
 
     sns.set(style="ticks")
     kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
@@ -1303,7 +1301,7 @@ def sampling_1d_marginals(
 
     fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
 
-    par_ax = dict(zip(param_names, ax.flat))
+    par_ax = dict(zip(param_names, ax.flat, strict=True))
     sns.set(style="ticks")
 
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]

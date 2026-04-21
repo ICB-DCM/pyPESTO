@@ -95,7 +95,7 @@ def history_decorator(minimize):
     ):
         if history_options is None:
             history_options = HistoryOptions()
-        if id is None:
+        if history_options.storage_file is not None and id is None:
             raise ValueError("id must be provided for history tracking.")
 
         objective = problem.objective
@@ -822,7 +822,9 @@ class IpoptOptimizer(Optimizer):
             )
         if self.options is None:
             self.options = {}
-        self.options["max_wall_time"] = seconds
+        # We explicitly cast to float, as the IpoptOptimizer requires
+        # the provision of a float for the max_wall_time option.
+        self.options["max_wall_time"] = float(seconds)
 
     def supports_maxiter(self) -> bool:
         """Check whether optimizer supports iteration limits."""
@@ -1224,7 +1226,7 @@ class ScipyDifferentialEvolutionOptimizer(Optimizer):
 
         See :meth:`Optimizer.minimize`.
         """
-        bounds = list(zip(problem.lb, problem.ub))
+        bounds = list(zip(problem.lb, problem.ub, strict=True))
 
         result = scipy.optimize.differential_evolution(
             problem.objective.get_fval, bounds, x0=x0, **self.options
@@ -1698,9 +1700,15 @@ class FidesOptimizer(Optimizer):
             Optimizer options. See :meth:`fides.minimize.Optimizer.minimize`
             and :class:`fides.constants.Options` for details.
         hessian_update:
-            Hessian update strategy. If this is ``None``, a hybrid approximation
-            that switches from the ``problem.objective`` provided Hessian (
-            approximation) to a BFGS approximation will be used.
+            Hessian update strategy. Defaults to a BFGS approximation if
+            ``problem.objective`` does not provide a Hessian. Otherwise, it is
+            assumed that the ``problem.objective`` Hessian is actually the
+            Fisher information matrix (FIM), and hence a Hessian approximation
+            strategy is the default, which uses the FIM initially but switches
+            to BFGS during later iterations.
+            If your ``problem.objective`` Hessian is actually the Hessian,
+            then use ``None`` to have Fides use the ``problem.objective``
+            Hessian for all iterations.
         """
         super().__init__()
 
@@ -1760,15 +1768,23 @@ class FidesOptimizer(Optimizer):
 
         if self.hessian_update == "default":
             if not problem.objective.has_hess:
-                warnings.warn(
+                logger.debug(
                     "Fides is using BFGS as hessian approximation, "
                     "as the problem does not provide a Hessian. "
-                    "Specify a Hessian to use a more efficient "
-                    "hybrid approximation scheme.",
+                    "Specify a Hessian (or Fisher information matrix, to use "
+                    "a more efficient hybrid approximation scheme. See the "
+                    "docstring for `hessian_update` in the class constructor "
+                    "for more details.",
                     stacklevel=1,
                 )
                 _hessian_update = fides.BFGS()
             else:
+                logger.debug(
+                    "A hybrid Hessian approximation strategy will be "
+                    "employed. See the docstring for `hessian_update` in "
+                    "the class constructor for more details.",
+                    stacklevel=1,
+                )
                 _hessian_update = fides.HybridFixed()
         else:
             _hessian_update = self.hessian_update

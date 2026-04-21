@@ -562,9 +562,10 @@ def test_ess_multiprocess(problem, request):
     ess = ESSOptimizer(
         max_iter=20,
         # also test passing a callable as local_optimizer
-        local_optimizer=lambda max_walltime_s,
-        **kwargs: optimize.FidesOptimizer(
-            options={FidesOptions.MAXTIME: max_walltime_s}
+        local_optimizer=lambda max_walltime_s, **kwargs: (
+            optimize.FidesOptimizer(
+                options={FidesOptions.MAXTIME: max_walltime_s}
+            )
         ),
     )
     refset = RefSet(

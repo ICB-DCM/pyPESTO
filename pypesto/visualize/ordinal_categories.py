@@ -1,5 +1,5 @@
 import warnings
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import pypesto
@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 try:
-    import amici
-    from amici.petab.conditions import fill_in_parameters
+    import amici.sim.sundials as asd
+    from amici.sim.sundials.petab.v1 import fill_in_parameters
     from petab.v1.C import OBSERVABLE_ID
 
     from ..hierarchical.ordinal.calculator import OrdinalCalculator
@@ -41,7 +41,7 @@ from ..result import Result
 def plot_categories_from_pypesto_result(
     pypesto_result: Result,
     start_index=0,
-    axes: Optional[plt.Axes] = None,
+    axes: plt.Axes | None = None,
     **kwargs,
 ):
     """Plot the inner solutions from a pypesto result.
@@ -70,6 +70,7 @@ def plot_categories_from_pypesto_result(
         zip(
             pypesto_result.problem.objective.x_ids,
             pypesto_result.optimize_result.list[start_index]["x"],
+            strict=True,
         )
     )
     x_dct.update(
@@ -96,7 +97,7 @@ def plot_categories_from_pypesto_result(
     )
 
     # Simulate the model with the parameters from the pypesto result.
-    inner_rdatas = amici.runAmiciSimulations(
+    inner_rdatas = asd.run_simulations(
         amici_model,
         amici_solver,
         edatas,
@@ -104,7 +105,7 @@ def plot_categories_from_pypesto_result(
     )
 
     # If any amici simulation failed, raise warning and return None.
-    if any(rdata.status != amici.AMICI_SUCCESS for rdata in inner_rdatas):
+    if any(rdata.status != asd.AMICI_SUCCESS for rdata in inner_rdatas):
         warnings.warn(
             "Warning: Some AMICI simulations failed. Cannot plot inner "
             "solutions.",
@@ -116,7 +117,7 @@ def plot_categories_from_pypesto_result(
     sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
     sigma = [rdata[AMICI_SIGMAY] for rdata in inner_rdatas]
     timepoints = [rdata[AMICI_T] for rdata in inner_rdatas]
-    observable_ids = amici_model.getObservableIds()
+    observable_ids = amici_model.get_observable_ids()
     condition_ids = [edata.id for edata in edatas]
     petab_condition_ordering = list(petab_problem.condition_df.index)
 
@@ -164,7 +165,7 @@ def plot_categories_from_inner_result(
     condition_ids: list[str] = None,
     petab_condition_ordering: list[str] = None,
     measurement_df_observable_ordering: list[str] = None,
-    axes: Optional[plt.Axes] = None,
+    axes: plt.Axes | None = None,
     **kwargs,
 ):
     """Plot the inner solutions.
@@ -210,7 +211,7 @@ def plot_categories_from_inner_result(
         axes = _get_default_axes(n_groups, **kwargs)
 
     # for each result and group, plot the inner solution
-    for result, group in zip(results, inner_problem.groups):
+    for result, group in zip(results, inner_problem.groups, strict=True):
         if observable_ids is not None and use_given_axes:
             observable_id = observable_ids[group - 1]
             meas_obs_idx = measurement_df_observable_ordering.index(
@@ -897,7 +898,7 @@ def _plot_observable_fit_for_multiple_conditions(
 
     # Plot the categories and surrogate data for all conditions.
     for condition_index, condition_id, color in zip(
-        range(len(simulation_all)), condition_ids, colors
+        range(len(simulation_all)), condition_ids, colors, strict=True
     ):
         # Plot the categories and surrogate data for the current condition
         if measurement_type == ORDINAL:
@@ -946,6 +947,7 @@ def _plot_observable_fit_for_multiple_conditions(
             upper_bounds_all[condition_idx],
             lower_bounds_all[condition_idx],
             timepoints_all[condition_idx],
+            strict=True,
         ):
             if (
                 upper_bound,

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
@@ -55,7 +55,7 @@ jobs:
         CXX: clang++
 
     - name: Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
@@ -64,7 +64,7 @@ jobs:
     runs-on: macos-14
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
@@ -91,7 +91,7 @@ jobs:
       run: ulimit -n 65536 65536 && tox -e base
 
     - name: Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
@@ -100,7 +100,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
@@ -163,7 +163,7 @@ jobs:
         CXX: clang++
 
     - name: Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
@@ -197,7 +197,7 @@ jobs:
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install julia
-      uses: julia-actions/setup-julia@v2
+      uses: julia-actions/setup-julia@v3
       with:
         version: 1.11
 
@@ -214,7 +214,7 @@ jobs:
       run: tox -e julia
 
     - name: Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
@@ -250,7 +250,7 @@ jobs:
       run: tox -e optimize
 
     - name: Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
@@ -259,7 +259,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
@@ -286,7 +286,7 @@ jobs:
       run: tox -e hierarchical
 
     - name: Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
@@ -295,7 +295,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11', '3.13']
+        python-version: ['3.11', '3.14']
 
     steps:
     - name: Check out repository
@@ -322,7 +322,7 @@ jobs:
       run: tox -e select
 
     - name: Coverage
-      uses: codecov/codecov-action@v5
+      uses: codecov/codecov-action@v6
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         files: ./coverage.xml
@@ -331,7 +331,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']
 
     steps:
     - name: Check out repository
@@ -363,7 +363,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.11']
+        python-version: ['3.13']
 
     steps:
     - name: Check out repository

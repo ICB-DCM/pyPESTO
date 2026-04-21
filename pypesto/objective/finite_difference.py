@@ -2,7 +2,7 @@
 
 import copy
 import logging
-from typing import Callable, Union
+from collections.abc import Callable
 
 import numpy as np
 
@@ -54,7 +54,7 @@ class FDDelta:
 
     def __init__(
         self,
-        delta: Union[np.ndarray, float, None] = None,
+        delta: np.ndarray | float | None = None,
         test_deltas: np.ndarray = None,
         update_condition: str = CONSTANT,
         max_distance: float = 0.5,
@@ -62,7 +62,7 @@ class FDDelta:
     ):
         if not isinstance(delta, (np.ndarray, float)) and delta is not None:
             raise ValueError(f"Unexpected type {type(delta)} for delta")
-        self.delta: Union[np.ndarray, float, None] = delta
+        self.delta: np.ndarray | float | None = delta
 
         if test_deltas is None:
             test_deltas = np.array([10 ** (-i) for i in range(1, 9)])
@@ -80,7 +80,7 @@ class FDDelta:
 
         # run variables
         #  parameter where the step sizes where updated last
-        self.x0: Union[np.ndarray, None] = None
+        self.x0: np.ndarray | None = None
         #  overall number of steps
         self.steps: int = 0
         self.updates: int = 0
@@ -88,7 +88,7 @@ class FDDelta:
     def update(
         self,
         x: np.ndarray,
-        fval: Union[float, np.ndarray, None],
+        fval: float | np.ndarray | None,
         fun: Callable,
         fd_method: str,
     ) -> None:
@@ -149,7 +149,7 @@ class FDDelta:
     def _update(
         self,
         x: np.ndarray,
-        fval: Union[float, np.ndarray],
+        fval: float | np.ndarray,
         fun: Callable,
         fd_method: str,
     ) -> None:
@@ -220,7 +220,7 @@ class FDDelta:
         return self.delta
 
 
-def to_delta(delta: Union[FDDelta, np.ndarray, float, str]) -> FDDelta:
+def to_delta(delta: FDDelta | np.ndarray | float | str) -> FDDelta:
     """Input to step size delta.
 
     Input can be a vector, float, or an update method type.
@@ -307,21 +307,21 @@ class FD(ObjectiveBase):
     def __init__(
         self,
         obj: ObjectiveBase,
-        grad: Union[bool, None] = None,
-        hess: Union[bool, None] = None,
-        sres: Union[bool, None] = None,
+        grad: bool | None = None,
+        hess: bool | None = None,
+        sres: bool | None = None,
         hess_via_fval: bool = True,
-        delta_fun: Union[FDDelta, np.ndarray, float, str] = 1e-6,
-        delta_grad: Union[FDDelta, np.ndarray, float, str] = 1e-6,
-        delta_res: Union[FDDelta, float, np.ndarray, str] = 1e-6,
+        delta_fun: FDDelta | np.ndarray | float | str = 1e-6,
+        delta_grad: FDDelta | np.ndarray | float | str = 1e-6,
+        delta_res: FDDelta | float | np.ndarray | str = 1e-6,
         method: str = CENTRAL,
         x_names: list[str] = None,
     ):
         super().__init__(x_names=x_names)
         self.obj: ObjectiveBase = obj
-        self.grad: Union[bool, None] = grad
-        self.hess: Union[bool, None] = hess
-        self.sres: Union[bool, None] = sres
+        self.grad: bool | None = grad
+        self.hess: bool | None = hess
+        self.sres: bool | None = sres
         self.hess_via_fval: bool = hess_via_fval
         self.delta_fun: FDDelta = to_delta(delta_fun)
         self.delta_grad: FDDelta = to_delta(delta_grad)
