@@ -1,6 +1,9 @@
 """Utility function for profile module."""
 
+import logging
+import warnings
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -9,6 +12,51 @@ import scipy.stats
 from ..C import GRAD
 from ..problem import Problem
 from ..result import ProfileResult, ProfilerResult, Result
+from .options import ProfileOptions
+
+logger = logging.getLogger(__name__)
+
+PROFILE_STEP_PRECHECK_NOMINAL_WARN_THRESHOLD = 200
+PROFILE_STEP_PRECHECK_DENSE_WARN_THRESHOLD = 1000
+
+
+@dataclass(frozen=True)
+class ResolvedProfileStepSizes:
+    """
+    Effective step sizes for one profiled parameter.
+
+    Attributes
+    ----------
+    default_step_size:
+        Effective default step size after combining absolute and relative
+        settings.
+    min_step_size:
+        Effective minimum step size after combining absolute and relative
+        settings.
+    max_step_size:
+        Effective maximum step size after combining absolute and relative
+        settings.
+    span:
+        Full parameter span `ub - lb` if a finite positive span was available
+        for a `lin`-scale parameter, else `None`.
+    uses_relative_min:
+        Whether the effective minimum step size is larger than the configured
+        absolute minimum due to the relative setting.
+    uses_relative_default:
+        Whether the effective default step size is larger than the configured
+        absolute default due to the relative setting.
+    uses_relative_max:
+        Whether the effective maximum step size is larger than the configured
+        absolute maximum due to the relative setting.
+    """
+
+    default_step_size: float
+    min_step_size: float
+    max_step_size: float
+    span: float | None
+    uses_relative_min: bool
+    uses_relative_default: bool
+    uses_relative_max: bool
 
 
 def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
@@ -78,6 +126,176 @@ def calculate_approximate_ci(
         ub = np.interp(confidence_ratio, ratios[ind], xs[ind])
 
     return lb, ub
+
+
+def resolve_profile_step_sizes(
+    problem: Problem,
+    i_par: int,
+    options: ProfileOptions,
+) -> ResolvedProfileStepSizes:
+    """
+    Resolve effective profile step sizes for one parameter.
+
+    The profiling options expose absolute step-size settings for all
+    parameters and relative step-size settings for wide `lin`-scale
+    parameters. This helper combines both into one set of effective values
+    for the profiled parameter.
+
+    For `lin`-scale parameters with finite positive span `ub - lb`, the
+    effective step sizes are computed as the maxima of the corresponding
+    absolute and relative settings. For `log` and `log10` parameters, or if
+    the span is not finite and positive, the absolute settings are used
+    unchanged.
+
+    Parameters
+    ----------
+    problem:
+        The parameter estimation problem containing bounds and scales.
+    i_par:
+        Index of the profiled parameter in full dimension.
+    options:
+        Profile options containing absolute and relative step-size settings.
+
+    Returns
+    -------
+    A dataclass containing the effective minimum, default, and maximum step
+    sizes for the profiled parameter, together with metadata describing
+    whether relative settings were active.
+    """
+    default_step_size = options.default_step_size
+    min_step_size = options.min_step_size
+    max_step_size = options.max_step_size
+    span = None
+    uses_relative_min = False
+    uses_relative_default = False
+    uses_relative_max = False
+
+    scale = str(problem.x_scales[i_par]).lower()
+    if scale == "lin":
+        candidate_span = float(problem.ub_full[i_par] - problem.lb_full[i_par])
+        if np.isfinite(candidate_span) and candidate_span > 0:
+            span = candidate_span
+            relative_min = options.min_step_size_relative * span
+            relative_default = options.default_step_size_relative * span
+            relative_max = options.max_step_size_relative * span
+            min_step_size = max(min_step_size, relative_min)
+            default_step_size = max(default_step_size, relative_default)
+            max_step_size = max(
+                max_step_size,
+                relative_max,
+                default_step_size,
+            )
+            uses_relative_min = min_step_size > options.min_step_size
+            uses_relative_default = (
+                default_step_size > options.default_step_size
+            )
+            uses_relative_max = max_step_size > options.max_step_size
+
+    return ResolvedProfileStepSizes(
+        default_step_size=default_step_size,
+        min_step_size=min_step_size,
+        max_step_size=max_step_size,
+        span=span,
+        uses_relative_min=uses_relative_min,
+        uses_relative_default=uses_relative_default,
+        uses_relative_max=uses_relative_max,
+    )
+
+
+def precheck_profile_step_size(
+    current_profile: ProfilerResult,
+    problem: Problem,
+    i_par: int,
+    par_direction: int,
+    options: ProfileOptions,
+) -> None:
+    """
+    Precheck whether the current step-size settings are suspiciously small.
+
+    The check is currently only applied to `lin`-scale parameters. It compares
+    the remaining span in the current profiling direction against the resolved
+    effective default and minimum step sizes and warns, or raises, if the
+    resulting number of expected profile points exceeds configured heuristic
+    thresholds.
+
+    Parameters
+    ----------
+    current_profile:
+        The current profile path, used to determine the current parameter
+        value.
+    problem:
+        The parameter estimation problem containing bounds and scales.
+    i_par:
+        Index of the profiled parameter in full dimension.
+    par_direction:
+        Profiling direction, either `-1` for descending or `1` for ascending.
+    options:
+        Profile options controlling the precheck behavior and step-size
+        settings.
+    """
+    if options.step_size_precheck_mode == "off":
+        return
+
+    scale = str(problem.x_scales[i_par]).lower()
+    if scale != "lin":
+        return
+
+    resolved_steps = resolve_profile_step_sizes(problem, i_par, options)
+
+    x0 = float(current_profile.x_path[i_par, -1])
+    if par_direction == -1:
+        direction_label = "descending"
+        available_span = x0 - float(problem.lb_full[i_par])
+    elif par_direction == 1:
+        direction_label = "ascending"
+        available_span = float(problem.ub_full[i_par]) - x0
+    else:
+        raise ValueError("par_direction must be either -1 or 1.")
+
+    if not np.isfinite(available_span) or available_span <= 0:
+        return
+
+    nominal_count = available_span / resolved_steps.default_step_size
+    dense_count = available_span / resolved_steps.min_step_size
+
+    nominal_warn = nominal_count > PROFILE_STEP_PRECHECK_NOMINAL_WARN_THRESHOLD
+    dense_warn = dense_count > PROFILE_STEP_PRECHECK_DENSE_WARN_THRESHOLD
+    if not nominal_warn and not dense_warn:
+        return
+
+    parameter_name = problem.x_names[i_par]
+    message = (
+        "Profiling precheck: parameter "
+        f"'{parameter_name}' on scale '{scale}' in {direction_label} "
+        "direction may require many profile steps with the current settings. "
+        f"current value={x0:.6g}, bounds=({problem.lb_full[i_par]:.6g}, "
+        f"{problem.ub_full[i_par]:.6g}), available span={available_span:.6g}, "
+        f"default_step_size={options.default_step_size:.6g}, "
+        f"default_step_size_relative={options.default_step_size_relative:.6g}, "
+        f"effective_default_step_size={resolved_steps.default_step_size:.6g}, "
+        f"min_step_size={options.min_step_size:.6g}, "
+        f"min_step_size_relative={options.min_step_size_relative:.6g}, "
+        f"effective_min_step_size={resolved_steps.min_step_size:.6g}, "
+        f"max_step_size={options.max_step_size:.6g}, "
+        f"max_step_size_relative={options.max_step_size_relative:.6g}, "
+        f"effective_max_step_size={resolved_steps.max_step_size:.6g}, "
+        f"estimated nominal count={nominal_count:.1f}, "
+        f"estimated worst-case count={dense_count:.1f}. "
+        "Consider increasing default_step_size, "
+        "default_step_size_relative, min_step_size, "
+        "min_step_size_relative, or max_step_size_relative."
+    )
+    if dense_warn:
+        message += (
+            " The estimated worst-case count strongly suggests an extreme "
+            "number of expected profile steps."
+        )
+
+    logger.warning(message)
+    if dense_warn and options.step_size_precheck_mode == "raise":
+        raise ValueError(message)
+
+    warnings.warn(message, UserWarning, stacklevel=2)
 
 
 def initialize_profile(

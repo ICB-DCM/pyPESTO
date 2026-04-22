@@ -11,11 +11,23 @@ class ProfileOptions(dict):
         Default step size of the profiling routine along the profile path
         (adaptive step lengths algorithms will only use this as a first guess
         and then refine the update).
+    default_step_size_relative:
+        Relative default step size for wide `lin`-scale parameters, expressed
+        as a fraction of the full parameter span `ub - lb`. The effective
+        default step size is the maximum of the absolute and relative values.
     min_step_size:
         Lower bound for the step size in adaptive methods.
         Default: 0.005.
+    min_step_size_relative:
+        Relative minimum step size for wide `lin`-scale parameters, expressed
+        as a fraction of the full parameter span `ub - lb`. The effective
+        minimum step size is the maximum of the absolute and relative values.
     max_step_size:
         Upper bound for the step size in adaptive methods.
+    max_step_size_relative:
+        Relative maximum step size for wide `lin`-scale parameters, expressed
+        as a fraction of the full parameter span `ub - lb`. The effective
+        maximum step size is the maximum of the absolute and relative values.
     step_size_factor:
         Adaptive methods recompute the likelihood at the predicted point and
         try to find a good step length by a sort of line search algorithm.
@@ -53,13 +65,21 @@ class ProfileOptions(dict):
         Standard deviation for Gaussian sampling around predicted starting
         point in multi-start optimization (relative to parameter scale).
         Default: 0.01
+    step_size_precheck_mode:
+        Behavior of the linear-scale profile step-size precheck.
+        Use ``"off"`` to disable the precheck, ``"warn"`` to emit a warning
+        for suspiciously small steps, and ``"raise"`` to raise an error for
+        extreme cases. Default: ``"warn"``.
     """
 
     def __init__(
         self,
         default_step_size: float = 0.01,
+        default_step_size_relative: float = 0.005,
         min_step_size: float = 0.005,
+        min_step_size_relative: float = 0.0025,
         max_step_size: float = 0.1,
+        max_step_size_relative: float = 0.02,
         step_size_factor: float = 1.25,
         delta_ratio_max: float = 0.1,
         ratio_min: float = 0.145,
@@ -70,12 +90,16 @@ class ProfileOptions(dict):
         correlation_threshold: float = 0.7,
         profile_n_starts: int = 3,
         profile_sampling_sigma: float = 0.01,
+        step_size_precheck_mode: str = "warn",
     ):
         super().__init__()
 
         self.default_step_size = default_step_size
+        self.default_step_size_relative = default_step_size_relative
         self.min_step_size = min_step_size
+        self.min_step_size_relative = min_step_size_relative
         self.max_step_size = max_step_size
+        self.max_step_size_relative = max_step_size_relative
         self.ratio_min = ratio_min
         self.step_size_factor = step_size_factor
         self.delta_ratio_max = delta_ratio_max
@@ -86,6 +110,7 @@ class ProfileOptions(dict):
         self.correlation_threshold = correlation_threshold
         self.profile_n_starts = profile_n_starts
         self.profile_sampling_sigma = profile_sampling_sigma
+        self.step_size_precheck_mode = step_size_precheck_mode
 
         self.validate()
 
@@ -132,6 +157,20 @@ class ProfileOptions(dict):
             raise ValueError("default_step_size must be <= max_step_size.")
         if self.default_step_size < self.min_step_size:
             raise ValueError("default_step_size must be >= min_step_size.")
+        if self.default_step_size_relative <= 0:
+            raise ValueError("default_step_size_relative must be > 0.")
+        if self.min_step_size_relative <= 0:
+            raise ValueError("min_step_size_relative must be > 0.")
+        if self.max_step_size_relative <= 0:
+            raise ValueError("max_step_size_relative must be > 0.")
+        if self.min_step_size_relative > self.default_step_size_relative:
+            raise ValueError(
+                "min_step_size_relative must be <= default_step_size_relative."
+            )
+        if self.default_step_size_relative > self.max_step_size_relative:
+            raise ValueError(
+                "default_step_size_relative must be <= max_step_size_relative."
+            )
 
         if self.adaptive_target_scaling_factor < 1:
             raise ValueError("adaptive_target_scaling_factor must be > 1.")
@@ -144,3 +183,9 @@ class ProfileOptions(dict):
 
         if self.profile_sampling_sigma <= 0:
             raise ValueError("profile_sampling_sigma must be > 0.")
+
+        if self.step_size_precheck_mode not in {"off", "warn", "raise"}:
+            raise ValueError(
+                "step_size_precheck_mode must be one of "
+                "{'off', 'warn', 'raise'}."
+            )

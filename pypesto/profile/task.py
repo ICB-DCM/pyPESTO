@@ -8,6 +8,7 @@ from ..engine import Task
 from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
+from .util import precheck_profile_step_size, resolve_profile_step_sizes
 from .walk_along_profile import walk_along_profile
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,56 @@ class ProfilerTask(Task):
 
         # flip profile
         self.current_profile.flip_profile()
+
+        start_value = float(self.current_profile.x_path[self.i_par, -1])
+        resolved_steps = resolve_profile_step_sizes(
+            self.problem,
+            self.i_par,
+            self.options,
+        )
+        span = (
+            f"{resolved_steps.span:.6g}"
+            if resolved_steps.span is not None
+            else "n/a"
+        )
+        logger.info(
+            "Profiling start: parameter=%s direction=%s scale=%s "
+            "start_value=%.6g bounds=(%.6g, %.6g) span=%s "
+            "default_step_size=%.6g default_step_size_relative=%.6g "
+            "min_step_size=%.6g min_step_size_relative=%.6g "
+            "max_step_size=%.6g max_step_size_relative=%.6g "
+            "effective_default_step_size=%.6g effective_min_step_size=%.6g "
+            "effective_max_step_size=%.6g uses_relative_min=%s "
+            "uses_relative_default=%s uses_relative_max=%s precheck_mode=%s",
+            self.problem.x_names[self.i_par],
+            "descending" if self.par_direction == -1 else "ascending",
+            self.problem.x_scales[self.i_par],
+            start_value,
+            self.problem.lb_full[self.i_par],
+            self.problem.ub_full[self.i_par],
+            span,
+            self.options.default_step_size,
+            self.options.default_step_size_relative,
+            self.options.min_step_size,
+            self.options.min_step_size_relative,
+            self.options.max_step_size,
+            self.options.max_step_size_relative,
+            resolved_steps.default_step_size,
+            resolved_steps.min_step_size,
+            resolved_steps.max_step_size,
+            resolved_steps.uses_relative_min,
+            resolved_steps.uses_relative_default,
+            resolved_steps.uses_relative_max,
+            self.options.step_size_precheck_mode,
+        )
+
+        precheck_profile_step_size(
+            current_profile=self.current_profile,
+            problem=self.problem,
+            i_par=self.i_par,
+            par_direction=self.par_direction,
+            options=self.options,
+        )
 
         # compute the current profile
         self.current_profile = walk_along_profile(
