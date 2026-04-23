@@ -1191,6 +1191,9 @@ def test_get_simulation_rdatas_default_timepoints():
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
+        optimizer=optimize.ScipyOptimizer(
+            method="L-BFGS-B", options={"maxiter": 1}
+        ),
         progress_bar=False,
     )
 
