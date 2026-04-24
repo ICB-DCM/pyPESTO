@@ -26,10 +26,14 @@ def _parameter_label(problem: Problem, idx: int) -> str:
     return name
 
 
+# Fraction of the bound range added to axis limits so bound lines (drawn
+# at the true lb/ub) are visible without overlapping the axis spine.
+_BOUND_VIEW_MARGIN = 0.03
+
+
 def _add_bound_lines_1d(ax: plt.Axes, lb: float, ub: float) -> None:
-    """Draw dashed vertical lines indicating lower and upper parameter bounds."""
-    offset = 0.02 * max(ub - lb, 1.0)
-    for bound in (lb + offset, ub - offset):
+    """Draw dashed vertical lines at the lower and upper parameter bounds."""
+    for bound in (lb, ub):
         ax.axvline(
             bound,
             color="0.5",
@@ -47,10 +51,8 @@ def _add_bound_lines_2d(
     y_lb: float,
     y_ub: float,
 ) -> None:
-    """Draw dashed lines indicating lower and upper bounds on both axes."""
-    x_offset = 0.02 * max(x_ub - x_lb, 1.0)
-    y_offset = 0.02 * max(y_ub - y_lb, 1.0)
-    for bound in (x_lb + x_offset, x_ub - x_offset):
+    """Draw dashed lines at the lower and upper bounds on both axes."""
+    for bound in (x_lb, x_ub):
         ax.axvline(
             bound,
             color="0.5",
@@ -59,7 +61,7 @@ def _add_bound_lines_2d(
             alpha=0.95,
             zorder=1,
         )
-    for bound in (y_lb + y_offset, y_ub - y_offset):
+    for bound in (y_lb, y_ub):
         ax.axhline(
             bound,
             color="0.5",
@@ -809,26 +811,15 @@ def profile_lowlevel_2d(
     ax.set_xlabel(_label(profile_index))
     ax.set_ylabel(_label(second_par_index))
 
-    # Always extend axes to parameter bounds
-    ax.set_xlim(
-        [
-            result.problem.lb_full[profile_index],
-            result.problem.ub_full[profile_index],
-        ]
-    )
-    ax.set_ylim(
-        [
-            result.problem.lb_full[second_par_index],
-            result.problem.ub_full[second_par_index],
-        ]
-    )
-    _add_bound_lines_2d(
-        ax,
-        result.problem.lb_full[profile_index],
-        result.problem.ub_full[profile_index],
-        result.problem.lb_full[second_par_index],
-        result.problem.ub_full[second_par_index],
-    )
+    x_lb = result.problem.lb_full[profile_index]
+    x_ub = result.problem.ub_full[profile_index]
+    y_lb = result.problem.lb_full[second_par_index]
+    y_ub = result.problem.ub_full[second_par_index]
+    x_margin = _BOUND_VIEW_MARGIN * (x_ub - x_lb)
+    y_margin = _BOUND_VIEW_MARGIN * (y_ub - y_lb)
+    ax.set_xlim([x_lb - x_margin, x_ub + x_margin])
+    ax.set_ylim([y_lb - y_margin, y_ub + y_margin])
+    _add_bound_lines_2d(ax, x_lb, x_ub, y_lb, y_ub)
 
     return ax
 
@@ -988,11 +979,11 @@ def visualize_2d_profile(
                         if plot_objective_values
                         else "Log-posterior ratio"
                     )
-                    _add_bound_lines_1d(
-                        ax,
-                        result.problem.lb_full[row_param_idx],
-                        result.problem.ub_full[row_param_idx],
-                    )
+                    diag_lb = result.problem.lb_full[row_param_idx]
+                    diag_ub = result.problem.ub_full[row_param_idx]
+                    diag_margin = _BOUND_VIEW_MARGIN * (diag_ub - diag_lb)
+                    ax.set_xlim([diag_lb - diag_margin, diag_ub + diag_margin])
+                    _add_bound_lines_1d(ax, diag_lb, diag_ub)
 
                     if len(ref) > 0:
                         for i_ref in ref:
