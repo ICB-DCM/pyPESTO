@@ -783,7 +783,13 @@ def test_nested_profile_cis():
 def test_visualize_2d_profile():
     result = create_profile_result()
     # basic call — all profiles, default settings
-    visualize.visualize_2d_profile(result)
+    _, axes = visualize.visualize_2d_profile(result)
+    assert axes[0, 1].yaxis.labelpad == 2
+    assert axes[0, 1].yaxis.label.get_size() == 14
+    assert not axes[0, 1].spines["top"].get_visible()
+    assert not axes[0, 1].spines["right"].get_visible()
+    assert axes[0, 0].get_legend() is not None
+    assert axes[0, 1].get_legend() is not None
     # explicit profile indices and ratio cutoff
     visualize.visualize_2d_profile(
         result, profile_indices=[0, 1], ratio_min=0.1
@@ -800,6 +806,9 @@ def test_profile_lowlevel_2d():
     _, ax = plt.subplots()
     visualize.profile_lowlevel_2d(
         result, profile_index=0, second_par_index=1, ax=ax
+    )
+    assert (
+        len([line for line in ax.lines if line.get_linestyle() == "--"]) == 4
     )
     _, ax = plt.subplots()
     visualize.profile_lowlevel_2d(

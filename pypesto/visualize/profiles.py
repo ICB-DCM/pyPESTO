@@ -4,6 +4,7 @@ from warnings import warn
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import is_color_like
+from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 
 from ..C import COLOR
@@ -23,6 +24,82 @@ def _parameter_label(problem: Problem, idx: int) -> str:
     if scale == "log":
         return f"log({name})"
     return name
+
+
+def _add_bound_lines_1d(ax: plt.Axes, lb: float, ub: float) -> None:
+    """Draw dashed vertical lines indicating lower and upper parameter bounds."""
+    offset = 0.02 * max(ub - lb, 1.0)
+    for bound in (lb + offset, ub - offset):
+        ax.axvline(
+            bound,
+            color="0.5",
+            linestyle="--",
+            linewidth=1.4,
+            alpha=0.95,
+            zorder=1,
+        )
+
+
+def _add_bound_lines_2d(
+    ax: plt.Axes,
+    x_lb: float,
+    x_ub: float,
+    y_lb: float,
+    y_ub: float,
+) -> None:
+    """Draw dashed lines indicating lower and upper bounds on both axes."""
+    x_offset = 0.02 * max(x_ub - x_lb, 1.0)
+    y_offset = 0.02 * max(y_ub - y_lb, 1.0)
+    for bound in (x_lb + x_offset, x_ub - x_offset):
+        ax.axvline(
+            bound,
+            color="0.5",
+            linestyle="--",
+            linewidth=1.4,
+            alpha=0.95,
+            zorder=1,
+        )
+    for bound in (y_lb + y_offset, y_ub - y_offset):
+        ax.axhline(
+            bound,
+            color="0.5",
+            linestyle="--",
+            linewidth=1.4,
+            alpha=0.95,
+            zorder=1,
+        )
+
+
+def _add_panel_legend(
+    ax: plt.Axes,
+    handles: list[Line2D],
+    fontsize: int,
+    loc: str = "upper left",
+) -> None:
+    """Add a compact styled legend to a subplot."""
+    existing_handles, existing_labels = ax.get_legend_handles_labels()
+    label_to_handle = {
+        label: handle
+        for handle, label in zip(
+            existing_handles, existing_labels, strict=True
+        )
+        if label
+    }
+    for handle in handles:
+        if handle.get_label() not in label_to_handle:
+            label_to_handle[handle.get_label()] = handle
+    ax.legend(
+        label_to_handle.values(),
+        label_to_handle.keys(),
+        loc=loc,
+        frameon=True,
+        framealpha=0.95,
+        facecolor="white",
+        edgecolor="0.85",
+        fontsize=fontsize,
+        handlelength=1.8,
+        borderpad=0.4,
+    )
 
 
 def profiles(
@@ -641,7 +718,8 @@ def profile_lowlevel_2d(
 
     Visualizes the profile of one parameter (x-axis) while showing the values
     of a second parameter (y-axis), with colors indicating the objective ratio
-    or function value. Axis limits are always set to the parameter bounds.
+    or function value. Axis limits are always set to the parameter bounds,
+    with dashed lines marking the lower and upper bounds.
     Axis labels include the parameter scale (e.g. ``log10(k1)``) unless
     overridden via ``x_labels``.
 
@@ -702,18 +780,26 @@ def profile_lowlevel_2d(
     y_values = y_values[indices]
     color_values = color_values[indices]
 
+    # Draw the connector line in profile traversal order (pre-sort) so it
+    # represents the actual profile path rather than a color-sorted spaghetti.
+    ax.plot(x_values, y_values, "k-", alpha=0.2, linewidth=0.8, zorder=0)
+
+    # Draw best points on top: ascending for ratio (high on top),
+    # descending for objective value (low on top).
+    sort_idx = (
+        np.argsort(-color_values)
+        if plot_objective_values
+        else np.argsort(color_values)
+    )
     ax.scatter(
-        x_values,
-        y_values,
-        c=color_values,
+        x_values[sort_idx],
+        y_values[sort_idx],
+        c=color_values[sort_idx],
         cmap=cmap,
         s=30,
-        edgecolors="black",
-        linewidths=0.3,
         vmin=vmin,
         vmax=vmax,
     )
-    ax.plot(x_values, y_values, "k-", alpha=0.2, linewidth=0.8, zorder=0)
 
     def _label(idx):
         if x_labels is not None:
@@ -736,6 +822,13 @@ def profile_lowlevel_2d(
             result.problem.ub_full[second_par_index],
         ]
     )
+    _add_bound_lines_2d(
+        ax,
+        result.problem.lb_full[profile_index],
+        result.problem.ub_full[profile_index],
+        result.problem.lb_full[second_par_index],
+        result.problem.ub_full[second_par_index],
+    )
 
     return ax
 
@@ -751,6 +844,7 @@ def visualize_2d_profile(
     x_labels: Sequence[str] = None,
     profile_color: COLOR | np.ndarray | None = None,
     reference: ReferencePoint | Sequence[ReferencePoint] = None,
+    label_fontsize: int = 14,
 ) -> tuple[plt.Figure, np.ndarray]:
     """
     Create an n×n grid of profile plots.
@@ -758,6 +852,8 @@ def visualize_2d_profile(
     Diagonal plots show 1D profiles (likelihood ratio vs. parameter value).
     Off-diagonal plots show the path of one parameter while another is
     profiled, with color indicating the likelihood ratio or objective value.
+    Legend panels summarizing profile points and bound lines are drawn on
+    the top-left diagonal and the first off-diagonal subplot.
 
     Parameters
     ----------
@@ -768,7 +864,7 @@ def visualize_2d_profile(
         If None, all parameters with computed profiles are included.
     size:
         Figure size (width, height) in inches. If None, automatically sized
-        based on number of parameters (3 inches per parameter).
+        based on number of parameters (3.5 inches per parameter).
     profile_list_id:
         Index of the profile list to visualize.
     ratio_min:
@@ -787,6 +883,9 @@ def visualize_2d_profile(
     reference:
         List of reference points for optimization results, shown on diagonal
         1D plots.
+    label_fontsize:
+        Font size for axis labels and the colorbar label. Tick labels are
+        drawn two points smaller.
 
     Returns
     -------
@@ -813,10 +912,14 @@ def visualize_2d_profile(
     if size is None:
         # +1 inch of extra width reserves space for the colorbar so that
         # each subplot cell remains approximately square.
-        size = (n_params * 3 + 1, n_params * 3)
+        size = (n_params * 3.5 + 1, n_params * 3.5)
 
     fig, axes = plt.subplots(
-        n_params, n_params, figsize=size, constrained_layout=True
+        n_params,
+        n_params,
+        figsize=size,
+        constrained_layout=True,
+        gridspec_kw={"wspace": 0.1, "hspace": 0.1},
     )
 
     if n_params == 1:
@@ -851,7 +954,7 @@ def visualize_2d_profile(
     else:
         color_vmin, color_vmax = None, None
 
-    # Track the last successful 2D axes for the shared colorbar
+    first_2d_ax = None
     last_2d_ax = None
 
     for i, row_param_idx in enumerate(profile_indices):
@@ -885,6 +988,11 @@ def visualize_2d_profile(
                         if plot_objective_values
                         else "Log-posterior ratio"
                     )
+                    _add_bound_lines_1d(
+                        ax,
+                        result.problem.lb_full[row_param_idx],
+                        result.problem.ub_full[row_param_idx],
+                    )
 
                     if len(ref) > 0:
                         for i_ref in ref:
@@ -897,8 +1005,33 @@ def visualize_2d_profile(
                                 if i == 0 and j == 0
                                 else None,
                             )
-                        if i == 0 and j == 0 and i_ref.legend is not None:
-                            ax.legend()
+                    if i == 0 and j == 0:
+                        profile_legend_color = (
+                            profile_color
+                            if profile_color is not None
+                            else "red"
+                        )
+                        _add_panel_legend(
+                            ax,
+                            handles=[
+                                Line2D(
+                                    [0],
+                                    [0],
+                                    color=profile_legend_color,
+                                    linewidth=2.0,
+                                    label="Profile",
+                                ),
+                                Line2D(
+                                    [0],
+                                    [0],
+                                    color="0.65",
+                                    linestyle="--",
+                                    linewidth=1.0,
+                                    label="Bounds",
+                                ),
+                            ],
+                            fontsize=label_fontsize - 3,
+                        )
 
             else:
                 # Off-diagonal: 2D profile
@@ -917,6 +1050,8 @@ def visualize_2d_profile(
                         vmin=color_vmin,
                         vmax=color_vmax,
                     )
+                    if first_2d_ax is None:
+                        first_2d_ax = ax
                     last_2d_ax = ax
                 except (ValueError, IndexError):
                     ax.text(
@@ -930,23 +1065,44 @@ def visualize_2d_profile(
                     ax.set_xticks([])
                     ax.set_yticks([])
 
-    # Pairplot-style axis label cleanup:
-    # - bottom row only gets x-axis labels (parameter names)
-    # - leftmost column gets y-axis label = parameter name for that row
-    # - off-diagonal subplots not in leftmost column have y-labels hidden
-    # - diagonal subplots not in leftmost column keep their ratio y-label
-    for i in range(n_params):
-        for j in range(n_params):
-            if i < n_params - 1:
-                axes[i, j].set_xlabel("")
-                axes[i, j].tick_params(labelbottom=False)
-            if j > 0 and i != j:
-                axes[i, j].set_ylabel("")
-                axes[i, j].tick_params(labelleft=False)
-        # Override leftmost-column y-label with row parameter name
-        axes[i, 0].set_ylabel(_label(profile_indices[i]))
+    # yaxis.labelpad is tightened so y-labels stay close to their axis
+    # rather than floating in the gap between columns.
+    for ax in axes.flat:
+        ax.xaxis.label.set_size(label_fontsize)
+        ax.yaxis.label.set_size(label_fontsize)
+        ax.xaxis.label.set_weight("bold")
+        ax.yaxis.label.set_weight("bold")
+        ax.yaxis.labelpad = 2
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(axis="both", labelsize=label_fontsize - 2)
 
-    # Add a shared colorbar for all 2D off-diagonal plots
+    if first_2d_ax is not None:
+        _add_panel_legend(
+            first_2d_ax,
+            handles=[
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    linestyle="None",
+                    markerfacecolor="0.35",
+                    markeredgecolor="none",
+                    markersize=6,
+                    label="Profile points",
+                ),
+                Line2D(
+                    [0],
+                    [0],
+                    color="0.65",
+                    linestyle="--",
+                    linewidth=1.0,
+                    label="Bounds",
+                ),
+            ],
+            fontsize=label_fontsize - 3,
+        )
+
     if last_2d_ax is not None:
         scatter = last_2d_ax.collections[-1]
         cbar = fig.colorbar(scatter, ax=axes)
@@ -956,6 +1112,9 @@ def visualize_2d_profile(
             else "Log-posterior ratio",
             rotation=270,
             labelpad=20,
+            fontsize=label_fontsize,
+            fontweight="bold",
         )
+        cbar.ax.tick_params(labelsize=label_fontsize - 2)
 
     return fig, axes
