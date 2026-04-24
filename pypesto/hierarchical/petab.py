@@ -152,10 +152,10 @@ def validate_inner_parameter_pairings(
     scalings_with_offsets = {}
     offsets_with_scalings = {}
 
-    for _, row in inner_parameter_df.iterrows():
-        offset = row[InnerParameterType.OFFSET]
-        scaling = row[InnerParameterType.SCALING]
-        sigma = row[InnerParameterType.SIGMA]
+    for row in inner_parameter_df.itertuples():
+        offset = getattr(row, InnerParameterType.OFFSET)
+        scaling = getattr(row, InnerParameterType.SCALING)
+        sigma = getattr(row, InnerParameterType.SIGMA)
 
         # Ensures each scaling is only ever paired with one sigma.
         if scaling is not None and sigma is not None:

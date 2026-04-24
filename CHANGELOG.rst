@@ -1,6 +1,56 @@
 Release notes
 =============
 
+Versioning
+..........
+
+pyPESTO follows `EffVer <https://jacobtomlinson.dev/effver/>`_ (Intended Effort Versioning).
+Version numbers communicate the expected effort required for users to adopt a new release:
+
+- **Macro (X.0.0)**: Significant effort required. Major breaking changes or feature overhauls.
+  You will need to dedicate significant time to upgrade.
+- **Meso (0.X.0)**: Moderate effort required. Small breaking changes, dependency updates,
+  or bug fixes you may have worked around. Some adjustments may be needed.
+- **Micro (0.0.X)**: Minimal effort required. Bug fixes and new orthogonal features.
+  You shouldn't need to change anything.
+
+**Deprecation Policy:**
+
+Breaking changes follow a staged deprecation process to give users time to adapt:
+
+1. **Meso release N**: Feature marked as deprecated with ``DeprecationWarning``.
+   Old functionality still works, but warnings inform users of upcoming changes.
+2. **Meso release N+1** (or later): Deprecated feature is removed or breaking change is applied.
+   This change is clearly documented in the release notes under "Breaking Changes."
+
+This policy ensures users have at least one full Meso release cycle to adapt their code
+before breaking changes take effect.
+
+
+0.6 series
+..........
+
+
+0.6.0 (2026-03-13)
+------------------
+
+- General
+    - Support for Python 3.14 (#1620)
+- Optimization
+    - Make `id` optional in `Optimizer.minimize` (#1692)
+- Visualize
+    - Make parameters_correlation_matrix more customizable (#1695)
+- Documentation
+    - More readable figures in examples (#1691)
+- Installation / Packaging
+    - Require amici>=1.0.0 (#1619)
+- Performance
+    - Change from Pool to ProcessPoolExecutor (#1664)
+- Bugfixes
+    - Make validate_inner_parameter_pairings pandas 3 compatible (#1696)
+- Deprecations
+    - Add deprecation warning in SacessOptimizer and ESSOptimizer (#1690)
+
 
 0.5 series
 ..........
