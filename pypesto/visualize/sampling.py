@@ -25,9 +25,9 @@ from ..C import (
 from ..ensemble import EnsemblePrediction, get_percentile_label
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
+from ._style import process_deprecated_kwarg
 from .misc import rgba2rgb
 
-cmap = matplotlib.cm.viridis
 logger = logging.getLogger(__name__)
 
 
@@ -707,7 +707,7 @@ def _handle_colors(
 
     # define colormap
     variable_colors = [
-        list(cmap(v))[:LEN_RGB]
+        list(matplotlib.cm.viridis(v))[:LEN_RGB]
         for v in np.linspace(cmap_min, cmap_max, n_variables)
     ]
 
@@ -1070,13 +1070,14 @@ def sampling_parameter_cis(
 def sampling_parameter_traces(
     result: Result,
     i_chain: int = 0,
-    par_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] = None,
     full_trace: bool = False,
     stepsize: int = 1,
     use_problem_bounds: bool = True,
     suptitle: str = None,
     size: tuple[float, float] = None,
     ax: matplotlib.axes.Axes = None,
+    par_indices: Sequence[int] = None,
 ):
     """
     Plot parameter values over iterations.
@@ -1087,7 +1088,7 @@ def sampling_parameter_traces(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    par_indices: list of integer values
+    parameter_indices: list of integer values
         List of integer values specifying which parameters to plot.
         Default: All parameters are shown.
     full_trace:
@@ -1109,6 +1110,13 @@ def sampling_parameter_traces(
     ax:
         The plot axes.
     """
+    parameter_indices = process_deprecated_kwarg(
+        "parameter_indices",
+        parameter_indices,
+        "par_indices",
+        par_indices,
+    )
+
     import seaborn as sns
 
     # get data which should be plotted
@@ -1117,7 +1125,7 @@ def sampling_parameter_traces(
         i_chain=i_chain,
         stepsize=stepsize,
         full_trace=full_trace,
-        par_indices=par_indices,
+        parameter_indices=parameter_indices,
     )
 
     # compute, how many rows and columns we need for the subplots
@@ -1249,12 +1257,13 @@ def sampling_scatter(
 def sampling_1d_marginals(
     result: Result,
     i_chain: int = 0,
-    par_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] = None,
     stepsize: int = 1,
     plot_type: str = "both",
     bw_method: str = "scott",
     suptitle: str = None,
     size: tuple[float, float] = None,
+    par_indices: Sequence[int] = None,
 ):
     """
     Plot marginals.
@@ -1265,7 +1274,7 @@ def sampling_1d_marginals(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    par_indices: list of integer values
+    parameter_indices: list of integer values
         List of integer values specifying which parameters to plot.
         Default: All parameters are shown.
     stepsize:
@@ -1285,6 +1294,13 @@ def sampling_1d_marginals(
     ax:
         matplotlib-axes
     """
+    parameter_indices = process_deprecated_kwarg(
+        "parameter_indices",
+        parameter_indices,
+        "par_indices",
+        par_indices,
+    )
+
     import seaborn as sns
 
     # get data which should be plotted
@@ -1292,7 +1308,7 @@ def sampling_1d_marginals(
         result=result,
         i_chain=i_chain,
         stepsize=stepsize,
-        par_indices=par_indices,
+        parameter_indices=parameter_indices,
     )
 
     # compute, how many rows and columns we need for the subplots
@@ -1344,7 +1360,7 @@ def get_data_to_plot(
     i_chain: int,
     stepsize: int,
     full_trace: bool = False,
-    par_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] = None,
 ):
     """Get the data which should be plotted as a pandas.DataFrame.
 
@@ -1358,7 +1374,7 @@ def get_data_to_plot(
         Only one in `stepsize` values is plotted.
     full_trace:
         Keep the full length of the chain. Default: False.
-    par_indices: list of integer values
+    parameter_indices: list of integer values
         List of integer values specifying which parameters to plot.
         Default: All parameters are shown.
 
@@ -1432,9 +1448,9 @@ def get_data_to_plot(
     # some global parameters
     nr_params = arr_param.shape[1]  # number of parameters
 
-    if par_indices is not None:
-        param_names = params_fval.columns.values[par_indices]
-        nr_params = len(par_indices)
+    if parameter_indices is not None:
+        param_names = params_fval.columns.values[parameter_indices]
+        nr_params = len(parameter_indices)
     else:
         param_names = params_fval.columns.values[0:nr_params]
 
