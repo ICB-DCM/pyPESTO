@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from warnings import warn
 
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import is_color_like
@@ -15,7 +16,7 @@ from .reference_points import ReferencePoint, create_references
 
 def profiles(
     results: Result | Sequence[Result],
-    ax=None,
+    ax: matplotlib.axes.Axes | None = None,
     profile_indices: Sequence[int] = None,
     size: tuple[float, float] = (18.5, 6.5),
     reference: ReferencePoint | Sequence[ReferencePoint] = None,

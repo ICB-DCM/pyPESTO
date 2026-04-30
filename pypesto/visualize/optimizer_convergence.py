@@ -1,3 +1,4 @@
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,11 +8,11 @@ from ..result import Result
 
 def optimizer_convergence(
     result: Result,
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     xscale: str = "symlog",
     yscale: str = "log",
-    size: tuple[float] = (18.5, 10.5),
-) -> plt.Axes:
+    size: tuple[float, float] = (18.5, 10.5),
+) -> matplotlib.axes.Axes:
     """
     Visualize to help spotting convergence issues.
 

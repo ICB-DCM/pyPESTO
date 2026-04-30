@@ -2,6 +2,7 @@ import logging
 import warnings
 from collections.abc import Iterable
 
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
@@ -24,8 +25,8 @@ logger = logging.getLogger(__name__)
 
 def optimizer_history(
     results: Result | list[Result],
-    ax: plt.Axes | None = None,
-    size: tuple = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] = (18.5, 10.5),
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
     scale_y: str = "log10",
@@ -129,12 +130,12 @@ def optimizer_history_lowlevel(
     vals: list[np.ndarray],
     scale_y: str = "log10",
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
-    ax: plt.Axes | None = None,
-    size: tuple = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] = (18.5, 10.5),
     x_label: str = "Optimizer steps",
     y_label: str = "Objective value",
     legend_text: str | None = None,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Plot optimizer history using list of numpy arrays.
 

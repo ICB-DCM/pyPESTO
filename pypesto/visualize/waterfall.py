@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
@@ -21,7 +22,7 @@ from .reference_points import ReferencePoint, create_references
 
 def waterfall(
     results: Result | Sequence[Result],
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = (18.5, 10.5),
     y_limits: tuple[float] | None = None,
     scale_y: str | None = "log10",
@@ -200,8 +201,8 @@ def waterfall(
 
 def waterfall_lowlevel(
     fvals,
-    ax: plt.Axes | None = None,
-    size: tuple[float] | None = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (18.5, 10.5),
     scale_y: str = "log10",
     offset_y: float = 0.0,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,

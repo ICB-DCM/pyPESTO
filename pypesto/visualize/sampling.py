@@ -43,9 +43,9 @@ def sampling_fval_traces(
     i_chain: int = 0,
     full_trace: bool = False,
     stepsize: int = 1,
-    title: str = None,
-    size: tuple[float, float] = None,
-    ax: matplotlib.axes.Axes = None,
+    title: str | None = None,
+    size: tuple[float, float] | None = None,
+    ax: matplotlib.axes.Axes | None = None,
 ):
     """
     Plot log-posterior (=function value) over iterations.
@@ -965,9 +965,9 @@ def sampling_parameter_cis(
     alpha: Sequence[int] = None,
     step: float = 0.05,
     show_median: bool = True,
-    title: str = None,
-    size: tuple[float, float] = None,
-    ax: matplotlib.axes.Axes = None,
+    title: str | None = None,
+    size: tuple[float, float] | None = None,
+    ax: matplotlib.axes.Axes | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot MCMC-based parameter credibility intervals.
@@ -1074,9 +1074,9 @@ def sampling_parameter_traces(
     full_trace: bool = False,
     stepsize: int = 1,
     use_problem_bounds: bool = True,
-    suptitle: str = None,
-    size: tuple[float, float] = None,
-    ax: matplotlib.axes.Axes = None,
+    suptitle: str | None = None,
+    size: tuple[float, float] | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     par_indices: Sequence[int] = None,
 ):
     """

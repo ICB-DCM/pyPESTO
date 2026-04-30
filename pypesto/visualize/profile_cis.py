@@ -26,7 +26,7 @@ def profile_cis(
     profile_list: int = 0,
     color: str | tuple = "C0",
     show_bounds: bool = False,
-    ax: matplotlib.axes.Axes = None,
+    ax: matplotlib.axes.Axes | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot approximate confidence intervals based on profiles.
@@ -113,7 +113,7 @@ def profile_nested_cis(
     profile_indices: Sequence[int] = None,
     profile_list: int = 0,
     colors: Sequence = None,
-    ax: matplotlib.axes.Axes = None,
+    ax: matplotlib.axes.Axes | None = None,
     orientation: Literal["v", "h"] = "v",
 ):
     """
