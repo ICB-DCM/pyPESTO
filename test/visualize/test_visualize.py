@@ -551,6 +551,14 @@ def test_optimization_scatter():
     result = create_optimization_result()
     visualize.optimization_scatter(result)
 
+    for i, optimizer_result in enumerate(result.optimize_result.list):
+        optimizer_result.fval = 1.0 + i * 1e-12
+
+    axes = visualize.optimization_scatter(result)
+    colorbar_ax = axes[0, 0].figure.axes[-1]
+
+    assert colorbar_ax.get_ylim()[1] - colorbar_ax.get_ylim()[0] >= 1.0
+
 
 @close_fig
 def test_optimization_scatter_with_x_None():
@@ -627,6 +635,55 @@ def _test_ensemble_dimension_reduction():
 
     # test call via lowlevel routine
     visualize.ensemble_scatter_lowlevel(pca_components[:, 0:2])
+
+
+@close_fig
+def test_ensemble_scatter_lowlevel():
+    dataset = np.array([[0.0, 1.0], [1.0, 0.0], [0.5, 0.5]])
+
+    ax = visualize.ensemble_scatter_lowlevel(
+        dataset, x_label="component x", y_label="component y"
+    )
+
+    assert ax.get_xlabel() == "component x"
+    assert ax.get_ylabel() == "component y"
+
+
+@close_fig
+def test_projection_scatter_umap_original(monkeypatch):
+    import sys
+    import types
+
+    plot_module = types.ModuleType("umap.plot")
+
+    def fake_points(umap_object, values=None, theme=None, **kwargs):
+        assert values == [0.0, 1.0]
+        assert theme == "viridis"
+        return kwargs["ax"]
+
+    plot_module.points = fake_points
+    umap_module = types.ModuleType("umap")
+    umap_module.plot = plot_module
+
+    monkeypatch.setitem(sys.modules, "umap", umap_module)
+    monkeypatch.setitem(sys.modules, "umap.plot", plot_module)
+
+    class DummyUmap:
+        def __init__(self):
+            self.embedding_ = np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]])
+
+    dummy_umap = DummyUmap()
+    _, ax = plt.subplots()
+
+    returned_ax = visualize.projection_scatter_umap_original(
+        dummy_umap,
+        color_by=[0.0, 1.0],
+        components=(0, 2),
+        ax=ax,
+    )
+
+    assert returned_ax is ax
+    assert dummy_umap.embedding_.shape == (2, 2)
 
 
 @close_fig
@@ -761,6 +818,13 @@ def test_profile_lowlevel():
         ]
     )
     visualize.profile_lowlevel(fvals=fvals, color="m")
+    _, ax = plt.subplots()
+
+    returned_ax = visualize.profile_lowlevel(fvals=fvals, color="m", ax=ax)
+
+    assert returned_ax is ax
+    assert ax.get_xlabel() == "Parameter value"
+    assert ax.get_ylabel() == "Log-posterior ratio"
 
 
 @close_fig

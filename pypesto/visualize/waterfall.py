@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import inset_locator
@@ -10,6 +9,7 @@ from pypesto.util import delete_nan_inf
 
 from ..C import ALL, COLOR, WATERFALL_MAX_VALUE
 from ..result import Result
+from ._style import get_ax
 from .clust_color import assign_colors
 from .misc import (
     process_offset_y,
@@ -77,11 +77,7 @@ def waterfall(
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     if n_starts_to_zoom:
         # create zoom in
@@ -236,11 +232,7 @@ def waterfall_lowlevel(
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
     fvals = [fvals[i] for i in start_indices]

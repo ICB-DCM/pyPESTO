@@ -25,7 +25,7 @@ from ..C import (
 from ..ensemble import EnsemblePrediction, get_percentile_label
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
-from ._style import process_deprecated_kwarg
+from ._style import get_ax, process_deprecated_kwarg
 from .misc import rgba2rgb
 
 logger = logging.getLogger(__name__)
@@ -82,9 +82,7 @@ def sampling_fval_traces(
         full_trace=full_trace,
     )
 
-    # set axes and figure
-    if ax is None:
-        _, ax = plt.subplots(figsize=size)
+    ax = get_ax(ax, size)
 
     sns.set(style="ticks")
     kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
@@ -1005,9 +1003,7 @@ def sampling_parameter_cis(
     # number of sampled parameters
     n_pars = result.sample_result.trace_x.shape[-1]
 
-    # set axes and figure
-    if ax is None:
-        _, ax = plt.subplots(figsize=size)
+    ax = get_ax(ax, size)
 
     # loop over parameters
     for npar in range(n_pars):

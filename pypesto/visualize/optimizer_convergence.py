@@ -1,9 +1,9 @@
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from ..result import Result
+from ._style import get_ax
 
 
 def optimizer_convergence(
@@ -46,8 +46,7 @@ def optimizer_convergence(
     """
     import seaborn as sns
 
-    if ax is None:
-        ax = plt.subplots(figsize=size)[1]
+    ax = get_ax(ax, size)
 
     fvals = result.optimize_result.fval
     grad_norms = [

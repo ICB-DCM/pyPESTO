@@ -9,6 +9,7 @@ from pypesto.util import delete_nan_inf
 
 from ..C import COLOR
 from ..result import Result
+from ._style import get_ax
 from .clust_color import assign_colors, assign_colors_for_list
 from .misc import process_result_list, process_start_indices
 
@@ -21,6 +22,7 @@ def optimization_run_properties_one_plot(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
     plot_type: str = "line",
+    ax: matplotlib.axes.Axes | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot stats for allproperties specified in properties_to_plot on one plot.
@@ -29,6 +31,8 @@ def optimization_run_properties_one_plot(
     ----------
     results:
         Optimization result obtained by 'optimize.py' or list of those
+    ax:
+        Axes object to use.
     properties_to_plot:
         Optimization run properties that should be plotted
     size:
@@ -99,9 +103,7 @@ def optimization_run_properties_one_plot(
             "optimization properties to plot"
         )
 
-    ax = plt.subplots()[1]
-    fig = plt.gcf()
-    fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     for idx, prop_name in enumerate(properties_to_plot):
         optimization_run_property_per_multistart(

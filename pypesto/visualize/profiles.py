@@ -9,6 +9,7 @@ from matplotlib.ticker import MaxNLocator
 
 from ..C import COLOR
 from ..result import Result
+from ._style import get_ax
 from .clust_color import assign_colors
 from .misc import process_result_list
 from .reference_points import ReferencePoint, create_references
@@ -318,10 +319,10 @@ def profile_lowlevel(
     ax: plt.Axes | None = None,
     size: tuple[float, float] = (18.5, 6.5),
     color: COLOR | np.ndarray | None = None,
-    legend_text: str = None,
+    legend_text: str | None = None,
     show_bounds: bool = False,
-    lb: float = None,
-    ub: float = None,
+    lb: float | None = None,
+    ub: float | None = None,
 ) -> plt.Axes:
     """
     Lowlevel routine for plotting one profile, working with a numpy array only.
@@ -359,13 +360,9 @@ def profile_lowlevel(
     else:
         single_color = False
 
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        ax.set_xlabel("Parameter value")
-        ax.set_ylabel("Log-posterior ratio")
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
+    ax.set_xlabel("Parameter value")
+    ax.set_ylabel("Log-posterior ratio")
 
     # plot
     if fvals.size != 0:

@@ -16,6 +16,7 @@ from ..C import (
 )
 from ..history import HistoryBase
 from ..result import Result
+from ._style import get_ax
 from .clust_color import assign_colors
 from .misc import process_offset_y, process_result_list, process_y_limits
 from .reference_points import ReferencePoint, create_references
@@ -164,11 +165,7 @@ def optimizer_history_lowlevel(
     ax:
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     # parse input
     fvals = []
@@ -561,7 +558,7 @@ def sacess_history(
     -------
     The plot axes. `ax` or a new axes if `ax` was `None`.
     """
-    ax = ax or plt.subplot()
+    ax = get_ax(ax)
     if len(histories) == 0:
         warnings.warn("No histories to plot.", stacklevel=2)
 

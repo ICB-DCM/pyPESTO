@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..C import COLOR
+from ._style import get_ax
 
 if TYPE_CHECKING:
     try:
@@ -71,8 +72,9 @@ def projection_scatter_umap_original(
     umap_object: UmapTypeObject,
     color_by: Sequence[float] = None,
     components: Sequence[int] = (0, 1),
+    ax: plt.Axes | None = None,
     **kwargs,
-):
+) -> plt.Axes:
     """
     See `projection_scatter_umap` for more documentation.
 
@@ -88,6 +90,8 @@ def projection_scatter_umap_original(
         A sequence/list of floats, which specify the color in the colormap
     components:
         Components to be plotted (corresponds to columns of umap_coordinates)
+    ax:
+        Axes object to use.
 
     Returns
     -------
@@ -100,7 +104,15 @@ def projection_scatter_umap_original(
     umap_object.embedding_ = umap_object.embedding_[:, components]
 
     # use umap's original plotting routine to visualize
-    umap.plot.points(umap_object, values=color_by, theme="viridis", **kwargs)
+    if ax is not None:
+        kwargs["ax"] = ax
+
+    return umap.plot.points(
+        umap_object,
+        values=color_by,
+        theme="viridis",
+        **kwargs,
+    )
 
 
 def projection_scatter_pca(
@@ -211,7 +223,7 @@ def ensemble_crosstab_scatter_lowlevel(
 def ensemble_scatter_lowlevel(
     dataset,
     ax: plt.Axes | None = None,
-    size: tuple[float] | None = (12, 6),
+    size: tuple[float, float] | None = (12, 6),
     x_label: str = "component 1",
     y_label: str = "component 2",
     color_by: Sequence[float] = None,
@@ -256,12 +268,7 @@ def ensemble_scatter_lowlevel(
     ax: matplotlib.Axes
         The plot axes.
     """
-    # first get the data to check identifiability
-    # axes
-    if ax is None:
-        fig, ax = plt.subplots()
-        fig.set_size_inches(*size)
-    plt.sca(ax)
+    ax = get_ax(ax, size)
 
     if color_by is None:
         color_by = np.array([1.0] * dataset.shape[0])
@@ -270,7 +277,7 @@ def ensemble_scatter_lowlevel(
     if invert_scatter_order:
         ordering = -1
 
-    plt.scatter(
+    ax.scatter(
         dataset[::ordering, 0],
         dataset[::ordering, 1],
         c=color_by,
@@ -281,12 +288,12 @@ def ensemble_scatter_lowlevel(
 
     # beautify
     ax.set_facecolor(background_color)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.xticks([])
-    plt.yticks([])
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_xticks([])
+    ax.set_yticks([])
 
-    plt.tight_layout()
+    ax.figure.tight_layout()
 
     return ax
 

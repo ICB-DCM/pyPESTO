@@ -3,13 +3,13 @@ from typing import Literal
 
 import matplotlib.axes
 import matplotlib.cm as cm
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch, Rectangle
 
 from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
+from ._style import get_ax
 
 # kwargs passed to `matplotlib.axes.Axes.errorbar` for plotting confidence levels
 cis_visualization_settings = {
@@ -62,8 +62,7 @@ def profile_cis(
     if profile_indices is None:
         profile_indices = [ix for ix, res in enumerate(profile_list) if res]
 
-    if ax is None:
-        _, ax = plt.subplots()
+    ax = get_ax(ax)
 
     confidence_ratio = chi2_quantile_to_ratio(confidence_level, df=df)
 
@@ -162,8 +161,7 @@ def profile_nested_cis(
     if profile_indices is None:
         profile_indices = [ix for ix, res in enumerate(profile_list) if res]
 
-    if ax is None:
-        _, ax = plt.subplots()
+    ax = get_ax(ax)
 
     legends = []
     for i, confidence_level in enumerate(confidence_levels):
