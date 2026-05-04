@@ -1,7 +1,6 @@
 from collections.abc import Iterable, Sequence
 
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import is_color_like
 
@@ -9,7 +8,7 @@ from pypesto.util import delete_nan_inf
 
 from ..C import COLOR
 from ..result import Result
-from ._style import get_ax
+from ._style import get_ax, get_axes_array
 from .clust_color import assign_colors, assign_colors_for_list
 from .misc import process_result_list, process_start_indices
 
@@ -130,7 +129,8 @@ def optimization_run_properties_per_multistart(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
     plot_type: str = "line",
-) -> dict[str, plt.Subplot]:
+    axes: np.ndarray | None = None,
+) -> np.ndarray:
     """
     One plot per optimization property in properties_to_plot.
 
@@ -157,8 +157,8 @@ def optimization_run_properties_per_multistart(
 
     Returns
     -------
-    ax:
-    The plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
 
     Examples
     --------
@@ -197,27 +197,32 @@ def optimization_run_properties_per_multistart(
             "n_sres",
         ]
 
+    if plot_type not in {"line", "hist"}:
+        raise ValueError(
+            "`optimization_run_properties_per_multistart` supports only "
+            "`plot_type='line'` or `plot_type='hist'`."
+        )
+
     num_subplot = len(properties_to_plot)
     # compute, how many rows and columns we need for the subplots
     num_row = int(np.round(np.sqrt(num_subplot)))
     num_col = int(np.ceil(num_subplot / num_row))
-    fig, axes = plt.subplots(num_row, num_col, squeeze=False)
-    fig.set_size_inches(*size)
-
+    axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
     for ax in axes.flat[num_subplot:]:
-        ax.remove()
-    axes = dict(zip(range(num_subplot), axes.flat, strict=True))
+        ax.set_visible(False)
     for idx, prop_name in enumerate(properties_to_plot):
-        ax = axes[idx]
         optimization_run_property_per_multistart(
             results,
             prop_name,
-            ax,
-            size,
-            start_indices,
-            colors,
-            legends,
-            plot_type,
+            axes=axes.flat[idx],
+            size=size,
+            start_indices=start_indices,
+            colors=colors,
+            legends=legends,
+            plot_type=plot_type,
         )
     return axes
 
@@ -225,13 +230,13 @@ def optimization_run_properties_per_multistart(
 def optimization_run_property_per_multistart(
     results: Result | Sequence[Result],
     opt_run_property: str,
-    axes: matplotlib.axes.Axes | None = None,
+    axes: matplotlib.axes.Axes | np.ndarray | None = None,
     size: tuple[float, float] = (18.5, 10.5),
     start_indices: int | Iterable[int] | None = None,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
     plot_type: str = "line",
-) -> matplotlib.axes.Axes:
+) -> np.ndarray:
     """
     Plot stats for an optimization run property specified by opt_run_property.
 
@@ -267,7 +272,7 @@ def optimization_run_property_per_multistart(
     Returns
     -------
     axes:
-        The plot axes.
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
     supported_properties = {
         "time": "Wall-clock time (seconds)",
@@ -288,48 +293,51 @@ def optimization_run_property_per_multistart(
     # parse input
     (results, colors, legends) = process_result_list(results, colors, legends)
 
-    # axes
-    if axes is None:
-        ncols = 2 if plot_type == "both" else 1
-        fig, axes = plt.subplots(1, ncols)
-        fig.set_size_inches(*size)
+    ncols = 2 if plot_type == "both" else 1
+    axes = get_axes_array(axes=axes, nrows=1, ncols=ncols, size=size)
+    fig = axes.flat[0].figure
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
+
+    if plot_type == "both":
         fig.suptitle(
             f"{supported_properties[opt_run_property]} per optimizer run"
         )
     else:
-        axes.set_title(
+        axes[0, 0].set_title(
             f"{supported_properties[opt_run_property]} per optimizer run"
         )
 
     # loop over results
     for j, result in enumerate(results):
         if plot_type == "both":
-            axes[0] = stats_lowlevel(
+            stats_lowlevel(
                 result,
                 opt_run_property,
                 supported_properties[opt_run_property],
-                axes[0],
+                axes[0, 0],
                 start_indices,
                 colors[j],
                 legends[j],
             )
 
-            axes[1] = stats_lowlevel(
+            stats_lowlevel(
                 result,
                 opt_run_property,
                 supported_properties[opt_run_property],
-                axes[1],
+                axes[0, 1],
                 start_indices,
                 colors[j],
                 legends[j],
                 plot_type="hist",
             )
         else:
-            axes = stats_lowlevel(
+            stats_lowlevel(
                 result,
                 opt_run_property,
                 supported_properties[opt_run_property],
-                axes,
+                axes[0, 0],
                 start_indices,
                 colors[j],
                 legends[j],
@@ -338,10 +346,10 @@ def optimization_run_property_per_multistart(
 
     if sum(legend is not None for legend in legends) > 0:
         if plot_type == "both":
-            for ax in axes:
+            for ax in axes.flat:
                 ax.legend()
         else:
-            axes.legend()
+            axes[0, 0].legend()
 
     return axes
 

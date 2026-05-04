@@ -3,7 +3,6 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import Optional
 
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.colors import Colormap
@@ -19,7 +18,7 @@ from ..C import (
     InnerParameterType,
 )
 from ..result import Result
-from ._style import get_ax
+from ._style import get_ax, get_axes_array, plot_diagonal_marginal
 from .clust_color import assign_colors
 from .misc import (
     process_parameter_indices,
@@ -661,6 +660,7 @@ def optimization_scatter(
     suptitle: str | None = None,
     size: tuple[float, float] | None = None,
     show_bounds: bool = False,
+    axes: np.ndarray | None = None,
 ) -> np.ndarray:
     """
     Plot a scatter matrix of all parameter pairs for the given starts.
@@ -684,6 +684,9 @@ def optimization_scatter(
         ``(2.5 * n + 0.5, 2.5 * n + 0.5)``.
     show_bounds:
         Whether to draw dashed lines at the parameter bounds.
+    axes:
+        Optional axes grid to draw into. Must have shape
+        ``(n_params, n_params)``.
 
     Returns
     -------
@@ -693,7 +696,6 @@ def optimization_scatter(
     """
     import matplotlib.cm as mpl_cm
     from matplotlib.colors import Normalize
-    from scipy.stats import gaussian_kde
 
     start_indices = process_start_indices(
         start_indices=start_indices, result=result
@@ -726,12 +728,34 @@ def optimization_scatter(
         vmax=fval_mid + fval_half_range,
     )
 
-    if size is None:
+    if size is None and axes is None:
         size = (2.5 * n + 0.5, 2.5 * n + 0.5)
 
-    fig, axes = plt.subplots(
-        n, n, figsize=size, squeeze=False, layout="constrained"
-    )
+    axes = get_axes_array(axes=axes, nrows=n, ncols=n, size=size)
+    fig = axes.flat[0].figure
+    fig.set_layout_engine("constrained")
+
+    previous_colorbar_axes = []
+    for ax in axes.flat:
+        colorbar_ax = getattr(
+            ax,
+            "_pypesto_optimization_scatter_colorbar_ax",
+            None,
+        )
+        if (
+            colorbar_ax is not None
+            and colorbar_ax not in previous_colorbar_axes
+        ):
+            previous_colorbar_axes.append(colorbar_ax)
+    for colorbar_ax in previous_colorbar_axes:
+        if colorbar_ax in fig.axes:
+            colorbar_ax.remove()
+
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
+        if hasattr(ax, "_pypesto_optimization_scatter_colorbar_ax"):
+            delattr(ax, "_pypesto_optimization_scatter_colorbar_ax")
 
     for row in range(n):
         for col in range(n):
@@ -740,26 +764,9 @@ def optimization_scatter(
             row_vals = data[:, row]
 
             if row == col:
-                data_range = col_vals.max() - col_vals.min()
-                if data_range == 0:
-                    data_range = max(abs(float(col_vals.mean())) * 0.1, 0.1)
-                x_pad = data_range * 0.25
-                x_grid = np.linspace(
-                    col_vals.min() - x_pad, col_vals.max() + x_pad, 300
+                plot_diagonal_marginal(
+                    ax=ax, values=col_vals, diag_kind=diag_kind
                 )
-                if diag_kind == "kde" and len(col_vals) > 1:
-                    try:
-                        kde = gaussian_kde(col_vals)
-                        y_grid = kde(x_grid)
-                        ax.fill_between(x_grid, y_grid, alpha=0.35, color="C0")
-                        ax.plot(x_grid, y_grid, color="C0", lw=1.5)
-                        ax.set_ylabel("Density")
-                    except np.linalg.LinAlgError:
-                        ax.hist(col_vals, bins="auto", color="C0", alpha=0.6)
-                        ax.set_ylabel("Count")
-                else:
-                    ax.hist(col_vals, bins="auto", color="C0", alpha=0.6)
-                    ax.set_ylabel("Count")
             else:
                 ax.scatter(
                     col_vals,
@@ -815,6 +822,8 @@ def optimization_scatter(
     sm.set_array([])
     cbar = fig.colorbar(sm, ax=axes.ravel().tolist(), shrink=0.8, pad=0.03)
     cbar.set_label("Objective value")
+    for ax in axes.flat:
+        ax._pypesto_optimization_scatter_colorbar_ax = cbar.ax
 
     if suptitle:
         fig.suptitle(suptitle)

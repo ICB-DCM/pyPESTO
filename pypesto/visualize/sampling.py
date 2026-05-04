@@ -25,7 +25,12 @@ from ..C import (
 from ..ensemble import EnsemblePrediction, get_percentile_label
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
-from ._style import get_ax, process_deprecated_kwarg
+from ._style import (
+    get_ax,
+    get_axes_array,
+    plot_diagonal_marginal,
+    process_deprecated_kwarg,
+)
 from .misc import rgba2rgb
 
 logger = logging.getLogger(__name__)
@@ -84,7 +89,6 @@ def sampling_fval_traces(
 
     ax = get_ax(ax, size)
 
-    sns.set(style="ticks")
     kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
     if full_trace:
         kwargs["hue"] = "converged"
@@ -715,10 +719,10 @@ def _handle_colors(
 def sampling_prediction_trajectories(
     ensemble_prediction: EnsemblePrediction,
     levels: float | Sequence[float],
-    title: str = None,
-    size: tuple[float, float] = None,
-    axes: matplotlib.axes.Axes = None,
-    labels: dict[str, str] = None,
+    title: str | None = None,
+    size: tuple[float, float] | None = None,
+    axes: matplotlib.axes.Axes | np.ndarray | None = None,
+    labels: dict[str, str] | None = None,
     axis_label_padding: int = 50,
     groupby: str = CONDITION,
     condition_gap: float = 0.01,
@@ -728,8 +732,8 @@ def sampling_prediction_trajectories(
     reverse_opacities: bool = False,
     average: str = MEDIAN,
     add_sd: bool = False,
-    measurement_df: pd.DataFrame = None,
-) -> matplotlib.axes.Axes:
+    measurement_df: pd.DataFrame | None = None,
+) -> np.ndarray:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
 
@@ -783,7 +787,7 @@ def sampling_prediction_trajectories(
     Returns
     -------
     axes:
-        The plot axes.
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
     if labels is None:
         labels = {}
@@ -863,21 +867,16 @@ def sampling_prediction_trajectories(
         reverse=reverse_opacities,
     )
 
-    if axes is None:
-        n_row = int(np.round(np.sqrt(n_subplots)))
-        n_col = int(np.ceil(n_subplots / n_row))
-        fig, axes = plt.subplots(n_row, n_col, figsize=size, squeeze=False)
-        for ax in axes.flat[n_subplots:]:
-            ax.remove()
-    else:
-        fig = axes.get_figure()
-        if not isinstance(axes, np.ndarray):
-            axes = np.array([[axes]])
-        if len(axes.flat) < n_subplots:
-            raise ValueError(
-                "Provided `axes` contains insufficient subplots. At least "
-                f"{n_subplots} are required."
-            )
+    n_row = int(np.round(np.sqrt(n_subplots)))
+    n_col = int(np.ceil(n_subplots / n_row))
+
+    axes = get_axes_array(axes=axes, nrows=n_row, ncols=n_col, size=size)
+    fig = axes.flat[0].figure
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
+    for ax in axes.flat[n_subplots:]:
+        ax.set_visible(False)
     artist_padding = axis_label_padding / (fig.get_size_inches() * fig.dpi)[0]
 
     if groupby == CONDITION:
@@ -929,8 +928,9 @@ def sampling_prediction_trajectories(
     )
 
     # X and Y labels
-    xmin = min(ax.get_position().xmin for ax in axes.flat)
-    ymin = min(ax.get_position().ymin for ax in axes.flat)
+    visible_axes = [ax for ax in axes.flat if ax.get_visible()]
+    xmin = min(ax.get_position().xmin for ax in visible_axes)
+    ymin = min(ax.get_position().ymin for ax in visible_axes)
     xlabel = (
         "Cumulative time across all conditions"
         if groupby == OUTPUT
@@ -1072,9 +1072,10 @@ def sampling_parameter_traces(
     use_problem_bounds: bool = True,
     suptitle: str | None = None,
     size: tuple[float, float] | None = None,
-    ax: matplotlib.axes.Axes | None = None,
+    axes: np.ndarray | None = None,
+    ax: np.ndarray | None = None,
     par_indices: Sequence[int] = None,
-):
+) -> np.ndarray:
     """
     Plot parameter values over iterations.
 
@@ -1098,13 +1099,13 @@ def sampling_parameter_traces(
         Figure suptitle.
     size:
         Figure size in inches.
-    ax:
-        Axes object to use.
+    axes:
+        Axes grid to use. Must match the computed subplot layout.
 
     Returns
     -------
-    ax:
-        The plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
     parameter_indices = process_deprecated_kwarg(
         "parameter_indices",
@@ -1112,6 +1113,7 @@ def sampling_parameter_traces(
         "par_indices",
         par_indices,
     )
+    axes = process_deprecated_kwarg("axes", axes, "ax", ax)
 
     import seaborn as sns
 
@@ -1128,15 +1130,18 @@ def sampling_parameter_traces(
     num_row = int(np.round(np.sqrt(nr_params)))
     num_col = int(np.ceil(nr_params / num_row))
 
-    # set axes and figure
-    if ax is None:
-        fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
-    else:
-        fig = ax.get_figure()
+    axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
+    fig = axes.flat[0].figure
 
-    par_ax = dict(zip(param_names, ax.flat, strict=True))
+    for panel_ax in axes.flat:
+        panel_ax.clear()
+        panel_ax.set_visible(True)
 
-    sns.set(style="ticks")
+    for panel_ax in axes.flat[nr_params:]:
+        panel_ax.set_visible(False)
+
+    par_ax = dict(zip(param_names, axes.flat, strict=True))
+
     kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
 
     if full_trace:
@@ -1182,18 +1187,19 @@ def sampling_parameter_traces(
     fig.tight_layout()
     sns.despine()
 
-    return ax
+    return axes
 
 
 def sampling_scatter(
     result: Result,
     i_chain: int = 0,
     stepsize: int = 1,
-    suptitle: str = None,
+    suptitle: str | None = None,
     diag_kind: str = "kde",
-    size: tuple[float, float] = None,
+    size: tuple[float, float] | None = None,
     show_bounds: bool = True,
-):
+    axes: np.ndarray | None = None,
+) -> np.ndarray:
     """
     Parameter scatter plot.
 
@@ -1216,38 +1222,72 @@ def sampling_scatter(
 
     Returns
     -------
-    ax:
-        The plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
-    import seaborn as sns
-
     # get data which should be plotted
-    nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
+    nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize
     )
 
-    sns.set(style="ticks")
+    if size is None and axes is None:
+        size = (2.5 * nr_params + 0.5, 2.5 * nr_params + 0.5)
 
-    # TODO: Think this throws the axis errors in seaborn.
-    ax = sns.pairplot(
-        params_fval.drop(["logPosterior", "iteration"], axis=1),
-        diag_kind=diag_kind,
+    axes = get_axes_array(
+        axes=axes, nrows=nr_params, ncols=nr_params, size=size
     )
+    fig = axes.flat[0].figure
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
 
-    if size is not None:
-        ax.fig.set_size_inches(size)
+    data = params_fval[param_names]
+    for row in range(nr_params):
+        for col in range(nr_params):
+            ax = axes[row, col]
+            col_name = param_names[col]
+            row_name = param_names[row]
+            col_vals = data[col_name]
+            row_vals = data[row_name]
 
-    if suptitle:
-        ax.fig.suptitle(suptitle)
+            if row == col:
+                plot_diagonal_marginal(
+                    ax=ax, values=col_vals, diag_kind=diag_kind
+                )
+            else:
+                ax.scatter(
+                    col_vals,
+                    row_vals,
+                    color="C0",
+                    alpha=0.85,
+                    s=35,
+                    linewidths=0.6,
+                    edgecolors="white",
+                    zorder=3,
+                )
+                ax.set_ylabel(row_name)
+
+            ax.set_xlabel(col_name)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
 
     if show_bounds:
-        # set bounds of plot to parameter bounds. Only use diagonal as
-        # sns.PairGrid has sharex,sharey = True by default.
-        for i_axis, axis in enumerate(np.diag(ax.axes)):
-            axis.set_xlim(result.problem.lb[i_axis], result.problem.ub[i_axis])
-            axis.set_ylim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+        for col in range(nr_params):
+            xlim = (theta_lb[col], theta_ub[col])
+            for row in range(nr_params):
+                axes[row, col].set_xlim(xlim)
+        for row in range(nr_params):
+            ylim = (theta_lb[row], theta_ub[row])
+            for col in range(nr_params):
+                if row != col:
+                    axes[row, col].set_ylim(ylim)
 
-    return ax
+    if suptitle:
+        fig.suptitle(suptitle)
+
+    fig.tight_layout()
+
+    return axes
 
 
 def sampling_1d_marginals(
@@ -1257,10 +1297,11 @@ def sampling_1d_marginals(
     stepsize: int = 1,
     plot_type: str = "both",
     bw_method: str = "scott",
-    suptitle: str = None,
-    size: tuple[float, float] = None,
+    suptitle: str | None = None,
+    size: tuple[float, float] | None = None,
+    axes: np.ndarray | None = None,
     par_indices: Sequence[int] = None,
-):
+) -> np.ndarray:
     """
     Plot marginals.
 
@@ -1284,11 +1325,13 @@ def sampling_1d_marginals(
         Figure super title.
     size:
         Figure size in inches.
+    axes:
+        Axes grid to use. Must match the computed subplot layout.
 
     Return
     --------
-    ax:
-        matplotlib-axes
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
     parameter_indices = process_deprecated_kwarg(
         "parameter_indices",
@@ -1311,10 +1354,17 @@ def sampling_1d_marginals(
     num_row = int(np.round(np.sqrt(nr_params)))
     num_col = int(np.ceil(nr_params / num_row))
 
-    fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
+    axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
+    fig = axes.flat[0].figure
 
-    par_ax = dict(zip(param_names, ax.flat, strict=True))
-    sns.set(style="ticks")
+    for panel_ax in axes.flat:
+        panel_ax.clear()
+        panel_ax.set_visible(True)
+
+    for panel_ax in axes.flat[nr_params:]:
+        panel_ax.set_visible(False)
+
+    par_ax = dict(zip(param_names, axes.flat, strict=True))
 
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, par_id in enumerate(param_names):
@@ -1348,7 +1398,7 @@ def sampling_1d_marginals(
 
     fig.tight_layout()
 
-    return ax
+    return axes
 
 
 def get_data_to_plot(

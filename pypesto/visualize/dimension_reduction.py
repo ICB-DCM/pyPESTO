@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ..C import COLOR
-from ._style import get_ax
+from ._style import get_ax, get_axes_array
 
 if TYPE_CHECKING:
     try:
@@ -166,8 +166,12 @@ def projection_scatter_pca(
 
 
 def ensemble_crosstab_scatter_lowlevel(
-    dataset: np.ndarray, component_labels: Sequence[str] = None, **kwargs
-):
+    dataset: np.ndarray,
+    component_labels: Sequence[str] = None,
+    axes: np.ndarray | None = None,
+    size: tuple[float, float] | None = None,
+    **kwargs,
+) -> np.ndarray:
     """
     Plot cross-classification table of scatter plots for different coordinates.
 
@@ -183,17 +187,24 @@ def ensemble_crosstab_scatter_lowlevel(
 
     Returns
     -------
-    axs:
-        A dictionary of plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
     # We got more than two components. Create a cross-classification table
     n_components = dataset.shape[1]
-    axs = _create_crosstab_axes(n_components)
+    if component_labels is None:
+        component_labels = [
+            f"component {i_component + 1}"
+            for i_component in range(n_components)
+        ]
 
-    # wo don't even try to plot this into an existing axes object.
-    # Overplotting a multi-axes figure is asking for trouble...
-    if "ax" in kwargs.keys():
-        del kwargs["ax"]
+    if "ax" in kwargs:
+        if axes is None:
+            axes = kwargs.pop("ax")
+        else:
+            del kwargs["ax"]
+
+    axes = _create_crosstab_axes(n_components, axes=axes, size=size)
 
     for x_comp in range(0, n_components - 1):
         for y_comp in range(x_comp + 1, n_components):
@@ -213,11 +224,10 @@ def ensemble_crosstab_scatter_lowlevel(
                 tmp_dataset,
                 x_label=x_label,
                 y_label=y_label,
-                ax=axs[(x_comp, y_comp)],
+                ax=axes[y_comp - 1, x_comp],
                 **kwargs,
             )
-    # return dict of axes
-    return axs
+    return axes
 
 
 def ensemble_scatter_lowlevel(
@@ -298,7 +308,11 @@ def ensemble_scatter_lowlevel(
     return ax
 
 
-def _create_crosstab_axes(n_comp: int):
+def _create_crosstab_axes(
+    n_comp: int,
+    axes: np.ndarray | None = None,
+    size: tuple[float, float] | None = None,
+) -> np.ndarray:
     """
     Create a figure with cross-classification table of axes.
 
@@ -309,15 +323,20 @@ def _create_crosstab_axes(n_comp: int):
 
     Returns
     -------
-    axs:
-        A dictionary of plot axes.
+    axes:
+        A 2-D NumPy array of plot axes.
     """
-    axs = {}
+    n_grid = n_comp - 1
+    if size is None and axes is None:
+        size = (3.0 * n_grid, 3.0 * n_grid)
 
-    # run over x- and y-coordinate
+    axes = get_axes_array(axes=axes, nrows=n_grid, ncols=n_grid, size=size)
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(False)
+
     for x_comp in range(0, n_comp - 1):
         for y_comp in range(x_comp + 1, n_comp):
-            i_ax = (y_comp - 1) * (n_comp - 1) + x_comp + 1
-            axs[(x_comp, y_comp)] = plt.subplot(n_comp - 1, n_comp - 1, i_ax)
+            axes[y_comp - 1, x_comp].set_visible(True)
 
-    return axs
+    return axes

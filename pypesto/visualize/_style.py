@@ -11,6 +11,7 @@ import warnings
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
@@ -40,6 +41,96 @@ def get_ax(
         return ax
     _, ax = plt.subplots(figsize=size)
     return ax
+
+
+def get_axes_array(
+    axes: Axes | np.ndarray | None = None,
+    nrows: int = 1,
+    ncols: int = 1,
+    size: tuple[float, float] | None = None,
+) -> np.ndarray:
+    """
+    Return a 2-D array of Axes, creating one if ``axes`` is None.
+
+    Parameters
+    ----------
+    axes:
+        Existing matplotlib Axes grid. If provided, it is normalized to a
+        2-D object array and validated against ``(nrows, ncols)``.
+    nrows, ncols:
+        Expected grid shape.
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``axes``
+        is None.
+
+    Returns
+    -------
+    axes:
+        A 2-D NumPy object array containing matplotlib Axes.
+    """
+    if axes is None:
+        _, axes = plt.subplots(nrows, ncols, squeeze=False, figsize=size)
+        return axes
+
+    axes_array = np.asarray(axes, dtype=object)
+    if axes_array.ndim == 0:
+        axes_array = axes_array.reshape(1, 1)
+    elif axes_array.ndim == 1:
+        if nrows == 1:
+            axes_array = axes_array.reshape(1, ncols)
+        elif ncols == 1:
+            axes_array = axes_array.reshape(nrows, 1)
+        else:
+            raise ValueError(f"Pass `axes` with shape ({nrows}, {ncols}).")
+
+    if axes_array.shape != (nrows, ncols):
+        raise ValueError(f"Pass `axes` with shape ({nrows}, {ncols}).")
+
+    return axes_array
+
+
+def plot_diagonal_marginal(
+    ax: Axes,
+    values: np.ndarray,
+    diag_kind: str = "kde",
+    color: str = "C0",
+) -> None:
+    """
+    Plot a 1-D marginal on a diagonal scatter-matrix panel.
+
+    Parameters
+    ----------
+    ax:
+        Axes to draw into.
+    values:
+        One-dimensional sample values.
+    diag_kind:
+        Marginal visualization mode: ``"kde"`` or ``"hist"``.
+    color:
+        Base matplotlib color for the marginal.
+    """
+    from scipy.stats import gaussian_kde
+
+    values = np.asarray(values)
+    data_range = values.max() - values.min()
+    if data_range == 0:
+        data_range = max(abs(float(values.mean())) * 0.1, 0.1)
+    x_pad = data_range * 0.25
+    x_grid = np.linspace(values.min() - x_pad, values.max() + x_pad, 300)
+
+    if diag_kind == "kde" and len(values) > 1:
+        try:
+            kde = gaussian_kde(values)
+            y_grid = kde(x_grid)
+            ax.fill_between(x_grid, y_grid, alpha=0.35, color=color)
+            ax.plot(x_grid, y_grid, color=color, lw=1.5)
+            ax.set_ylabel("Density")
+            return
+        except np.linalg.LinAlgError:
+            pass
+
+    ax.hist(values, bins="auto", color=color, alpha=0.6)
+    ax.set_ylabel("Count")
 
 
 def process_deprecated_kwarg(

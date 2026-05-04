@@ -3,7 +3,11 @@
 import matplotlib.pyplot as plt
 import pytest
 
-from pypesto.visualize._style import get_ax, process_deprecated_kwarg
+from pypesto.visualize._style import (
+    get_ax,
+    get_axes_array,
+    process_deprecated_kwarg,
+)
 
 
 def test_get_ax():
@@ -13,6 +17,22 @@ def test_get_ax():
 
     custom = get_ax(size=(4.0, 3.0))
     assert tuple(custom.get_figure().get_size_inches()) == (4.0, 3.0)
+
+    plt.close("all")
+
+
+def test_get_axes_array():
+    """Normalizes existing grids and creates new ones with ``size``."""
+    _, given = plt.subplots(1, 2)
+    normalized = get_axes_array(given, nrows=1, ncols=2)
+    assert normalized.shape == (1, 2)
+
+    created = get_axes_array(nrows=2, ncols=1, size=(4.0, 3.0))
+    assert created.shape == (2, 1)
+    assert tuple(created.flat[0].figure.get_size_inches()) == (4.0, 3.0)
+
+    with pytest.raises(ValueError, match="shape"):
+        get_axes_array(given, nrows=2, ncols=2)
 
     plt.close("all")
 
