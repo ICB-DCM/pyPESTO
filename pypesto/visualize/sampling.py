@@ -960,12 +960,13 @@ def sampling_prediction_trajectories(
 
 def sampling_parameter_cis(
     result: Result,
-    alpha: Sequence[int] = None,
+    confidence_levels: Sequence[float] = None,
     step: float = 0.05,
     show_median: bool = True,
     title: str | None = None,
     size: tuple[float, float] | None = None,
     ax: matplotlib.axes.Axes | None = None,
+    alpha: Sequence[int] = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot MCMC-based parameter credibility intervals.
@@ -974,8 +975,13 @@ def sampling_parameter_cis(
     ----------
     result:
         The pyPESTO result object with filled sample result.
+    confidence_levels:
+        Credibility levels as fractions in (0, 1), e.g. ``[0.95]`` for a
+        95% credibility interval. Defaults to ``[0.95]``.
     alpha:
-        List of lower tail probabilities, defaults to 95% interval.
+        Deprecated. Use ``confidence_levels`` instead.
+        Previously accepted integer percentages (e.g. ``[95]``); values
+        are divided by 100 automatically during the transition.
     step:
         Height of boxes for projectile plot, defaults to 0.05.
     show_median:
@@ -992,13 +998,30 @@ def sampling_parameter_cis(
     ax:
         The plot axes.
     """
-    if alpha is None:
-        alpha = [95]
+    if alpha is not None:
+        if confidence_levels is not None:
+            raise ValueError(
+                "Pass either `confidence_levels` or the deprecated `alpha`, not both."
+            )
+        import warnings
+
+        warnings.warn(
+            "`alpha` is deprecated; use `confidence_levels` instead. "
+            "Note: units have changed — pass fractions in (0, 1) "
+            "(e.g. `confidence_levels=[0.95]`) instead of integer percentages "
+            "(e.g. `alpha=[95]`). Your values have been divided by 100 automatically.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        confidence_levels = [a / 100 for a in alpha]
+
+    if confidence_levels is None:
+        confidence_levels = [0.95]
 
     # automatically sort values in decreasing order
-    alpha_sorted = sorted(alpha, reverse=True)
+    levels_sorted = sorted(confidence_levels, reverse=True)
     # define colormap
-    evenly_spaced_interval = np.linspace(0, 1, len(alpha_sorted))
+    evenly_spaced_interval = np.linspace(0, 1, len(levels_sorted))
     colors = [plt.cm.tab20c_r(x) for x in evenly_spaced_interval]
     # number of sampled parameters
     n_pars = result.sample_result.trace_x.shape[-1]
@@ -1010,11 +1033,11 @@ def sampling_parameter_cis(
         # initialize height of boxes
         _step = step
         # loop over confidence levels
-        for n, level in enumerate(alpha_sorted):
+        for n, level in enumerate(levels_sorted):
             # extract percentile-based confidence intervals
             lb, ub = calculate_ci_mcmc_sample(
                 result=result,
-                ci_level=level / 100,
+                ci_level=level,
             )
 
             # assemble boxes for projectile plot
@@ -1026,11 +1049,11 @@ def sampling_parameter_cis(
                 np.append(x1, x1[::-1]),
                 np.append(y1, y2[::-1]),
                 color=colors[n],
-                label=str(level) + "% CI",
+                label=f"{level:.0%} CI",
             )
 
             if show_median:
-                if n == len(alpha_sorted) - 1:
+                if n == len(levels_sorted) - 1:
                     burn_in = result.sample_result.burn_in
                     converged = result.sample_result.trace_x[0, burn_in:, npar]
                     _median = np.median(converged)

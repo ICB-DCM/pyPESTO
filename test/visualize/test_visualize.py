@@ -1264,9 +1264,9 @@ def test_sampling_parameter_cis():
     """Test pypesto.visualize.sampling_parameter_cis"""
     result = create_sampling_result()
     visualize.sampling_parameter_cis(result)
-    # call with custom arguments
+    # call with canonical kwarg
     visualize.sampling_parameter_cis(
-        result, alpha=[99, 68], step=0.1, size=(10, 10)
+        result, confidence_levels=[0.99, 0.68], step=0.1, size=(10, 10)
     )
 
 
