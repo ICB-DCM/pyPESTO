@@ -51,7 +51,7 @@ def sampling_fval_traces(
     title: str | None = None,
     size: tuple[float, float] | None = None,
     ax: matplotlib.axes.Axes | None = None,
-):
+) -> matplotlib.axes.Axes:
     """
     Plot log-posterior (=function value) over iterations.
 

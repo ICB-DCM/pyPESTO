@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,7 +21,7 @@ if TYPE_CHECKING:
 
 def projection_scatter_umap(
     umap_coordinates: np.ndarray, components: Sequence[int] = (0, 1), **kwargs
-):
+) -> matplotlib.axes.Axes | np.ndarray:
     """
     Plot a scatter plots for UMAP coordinates.
 
@@ -117,7 +118,7 @@ def projection_scatter_umap_original(
 
 def projection_scatter_pca(
     pca_coordinates: np.ndarray, components: Sequence[int] = (0, 1), **kwargs
-):
+) -> matplotlib.axes.Axes | np.ndarray:
     """
     Plot a scatter plot for PCA coordinates.
 
@@ -242,7 +243,7 @@ def ensemble_scatter_lowlevel(
     marker_type: str = ".",
     scatter_size: float = 0.5,
     invert_scatter_order: bool = False,
-):
+) -> matplotlib.axes.Axes:
     """
     Create a scatter plot.
 

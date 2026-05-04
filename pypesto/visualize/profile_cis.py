@@ -114,7 +114,7 @@ def profile_nested_cis(
     colors: Sequence = None,
     ax: matplotlib.axes.Axes | None = None,
     orientation: Literal["v", "h"] = "v",
-):
+) -> matplotlib.axes.Axes:
     """
     Plot approximate nested confidence intervals based on profiles.
 

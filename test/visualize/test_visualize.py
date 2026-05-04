@@ -1251,15 +1251,6 @@ def test_sampling_1d_marginals():
 
 
 @close_fig
-def test_sampling_par_indices_deprecated():
-    """`par_indices` is the deprecated alias of `parameter_indices`."""
-    result = create_sampling_result()
-    visualize.sampling_parameter_traces(result, parameter_indices=[0])
-    with pytest.warns(DeprecationWarning, match="par_indices"):
-        visualize.sampling_parameter_traces(result, par_indices=[0])
-
-
-@close_fig
 def test_sampling_parameter_cis():
     """Test pypesto.visualize.sampling_parameter_cis"""
     result = create_sampling_result()

@@ -33,7 +33,7 @@ def waterfall(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: Sequence[str] | str | None = None,
     order_by_id: bool = False,
-):
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot.
 
@@ -203,7 +203,7 @@ def waterfall_lowlevel(
     offset_y: float = 0.0,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legend_text: str | None = None,
-):
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot using list of function values.
 
