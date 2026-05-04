@@ -8,6 +8,7 @@ from matplotlib.colors import is_color_like
 from matplotlib.ticker import MaxNLocator
 
 from ..C import COLOR
+from ..profile import chi2_quantile_to_ratio
 from ..result import Result
 from ._style import get_ax
 from .clust_color import assign_colors
@@ -26,6 +27,7 @@ def profiles(
     x_labels: Sequence[str] = None,
     profile_list_ids: int | Sequence[int] = 0,
     ratio_min: float = 0.0,
+    confidence_level: float | None = None,
     show_bounds: bool = False,
     plot_objective_values: bool = False,
     quality_colors: bool = False,
@@ -60,7 +62,12 @@ def profiles(
     profile_list_ids:
         Index or list of indices of the profile lists to visualize.
     ratio_min:
-        Minimum ratio below which to cut off.
+        Minimum likelihood-ratio value below which to cut off profile points.
+        Mutually exclusive with ``confidence_level``.
+    confidence_level:
+        Confidence level in (0, 1) (e.g. ``0.95``). Converted to
+        ``ratio_min`` via :func:`pypesto.profile.chi2_quantile_to_ratio`.
+        Convenience alternative to specifying ``ratio_min`` directly.
     show_bounds:
         Whether to show, and extend the plot to, the lower and upper bounds.
     plot_objective_values:
@@ -86,6 +93,13 @@ def profiles(
             "Cannot visualize the profiles with `quality_colors` of profiler_result.color_path "
             " and `colors` provided at the same time. Please provide only one of them."
         )
+
+    if confidence_level is not None:
+        if ratio_min != 0.0:
+            raise ValueError(
+                "Pass either `confidence_level` or `ratio_min`, not both."
+            )
+        ratio_min = chi2_quantile_to_ratio(confidence_level)
 
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
