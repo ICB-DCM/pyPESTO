@@ -1321,12 +1321,19 @@ def test_time_trajectory_model():
     importer = pypesto.petab.PetabImporter(
         hierarchical_petab_problem, hierarchical=True
     )
-    helper_problem = importer.create_problem()
+    problem = importer.create_problem()
 
-    x_guesses = np.asarray(hierarchical_petab_problem.x_nominal_scaled)[
-        helper_problem.x_free_indices
-    ]
-    problem = importer.create_problem(x_guesses=[x_guesses])
+    # Set nominal values as start point, mapped by name to avoid ordering
+    # assumptions about where inner parameters sit in x_nominal_scaled
+    x_nominal_by_id = dict(
+        zip(
+            hierarchical_petab_problem.x_ids,
+            hierarchical_petab_problem.x_nominal_scaled,
+            strict=True,
+        )
+    )
+    x_guess = np.array([x_nominal_by_id[xid] for xid in problem.x_names])
+    problem.set_x_guesses([x_guess])
 
     result = optimize.minimize(
         problem=problem,
