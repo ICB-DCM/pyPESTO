@@ -777,7 +777,7 @@ def profile_lowlevel_2d(
     color_values = fval_path if plot_objective_values else ratio_path
 
     # Filter based on ratio_min
-    indices = np.where(ratio_path > ratio_min)
+    indices = np.where(ratio_path >= ratio_min)
     x_values = x_values[indices]
     y_values = y_values[indices]
     color_values = color_values[indices]
@@ -910,8 +910,8 @@ def visualize_2d_profile(
         n_params,
         figsize=size,
         constrained_layout=True,
-        gridspec_kw={"wspace": 0.1, "hspace": 0.1},
     )
+    fig.get_layout_engine().set(wspace=0.1, hspace=0.1)
 
     if n_params == 1:
         axes = np.array([[axes]])
@@ -931,7 +931,7 @@ def visualize_2d_profile(
             if row_idx == col_idx or profile_list[col_idx] is None:
                 continue
             profiler = profile_list[col_idx]
-            mask = profiler.ratio_path > ratio_min
+            mask = profiler.ratio_path >= ratio_min
             vals = (
                 profiler.fval_path[mask]
                 if plot_objective_values
