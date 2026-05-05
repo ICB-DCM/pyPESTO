@@ -4,13 +4,104 @@ from warnings import warn
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import is_color_like
+from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 
 from ..C import COLOR
+from ..problem import Problem
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import process_result_list
 from .reference_points import ReferencePoint, create_references
+
+
+def _parameter_label(problem: Problem, idx: int) -> str:
+    """Return a scale-aware axis label for parameter ``idx``."""
+    name = problem.x_names[idx]
+    scale = problem.x_scales[idx] if problem.x_scales is not None else "lin"
+    if scale == "log10":
+        return f"log10({name})"
+    if scale == "log":
+        return f"log({name})"
+    return name
+
+
+# Fraction of the bound range added to axis limits so bound lines (drawn
+# at the true lb/ub) are visible without overlapping the axis spine.
+_BOUND_VIEW_MARGIN = 0.03
+
+
+def _add_bound_lines_1d(ax: plt.Axes, lb: float, ub: float) -> None:
+    """Draw dashed vertical lines at the lower and upper parameter bounds."""
+    for bound in (lb, ub):
+        ax.axvline(
+            bound,
+            color="0.5",
+            linestyle="--",
+            linewidth=1.4,
+            alpha=0.95,
+            zorder=1,
+        )
+
+
+def _add_bound_lines_2d(
+    ax: plt.Axes,
+    x_lb: float,
+    x_ub: float,
+    y_lb: float,
+    y_ub: float,
+) -> None:
+    """Draw dashed lines at the lower and upper bounds on both axes."""
+    for bound in (x_lb, x_ub):
+        ax.axvline(
+            bound,
+            color="0.5",
+            linestyle="--",
+            linewidth=1.4,
+            alpha=0.95,
+            zorder=1,
+        )
+    for bound in (y_lb, y_ub):
+        ax.axhline(
+            bound,
+            color="0.5",
+            linestyle="--",
+            linewidth=1.4,
+            alpha=0.95,
+            zorder=1,
+        )
+
+
+def _add_panel_legend(
+    ax: plt.Axes,
+    handles: list[Line2D],
+    fontsize: int,
+    loc: str = "upper left",
+) -> None:
+    """Add a compact styled legend to a subplot."""
+    existing_handles, existing_labels = ax.get_legend_handles_labels()
+    label_to_handle = {
+        label: handle
+        for handle, label in zip(
+            existing_handles, existing_labels, strict=True
+        )
+        if label
+    }
+    for handle in handles:
+        if handle.get_label() not in label_to_handle:
+            label_to_handle[handle.get_label()] = handle
+    ax.legend(
+        label_to_handle.values(),
+        label_to_handle.keys(),
+        loc=loc,
+        frameon=True,
+        framealpha=0.95,
+        facecolor="white",
+        edgecolor="0.85",
+        fontsize=fontsize,
+        handlelength=1.8,
+        borderpad=0.4,
+    )
 
 
 def profiles(
@@ -609,3 +700,412 @@ def process_profile_indices(
                 )
 
     return profile_indices_ret
+
+
+def profile_lowlevel_2d(
+    result: Result,
+    profile_index: int,
+    second_par_index: int,
+    ax: plt.Axes,
+    profile_list_id: int = 0,
+    ratio_min: float = 0.0,
+    cmap: str = "viridis",
+    plot_objective_values: bool = False,
+    x_labels: Sequence[str] = None,
+    vmin: float = None,
+    vmax: float = None,
+) -> plt.Axes:
+    """
+    Lowlevel routine for plotting a two-parameter profile visualization.
+
+    Visualizes the profile of one parameter (x-axis) while showing the values
+    of a second parameter (y-axis), with colors indicating the objective ratio
+    or function value. Axis limits are always set to the parameter bounds,
+    with dashed lines marking the lower and upper bounds.
+    Axis labels include the parameter scale (e.g. ``log10(k1)``) unless
+    overridden via ``x_labels``.
+
+    Parameters
+    ----------
+    result:
+        A single `pypesto.Result` after profiling.
+    profile_index:
+        Integer index specifying which profile to plot (x-axis parameter).
+    second_par_index:
+        Integer index specifying which parameter to show on y-axis.
+    ax:
+        Axes object to use for plotting.
+    profile_list_id:
+        Index of the profile list to visualize.
+    ratio_min:
+        Minimum ratio below which to cut off.
+    cmap:
+        Colormap to use for the objective ratio/value colors.
+    plot_objective_values:
+        Whether to plot the objective function values instead of the likelihood
+        ratio values.
+    x_labels:
+        Labels for the parameters (indexed by full parameter index).
+        If None, labels are auto-generated from parameter names and scales.
+    vmin:
+        Minimum value for the color scale. If None, auto-scaled to the data.
+    vmax:
+        Maximum value for the color scale. If None, auto-scaled to the data.
+
+    Returns
+    -------
+    The plot axes.
+    """
+    if result.profile_result is None:
+        raise ValueError("Result does not contain profile results.")
+
+    profile_list = result.profile_result.list[profile_list_id]
+
+    if profile_list[profile_index] is None:
+        raise ValueError(
+            f"Profile for parameter {profile_index} has not been computed."
+        )
+
+    profiler_result = profile_list[profile_index]
+
+    x_path = profiler_result.x_path
+    ratio_path = profiler_result.ratio_path
+    fval_path = profiler_result.fval_path
+
+    x_values = x_path[profile_index, :]
+    y_values = x_path[second_par_index, :]
+    color_values = fval_path if plot_objective_values else ratio_path
+
+    # Filter based on ratio_min
+    indices = np.where(ratio_path >= ratio_min)
+    x_values = x_values[indices]
+    y_values = y_values[indices]
+    color_values = color_values[indices]
+
+    # Draw the connector line in profile traversal order (pre-sort) so it
+    # represents the actual profile path rather than a color-sorted spaghetti.
+    ax.plot(x_values, y_values, "k-", alpha=0.2, linewidth=0.8, zorder=0)
+
+    # Draw best points on top: ascending for ratio (high on top),
+    # descending for objective value (low on top).
+    sort_idx = (
+        np.argsort(-color_values)
+        if plot_objective_values
+        else np.argsort(color_values)
+    )
+    ax.scatter(
+        x_values[sort_idx],
+        y_values[sort_idx],
+        c=color_values[sort_idx],
+        cmap=cmap,
+        s=30,
+        vmin=vmin,
+        vmax=vmax,
+    )
+
+    def _label(idx):
+        if x_labels is not None:
+            return x_labels[idx]
+        return _parameter_label(result.problem, idx)
+
+    ax.set_xlabel(_label(profile_index))
+    ax.set_ylabel(_label(second_par_index))
+
+    x_lb = result.problem.lb_full[profile_index]
+    x_ub = result.problem.ub_full[profile_index]
+    y_lb = result.problem.lb_full[second_par_index]
+    y_ub = result.problem.ub_full[second_par_index]
+    x_margin = _BOUND_VIEW_MARGIN * (x_ub - x_lb)
+    y_margin = _BOUND_VIEW_MARGIN * (y_ub - y_lb)
+    ax.set_xlim([x_lb - x_margin, x_ub + x_margin])
+    ax.set_ylim([y_lb - y_margin, y_ub + y_margin])
+    _add_bound_lines_2d(ax, x_lb, x_ub, y_lb, y_ub)
+
+    return ax
+
+
+def visualize_2d_profile(
+    result: Result,
+    profile_indices: Sequence[int] = None,
+    size: tuple[float, float] = None,
+    profile_list_id: int = 0,
+    ratio_min: float = 0.0,
+    cmap: str = "viridis",
+    plot_objective_values: bool = False,
+    x_labels: Sequence[str] = None,
+    profile_color: COLOR | np.ndarray | None = None,
+    reference: ReferencePoint | Sequence[ReferencePoint] = None,
+    label_fontsize: int = 14,
+) -> tuple[plt.Figure, np.ndarray]:
+    """
+    Create an n×n grid of profile plots.
+
+    Diagonal plots show 1D profiles (likelihood ratio vs. parameter value).
+    Off-diagonal plots show the path of one parameter while another is
+    profiled, with color indicating the likelihood ratio or objective value.
+    Legend panels summarizing profile points and bound lines are drawn on
+    the top-left diagonal and the first off-diagonal subplot.
+
+    Parameters
+    ----------
+    result:
+        A single `pypesto.Result` after profiling.
+    profile_indices:
+        List of integer indices specifying which parameters to include.
+        If None, all parameters with computed profiles are included.
+    size:
+        Figure size (width, height) in inches. If None, automatically sized
+        based on number of parameters (3.5 inches per parameter).
+    profile_list_id:
+        Index of the profile list to visualize.
+    ratio_min:
+        Minimum ratio below which to cut off.
+    cmap:
+        Colormap to use for the 2D off-diagonal scatter plots.
+    plot_objective_values:
+        Whether to plot the objective function values instead of the likelihood
+        ratio values.
+    x_labels:
+        Labels for the parameters (indexed by full parameter index).
+        If None, labels are auto-generated from parameter names and scales.
+    profile_color:
+        Color for the diagonal 1D profile lines. Passed directly to
+        :func:`profile_lowlevel`. If None, the default color is used.
+    reference:
+        List of reference points for optimization results, shown on diagonal
+        1D plots.
+    label_fontsize:
+        Font size for axis labels and the colorbar label. Tick labels are
+        drawn two points smaller.
+
+    Returns
+    -------
+    fig:
+        The figure object.
+    axes:
+        Array of axes objects (n×n grid).
+    """
+    if result.profile_result is None:
+        raise ValueError("Result does not contain profile results.")
+
+    profile_list = result.profile_result.list[profile_list_id]
+
+    if profile_indices is None:
+        profile_indices = [
+            i for i, prof in enumerate(profile_list) if prof is not None
+        ]
+
+    n_params = len(profile_indices)
+
+    if n_params == 0:
+        raise ValueError("No profiles available to plot.")
+
+    if size is None:
+        # +1 inch of extra width reserves space for the colorbar so that
+        # each subplot cell remains approximately square.
+        size = (n_params * 3.5 + 1, n_params * 3.5)
+
+    fig, axes = plt.subplots(
+        n_params,
+        n_params,
+        figsize=size,
+        constrained_layout=True,
+    )
+    fig.get_layout_engine().set(wspace=0.1, hspace=0.1)
+
+    if n_params == 1:
+        axes = np.array([[axes]])
+
+    ref = create_references(references=reference)
+
+    def _label(idx):
+        if x_labels is not None:
+            return x_labels[idx]
+        return _parameter_label(result.problem, idx)
+
+    # Compute global color range across all 2D off-diagonal subplots so the
+    # shared colorbar is accurate for every panel.
+    all_color_values = []
+    for row_idx in profile_indices:
+        for col_idx in profile_indices:
+            if row_idx == col_idx or profile_list[col_idx] is None:
+                continue
+            profiler = profile_list[col_idx]
+            mask = profiler.ratio_path >= ratio_min
+            vals = (
+                profiler.fval_path[mask]
+                if plot_objective_values
+                else profiler.ratio_path[mask]
+            )
+            if vals.size > 0:
+                all_color_values.append(vals)
+    if all_color_values:
+        all_vals = np.concatenate(all_color_values)
+        color_vmin, color_vmax = float(all_vals.min()), float(all_vals.max())
+    else:
+        color_vmin, color_vmax = None, None
+
+    first_2d_ax = None
+    last_2d_ax = None
+
+    for i, row_param_idx in enumerate(profile_indices):
+        for j, col_param_idx in enumerate(profile_indices):
+            ax = axes[i, j]
+
+            if i == j:
+                # Diagonal: 1D profile
+                fvals, _ = handle_inputs(
+                    result,
+                    profile_indices=[row_param_idx],
+                    profile_list=profile_list_id,
+                    ratio_min=ratio_min,
+                    plot_objective_values=plot_objective_values,
+                )
+
+                if fvals[row_param_idx] is not None:
+                    profile_lowlevel(
+                        fvals[row_param_idx],
+                        ax,
+                        show_bounds=True,
+                        color=profile_color,
+                        lb=result.problem.lb_full[row_param_idx],
+                        ub=result.problem.ub_full[row_param_idx],
+                    )
+                    # Fix integer tick locator from profile_lowlevel for float params
+                    ax.xaxis.set_major_locator(plt.AutoLocator())
+                    ax.set_xlabel(_label(row_param_idx))
+                    ax.set_ylabel(
+                        "Objective value"
+                        if plot_objective_values
+                        else "Log-posterior ratio"
+                    )
+                    diag_lb = result.problem.lb_full[row_param_idx]
+                    diag_ub = result.problem.ub_full[row_param_idx]
+                    diag_margin = _BOUND_VIEW_MARGIN * (diag_ub - diag_lb)
+                    ax.set_xlim([diag_lb - diag_margin, diag_ub + diag_margin])
+                    _add_bound_lines_1d(ax, diag_lb, diag_ub)
+
+                    if len(ref) > 0:
+                        for i_ref in ref:
+                            current_x = i_ref["x"][row_param_idx]
+                            ax.plot(
+                                [current_x, current_x],
+                                [0.0, 1.0],
+                                color=i_ref.color,
+                                label=i_ref.legend
+                                if i == 0 and j == 0
+                                else None,
+                            )
+                    if i == 0 and j == 0:
+                        profile_legend_color = (
+                            profile_color
+                            if profile_color is not None
+                            else "red"
+                        )
+                        _add_panel_legend(
+                            ax,
+                            handles=[
+                                Line2D(
+                                    [0],
+                                    [0],
+                                    color=profile_legend_color,
+                                    linewidth=2.0,
+                                    label="Profile",
+                                ),
+                                Line2D(
+                                    [0],
+                                    [0],
+                                    color="0.65",
+                                    linestyle="--",
+                                    linewidth=1.0,
+                                    label="Bounds",
+                                ),
+                            ],
+                            fontsize=label_fontsize - 3,
+                        )
+
+            else:
+                # Off-diagonal: 2D profile
+                # subplot (i, j): x-axis = col_param_idx, y-axis = row_param_idx
+                try:
+                    profile_lowlevel_2d(
+                        result=result,
+                        profile_index=col_param_idx,
+                        second_par_index=row_param_idx,
+                        ax=ax,
+                        profile_list_id=profile_list_id,
+                        ratio_min=ratio_min,
+                        cmap=cmap,
+                        plot_objective_values=plot_objective_values,
+                        x_labels=x_labels,
+                        vmin=color_vmin,
+                        vmax=color_vmax,
+                    )
+                    if first_2d_ax is None:
+                        first_2d_ax = ax
+                    last_2d_ax = ax
+                except (ValueError, IndexError):
+                    ax.text(
+                        0.5,
+                        0.5,
+                        "No profile",
+                        ha="center",
+                        va="center",
+                        transform=ax.transAxes,
+                    )
+                    ax.set_xticks([])
+                    ax.set_yticks([])
+
+    # yaxis.labelpad is tightened so y-labels stay close to their axis
+    # rather than floating in the gap between columns.
+    for ax in axes.flat:
+        ax.xaxis.label.set_size(label_fontsize)
+        ax.yaxis.label.set_size(label_fontsize)
+        ax.xaxis.label.set_weight("bold")
+        ax.yaxis.label.set_weight("bold")
+        ax.yaxis.labelpad = 2
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(axis="both", labelsize=label_fontsize - 2)
+
+    if first_2d_ax is not None:
+        _add_panel_legend(
+            first_2d_ax,
+            handles=[
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    linestyle="None",
+                    markerfacecolor="0.35",
+                    markeredgecolor="none",
+                    markersize=6,
+                    label="Profile points",
+                ),
+                Line2D(
+                    [0],
+                    [0],
+                    color="0.65",
+                    linestyle="--",
+                    linewidth=1.0,
+                    label="Bounds",
+                ),
+            ],
+            fontsize=label_fontsize - 3,
+        )
+
+    if last_2d_ax is not None:
+        scatter = last_2d_ax.collections[-1]
+        cbar = fig.colorbar(scatter, ax=axes)
+        cbar.set_label(
+            "Objective value"
+            if plot_objective_values
+            else "Log-posterior ratio",
+            rotation=270,
+            labelpad=20,
+            fontsize=label_fontsize,
+            fontweight="bold",
+        )
+        cbar.ax.tick_params(labelsize=label_fontsize - 2)
+
+    return fig, axes
