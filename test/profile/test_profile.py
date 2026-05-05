@@ -507,9 +507,9 @@ def _create_step_size_unit_problem(
         "uses_relative",
     ),
     [
-        ("lin", 0.0, 100.0, 0.25, 0.5, 2.0, True),
-        ("lin", 0.0, 1.0, 0.005, 0.01, 0.1, False),
-        ("log10", -6.0, 6.0, 0.005, 0.01, 0.1, False),
+        ("lin", 0.0, 100.0, 0.5, 1.0, 4.0, True),
+        ("lin", 0.0, 1.0, 0.01, 0.02, 0.2, False),
+        ("log10", -6.0, 6.0, 0.01, 0.02, 0.2, False),
     ],
 )
 def test_resolve_profile_step_sizes(

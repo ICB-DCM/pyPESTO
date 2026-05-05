@@ -17,7 +17,7 @@ class ProfileOptions(dict):
         default step size is the maximum of the absolute and relative values.
     min_step_size:
         Lower bound for the step size in adaptive methods.
-        Default: 0.005.
+        Default: 0.01.
     min_step_size_relative:
         Relative minimum step size for wide `lin`-scale parameters, expressed
         as a fraction of the full parameter span `ub - lb`. The effective
@@ -59,7 +59,7 @@ class ProfileOptions(dict):
         Default: 0.7
     profile_n_starts:
         Number of multi-start optimizations at each profile point.
-        Default: 3. Higher values improve robustness but increase
+        Default: 6. Higher values improve robustness but increase
         computational cost.
     profile_sampling_sigma:
         Standard deviation for Gaussian sampling around predicted starting
@@ -74,12 +74,12 @@ class ProfileOptions(dict):
 
     def __init__(
         self,
-        default_step_size: float = 0.01,
-        default_step_size_relative: float = 0.005,
-        min_step_size: float = 0.005,
-        min_step_size_relative: float = 0.0025,
-        max_step_size: float = 0.1,
-        max_step_size_relative: float = 0.02,
+        default_step_size: float = 0.02,
+        default_step_size_relative: float = 0.01,
+        min_step_size: float = 0.01,
+        min_step_size_relative: float = 0.005,
+        max_step_size: float = 0.2,
+        max_step_size_relative: float = 0.04,
         step_size_factor: float = 1.25,
         delta_ratio_max: float = 0.1,
         ratio_min: float = 0.145,
@@ -88,7 +88,7 @@ class ProfileOptions(dict):
         adaptive_target_scaling_factor: float = 1.5,
         whole_path: bool = False,
         correlation_threshold: float = 0.7,
-        profile_n_starts: int = 3,
+        profile_n_starts: int = 6,
         profile_sampling_sigma: float = 0.01,
         step_size_precheck_mode: str = "warn",
     ):
