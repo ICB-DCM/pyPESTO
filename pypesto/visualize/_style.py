@@ -112,6 +112,8 @@ def plot_diagonal_marginal(
     from scipy.stats import gaussian_kde
 
     values = np.asarray(values)
+    if values.size == 0:
+        return
     data_range = values.max() - values.min()
     if data_range == 0:
         data_range = max(abs(float(values.mean())) * 0.1, 0.1)
