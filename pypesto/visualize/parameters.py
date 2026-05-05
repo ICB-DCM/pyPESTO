@@ -1,6 +1,5 @@
 import logging
 from collections.abc import Callable, Iterable, Sequence
-from typing import Optional
 
 import matplotlib.axes
 import numpy as np
@@ -197,7 +196,7 @@ def parameter_hist(
     result: Result,
     parameter_name: str,
     bins: int | str = "auto",
-    ax: Optional["matplotlib.Axes"] = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = (18.5, 10.5),
     color: COLOR | None = None,
     start_indices: int | list[int] | None = None,
