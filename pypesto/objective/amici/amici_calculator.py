@@ -137,7 +137,7 @@ class AmiciCalculator:
                     "Cannot use least squares solver with"
                     "parameter dependent sigma! Support can be "
                     "enabled via "
-                    "amici_model.setAddSigmaResiduals()."
+                    "amici_model.set_add_sigma_residuals()."
                 )
             self._known_least_squares_safe = True  # don't check this again
 
