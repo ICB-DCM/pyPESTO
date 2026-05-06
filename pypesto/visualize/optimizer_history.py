@@ -3,7 +3,6 @@ import warnings
 from collections.abc import Iterable
 
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
@@ -16,9 +15,13 @@ from ..C import (
 )
 from ..history import HistoryBase
 from ..result import Result
-from ._style import get_ax
 from .clust_color import assign_colors
-from .misc import process_offset_y, process_result_list, process_y_limits
+from .misc import (
+    get_ax,
+    process_offset_y,
+    process_result_list,
+    process_y_limits,
+)
 from .reference_points import ReferencePoint, create_references
 
 logger = logging.getLogger(__name__)
@@ -41,7 +44,7 @@ def optimizer_history(
     | list[dict]
     | None = None,
     legends: str | list[str] | None = None,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Plot history of optimizer.
 
@@ -409,13 +412,13 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> tuple[str, str]:
 
 
 def handle_options(
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     vals: list[np.ndarray],
     trace_y: str,
     ref: list[ReferencePoint],
     y_limits: float | np.ndarray | None,
     offset_y: float,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Apply post-plotting transformations to the axis object.
 
@@ -538,8 +541,8 @@ def monotonic_history(
 
 def sacess_history(
     histories: list[HistoryBase],
-    ax: plt.Axes | None = None,
-) -> plt.Axes:
+    ax: matplotlib.axes.Axes | None = None,
+) -> matplotlib.axes.Axes:
     """Plot `SacessOptimizer` history.
 
     Plot the history of the best objective values for each

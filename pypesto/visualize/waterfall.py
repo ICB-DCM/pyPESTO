@@ -9,9 +9,9 @@ from pypesto.util import delete_nan_inf
 
 from ..C import ALL, COLOR, WATERFALL_MAX_VALUE
 from ..result import Result
-from ._style import get_ax
 from .clust_color import assign_colors
 from .misc import (
+    get_ax,
     process_offset_y,
     process_result_list,
     process_start_indices,

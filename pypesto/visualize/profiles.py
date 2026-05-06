@@ -12,9 +12,8 @@ from ..C import COLOR
 from ..problem import Problem
 from ..profile import chi2_quantile_to_ratio
 from ..result import Result
-from ._style import get_ax
 from .clust_color import assign_colors
-from .misc import process_result_list
+from .misc import get_ax, process_result_list
 from .reference_points import ReferencePoint, create_references
 
 
@@ -34,7 +33,9 @@ def _parameter_label(problem: Problem, idx: int) -> str:
 _BOUND_VIEW_MARGIN = 0.03
 
 
-def _add_bound_lines_1d(ax: plt.Axes, lb: float, ub: float) -> None:
+def _add_bound_lines_1d(
+    ax: matplotlib.axes.Axes, lb: float, ub: float
+) -> None:
     """Draw dashed vertical lines at the lower and upper parameter bounds."""
     for bound in (lb, ub):
         ax.axvline(
@@ -48,7 +49,7 @@ def _add_bound_lines_1d(ax: plt.Axes, lb: float, ub: float) -> None:
 
 
 def _add_bound_lines_2d(
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     x_lb: float,
     x_ub: float,
     y_lb: float,
@@ -76,7 +77,7 @@ def _add_bound_lines_2d(
 
 
 def _add_panel_legend(
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     handles: list[Line2D],
     fontsize: int,
     loc: str = "upper left",
@@ -122,7 +123,7 @@ def profiles(
     show_bounds: bool = False,
     plot_objective_values: bool = False,
     quality_colors: bool = False,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Plot classical 1D profile plot.
 
@@ -263,14 +264,12 @@ def profiles(
     # plot reference points
     ax = handle_reference_points(ref, ax, profile_indices)
 
-    plt.tight_layout()
-
     return ax
 
 
 def profiles_lowlevel(
     fvals: float | Sequence[float],
-    ax: Sequence[plt.Axes] | None = None,
+    ax: Sequence[matplotlib.axes.Axes] | None = None,
     size: tuple[float, float] = (18.5, 6.5),
     color: COLOR | list[np.ndarray] | None = None,
     legend_text: str = None,
@@ -279,7 +278,7 @@ def profiles_lowlevel(
     lb_full: Sequence[float] = None,
     ub_full: Sequence[float] = None,
     plot_objective_values: bool = False,
-) -> list[plt.Axes]:
+) -> list[matplotlib.axes.Axes]:
     """
     Lowlevel routine for profile plotting.
 
@@ -421,14 +420,14 @@ def profiles_lowlevel(
 
 def profile_lowlevel(
     fvals: Sequence[float],
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] = (18.5, 6.5),
     color: COLOR | np.ndarray | None = None,
     legend_text: str | None = None,
     show_bounds: bool = False,
     lb: float | None = None,
     ub: float | None = None,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Lowlevel routine for plotting one profile, working with a numpy array only.
 
@@ -718,7 +717,7 @@ def profile_lowlevel_2d(
     result: Result,
     profile_index: int,
     second_par_index: int,
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     profile_list_id: int = 0,
     ratio_min: float = 0.0,
     cmap: str = "viridis",
@@ -726,7 +725,7 @@ def profile_lowlevel_2d(
     x_labels: Sequence[str] = None,
     vmin: float = None,
     vmax: float = None,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Lowlevel routine for plotting a two-parameter profile visualization.
 

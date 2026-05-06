@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 import pandas as pd
 from matplotlib.collections import PatchCollection
@@ -6,14 +6,14 @@ from matplotlib.patches import Rectangle
 
 from ..C import COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_NO_BOUNDS, COLOR_HIT_ONE_BOUND
 from ..ensemble import Ensemble
-from ._style import get_ax
+from .misc import get_ax
 
 
 def ensemble_identifiability(
     ensemble: Ensemble,
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = (12, 6),
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Visualize identifiablity of parameter ensemble.
 
@@ -34,7 +34,7 @@ def ensemble_identifiability(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
     # first get the data to check identifiability
@@ -56,9 +56,9 @@ def ensemble_identifiability_lowlevel(
     lb_hit: np.ndarray,
     ub_hit: np.ndarray,
     both_hit: np.ndarray,
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = (16, 10),
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Low-level identifiablity routine.
 
@@ -90,7 +90,7 @@ def ensemble_identifiability_lowlevel(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
     # define some short hands for later plotting

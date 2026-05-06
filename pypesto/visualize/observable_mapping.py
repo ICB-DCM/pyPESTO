@@ -21,7 +21,7 @@ from ..C import (
 )
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
-from ._style import get_axes_array
+from .misc import get_axes_array, hide_unused_axes, make_grid_shape
 
 try:
     import amici.sim.sundials as asd
@@ -42,48 +42,21 @@ except ImportError:
     pass
 
 
-def _observable_mapping_grid_shape(n_panels: int) -> tuple[int, int]:
-    """Compute a near-square subplot layout for ``n_panels`` panels."""
-    if n_panels < 1:
-        raise ValueError("At least one panel is required.")
-    n_rows = int(np.ceil(np.sqrt(n_panels)))
-    n_cols = int(np.ceil(n_panels / n_rows))
-    return n_rows, n_cols
-
-
-def _normalize_axes_array(
-    axes: matplotlib.axes.Axes | np.ndarray,
-) -> np.ndarray:
-    """Normalize an axes input to a 2-D object array."""
-    axes_array = np.asarray(axes, dtype=object)
-    if axes_array.ndim == 0:
-        axes_array = axes_array.reshape(1, 1)
-    elif axes_array.ndim == 1:
-        axes_array = axes_array.reshape(1, axes_array.size)
-    return axes_array
-
-
 def _prepare_observable_mapping_axes(
     axes: matplotlib.axes.Axes | np.ndarray | None,
     n_panels: int,
     **kwargs,
-) -> tuple[np.ndarray, bool]:
+) -> np.ndarray:
     """Return a cleared axes grid for observable-mapping plots."""
-    n_rows, n_cols = _observable_mapping_grid_shape(n_panels)
-    created_axes = axes is None
+    n_rows, n_cols = make_grid_shape(n_panels)
 
-    if created_axes:
+    if axes is None:
+        kwargs.setdefault("layout", "constrained")
         _, axes = plt.subplots(n_rows, n_cols, squeeze=False, **kwargs)
     else:
         axes = get_axes_array(axes=axes, nrows=n_rows, ncols=n_cols)
 
-    for ax in axes.flat:
-        ax.clear()
-        ax.set_visible(True)
-    for ax in axes.flat[n_panels:]:
-        ax.set_visible(False)
-
-    return axes, created_axes
+    return hide_unused_axes(axes=axes, n_used=n_panels, clear=True)
 
 
 def _plot_observable_mapping_measurements(
@@ -194,7 +167,7 @@ def visualize_estimated_observable_mapping(
     rel_and_semiquant_obs_indices.sort()
 
     n_axes = n_relative_observables + n_semiquant_observables
-    axes, created_axes = _prepare_observable_mapping_axes(
+    axes = _prepare_observable_mapping_axes(
         axes=axes,
         n_panels=n_axes,
         **kwargs,
@@ -222,9 +195,6 @@ def visualize_estimated_observable_mapping(
             return None
         axes = spline_axes
 
-    if created_axes:
-        axes.flat[0].figure.tight_layout()
-
     return axes
 
 
@@ -232,7 +202,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     pypesto_result: Result,
     pypesto_problem: HierarchicalProblem,
     start_index=0,
-    axes: matplotlib.axes.Axes | np.ndarray | None = None,
+    axes: np.ndarray | None = None,
     rel_and_semiquant_obs_indices: list[int] | None = None,
     **kwargs,
 ) -> np.ndarray:
@@ -247,11 +217,12 @@ def plot_linear_observable_mappings_from_pypesto_result(
     start_index:
         The observable mapping from this start's optimized vector will be plotted.
     axes:
-        Optional axes grid to draw into.
+        Optional 2-D NumPy array of Axes to draw into. Required when
+        ``rel_and_semiquant_obs_indices`` is set.
     rel_and_semiquant_obs_indices:
-        The indices of the relative and semi-quantitative observables in the
-        amici model. Important if both relative and semi-quantitative observables
-        will be plotted on the same axes.
+        Sorted indices of the relative and semi-quantitative observables in
+        the AMICI model. Each observable is plotted on the subplot at the
+        corresponding position in ``axes.flat``.
     **kwargs:
         Additional arguments to pass to the ``matplotlib.pyplot.subplots`` function.
 
@@ -299,19 +270,19 @@ def plot_linear_observable_mappings_from_pypesto_result(
             "The problem does not contain any relative observables."
         )
 
-    created_axes = False
     if rel_and_semiquant_obs_indices is None:
-        axes, created_axes = _prepare_observable_mapping_axes(
+        axes = _prepare_observable_mapping_axes(
             axes=axes,
             n_panels=n_relative_observables,
             **kwargs,
         )
-    elif axes is None:
-        raise ValueError(
-            "Pass `axes` when `rel_and_semiquant_obs_indices` is set."
-        )
     else:
-        axes = _normalize_axes_array(axes)
+        if axes is None:
+            raise ValueError(
+                "Pass `axes` when `rel_and_semiquant_obs_indices` is set."
+            )
+        if not isinstance(axes, np.ndarray) or axes.ndim != 2:
+            raise ValueError("`axes` must be a 2-D NumPy array.")
         if axes.size < len(rel_and_semiquant_obs_indices):
             raise ValueError(
                 "The number of axes must be at least equal to the number "
@@ -455,9 +426,6 @@ def plot_linear_observable_mappings_from_pypesto_result(
             ax,
             title=f"Observable {observable_id}",
         )
-
-    if created_axes:
-        axes.flat[0].figure.tight_layout()
 
     return axes
 
@@ -617,7 +585,7 @@ def plot_splines_from_inner_result(
     results: list[dict],
     sim: list[np.ndarray],
     observable_ids=None,
-    axes: matplotlib.axes.Axes | np.ndarray | None = None,
+    axes: np.ndarray | None = None,
     rel_and_semiquant_obs_indices: list[int] | None = None,
     **kwargs,
 ) -> np.ndarray:
@@ -636,11 +604,12 @@ def plot_splines_from_inner_result(
     observable_ids:
         The ids of the observables.
     axes:
-        Optional axes grid to draw into.
+        Optional 2-D NumPy array of Axes to draw into. Required when
+        ``rel_and_semiquant_obs_indices`` is set.
     rel_and_semiquant_obs_indices:
-        The indices of the relative and semi-quantitative observables in the
-        amici model. Important if both relative and semi-quantitative observables
-        will be plotted on the same axes.
+        Sorted indices of the relative and semi-quantitative observables in
+        the AMICI model. Each observable is plotted on the subplot at the
+        corresponding position in ``axes.flat``.
     kwargs:
         Additional arguments to pass to the plotting function.
 
@@ -659,19 +628,19 @@ def plot_splines_from_inner_result(
     n_groups = len(inner_problem.groups)
     semiquant_groups = list(inner_problem.groups.keys())
 
-    created_axes = False
     if rel_and_semiquant_obs_indices is None:
-        axes, created_axes = _prepare_observable_mapping_axes(
+        axes = _prepare_observable_mapping_axes(
             axes=axes,
             n_panels=n_groups,
             **kwargs,
         )
-    elif axes is None:
-        raise ValueError(
-            "Pass `axes` when `rel_and_semiquant_obs_indices` is set."
-        )
     else:
-        axes = _normalize_axes_array(axes)
+        if axes is None:
+            raise ValueError(
+                "Pass `axes` when `rel_and_semiquant_obs_indices` is set."
+            )
+        if not isinstance(axes, np.ndarray) or axes.ndim != 2:
+            raise ValueError("`axes` must be a 2-D NumPy array.")
         if axes.size < len(rel_and_semiquant_obs_indices):
             raise ValueError(
                 "The number of axes must be at least equal to the number "
@@ -761,9 +730,6 @@ def plot_splines_from_inner_result(
             title=title,
         )
 
-    if created_axes:
-        axes.flat[0].figure.tight_layout()
-
     return axes
 
 
@@ -820,7 +786,7 @@ def _add_spline_mapped_simulations_to_model_fit(
     result: Result | Sequence[Result],
     pypesto_problem: Problem,
     start_index: int = 0,
-    axes: plt.Axes | None = None,
+    axes: matplotlib.axes.Axes | None = None,
 ) -> matplotlib.axes.Axes | None:
     """Visualize the spline optimized model fit.
 

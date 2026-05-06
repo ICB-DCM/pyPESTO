@@ -9,7 +9,7 @@ from matplotlib.patches import Patch, Rectangle
 
 from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
-from ._style import get_ax
+from .misc import get_ax
 
 # kwargs passed to `matplotlib.axes.Axes.errorbar` for plotting confidence levels
 cis_visualization_settings = {

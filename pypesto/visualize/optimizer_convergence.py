@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 from ..result import Result
-from ._style import get_ax
+from .misc import get_ax
 
 
 def optimizer_convergence(

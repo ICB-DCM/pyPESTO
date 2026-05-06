@@ -8,9 +8,15 @@ from pypesto.util import delete_nan_inf
 
 from ..C import COLOR
 from ..result import Result
-from ._style import get_ax, get_axes_array
 from .clust_color import assign_colors, assign_colors_for_list
-from .misc import process_result_list, process_start_indices
+from .misc import (
+    get_ax,
+    get_axes_array,
+    hide_unused_axes,
+    make_grid_shape,
+    process_result_list,
+    process_start_indices,
+)
 
 
 def optimization_run_properties_one_plot(
@@ -204,15 +210,9 @@ def optimization_run_properties_per_multistart(
         )
 
     num_subplot = len(properties_to_plot)
-    # compute, how many rows and columns we need for the subplots
-    num_row = int(np.round(np.sqrt(num_subplot)))
-    num_col = int(np.ceil(num_subplot / num_row))
+    num_row, num_col = make_grid_shape(num_subplot)
     axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
-    for ax in axes.flat:
-        ax.clear()
-        ax.set_visible(True)
-    for ax in axes.flat[num_subplot:]:
-        ax.set_visible(False)
+    axes = hide_unused_axes(axes=axes, n_used=num_subplot, clear=True)
     for idx, prop_name in enumerate(properties_to_plot):
         optimization_run_property_per_multistart(
             results,

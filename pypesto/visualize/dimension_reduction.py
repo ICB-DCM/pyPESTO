@@ -4,11 +4,10 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 
 from ..C import COLOR
-from ._style import get_ax, get_axes_array
+from .misc import get_ax, get_axes_array, hide_unused_axes
 
 if TYPE_CHECKING:
     try:
@@ -40,8 +39,8 @@ def projection_scatter_umap(
     Returns
     -------
     axs:
-        Either one axes object, or a dictionary of plot axes (depending on the
-        number of coordinates passed)
+        Either a single matplotlib Axes (2 components) or a 2-D NumPy array
+        of Axes (more than 2 components).
     """
     n_components = len(components)
     if n_components == 2:
@@ -73,9 +72,9 @@ def projection_scatter_umap_original(
     umap_object: UmapTypeObject,
     color_by: Sequence[float] = None,
     components: Sequence[int] = (0, 1),
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     **kwargs,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     See `projection_scatter_umap` for more documentation.
 
@@ -96,7 +95,7 @@ def projection_scatter_umap_original(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
     import umap.plot
@@ -136,8 +135,8 @@ def projection_scatter_pca(
     Returns
     -------
     axs:
-        Either one axes object, or a dictionary of plot axes (depending on the
-        number of coordinates passed)
+        Either a single matplotlib Axes (2 components) or a 2-D NumPy array
+        of Axes (more than 2 components).
     """
     n_components = len(components)
     if n_components == 2:
@@ -233,7 +232,7 @@ def ensemble_crosstab_scatter_lowlevel(
 
 def ensemble_scatter_lowlevel(
     dataset,
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = (12, 6),
     x_label: str = "component 1",
     y_label: str = "component 2",
@@ -276,7 +275,7 @@ def ensemble_scatter_lowlevel(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
     ax = get_ax(ax, size)
@@ -304,8 +303,6 @@ def ensemble_scatter_lowlevel(
     ax.set_xticks([])
     ax.set_yticks([])
 
-    ax.figure.tight_layout()
-
     return ax
 
 
@@ -332,12 +329,14 @@ def _create_crosstab_axes(
         size = (3.0 * n_grid, 3.0 * n_grid)
 
     axes = get_axes_array(axes=axes, nrows=n_grid, ncols=n_grid, size=size)
-    for ax in axes.flat:
-        ax.clear()
-        ax.set_visible(False)
-
-    for x_comp in range(0, n_comp - 1):
-        for y_comp in range(x_comp + 1, n_comp):
-            axes[y_comp - 1, x_comp].set_visible(True)
-
+    used_indices = [
+        (y_comp - 1) * n_grid + x_comp
+        for x_comp in range(0, n_comp - 1)
+        for y_comp in range(x_comp + 1, n_comp)
+    ]
+    axes = hide_unused_axes(
+        axes=axes,
+        used_indices=used_indices,
+        clear=True,
+    )
     return axes

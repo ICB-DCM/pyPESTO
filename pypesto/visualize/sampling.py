@@ -25,13 +25,16 @@ from ..C import (
 from ..ensemble import EnsemblePrediction, get_percentile_label
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
-from ._style import (
+from .misc import (
+    _UNSET,
     get_ax,
     get_axes_array,
+    hide_unused_axes,
+    make_grid_shape,
     plot_diagonal_marginal,
     process_deprecated_kwarg,
+    rgba2rgb,
 )
-from .misc import rgba2rgb
 
 logger = logging.getLogger(__name__)
 
@@ -872,11 +875,7 @@ def sampling_prediction_trajectories(
 
     axes = get_axes_array(axes=axes, nrows=n_row, ncols=n_col, size=size)
     fig = axes.flat[0].figure
-    for ax in axes.flat:
-        ax.clear()
-        ax.set_visible(True)
-    for ax in axes.flat[n_subplots:]:
-        ax.set_visible(False)
+    axes = hide_unused_axes(axes=axes, n_used=n_subplots, clear=True)
     artist_padding = axis_label_padding / (fig.get_size_inches() * fig.dpi)[0]
 
     if groupby == CONDITION:
@@ -1096,8 +1095,8 @@ def sampling_parameter_traces(
     suptitle: str | None = None,
     size: tuple[float, float] | None = None,
     axes: np.ndarray | None = None,
-    ax: np.ndarray | None = None,
-    par_indices: Sequence[int] = None,
+    ax: np.ndarray | None = _UNSET,
+    par_indices: Sequence[int] = _UNSET,
 ) -> np.ndarray:
     """
     Plot parameter values over iterations.
@@ -1149,19 +1148,12 @@ def sampling_parameter_traces(
         parameter_indices=parameter_indices,
     )
 
-    # compute, how many rows and columns we need for the subplots
-    num_row = int(np.round(np.sqrt(nr_params)))
-    num_col = int(np.ceil(nr_params / num_row))
-
+    num_row, num_col = make_grid_shape(nr_params)
+    if size is None and axes is None:
+        size = (3.5 * num_col, 2.5 * num_row)
     axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
     fig = axes.flat[0].figure
-
-    for panel_ax in axes.flat:
-        panel_ax.clear()
-        panel_ax.set_visible(True)
-
-    for panel_ax in axes.flat[nr_params:]:
-        panel_ax.set_visible(False)
+    axes = hide_unused_axes(axes=axes, n_used=nr_params, clear=True)
 
     par_ax = dict(zip(param_names, axes.flat, strict=True))
 
@@ -1206,8 +1198,6 @@ def sampling_parameter_traces(
 
     if suptitle:
         fig.suptitle(suptitle)
-
-    fig.tight_layout()
     sns.despine()
 
     return axes
@@ -1308,8 +1298,6 @@ def sampling_scatter(
     if suptitle:
         fig.suptitle(suptitle)
 
-    fig.tight_layout()
-
     return axes
 
 
@@ -1323,7 +1311,7 @@ def sampling_1d_marginals(
     suptitle: str | None = None,
     size: tuple[float, float] | None = None,
     axes: np.ndarray | None = None,
-    par_indices: Sequence[int] = None,
+    par_indices: Sequence[int] = _UNSET,
 ) -> np.ndarray:
     """
     Plot marginals.
@@ -1373,19 +1361,12 @@ def sampling_1d_marginals(
         parameter_indices=parameter_indices,
     )
 
-    # compute, how many rows and columns we need for the subplots
-    num_row = int(np.round(np.sqrt(nr_params)))
-    num_col = int(np.ceil(nr_params / num_row))
-
+    num_row, num_col = make_grid_shape(nr_params)
+    if size is None and axes is None:
+        size = (3.5 * num_col, 2.5 * num_row)
     axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
     fig = axes.flat[0].figure
-
-    for panel_ax in axes.flat:
-        panel_ax.clear()
-        panel_ax.set_visible(True)
-
-    for panel_ax in axes.flat[nr_params:]:
-        panel_ax.set_visible(False)
+    axes = hide_unused_axes(axes=axes, n_used=nr_params, clear=True)
 
     par_ax = dict(zip(param_names, axes.flat, strict=True))
 
@@ -1418,8 +1399,6 @@ def sampling_1d_marginals(
 
     if suptitle:
         fig.suptitle(suptitle)
-
-    fig.tight_layout()
 
     return axes
 

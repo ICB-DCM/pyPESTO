@@ -3,7 +3,6 @@ import logging
 import os
 from collections.abc import Sequence
 from copy import deepcopy
-from functools import wraps
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -30,18 +29,7 @@ from pypesto.visualize.model_fit import (
     visualize_optimized_model_fit,
 )
 
-
-def close_fig(fun):
-    """Close figure."""
-
-    @wraps(fun)
-    def wrapped_fun(*args, **kwargs):
-        ret = fun(*args, **kwargs)
-        plt.close("all")
-        return ret
-
-    return wrapped_fun
-
+from ..conftest import close_fig
 
 # Define some helper functions, to have the test code more readable
 

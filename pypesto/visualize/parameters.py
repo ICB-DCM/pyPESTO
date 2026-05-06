@@ -17,9 +17,11 @@ from ..C import (
     InnerParameterType,
 )
 from ..result import Result
-from ._style import get_ax, get_axes_array, plot_diagonal_marginal
 from .clust_color import assign_colors
 from .misc import (
+    get_ax,
+    get_axes_array,
+    plot_diagonal_marginal,
     process_parameter_indices,
     process_result_list,
     process_start_indices,
