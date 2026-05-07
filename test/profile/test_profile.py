@@ -15,6 +15,11 @@ import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.visualize as visualize
 from pypesto import ObjectiveBase
+from pypesto.profile.profile_next_guess import adaptive_step, fixed_step
+from pypesto.profile.util import (
+    precheck_profile_step_size,
+    resolve_profile_step_sizes,
+)
 
 from ..util import rosen_for_sensi
 from ..visualize import close_fig
@@ -426,6 +431,12 @@ def test_options_valid():
     """Test ProfileOptions validity checks."""
     # default settings are valid
     profile.ProfileOptions()
+    # A representative hybrid configuration should also validate as a group.
+    profile.ProfileOptions(
+        min_step_size_relative=0.0025,
+        default_step_size_relative=0.005,
+        max_step_size_relative=0.02,
+    )
 
     # try to set invalid values
     with pytest.raises(ValueError):
@@ -442,6 +453,178 @@ def test_options_valid():
             min_step_size=2,
             max_step_size=1,
         )
+    for kwargs in (
+        {"default_step_size_relative": 0},
+        {"min_step_size_relative": 0},
+        {"max_step_size_relative": 0},
+        {
+            "min_step_size_relative": 0.006,
+            "default_step_size_relative": 0.005,
+        },
+        {
+            "default_step_size_relative": 0.03,
+            "max_step_size_relative": 0.02,
+        },
+        {"step_size_precheck_mode": "invalid"},
+    ):
+        with pytest.raises(ValueError):
+            profile.ProfileOptions(**kwargs)
+
+
+@pytest.mark.parametrize(
+    (
+        "scale",
+        "lb",
+        "ub",
+        "expected_min",
+        "expected_default",
+        "expected_max",
+        "uses_relative",
+    ),
+    [
+        ("lin", 0.0, 100.0, 0.5, 1.0, 4.0, True),
+        ("lin", 0.0, 1.0, 0.01, 0.02, 0.2, False),
+        ("log10", -6.0, 6.0, 0.01, 0.02, 0.2, False),
+    ],
+)
+def test_resolve_profile_step_sizes(
+    scale,
+    lb,
+    ub,
+    expected_min,
+    expected_default,
+    expected_max,
+    uses_relative,
+):
+    """Resolved step sizes should only expand for wide linear-scale spans."""
+    problem = pypesto.Problem(
+        objective=pypesto.Objective(fun=lambda x: np.sum(x**2)),
+        lb=np.array([lb]),
+        ub=np.array([ub]),
+        x_scales=[scale],
+        x_names=["x0"],
+    )
+    resolved_steps = resolve_profile_step_sizes(
+        problem,
+        0,
+        profile.ProfileOptions(),
+    )
+
+    # Wide linear spans should activate the relative settings; narrow linear
+    # spans and non-linear scales should fall back to the absolute defaults.
+    assert np.isclose(resolved_steps.min_step_size, expected_min)
+    assert np.isclose(resolved_steps.default_step_size, expected_default)
+    assert np.isclose(resolved_steps.max_step_size, expected_max)
+    assert resolved_steps.uses_relative_min is uses_relative
+    assert resolved_steps.uses_relative_default is uses_relative
+    assert resolved_steps.uses_relative_max is uses_relative
+    if scale == "lin":
+        assert np.isclose(resolved_steps.span, ub - lb)
+    else:
+        assert resolved_steps.span is None
+    if scale == "lin" and uses_relative:
+        proposal_problem = pypesto.Problem(
+            objective=pypesto.Objective(fun=lambda x: 0.01 * x[0]),
+            lb=np.array([lb]),
+            ub=np.array([ub]),
+            x_scales=[scale],
+            x_names=["x0"],
+        )
+        options = profile.ProfileOptions()
+        x = np.array([0.0])
+
+        # Fixed-step profiling should immediately use the resolved default
+        # step, not the smaller absolute default.
+        next_fixed = fixed_step(x, 0, 1, options, proposal_problem)
+        assert np.isclose(next_fixed[0], expected_default)
+
+        current_profile = pypesto.ProfilerResult(
+            x_path=x[:, np.newaxis],
+            fval_path=np.array([0.0]),
+            ratio_path=np.array([1.0]),
+        )
+        # The linear objective makes the adaptive line search keep increasing
+        # the proposal until it hits the effective max step size. If this
+        # fails, the adaptive path is still clipping against the old absolute
+        # max.
+        next_adaptive = adaptive_step(
+            x=x,
+            par_index=0,
+            par_direction=1,
+            options=options,
+            current_profile=current_profile,
+            problem=proposal_problem,
+            global_opt=0.0,
+            order=0,
+        )
+
+        assert next_adaptive[0] > options.max_step_size
+        assert np.isclose(next_adaptive[0], expected_max)
+
+
+@pytest.mark.parametrize(
+    ("mode", "expect_warning", "expect_raise"),
+    [
+        ("off", False, False),
+        ("warn", True, False),
+        ("raise", False, True),
+    ],
+)
+def test_profile_step_size_precheck_modes(mode, expect_warning, expect_raise):
+    """Precheck modes should suppress, warn, or raise on large spans."""
+    problem = pypesto.Problem(
+        objective=pypesto.Objective(fun=lambda x: np.sum(x**2)),
+        lb=np.array([-5.0]),
+        ub=np.array([15.0]),
+        x_scales=["log10"],
+        x_names=["x0"],
+    )
+    current_profile = pypesto.ProfilerResult(
+        x_path=np.array([[0.0]]),
+        fval_path=np.array([0.0]),
+        ratio_path=np.array([1.0]),
+    )
+    profile_options = profile.ProfileOptions(
+        step_size_precheck_mode=mode,
+        whole_path=True,
+    )
+
+    if expect_raise:
+        with pytest.raises(ValueError, match="Profiling precheck"):
+            precheck_profile_step_size(
+                current_profile=current_profile,
+                problem=problem,
+                i_par=0,
+                par_direction=1,
+                options=profile_options,
+            )
+        return
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        precheck_profile_step_size(
+            current_profile=current_profile,
+            problem=problem,
+            i_par=0,
+            par_direction=1,
+            options=profile_options,
+        )
+
+    precheck_warnings = [
+        warning
+        for warning in caught
+        if "Profiling precheck" in str(warning.message)
+    ]
+    if expect_warning:
+        assert precheck_warnings
+        message = str(precheck_warnings[0].message)
+        assert "log10" in message
+        assert "available_span" in message
+        assert "effective_default_step_size" in message
+        assert "effective_min_step_size" in message
+        assert "estimated worst-case steps" in message
+    else:
+        assert not precheck_warnings
 
 
 @pytest.mark.parametrize(

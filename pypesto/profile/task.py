@@ -8,6 +8,7 @@ from ..engine import Task
 from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
+from .util import precheck_profile_step_size
 from .walk_along_profile import walk_along_profile
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,14 @@ class ProfilerTask(Task):
 
         # flip profile
         self.current_profile.flip_profile()
+
+        precheck_profile_step_size(
+            current_profile=self.current_profile,
+            problem=self.problem,
+            i_par=self.i_par,
+            par_direction=self.par_direction,
+            options=self.options,
+        )
 
         # compute the current profile
         self.current_profile = walk_along_profile(

@@ -9,6 +9,7 @@ from ..optimize import OptimizeOptions, Optimizer
 from ..problem import Problem
 from ..result import OptimizerResult, ProfilerResult
 from .options import ProfileOptions
+from .util import resolve_profile_step_sizes
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,8 @@ def walk_along_profile(
     if par_direction not in (-1, 1):
         raise AssertionError("par_direction must be -1 or 1")
 
+    resolved_steps = resolve_profile_step_sizes(problem, i_par, options)
+
     # while loop for profiling (will be exited by break command)
     while True:
         # get current position on the profile path
@@ -86,8 +89,8 @@ def walk_along_profile(
         while not optimization_successful:
             # Check max_step_size is not reduced below min_step_size
             if (
-                options.max_step_size * max_step_reduce_factor
-                < options.min_step_size
+                resolved_steps.max_step_size * max_step_reduce_factor
+                < resolved_steps.min_step_size
             ):
                 logger.warning(
                     "Max step size reduced below min step size. "
@@ -134,7 +137,8 @@ def walk_along_profile(
                     max_step_reduce_factor *= 0.5
                     logger.warning(
                         f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed. "
-                        f"Reducing max_step_size to {options.max_step_size * max_step_reduce_factor}."
+                        "Reducing max_step_size to "
+                        f"{resolved_steps.max_step_size * max_step_reduce_factor}."
                     )
             else:
                 # if too many parameters are fixed, there is nothing to do ...
@@ -167,8 +171,8 @@ def walk_along_profile(
         while not optimization_successful:
             # Check min_step_size is not increased above max_step_size
             if (
-                options.min_step_size * min_step_increase_factor
-                > options.max_step_size
+                resolved_steps.min_step_size * min_step_increase_factor
+                > resolved_steps.max_step_size
             ):
                 logger.warning(
                     "Min step size increased above max step size. "
@@ -208,7 +212,8 @@ def walk_along_profile(
                 min_step_increase_factor *= 1.25
                 logger.warning(
                     f"Optimization at {problem.x_names[i_par]}={x_next[i_par]} failed. "
-                    f"Increasing min_step_size to {options.min_step_size * min_step_increase_factor}."
+                    "Increasing min_step_size to "
+                    f"{resolved_steps.min_step_size * min_step_increase_factor}."
                 )
 
         if not optimization_successful:
