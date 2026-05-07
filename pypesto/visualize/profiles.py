@@ -523,7 +523,7 @@ def handle_reference_points(ref, ax, profile_indices):
     ref: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
-    ax: matplotlib.Axes, optional
+    ax: matplotlib.axes.Axes, optional
         Axes object to use.
     profile_indices: list of integer values
         List of integer values specifying which profiles should be plotted.
