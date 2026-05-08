@@ -590,6 +590,24 @@ def test_resolve_profile_step_sizes(
             next_adaptive_with_extrapolation[1], 10.0 + expected_max
         )
 
+        # When the profiled parameter is already fixed (as it is on every
+        # walk_along_profile iteration past the first), it must still get its
+        # own resolved trust-region cap. Otherwise adaptive_step proposes a
+        # zero step in the profile direction and profiling deadlocks.
+        trust_region_problem.fix_parameters(0, 1.0)
+        next_adaptive_with_fixed_profiled = adaptive_step(
+            x=np.array([1.0, 10.0]),
+            par_index=0,
+            par_direction=1,
+            options=options,
+            current_profile=trust_region_profile,
+            problem=trust_region_problem,
+            global_opt=0.0,
+            order=1,
+        )
+        assert next_adaptive_with_fixed_profiled[0] > 1.0
+        trust_region_problem.unfix_parameters(0)
+
 
 @pytest.mark.parametrize(
     ("mode", "expect_warning", "expect_raise"),
