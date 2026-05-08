@@ -211,16 +211,14 @@ def adaptive_step(
     The updated parameter vector, of size `dim_full`.
     """
     resolved_steps = resolve_profile_step_sizes(problem, par_index, options)
-    # Fixed parameters should not move during extrapolation, so their trust
-    # region entries stay at zero. Free parameters get parameter-specific caps.
+    # par_index is set explicitly because it may be currently fixed (it is,
+    # on every walk_along_profile iteration past the first).
     trust_region_max_step = np.zeros(len(x))
+    trust_region_max_step[par_index] = resolved_steps.max_step_size
     for i_par in problem.x_free_indices:
-        if i_par == par_index:
-            trust_region_max_step[i_par] = resolved_steps.max_step_size
-        else:
-            trust_region_max_step[i_par] = resolve_profile_step_sizes(
-                problem, i_par, options
-            ).max_step_size
+        trust_region_max_step[i_par] = resolve_profile_step_sizes(
+            problem, i_par, options
+        ).max_step_size
 
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
