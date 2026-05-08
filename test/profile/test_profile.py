@@ -564,6 +564,35 @@ def test_resolve_profile_step_sizes(
         assert next_adaptive[0] > options.max_step_size
         assert np.isclose(next_adaptive[0], expected_max)
 
+        # Extrapolated non-profiled parameters should use their own resolved
+        # trust-region max step sizes as well.
+        trust_region_problem = pypesto.Problem(
+            objective=pypesto.Objective(fun=lambda x: 0.0),
+            lb=np.array([lb, lb]),
+            ub=np.array([ub, ub]),
+            x_scales=[scale, scale],
+            x_names=["x0", "x1"],
+        )
+        trust_region_profile = pypesto.ProfilerResult(
+            x_path=np.array([[0.0, 1.0], [0.0, 10.0]]),
+            fval_path=np.array([0.0, 0.0]),
+            ratio_path=np.array([1.0, 1.0]),
+        )
+        next_adaptive_with_extrapolation = adaptive_step(
+            x=np.array([1.0, 10.0]),
+            par_index=0,
+            par_direction=1,
+            options=options,
+            current_profile=trust_region_profile,
+            problem=trust_region_problem,
+            global_opt=0.0,
+            order=1,
+        )
+
+        assert np.isclose(
+            next_adaptive_with_extrapolation[1], 10.0 + expected_max
+        )
+
 
 @pytest.mark.parametrize(
     ("mode", "expect_warning", "expect_raise"),
