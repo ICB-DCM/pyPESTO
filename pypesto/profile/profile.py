@@ -25,7 +25,7 @@ def parameter_profile(
     profile_index: Iterable[int] = None,
     profile_list: int = None,
     result_index: int = 0,
-    next_guess_method: Callable | str = "adaptive_step_order_1",
+    next_guess_method: Callable | str = "adaptive_step_order_0",
     profile_options: ProfileOptions = None,
     progress_bar: bool = None,
     filename: str | Callable | None = None,
@@ -62,6 +62,11 @@ def parameter_profile(
         Method that creates the next starting point for optimization in profiling.
         One of the ``update_type`` options supported by
         :func:`pypesto.profile.profile_next_guess.next_guess`.
+        Default: ``"adaptive_step_order_0"`` (adaptive step size, no extrapolation
+        of other parameters). ``"adaptive_step_order_1"`` is a two-point
+        extrapolation based only on the last profile step and is not the same
+        as regression-based extrapolation. More robust than regression-based
+        methods for complex models.
     profile_options:
         Various options applied to the profile optimization.
         See :class:`pypesto.profile.options.ProfileOptions`.

@@ -42,8 +42,12 @@ class ProfileOptions(dict):
         Number of profile points used for regression in regression based
         adaptive profile points proposal.
     reg_order:
-        Maximum degree of regression polynomial used in regression based
-        adaptive profile points proposal.
+        Polynomial degree for regression-based extrapolation.
+        Higher values may cause extrapolation instability.
+    correlation_threshold:
+        Minimum absolute correlation coefficient for extrapolating a parameter
+        in regression-based methods. Parameters with |correlation| below this
+        threshold will be kept at their current values instead of extrapolated.
     adaptive_target_scaling_factor:
         The scaling factor of the next_obj_target in next guess generation.
         Larger values result in larger next_guess step size (must be > 1).
@@ -77,7 +81,8 @@ class ProfileOptions(dict):
         delta_ratio_max: float = 0.1,
         ratio_min: float = 0.145,
         reg_points: int = 10,
-        reg_order: int = 4,
+        reg_order: int = 1,
+        correlation_threshold: float = 0.7,
         adaptive_target_scaling_factor: float = 1.5,
         whole_path: bool = False,
         profile_n_starts: int = 6,
@@ -97,6 +102,7 @@ class ProfileOptions(dict):
         self.delta_ratio_max = delta_ratio_max
         self.reg_points = reg_points
         self.reg_order = reg_order
+        self.correlation_threshold = correlation_threshold
         self.adaptive_target_scaling_factor = adaptive_target_scaling_factor
         self.whole_path = whole_path
         self.profile_n_starts = profile_n_starts
@@ -165,6 +171,8 @@ class ProfileOptions(dict):
 
         if self.adaptive_target_scaling_factor < 1:
             raise ValueError("adaptive_target_scaling_factor must be > 1.")
+        if self.correlation_threshold < 0 or self.correlation_threshold > 1:
+            raise ValueError("correlation_threshold must be in [0, 1].")
         if self.profile_n_starts < 1:
             raise ValueError("profile_n_starts must be >= 1.")
         if self.profile_sampling_sigma <= 0:

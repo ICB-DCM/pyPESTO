@@ -466,6 +466,8 @@ def test_options_valid():
             "default_step_size_relative": 0.03,
             "max_step_size_relative": 0.02,
         },
+        {"correlation_threshold": -0.1},
+        {"correlation_threshold": 1.1},
         {"profile_n_starts": 0},
         {"profile_sampling_sigma": 0},
         {"step_size_precheck_mode": "invalid"},

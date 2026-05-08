@@ -51,9 +51,14 @@ def next_guess(
         Type of update for next profile point. Available options are:
 
         * ``fixed_step`` (see :func:`fixed_step`)
-        * ``adaptive_step_order_0`` (see :func:`adaptive_step`).
-        * ``adaptive_step_order_1`` (see :func:`adaptive_step`).
-        * ``adaptive_step_regression`` (see :func:`adaptive_step`).
+        * ``adaptive_step_order_0``: adaptive step size without extrapolating
+          the other parameters (see :func:`adaptive_step`).
+        * ``adaptive_step_order_1``: adaptive step size with two-point
+          extrapolation based only on the last profile step
+          (see :func:`adaptive_step`).
+        * ``adaptive_step_regression``: adaptive step size with regression-based
+          extrapolation using several recent profile points
+          (see :func:`adaptive_step`).
     current_profile:
         The profile which should be computed.
     problem:
@@ -189,10 +194,12 @@ def adaptive_step(
         Specifies the precise algorithm for extrapolation.
         Available options are:
 
-        * ``0``: just one parameter is updated
-        * ``1``: the last two points are used to extrapolate all parameters
-        * ``np.nan``: indicates that a more complex regression should be used
-          as determined by :attr:`pypesto.profile.ProfileOptions.reg_order`.
+        * ``0``: just the profiled parameter is updated
+        * ``1``: the last two profile points are used to extrapolate all
+          parameters, i.e. only the last profile step direction is reused
+        * ``np.nan``: indicates that a regression over several recent profile
+          points should be used, as determined by
+          :attr:`pypesto.profile.ProfileOptions.reg_order`.
     min_step_increase_factor:
         Factor to increase the minimal step size bound.
     max_step_reduce_factor:
@@ -469,28 +476,49 @@ def get_reg_polynomial(
 
     # set up matrix of regression parameters
     reg_par = []
+    x_prof = current_profile.x_path[par_index, -reg_points:]
+    x_prof_std = np.std(x_prof)
     for i_par in range(problem.dim_full):
         if i_par in problem.x_fixed_indices:
             # if we meet the current profiling parameter or a fixed parameter,
             # there is nothing to do, so pass a np.nan
             reg_par.append(np.nan)
         else:
+            y_par = current_profile.x_path[i_par, -reg_points:]
+            par_reg_order = reg_order
+
+            # Only extrapolate a free parameter if it is sufficiently
+            # correlated with the profiled parameter over the recent
+            # profile history. Otherwise keep it at its current value.
+            if x_prof_std == 0 or np.std(y_par) == 0:
+                correlation = 0.0
+            else:
+                correlation = np.corrcoef(x_prof, y_par)[0, 1]
+                if np.isnan(correlation):
+                    correlation = 0.0
+
+            if abs(correlation) <= options.correlation_threshold:
+                reg_par.append(
+                    np.array([0.0, current_profile.x_path[i_par, -1]])
+                )
+                continue
+
             # Do polynomial interpolation of profile path
             # Determine rank of polynomial interpolation
             regression_tmp = np.polyfit(
-                current_profile.x_path[par_index, -reg_points:],
-                current_profile.x_path[i_par, -reg_points:],
-                reg_order,
+                x_prof,
+                y_par,
+                par_reg_order,
                 full=True,
             )
 
             # Decrease rank if interpolation problem is ill-conditioned
-            if regression_tmp[2] < reg_order:
-                reg_order = regression_tmp[2]
+            if regression_tmp[2] < par_reg_order:
+                par_reg_order = regression_tmp[2]
                 regression_tmp = np.polyfit(
-                    current_profile.x_path[par_index, -reg_points:],
-                    current_profile.x_path[i_par, -reg_points:],
-                    int(reg_order),
+                    x_prof,
+                    y_par,
+                    int(par_reg_order),
                     full=True,
                 )
 
