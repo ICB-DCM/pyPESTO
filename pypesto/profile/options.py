@@ -46,8 +46,9 @@ class ProfileOptions(dict):
         Higher values may cause extrapolation instability.
     correlation_threshold:
         Minimum absolute correlation coefficient for extrapolating a parameter
-        in regression-based methods. Parameters with |correlation| below this
-        threshold will be kept at their current values instead of extrapolated.
+        in regression-based methods. Parameters whose absolute correlation is
+        below this threshold will be kept at their current values instead of
+        extrapolated.
     adaptive_target_scaling_factor:
         The scaling factor of the next_obj_target in next guess generation.
         Larger values result in larger next_guess step size (must be > 1).
