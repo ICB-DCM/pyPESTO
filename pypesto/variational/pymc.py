@@ -89,7 +89,7 @@ class PymcVariational(PymcSampler):
             }
 
         # create model context
-        with pymc.Model():
+        with pymc.Model() as model:
             # parameter bounds as uniform prior
             _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
@@ -119,6 +119,7 @@ class PymcVariational(PymcSampler):
             )
 
         self.data = data
+        self.model = model
 
     def sample(self, n_samples: int, beta: float = 1.0) -> McmcPtResult:
         """
@@ -130,16 +131,22 @@ class PymcVariational(PymcSampler):
             Number of samples to be computed.
         """
         # get InferenceData object
-        pymc_data = self.data.sample(n_samples)
+        with self.model:
+            pymc_data = self.data.sample(n_samples)
+        posterior = pymc_data.posterior
+        if not hasattr(posterior, "to_array"):
+            # Newer ArviZ/xarray returns a DataTree group here.
+            posterior = posterior.dataset
+
         x_names_free = self.problem.get_reduced_vector(self.problem.x_names)
         post_samples = np.concatenate(
-            [pymc_data.posterior[name].values for name in x_names_free]
+            [posterior[name].values for name in x_names_free]
         ).T
         return McmcPtResult(
             trace_x=post_samples[np.newaxis, :],
-            trace_neglogpost=pymc_data.posterior.loggyposty.values,
+            trace_neglogpost=posterior.loggyposty.values,
             trace_neglogprior=np.full(
-                pymc_data.posterior.loggyposty.values.shape, np.nan
+                posterior.loggyposty.values.shape, np.nan
             ),
             betas=np.array([1.0] * post_samples.shape[0]),
             burn_in=0,
