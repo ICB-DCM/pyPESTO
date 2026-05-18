@@ -9,7 +9,7 @@ from ..optimize import OptimizeOptions, Optimizer
 from ..problem import Problem
 from ..result import OptimizerResult, ProfilerResult
 from .options import ProfileOptions
-from .util import resolve_profile_step_sizes
+from .util import ResolvedProfileStepSizeMap
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,7 @@ def walk_along_profile(
     optimizer: Optimizer,
     options: ProfileOptions,
     create_next_guess: Callable,
+    resolved_steps_by_par: ResolvedProfileStepSizeMap,
     global_opt: float,
     i_par: int,
     max_tries: int = 10,
@@ -125,6 +126,8 @@ def walk_along_profile(
         Various options applied to the profile optimization.
     create_next_guess:
         Handle of the method which creates the next profile point proposal
+    resolved_steps_by_par:
+        Pre-resolved profile step sizes.
     i_par:
         index for the current parameter
     max_tries:
@@ -140,7 +143,7 @@ def walk_along_profile(
 
     # Warn at most once per non-profiled parameter in each profile half.
     warned_at_bound: set[int] = set()
-    resolved_steps = resolve_profile_step_sizes(problem, i_par, options)
+    resolved_steps = resolved_steps_by_par[i_par]
 
     # while loop for profiling (will be exited by break command)
     while True:
