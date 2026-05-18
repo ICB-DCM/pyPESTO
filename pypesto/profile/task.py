@@ -8,7 +8,7 @@ from ..engine import Task
 from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
-from .util import precheck_profile_step_size
+from .util import ResolvedProfileStepSizeMap, precheck_profile_step_size
 from .walk_along_profile import walk_along_profile
 
 logger = logging.getLogger(__name__)
@@ -26,6 +26,7 @@ class ProfilerTask(Task):
         global_opt: float,
         optimizer: "pypesto.optimize.Optimizer",
         create_next_guess: Callable,
+        resolved_steps_by_par: ResolvedProfileStepSizeMap,
         par_direction: Literal[-1, 1],
     ):
         """
@@ -45,6 +46,8 @@ class ProfilerTask(Task):
             Various options applied to the profile optimization.
         create_next_guess:
             Handle of the method which creates the next profile point proposal
+        resolved_steps_by_par:
+            Pre-resolved profile step sizes.
         i_par:
             index for the current parameter
         par_direction:
@@ -58,6 +61,7 @@ class ProfilerTask(Task):
         self.current_profile = current_profile
         self.global_opt = global_opt
         self.create_next_guess = create_next_guess
+        self.resolved_steps_by_par = resolved_steps_by_par
         self.i_par = i_par
         self.options = options
         self.par_direction = par_direction
@@ -77,6 +81,7 @@ class ProfilerTask(Task):
             i_par=self.i_par,
             par_direction=self.par_direction,
             options=self.options,
+            resolved_steps=self.resolved_steps_by_par[self.i_par],
         )
 
         # compute the current profile
@@ -87,6 +92,7 @@ class ProfilerTask(Task):
             optimizer=self.optimizer,
             options=self.options,
             create_next_guess=self.create_next_guess,
+            resolved_steps_by_par=self.resolved_steps_by_par,
             global_opt=self.global_opt,
             i_par=self.i_par,
         )
