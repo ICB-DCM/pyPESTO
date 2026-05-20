@@ -252,8 +252,10 @@ class PymcSampler(Sampler):
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
         posterior = self.data.posterior
+        # ArviZ may expose posterior either as an xarray Dataset (older) or
+        # as a DataTree group (newer). If the minimum ArviZ version is bumped
+        # to DataTree-only, simplify this to `self.data.posterior.dataset`.
         if not hasattr(posterior, "to_array"):
-            # Newer ArviZ/xarray returns a DataTree group here.
             posterior = posterior.dataset
 
         # dimensions

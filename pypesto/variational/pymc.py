@@ -134,8 +134,10 @@ class PymcVariational(PymcSampler):
         with self.model:
             pymc_data = self.data.sample(n_samples)
         posterior = pymc_data.posterior
+        # ArviZ may expose posterior either as an xarray Dataset (older) or
+        # as a DataTree group (newer). If the minimum ArviZ version is bumped
+        # to DataTree-only, simplify this to `pymc_data.posterior.dataset`.
         if not hasattr(posterior, "to_array"):
-            # Newer ArviZ/xarray returns a DataTree group here.
             posterior = posterior.dataset
 
         x_names_free = self.problem.get_reduced_vector(self.problem.x_names)
