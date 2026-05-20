@@ -1123,6 +1123,10 @@ def sampling_parameter_traces(
         Figure size in inches.
     axes:
         Axes grid to use. Must match the computed subplot layout.
+    ax:
+        Deprecated. Use ``axes`` instead.
+    par_indices:
+        Deprecated. Use ``parameter_indices`` instead.
 
     Returns
     -------
@@ -1338,6 +1342,8 @@ def sampling_1d_marginals(
         Figure size in inches.
     axes:
         Axes grid to use. Must match the computed subplot layout.
+    par_indices:
+        Deprecated. Use ``parameter_indices`` instead.
 
     Return
     --------
