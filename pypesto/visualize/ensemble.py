@@ -1,26 +1,58 @@
+from __future__ import annotations
+
 import matplotlib.axes
 import numpy as np
 import pandas as pd
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Patch
 
-from ..C import COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_NO_BOUNDS, COLOR_HIT_ONE_BOUND
 from ..ensemble import Ensemble
 from .misc import get_ax
+from ._style import (
+    CI_BAR_HEIGHT,
+    COLOR_HIT_BOTH_BOUNDS,
+    COLOR_HIT_NO_BOUNDS,
+    COLOR_HIT_ONE_BOUND,
+    _bounds_legend_handle,
+    draw_bounds_1d,
+    resolve_style,
+)
 
 
 def ensemble_identifiability(
     ensemble: Ensemble,
     ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] | None = (12, 6),
+    size: tuple[float, float] | None = None,
+    title: str | None = (
+        "Parameter identifiability\n"
+        "(ensemble mean ± 1σ, normalised to parameter bounds)"
+    ),
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
-    Visualize identifiablity of parameter ensemble.
+    Visualize identifiability of parameter ensemble.
 
     Plot an overview about how many parameters hit the parameter bounds based
-    on an ensemble of parameters. confidence intervals/credible ranges are
+    on an ensemble of parameters. Confidence intervals/credible ranges are
     computed via the ensemble mean plus/minus 1 standard deviation.
     This highlevel routine expects an ensemble object as input.
+
+    .. warning::
+
+        This plot should be interpreted with care. It shows the spread of
+        ensemble members (mean ± 1σ) across all included parameter vectors,
+        regardless of their objective function values, and is not a rigorous
+        identifiability analysis:
+
+        - Ensembles from optimisation endpoints may contain vectors from
+          distinct local optima that lie far outside any confidence region,
+          inflating the apparent variance.
+        - Ensembles from optimisation history traces span the search space by
+          construction and will always appear wide.
+
+        For statistically meaningful identifiability statements, complement
+        this plot with uncertainty quantification via profile likelihood
+        (:func:`pypesto.visualize.profiles`) or Bayesian sampling
+        (:func:`pypesto.visualize.sampling_parameter_cis`).
 
     Parameters
     ----------
@@ -30,381 +62,168 @@ def ensemble_identifiability(
         Axes object to use.
     size:
         Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
+        object is specified. Defaults to a height that scales with the number
+        of parameters.
+    title:
+        Axes title. Pass ``None`` to suppress.
+    style_kwargs:
+        Style overrides. Key used by this function:
+
+        - ``ci_alpha`` — transparency of the mean ± 1σ bars (default 0.85).
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax: matplotlib.axes.Axes
         The plot axes.
     """
-    # first get the data to check identifiability
     id_df = ensemble.check_identifiability()
-
-    # check how many bounds are actually hit and which ones
-    none_hit, lb_hit, ub_hit, both_hit = _prepare_identifiability_plot(id_df)
-
-    # call lowlevel routine which works with np arrays only
     ax = ensemble_identifiability_lowlevel(
-        none_hit, lb_hit, ub_hit, both_hit, ax, size
+        id_df, ax=ax, size=size, title=title, style_kwargs=style_kwargs
     )
-
     return ax
 
 
 def ensemble_identifiability_lowlevel(
-    none_hit: np.ndarray,
-    lb_hit: np.ndarray,
-    ub_hit: np.ndarray,
-    both_hit: np.ndarray,
+    id_df: pd.DataFrame,
     ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] | None = (16, 10),
+    size: tuple[float, float] | None = None,
+    title: str | None = (
+        "Parameter identifiability\n"
+        "(ensemble mean ± 1σ, normalised to parameter bounds)"
+    ),
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
-    Low-level identifiablity routine.
+    Low-level identifiability routine.
 
-    Plot an overview about how many parameters hit the parameter bounds based
-    on a ensemble of parameters. Confidence intervals/credible ranges are
-    computed via the ensemble mean plus/minus 1 standard deviation.
-    This lowlevel routine works with numpy arrays which define the confidence
-    intervals/credible ranges of each parameter.
+    Plot a horizontal bar chart showing the mean ± 1σ range of each parameter
+    across the ensemble, normalized to [0, 1] where 0 = lower bound and
+    1 = upper bound. Parameters are colored by identifiability category and
+    sorted so the most non-identifiable parameters appear at the top.
+
+    .. warning::
+
+        Interpret with care — does not account for objective function values
+        or statistical confidence. See :func:`ensemble_identifiability` for
+        full caveats.
 
     Parameters
     ----------
-    none_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        identifiable parameters
-    lb_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit the lower parameter bound
-    ub_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit the upper parameter bound
-    both_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit both parameter bounds
+    id_df:
+        DataFrame as returned by ``Ensemble.check_identifiability()``.
+        Rows are indexed by parameter name; required columns are
+        ``lowerBound``, ``upperBound``, ``ensemble_mean``, ``ensemble_std``,
+        ``within lb: 1 std``, ``within ub: 1 std``.
     ax:
         Axes object to use.
     size:
         Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
+        object is specified.
+    title:
+        Axes title. Pass ``None`` to suppress.
+    style_kwargs:
+        Style overrides. Key used by this function:
+
+        - ``ci_alpha`` — transparency of the mean ± 1σ bars (default 0.85).
 
     Returns
     -------
     ax: matplotlib.axes.Axes
         The plot axes.
     """
-    # define some short hands for later plotting
-    n_par = sum(
-        [
-            none_hit.shape[0],
-            lb_hit.shape[0],
-            ub_hit.shape[0],
-            both_hit.shape[0],
-        ]
-    )
-    x_both = len(both_hit) / n_par
-    x_lb = len(lb_hit) / n_par
-    x_ub = len(ub_hit) / n_par
-    x_none = 1.0 - x_both - x_ub - x_lb
+    style = resolve_style(style_kwargs)
 
-    (
-        patches_both_hit,
-        patches_lb_hit,
-        patches_ub_hit,
-        patches_none_hit,
-    ) = _create_patches(none_hit, lb_hit, ub_hit, both_hit)
-
+    n_par = len(id_df)
+    if size is None:
+        size = (8.0, max(3.0, 0.45 * n_par + 1.5))
     ax = get_ax(ax, size)
 
-    # create axes object and add patch collections
-    if patches_both_hit:
-        ax.add_collection(patches_both_hit)
-    if patches_lb_hit:
-        ax.add_collection(patches_lb_hit)
-    if patches_ub_hit:
-        ax.add_collection(patches_ub_hit)
-    if patches_none_hit:
-        ax.add_collection(patches_none_hit)
+    lb = id_df["lowerBound"].values.astype(float)
+    ub = id_df["upperBound"].values.astype(float)
+    mean = id_df["ensemble_mean"].values.astype(float)
+    std = id_df["ensemble_std"].values.astype(float)
+    par_names = list(id_df.index)
 
-    # plot dashed lines indicating the number rof non-identifiable parameters
-    vert = [-0.05, 1.05]
-    ax.plot([x_both, x_both], vert, "k--", linewidth=1.5)
-    ax.plot([x_both + x_lb, x_both + x_lb], vert, "k--", linewidth=1.5)
-    ax.plot(
-        [x_both + x_lb + x_ub, x_both + x_lb + x_ub],
-        vert,
-        "k--",
-        linewidth=1.5,
-    )
+    # Normalise mean, mean−σ, mean+σ to [lb, ub] → [0, 1]
+    par_range = ub - lb
+    par_range[par_range == 0] = 1.0  # guard against degenerate bounds
+    norm_mean = (mean - lb) / par_range
+    norm_lo = np.clip((mean - std - lb) / par_range, 0.0, 1.0)
+    norm_hi = np.clip((mean + std - lb) / par_range, 0.0, 1.0)
 
-    # add text
-    if patches_both_hit:
-        ax.text(
-            x_both / 2,
-            -0.05,
-            "both bounds hit",
-            color=COLOR_HIT_BOTH_BOUNDS,
-            rotation=-90,
-            va="top",
-            ha="center",
+    lb_hit = ~id_df["within lb: 1 std"].values
+    ub_hit = ~id_df["within ub: 1 std"].values
+
+    def _color(i: int) -> str:
+        if lb_hit[i] and ub_hit[i]:
+            return COLOR_HIT_BOTH_BOUNDS
+        if lb_hit[i] or ub_hit[i]:
+            return COLOR_HIT_ONE_BOUND
+        return COLOR_HIT_NO_BOUNDS
+
+    # Sort: most non-identifiable first (both > one bound > identifiable),
+    # then by descending CI width so wider bars rise to the top within a group.
+    def _sort_key(i: int):
+        n_bounds = int(lb_hit[i]) + int(ub_hit[i])
+        return (-n_bounds, -(norm_hi[i] - norm_lo[i]))
+
+    order = sorted(range(n_par), key=_sort_key)
+
+    # y positions: 0 = bottom, n_par-1 = top (most non-identifiable at top)
+    bar_height = CI_BAR_HEIGHT
+    for plot_idx, par_idx in enumerate(order):
+        y = n_par - 1 - plot_idx
+        color = _color(par_idx)
+        width = norm_hi[par_idx] - norm_lo[par_idx]
+        ax.barh(y, width, left=norm_lo[par_idx], height=bar_height,
+                color=color, alpha=style["ci_alpha"], zorder=2)
+        # White tick at mean position
+        ax.plot(
+            [norm_mean[par_idx], norm_mean[par_idx]],
+            [y - bar_height / 2, y + bar_height / 2],
+            color="white", linewidth=1.5, zorder=3,
         )
-    if patches_lb_hit:
-        ax.text(
-            x_both + x_lb / 2,
-            -0.05,
-            "lower bound hit",
-            color=COLOR_HIT_ONE_BOUND,
-            rotation=-90,
-            va="top",
-            ha="center",
-        )
-    if patches_ub_hit:
-        ax.text(
-            x_both + x_lb + x_ub / 2,
-            -0.05,
-            "upper bound hit",
-            color=COLOR_HIT_ONE_BOUND,
-            rotation=-90,
-            va="top",
-            ha="center",
-        )
-    if patches_none_hit:
-        ax.text(
-            1 - x_none / 2,
-            -0.05,
-            "no bounds hit",
-            color=COLOR_HIT_NO_BOUNDS,
-            rotation=-90,
-            va="top",
-            ha="center",
-        )
-    ax.text(
-        0,
-        -0.7,
-        f"identifiable parameters: {x_none * 100:4.1f}%",
-        va="top",
-    )
 
-    # plot upper and lower bounds
-    ax.text(-0.03, 1.0, "upper\nbound", ha="right", va="center")
-    ax.text(-0.03, 0.0, "lower\nbound", ha="right", va="center")
-    ax.plot([-0.02, 1.03], [0, 0], "k:", linewidth=1.5)
-    ax.plot([-0.02, 1.03], [1, 1], "k:", linewidth=1.5)
-    ax.set_xticks([])
-    ax.set_yticks([])
+    # Y-axis: parameter names in visual order (top = order[0])
+    tick_labels = [par_names[order[n_par - 1 - k]] for k in range(n_par)]
+    ax.set_yticks(range(n_par))
+    ax.set_yticklabels(tick_labels)
+    ax.set_ylim(-0.7, n_par - 0.3)
 
-    # plot frame
-    ax.plot([0, 0], vert, "k-", linewidth=1.5)
-    ax.plot([1, 1], vert, "k-", linewidth=1.5)
+    # X-axis: normalised [0, 1] with bound annotations
+    draw_bounds_1d(ax, 0.0, 1.0, axis="x", view_margin=False, style=style)
+    ax.set_xlim(-0.08, 1.08)
+    ax.set_xticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_xticklabels(["lb", "0.25", "0.5", "0.75", "ub"])
+    ax.set_xlabel("Normalised parameter value  (lb = lower bound, ub = upper bound)")
 
-    # beautify axes
-    ax.set_xlim((-0.15, 1.1))
-    ax.set_ylim((-0.78, 1.15))
-    ax.spines["right"].set_visible(False)
-    ax.spines["left"].set_visible(False)
-    ax.spines["bottom"].set_visible(False)
-    ax.spines["top"].set_visible(False)
+    if title is not None:
+        ax.set_title(title)
+
+    # Legend
+    n_identifiable = int(np.sum(~lb_hit & ~ub_hit))
+    pct_id = 100.0 * n_identifiable / n_par if n_par > 0 else 0.0
+    legend_handles: list = []
+    if np.any(~lb_hit & ~ub_hit):
+        legend_handles.append(
+            Patch(facecolor=COLOR_HIT_NO_BOUNDS, alpha=style["ci_alpha"],
+                  label=f"Identifiable  ({n_identifiable}/{n_par},  {pct_id:.0f}%)")
+        )
+    if np.any((lb_hit | ub_hit) & ~(lb_hit & ub_hit)):
+        legend_handles.append(
+            Patch(facecolor=COLOR_HIT_ONE_BOUND, alpha=style["ci_alpha"],
+                  label="At one bound")
+        )
+    if np.any(lb_hit & ub_hit):
+        legend_handles.append(
+            Patch(facecolor=COLOR_HIT_BOTH_BOUNDS, alpha=style["ci_alpha"],
+                  label="At both bounds")
+        )
+    legend_handles.append(_bounds_legend_handle(style=style))
+    ax.legend(handles=legend_handles)
+
 
     return ax
-
-
-def _prepare_identifiability_plot(id_df: pd.DataFrame):
-    """
-    Group model parameters based on an ensemble object .
-
-    Can group into four categories, based on the mean of the parameter
-    ensemble plus/minus 1 standard deviation: Parameters that hit both
-    bounds, parameters that hit only the lower [or upper] bound,
-    and parameters that hit no bounds. It returns them as four numpy arrays,
-    together with their confidence intervals/credible ranges.
-
-    Parameters
-    ----------
-    id_df:
-        Pandas dataframe with information about parameter identifiability,
-        as created by pypesto.ensemble.check_identifiability()
-
-    Returns
-    -------
-    none_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        identifiable parameters
-
-    lb_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit the lower parameter bound
-
-    ub_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit the upper parameter bound
-
-    both_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit both parameter bounds
-    """
-    # prepare
-    both_hit = []
-    lb_hit = []
-    ub_hit = []
-    none_hit = []
-
-    def _affine_transform(par_info):
-        # rescale parameters to bounds
-        lb = par_info["lowerBound"]
-        ub = par_info["upperBound"]
-        val_l = par_info["ensemble_mean"] - par_info["ensemble_std"]
-        val_u = par_info["ensemble_mean"] + par_info["ensemble_std"]
-        # check if parameter confidence intervals/credible ranges hit bound
-        if val_l <= lb:
-            lower_val = 0.0
-        else:
-            lower_val = (val_l - lb) / (ub - lb)
-        if val_u >= ub:
-            upper_val = 1.0
-        else:
-            upper_val = (val_u - lb) / (ub - lb)
-
-        return lower_val, upper_val
-
-    for par_id in list(id_df.index):
-        # check which of the parameters seems to be identifiable and group them
-        if (
-            id_df.loc[par_id, "within lb: 1 std"]
-            and id_df.loc[par_id, "within ub: 1 std"]
-        ):
-            none_hit.append(_affine_transform(id_df.loc[par_id, :]))
-        elif id_df.loc[par_id, "within lb: 1 std"]:
-            ub_hit.append(_affine_transform(id_df.loc[par_id, :]))
-        elif id_df.loc[par_id, "within ub: 1 std"]:
-            lb_hit.append(_affine_transform(id_df.loc[par_id, :]))
-        else:
-            both_hit.append(_affine_transform(id_df.loc[par_id, :]))
-
-    return (
-        np.array(none_hit),
-        np.array(lb_hit),
-        np.array(ub_hit),
-        np.array(both_hit),
-    )
-
-
-def _create_patches(
-    none_hit: np.ndarray,
-    lb_hit: np.ndarray,
-    ub_hit: np.ndarray,
-    both_hit: np.ndarray,
-):
-    """
-    Create patches for identifiability analysis.
-
-    Create matplotlib.patches.PatchCollection objects from numpy arrays with
-    confidence intervals/credible ranges, which visualize identifiability
-    properties of the model parameters.
-
-    Parameters
-    ----------
-    none_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        identifiable parameters
-
-    lb_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit the lower parameter bound
-
-    ub_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit the upper parameter bound
-
-    both_hit:
-        2-dimensional array of confidence interval/credible ranges for
-        parameters which hit both parameter bounds
-
-    Returns
-    -------
-    patches_both_hit:
-        patches showing parameters which hit both parameter bounds in the
-        ensemble (and are hence non-identifiable)
-
-    patches_lb_hit:
-        patches showing parameters which hit only the lower parameter bounds
-        in the ensemble (and are hence non-identifiable)
-
-    patches_ub_hit:
-        patches showing parameters which hit only the lower parameter bounds
-        in the ensemble (and are hence non-identifiable)
-
-    patches_none_hit
-        patches showing parameters which hit no parameter bounds in the
-        ensemble (and are hence identifiable)
-    """
-    # get total number of parameters
-    n_par = sum(
-        [
-            none_hit.shape[0],
-            lb_hit.shape[0],
-            ub_hit.shape[0],
-            both_hit.shape[0],
-        ]
-    )
-
-    # start patches at the left end and increment by h = 1/n_par
-    x = 0.0
-    h = 1.0 / n_par
-
-    # creates patches for parameters which hit both bounds
-    patches_both_hit = []
-    if both_hit.size > 0:
-        for _ in both_hit:
-            # create a list of rectangles
-            patches_both_hit.append(Rectangle((x, 0.0), h, 1.0))
-            x += h
-        patches_both_hit = PatchCollection(
-            patches_both_hit, facecolors=COLOR_HIT_BOTH_BOUNDS
-        )
-
-    # creates patches for parameters which hit lower bound
-    patches_lb_hit = []
-    # sort by normalizes length of confidence interval/credible range
-    if lb_hit.size > 0:
-        tmp_lb = np.sort(lb_hit[:, 1])[::-1]
-        for lb_par in tmp_lb:
-            # create a list of rectangles
-            patches_lb_hit.append(Rectangle((x, 0.0), h, lb_par))
-            x += h
-        patches_lb_hit = PatchCollection(
-            patches_lb_hit, facecolors=COLOR_HIT_ONE_BOUND
-        )
-
-    # creates patches for parameters which hit upper bound
-    patches_ub_hit = []
-    # sort by normalizes length of confidence interval/credible range
-    if ub_hit.size > 0:
-        tmp_ub = np.sort(ub_hit[:, 0])
-        for ub_par in tmp_ub:
-            # create a list of rectangles
-            patches_ub_hit.append(Rectangle((x, ub_par), h, 1.0 - ub_par))
-            x += h
-        patches_ub_hit = PatchCollection(
-            patches_ub_hit, facecolors=COLOR_HIT_ONE_BOUND
-        )
-
-    # creates patches for parameters which hit no bounds
-    patches_none_hit = []
-    # sort by normalizes length of confidence interval/credible range
-    if none_hit.size > 0:
-        tmp_none = np.argsort(none_hit[:, 1] - none_hit[:, 0])[::-1]
-        for none_par in tmp_none:
-            patches_none_hit.append(
-                # create a list of rectangles
-                Rectangle(
-                    (x, none_hit[none_par, 0]),
-                    h,
-                    none_hit[none_par, 1] - none_hit[none_par, 0],
-                )
-            )
-            x += h
-        patches_none_hit = PatchCollection(
-            patches_none_hit, facecolors=COLOR_HIT_NO_BOUNDS
-        )
-
-    return patches_both_hit, patches_lb_hit, patches_ub_hit, patches_none_hit

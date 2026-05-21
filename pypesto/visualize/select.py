@@ -1,5 +1,8 @@
 """Deprecated. Use ``petab_select.plot`` methods instead."""
 
+from __future__ import annotations
+
+
 import warnings
 
 import matplotlib.pyplot as plt
@@ -21,16 +24,20 @@ def plot_selected_models(
     relative: bool = True,
     fz: int = 14,
     size: tuple[float, float] = (5, 4),
-    labels: dict[str, str] = None,
+    labels: dict[str, str] | None = None,
     ax: plt.Axes = None,
+    title: str | None = "Selected models",
 ) -> plt.Axes:
-    """Use `petab_select.plot.line_best_by_iteration`` instead. Deprecated."""
+    """Use `petab_select.plot.line_best_by_iteration`` instead.
+
+    Deprecated. The ``title`` argument is applied as the axes title.
+    """
     warnings.warn(
         "Use `petab_select.plot.line_best_by_iteration` instead.",
         DeprecationWarning,
         stacklevel=2,
     )
-    return petab_select.plot.line_best_by_iteration(
+    ax = petab_select.plot.line_best_by_iteration(
         models=Models(selected_models),
         criterion=criterion,
         relative=relative,
@@ -38,25 +45,32 @@ def plot_selected_models(
         labels=labels,
         ax=ax,
     )
+    if title is not None:
+        ax.set_title(title)
+    return ax
 
 
 def plot_calibrated_models_digraph(
     problem: pypesto_select.Problem,
-    calibrated_models: dict[str, Model] = None,
+    calibrated_models: dict[str, Model] | None = None,
     criterion: Criterion = None,
     optimal_distance: float = 1,
     relative: bool = True,
     options: dict = None,
-    labels: dict[str, str] = None,
+    labels: dict[str, str] | None = None,
     ax: plt.Axes = None,
+    title: str | None = "Calibrated models",
 ) -> plt.Axes:
-    """Use `petab_select.plot.graph_history`` instead. Deprecated."""
+    """Use `petab_select.plot.graph_history`` instead.
+
+    Deprecated. The ``title`` argument is applied as the axes title.
+    """
     warnings.warn(
         "Use `petab_select.plot.graph_history` instead.",
         DeprecationWarning,
         stacklevel=2,
     )
-    return petab_select.plot.graph_history(
+    ax = petab_select.plot.graph_history(
         models=calibrated_models.values(),
         criterion=criterion,
         draw_networkx_kwargs=options,
@@ -64,3 +78,6 @@ def plot_calibrated_models_digraph(
         labels=labels,
         ax=ax,
     )
+    if title is not None:
+        ax.set_title(title)
+    return ax

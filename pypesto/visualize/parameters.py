@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import logging
 from collections.abc import Callable, Iterable, Sequence
 
 import matplotlib.axes
 import numpy as np
 import pandas as pd
-from matplotlib.colors import Colormap
+from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
@@ -12,6 +14,7 @@ from pypesto.util import delete_nan_inf
 from ..C import (
     COLOR,
     INNER_PARAMETERS,
+    LABEL_OBJECTIVE,
     LOG10,
     WATERFALL_MAX_VALUE,
     InnerParameterType,
@@ -19,12 +22,27 @@ from ..C import (
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
+    _UNSET,
     get_ax,
     get_axes_array,
+    plot_density_panel,
     plot_diagonal_marginal,
+    process_deprecated_kwarg,
     process_parameter_indices,
     process_result_list,
     process_start_indices,
+)
+from ._style import (
+    BOUND_VIEW_MARGIN,
+    COLORBAR_WIDTH,
+    GRID_SIZE_PER_COL,
+    GRID_SIZE_PER_ROW,
+    _bounds_legend_handle,
+    add_colorbar,
+    cluster_legend_handles_from_data,
+    draw_bounds_1d,
+    draw_bounds_2d,
+    resolve_style,
 )
 from .reference_points import ReferencePoint, create_references
 
@@ -37,7 +55,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
 def parameters(
     results: Result | Sequence[Result],
     ax: matplotlib.axes.Axes | None = None,
@@ -45,6 +62,7 @@ def parameters(
     lb: np.ndarray | list[float] | None = None,
     ub: np.ndarray | list[float] | None = None,
     size: tuple[float, float] | None = None,
+    title: str | None = "Parameter estimates",
     reference: list[ReferencePoint] | None = None,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
@@ -53,6 +71,7 @@ def parameters(
     scale_to_interval: tuple[float, float] | None = None,
     plot_inner_parameters: bool = True,
     log10_scale_hier_sigma: bool = True,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -73,6 +92,8 @@ def parameters(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+    title:
+        Axes title. Pass ``None`` to suppress.
     reference:
         List of reference points for optimization results, containing at
         least a function value fval
@@ -95,14 +116,28 @@ def parameters(
     log10_scale_hier_sigma:
         Flag indicating whether to scale inner parameters of type
         ``InnerParameterType.SIGMA`` to log10 (default: True).
+    style_kwargs:
+        Style overrides passed through to :func:`parameters_lowlevel`. Keys
+        used by this function:
+
+        - ``trace_linewidth`` — width of the parameter lines.
+        - ``line_marker_size`` — diameter (points) of the ``"o"`` markers.
+        - ``marker_linewidth`` — edge width of the markers.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)  # validate early; lowlevel functions apply it
+
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     if isinstance(parameter_indices, str):
         if parameter_indices == "all":
@@ -161,6 +196,8 @@ def parameters(
             colors=colors[j],
             legend_text=legends[j],
             balance_alpha=balance_alpha,
+            title=title,
+            style_kwargs=style_kwargs,
         )
 
     # parse and apply plotting options
@@ -189,6 +226,7 @@ def parameters(
             linestyle="--",
             legend_text=i_ref.legend,
             balance_alpha=balance_alpha,
+            title=None,
         )
 
     return ax
@@ -199,12 +237,16 @@ def parameter_hist(
     parameter_name: str,
     bins: int | str = "auto",
     ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] | None = (18.5, 10.5),
+    size: tuple[float, float] | None = None,
+    title: str | None = "Parameter histogram",
     color: COLOR | None = None,
     start_indices: int | list[int] | None = None,
+    plot_type: str = "both",
+    show_bounds: bool = True,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
-    Plot parameter values as a histogram.
+    Plot parameter values as a histogram with KDE overlay and rug marks.
 
     Parameters
     ----------
@@ -217,19 +259,37 @@ def parameter_hist(
     ax:
         Axes object to use
     size:
-        Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
+        Figure size (width, height) in inches. Defaults to matplotlib's
+        default figure size when not specified.
+    title:
+        Axes title. Pass ``None`` to suppress.
     color:
         Color recognized by matplotlib.
     start_indices:
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
+    plot_type: {'hist'|'kde'|'both'}
+        What to draw: histogram only (``'hist'``), KDE line only (``'kde'``),
+        or both with rug marks (``'both'``, default).
+    show_bounds:
+        If ``True`` (default) draw the parameter bound lines and frame the
+        x-axis to include them. If ``False`` frame the x-axis tightly to the
+        data range and omit the bound lines.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``rectangle_color``, ``rectangle_alpha``, ``rectangle_edgecolor``,
+          ``rectangle_linewidth`` — bar styling.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
     ax = get_ax(ax, size)
 
     xs = result.optimize_result.x
@@ -241,12 +301,59 @@ def parameter_hist(
         xs = [xs[ind] for ind in start_indices]
 
     parameter_index = result.problem.x_names.index(parameter_name)
-    parameter_values = [x[parameter_index] for x in xs]
+    parameter_values = np.array([x[parameter_index] for x in xs])
 
-    ax.hist(parameter_values, color=color, bins=bins, label=parameter_name)
-    ax.set_xlabel(parameter_name)
-    ax.set_ylabel("counts")
-    ax.set_title(f"{parameter_name}")
+    # bounds and scale for this parameter
+    lb_val = result.problem.lb_full[parameter_index]
+    ub_val = result.problem.ub_full[parameter_index]
+    x_scales = getattr(result.problem, "x_scales", None)
+    scale = x_scales[parameter_index] if x_scales is not None else None
+
+    used_color = plot_density_panel(
+        ax, parameter_values, color=color, bins=bins,
+        rectangle_color=style["rectangle_color"],
+        rectangle_alpha=style["rectangle_alpha"],
+        rectangle_edgecolor=style["rectangle_edgecolor"],
+        rectangle_linewidth=style["rectangle_linewidth"],
+        show_hist=(plot_type in ("hist", "both")),
+        show_kde=(plot_type in ("kde", "both")),
+        show_rug=(plot_type in ("hist", "both")),
+    )
+
+    legend_handles, legend_labels = [], []
+    show_kde = plot_type in ("kde", "both")
+    show_rug = plot_type in ("hist", "both")
+    if used_color is not None:
+        if show_kde:
+            legend_handles.append(Line2D([0], [0], color=used_color, lw=2))
+            legend_labels.append("KDE")
+        if show_rug:
+            legend_handles.append(
+                Line2D([0], [0], color=used_color, marker="|", lw=0,
+                       markersize=10, markeredgewidth=1.2)
+            )
+            legend_labels.append("Starts")
+
+    if show_bounds and np.isfinite(lb_val) and np.isfinite(ub_val):
+        bound_handle = draw_bounds_1d(ax, lb_val, ub_val, axis="x", style=style)
+        legend_handles.append(bound_handle)
+        legend_labels.append("Bounds")
+
+    if not show_bounds and parameter_values.size > 0:
+        finite_vals = parameter_values[np.isfinite(parameter_values)]
+        if finite_vals.size > 0:
+            spread = finite_vals.max() - finite_vals.min()
+            pad = max(spread * 0.05, np.abs(finite_vals).max() * 0.01)
+            ax.set_xlim(finite_vals.min() - pad, finite_vals.max() + pad)
+
+    if legend_handles:
+        ax.legend(handles=legend_handles, labels=legend_labels)
+
+    xlabel = f"{parameter_name} ({scale})" if scale is not None else parameter_name
+    if title is not None:
+        ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Density")
 
     return ax
 
@@ -260,10 +367,12 @@ def parameters_lowlevel(
     x_axis_label: str = "Parameter value",
     ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = None,
+    title: str | None = "Parameter estimates",
     colors: Sequence[np.ndarray | COLOR] | None = None,
     linestyle: str = "-",
     legend_text: str | None = None,
     balance_alpha: bool = True,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameters plot using list of parameters.
@@ -283,6 +392,8 @@ def parameters_lowlevel(
         Axes object to use.
     size:
         see parameters
+    title:
+        Axes title. Pass ``None`` to suppress.
     colors:
         A single color recognized by matplotlib or a list of colors, one for each element in 'fvals'.
     linestyle:
@@ -292,22 +403,37 @@ def parameters_lowlevel(
     balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
+    x_axis_label:
+        Label for the x-axis. Defaults to ``"Parameter value"``;
+        automatically extended with the parameter scale when all parameters
+        share the same scale.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``trace_linewidth`` — width of the parameter lines.
+        - ``line_marker_size`` — diameter (points) of the ``"o"`` markers.
+        - ``marker_linewidth`` — edge width of the markers.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
 
     if size is None:
-        # 0.5 inch height per parameter
-        size = (18.5, max(xs.shape[1], 1) / 2)
+        n_par = xs.shape[1]
+        size = (8.0, max(2.5, 0.4 * n_par + 1.5))
 
     ax = get_ax(ax, size)
 
     # assign colors
+    user_supplied_colors = colors is not None
     colors = assign_colors(
-        vals=fvals, colors=colors, balance_alpha=balance_alpha
+        vals=fvals, colors=colors, balance_alpha=balance_alpha, style=style
     )
 
     # parameter indices
@@ -325,7 +451,10 @@ def parameters_lowlevel(
             parameters_ind,
             linestyle,
             color=colors[j_x],
+            linewidth=style["trace_linewidth"],
             marker="o",
+            markersize=style["line_marker_size"],
+            markeredgewidth=style["marker_linewidth"],
             label=tmp_legend,
         )
 
@@ -333,20 +462,43 @@ def parameters_lowlevel(
     if x_labels is not None:
         ax.set_yticklabels(x_labels)
 
-    # draw bounds
+    # draw bounds (matched to the family-wide dashed grey style)
     parameters_ind = np.array(parameters_ind).flatten()
+    bound_kw = dict(
+        linestyle=style["bound_linestyle"],
+        color=style["bound_color"],
+        linewidth=style["bound_linewidth"],
+        alpha=style["bound_alpha"],
+        marker="+",
+    )
+    has_bounds = lb is not None or ub is not None
     if lb is not None:
         lb = np.array(lb, dtype="float64")
-        ax.plot(lb.flatten(), parameters_ind, "k--", marker="+")
+        ax.plot(lb.flatten(), parameters_ind, **bound_kw)
     if ub is not None:
         ub = np.array(ub, dtype="float64")
-        ax.plot(ub.flatten(), parameters_ind, "k--", marker="+")
+        ax.plot(ub.flatten(), parameters_ind, **bound_kw)
 
+    if title is not None:
+        ax.set_title(title)
     ax.set_xlabel(x_axis_label)
     ax.set_ylabel("Parameter")
-    ax.set_title("Estimated parameters")
+
+    bounds_handle = [_bounds_legend_handle(style=style)] if has_bounds else []
     if legend_text is not None:
-        ax.legend()
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles=handles + bounds_handle,
+                  labels=labels + (["Bounds"] if bounds_handle else []))
+    elif not user_supplied_colors:
+        from pypesto.util import assign_clusters
+
+        clusters, cluster_size = assign_clusters(np.asarray(fvals))
+        handles = cluster_legend_handles_from_data(
+            clusters, cluster_size, np.array(colors)
+        )
+        if handles or bounds_handle:
+            ax.legend(handles=handles + bounds_handle,
+                      labels=[h.get_label() for h in handles] + (["Bounds"] if bounds_handle else []))
 
     return ax
 
@@ -576,13 +728,18 @@ def parameters_correlation_matrix(
     start_indices: int | Iterable[int] | None = None,
     method: str | Callable = "pearson",
     cluster: bool = True,
-    cmap: Colormap | str = "bwr",
     return_table: bool = False,
-    heatmap_kwargs: dict | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = None,
+    title: str | None = "Parameter correlation matrix",
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
-    Plot correlation of optimized parameters.
+    Plot the correlation matrix of optimized parameters as an annotated heatmap.
+
+    Each cell shows the correlation of a pair of parameters across the
+    multistart optimized vectors, annotated with its value and coloured on a
+    diverging scale (white at 0, saturated at ±1).
 
     Parameters
     ----------
@@ -597,23 +754,31 @@ def parameters_correlation_matrix(
         The method to compute correlation. Allowed values are ``pearson``,
         ``kendall``, ``spearman`` or a callable.
     cluster:
-        Whether to cluster the correlation matrix.
-    cmap:
-        Colormap to use for the heatmap. Defaults to 'bwr'.
+        Whether to hierarchically cluster the parameters so that correlated
+        ones are grouped together. This only *reorders* the rows/columns —
+        no dendrogram is drawn. Ignored for fewer than 3 parameters.
     return_table:
         Whether to return the parameter table additionally for further
         inspection.
-    heatmap_kwargs:
-        Additional keyword arguments to :func:`seaborn.heatmap`.
+    ax:
+        Axes to draw on. When ``None`` a new figure is created.
     size:
-        Figure size (width, height) in inches.
+        Figure size (width, height) in inches. Only applied when no ``ax``
+        is given.
+    title:
+        Axes title. Pass ``None`` to suppress.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_correlation`` — diverging colormap for the heatmap
+          (default ``"coolwarm"``).
 
     Returns
     -------
     ax:
-        The plot axis.
+        The plot axis. If ``return_table`` is set, ``(ax, table)``.
     """
-    import seaborn as sns
+    style = resolve_style(style_kwargs)
 
     start_indices = process_start_indices(
         start_indices=start_indices, result=result
@@ -632,22 +797,73 @@ def parameters_correlation_matrix(
     ]
     df = pd.DataFrame(parameters, columns=x_labels)
     corr_matrix = df.corr(method=method)
-    heatmap_kwargs = {
-        "data": corr_matrix,
-        "yticklabels": True,
-        "vmin": -1,
-        "vmax": 1,
-        "cmap": cmap,
-        "linewidth": 1,
-    } | (heatmap_kwargs or {})
-    if cluster:
-        if size is not None:
-            heatmap_kwargs["figsize"] = size
-        ax = sns.clustermap(**heatmap_kwargs)
-    else:
-        ax = sns.heatmap(**heatmap_kwargs)
-        if size is not None:
-            ax.figure.set_size_inches(*size)
+
+    corr = corr_matrix.to_numpy()
+    # cluster: reorder rows/columns so correlated parameters sit together
+    if cluster and corr.shape[0] > 2 and not np.isnan(corr).any():
+        from scipy.cluster.hierarchy import leaves_list, linkage
+        from scipy.spatial.distance import squareform
+
+        # distance from correlation; symmetrize and zero the diagonal to
+        # absorb floating-point noise before squareform's strict checks
+        dist = np.clip((1.0 - corr) + (1.0 - corr).T, 0.0, None) / 2.0
+        np.fill_diagonal(dist, 0.0)
+        order = leaves_list(linkage(squareform(dist), method="average"))
+        corr = corr[np.ix_(order, order)]
+        x_labels = [x_labels[i] for i in order]
+
+    n_par = len(x_labels)
+    if size is None and ax is None:
+        matrix_size = max(6.0, 0.4 * n_par + 1.5)
+        size = (matrix_size + COLORBAR_WIDTH, matrix_size)
+    ax = get_ax(ax, size)
+    im = ax.imshow(corr, cmap=style["cmap_correlation"], vmin=-1, vmax=1)
+
+    tick_labelsize = max(
+        6.0,
+        min(11.0, 220.0 / max(n_par, 1)),
+    )
+    annotation_labelsize = max(
+        4.0,
+        min(9.0, 180.0 / max(n_par, 1)),
+    )
+
+    ax.set_xticks(range(n_par))
+    ax.set_xticklabels(
+        x_labels, rotation=45, ha="right", fontsize=tick_labelsize
+    )
+    ax.set_yticks(range(n_par))
+    ax.set_yticklabels(x_labels, fontsize=tick_labelsize)
+
+    # annotate each cell; white text on saturated cells, dark on light ones
+    for i in range(n_par):
+        for j in range(n_par):
+            value = corr[i, j]
+            ax.text(
+                j, i, f"{value:.2f}",
+                ha="center", va="center",
+                color="white" if abs(value) > 0.5 else "0.15",
+                fontsize=annotation_labelsize,
+            )
+
+    # thin white separators between cells
+    ax.set_xticks(np.arange(n_par + 1) - 0.5, minor=True)
+    ax.set_yticks(np.arange(n_par + 1) - 0.5, minor=True)
+    ax.grid(which="minor", color="white", linewidth=1.5)
+    ax.tick_params(which="minor", length=0)
+
+    add_colorbar(
+        ax.figure,
+        np.array([[ax]]),
+        corr,
+        "Correlation",
+        cmap=style["cmap_correlation"],
+        norm=im.norm,
+    )
+
+    if title is not None:
+        ax.set_title(title)
+
     if return_table:
         return ax, df
     return ax
@@ -658,10 +874,12 @@ def optimization_scatter(
     parameter_indices: str | Sequence[int] = "free_only",
     start_indices: int | Iterable[int] | None = None,
     diag_kind: str = "kde",
-    suptitle: str | None = None,
+    title: str | None = None,
     size: tuple[float, float] | None = None,
-    show_bounds: bool = False,
+    show_bounds: bool = True,
     axes: np.ndarray | None = None,
+    suptitle: str | None = _UNSET,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
     Plot a scatter matrix of all parameter pairs for the given starts.
@@ -678,16 +896,30 @@ def optimization_scatter(
     diag_kind:
         Marginal distribution shown on the diagonal: ``’kde’`` (default)
         or ``’hist’``.
-    suptitle:
+    title:
         Title of the figure.
+    suptitle:
+        Deprecated. Use ``title`` instead.
     size:
         Figure size (width, height) in inches. Defaults to
-        ``(2.5 * n + 0.5, 2.5 * n + 0.5)``.
+        ``(GRID_SIZE_PER_COL * n_params + COLORBAR_WIDTH,
+        GRID_SIZE_PER_ROW * n_params)`` so the colorbar does not steal
+        space from the scatter panels.
     show_bounds:
         Whether to draw dashed lines at the parameter bounds.
     axes:
         Optional axes grid to draw into. Must have shape
         ``(n_params, n_params)``.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``scatter_size``, ``scatter_alpha``, ``scatter_linewidths``,
+          ``scatter_edgecolors``, ``scatter_zorder`` — off-diagonal scatter
+          point geometry.
+        - ``cmap_fval`` — colormap used for the fval-encoded scatter colors
+          and the colorbar.
+        - ``rectangle_color``, ``rectangle_alpha``, ``rectangle_edgecolor``,
+          ``rectangle_linewidth`` — diagonal marginal styling.
 
     Returns
     -------
@@ -695,8 +927,8 @@ def optimization_scatter(
         2-D NumPy array of shape ``(n_params, n_params)`` containing one
         matplotlib Axes per panel.
     """
-    import matplotlib.cm as mpl_cm
-    from matplotlib.colors import Normalize
+    style = resolve_style(style_kwargs)
+    title = process_deprecated_kwarg("title", title, "suptitle", suptitle)
 
     start_indices = process_start_indices(
         start_indices=start_indices, result=result
@@ -706,7 +938,16 @@ def optimization_scatter(
     )
 
     n = len(parameter_indices)
-    x_labels = [result.problem.x_names[i] for i in parameter_indices]
+    _par_names = [result.problem.x_names[i] for i in parameter_indices]
+    _par_scales = (
+        [result.problem.x_scales[i] for i in parameter_indices]
+        if getattr(result.problem, "x_scales", None) is not None
+        else None
+    )
+    if _par_scales is not None:
+        x_labels = [f"{name} ({scale})" for name, scale in zip(_par_names, _par_scales)]
+    else:
+        x_labels = _par_names
 
     # data matrix: rows = starts, cols = selected parameters
     data = np.array(
@@ -717,8 +958,10 @@ def optimization_scatter(
     )
     fvals = np.array([result.optimize_result[i].fval for i in start_indices])
 
-    # continuous colormap: viridis, low fval (best) → yellow, high fval (worst) → dark
-    cmap = mpl_cm.viridis_r
+    # continuous colormap: low fval (best) → yellow, high fval (worst) → dark
+    from matplotlib.colors import Normalize
+
+    cmap = style["cmap_fval"]
     min_fval_range = 1.0
     fval_min = fvals.min()
     fval_max = fvals.max()
@@ -730,11 +973,11 @@ def optimization_scatter(
     )
 
     if size is None and axes is None:
-        size = (2.5 * n + 0.5, 2.5 * n + 0.5)
+        # grid panels + extra width for the shared colorbar
+        size = (GRID_SIZE_PER_COL * n + COLORBAR_WIDTH, GRID_SIZE_PER_ROW * n)
 
     axes = get_axes_array(axes=axes, nrows=n, ncols=n, size=size)
     fig = axes.flat[0].figure
-    fig.set_layout_engine("constrained")
 
     previous_colorbar_axes = []
     for ax in axes.flat:
@@ -765,9 +1008,23 @@ def optimization_scatter(
             row_vals = data[:, row]
 
             if row == col:
+                diag_label = ("KDE estimate" if diag_kind == "kde" else "Histogram") if row == 0 else None
                 plot_diagonal_marginal(
-                    ax=ax, values=col_vals, diag_kind=diag_kind
+                    ax=ax, values=col_vals, diag_kind=diag_kind,
+                    color=style["rectangle_color"],
+                    rectangle_alpha=style["rectangle_alpha"],
+                    rectangle_edgecolor=style["rectangle_edgecolor"],
+                    rectangle_linewidth=style["rectangle_linewidth"],
+                    label=diag_label,
                 )
+                # single legend on the first panel: marginal + bounds entry
+                # (the first diagonal panel also carries bound lines)
+                if row == 0 and diag_label is not None:
+                    handles, labels = ax.get_legend_handles_labels()
+                    if show_bounds:
+                        handles.append(_bounds_legend_handle(style=style))
+                        labels.append("Bounds")
+                    ax.legend(handles=handles, labels=labels)
             else:
                 ax.scatter(
                     col_vals,
@@ -775,58 +1032,78 @@ def optimization_scatter(
                     c=fvals,
                     cmap=cmap,
                     norm=fval_norm,
-                    s=35,
-                    alpha=0.85,
-                    linewidths=0.6,
-                    edgecolors="white",
-                    zorder=3,
+                    s=style["scatter_size"],
+                    alpha=style["scatter_alpha"],
+                    linewidths=style["scatter_linewidths"],
+                    edgecolors=style["scatter_edgecolors"],
+                    zorder=style["scatter_zorder"],
                 )
                 ax.set_ylabel(x_labels[row])
 
             ax.set_xlabel(x_labels[col])
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
 
-            if show_bounds:
-                pi_col = parameter_indices[col]
-                pi_row = parameter_indices[row]
-                for val in (
-                    result.problem.lb_full[pi_col],
-                    result.problem.ub_full[pi_col],
-                ):
-                    ax.axvline(val, color="k", ls="--", lw=0.8)
-                if row != col:
-                    for val in (
-                        result.problem.lb_full[pi_row],
-                        result.problem.ub_full[pi_row],
-                    ):
-                        ax.axhline(val, color="k", ls="--", lw=0.8)
-
-    # shared x-limits per column, shared y-limits per row (non-diagonal)
+    # shared x-limits per column, shared y-limits per row (non-diagonal).
+    # When show_bounds is on, expand the limits to include the bounds with a
+    # small view margin so the bound lines are visible.
     for col in range(n):
         vals = data[:, col]
-        data_range = vals.max() - vals.min()
-        pad = data_range * 0.1 if data_range > 0 else 0.5
-        xlim = (vals.min() - pad, vals.max() + pad)
+        lo, hi = float(vals.min()), float(vals.max())
+        if show_bounds:
+            pi_col = parameter_indices[col]
+            lo = min(lo, float(result.problem.lb_full[pi_col]))
+            hi = max(hi, float(result.problem.ub_full[pi_col]))
+        span = hi - lo
+        pad = span * BOUND_VIEW_MARGIN if span > 0 else 0.5
+        xlim = (lo - pad, hi + pad)
         for row in range(n):
             axes[row, col].set_xlim(xlim)
     for row in range(n):
         vals = data[:, row]
-        data_range = vals.max() - vals.min()
-        pad = data_range * 0.1 if data_range > 0 else 0.5
-        ylim = (vals.min() - pad, vals.max() + pad)
+        lo, hi = float(vals.min()), float(vals.max())
+        if show_bounds:
+            pi_row = parameter_indices[row]
+            lo = min(lo, float(result.problem.lb_full[pi_row]))
+            hi = max(hi, float(result.problem.ub_full[pi_row]))
+        span = hi - lo
+        pad = span * BOUND_VIEW_MARGIN if span > 0 else 0.5
+        ylim = (lo - pad, hi + pad)
         for col in range(n):
             if col != row:
                 axes[row, col].set_ylim(ylim)
 
-    sm = mpl_cm.ScalarMappable(cmap=cmap, norm=fval_norm)
-    sm.set_array([])
-    cbar = fig.colorbar(sm, ax=axes.ravel().tolist(), shrink=0.8, pad=0.03)
-    cbar.set_label("Objective value")
+    if show_bounds:
+        for row in range(n):
+            for col in range(n):
+                ax = axes[row, col]
+                pi_col = parameter_indices[col]
+                if row == col:
+                    draw_bounds_1d(
+                        ax,
+                        result.problem.lb_full[pi_col],
+                        result.problem.ub_full[pi_col],
+                        axis="x",
+                        view_margin=False,
+                        style=style,
+                    )
+                else:
+                    pi_row = parameter_indices[row]
+                    draw_bounds_2d(
+                        ax,
+                        result.problem.lb_full[pi_col],
+                        result.problem.ub_full[pi_col],
+                        result.problem.lb_full[pi_row],
+                        result.problem.ub_full[pi_row],
+                        view_margin=False,
+                        style=style,
+                    )
+
+    cbar = add_colorbar(
+        fig, axes, fvals, LABEL_OBJECTIVE, cmap=style["cmap_fval"], norm=fval_norm
+    )
     for ax in axes.flat:
         ax._pypesto_optimization_scatter_colorbar_ax = cbar.ax
 
-    if suptitle:
-        fig.suptitle(suptitle)
+    if title is not None:
+        fig.suptitle(title)
 
     return axes

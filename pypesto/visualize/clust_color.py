@@ -1,4 +1,7 @@
-import matplotlib.cm as cm
+from __future__ import annotations
+
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import is_color_like
 
@@ -6,10 +9,46 @@ from pypesto.util import assign_clusters
 
 # for typehints
 from ..C import COLOR
+from ._style import resolve_style
+
+# Reserved colors are filtered out of the secondary cluster palette so they
+# can hold their semantic role (best optimum / isolated start).
+_RESERVED_COLOR_DISTANCE = 0.2
+
+
+def _build_cluster_palette(style: dict) -> np.ndarray:
+    """Sample non-best cluster colors from ``cmap_discrete``.
+
+    Colors close to ``mle_color`` or ``outlier_color`` are filtered out so
+    those reserved roles remain visually distinct from cycled cluster colors.
+    """
+    cmap = plt.get_cmap(style["cmap_discrete"])
+    reserved = [
+        np.array(mcolors.to_rgb(style["mle_color"])),
+        np.array(mcolors.to_rgb(style["outlier_color"])),
+    ]
+    if hasattr(cmap, "colors"):
+        candidates = [mcolors.to_rgba(c) for c in cmap.colors]
+    else:
+        n = 10
+        candidates = [cmap(i / (n - 1)) for i in range(n)]
+    palette = [
+        c for c in candidates
+        if all(
+            np.linalg.norm(np.array(c[:3]) - r) > _RESERVED_COLOR_DISTANCE
+            for r in reserved
+        )
+    ]
+    if not palette:
+        palette = candidates
+    return np.array(palette)
 
 
 def assign_clustered_colors(
-    vals: np.ndarray, balance_alpha: bool = True, highlight_global: bool = True
+    vals: np.ndarray,
+    balance_alpha: bool = True,
+    highlight_global: bool = True,
+    style: dict | None = None,
 ):
     """
     Cluster and assign colors.
@@ -23,6 +62,9 @@ def assign_clustered_colors(
         avoid overplotting
     highlight_global:
         flag indicating whether global optimum should be highlighted
+    style:
+        Resolved pyPESTO visualization style. Reads ``cmap_discrete``,
+        ``mle_color``, ``outlier_color``. Defaults to the global style.
 
     Returns
     -------
@@ -36,6 +78,12 @@ def assign_clustered_colors(
     # assign clusters
     clusters, cluster_size = assign_clusters(vals)
 
+    if style is None:
+        style = resolve_style({})
+    palette = _build_cluster_palette(style)
+    mle_rgba = list(mcolors.to_rgba(style["mle_color"]))
+    outlier_rgb = list(mcolors.to_rgb(style["outlier_color"]))
+
     # create list of colors, which has the correct shape
     n_clusters = 1 + max(clusters) - sum(cluster_size == 1)
 
@@ -43,13 +91,12 @@ def assign_clustered_colors(
     if highlight_global and cluster_size[0] > 1:
         n_clusters -= 1
 
-    # fill color array from colormap
-    colormap = cm.ScalarMappable().to_rgba
-    color_list = colormap(np.linspace(0.0, 1.0, n_clusters))
+    # fill color array by cycling through the categorical cluster palette
+    color_list = palette[np.arange(n_clusters) % len(palette)].copy()
 
-    # best optimum should be colored in red
+    # best optimum should be colored in MLE red
     if highlight_global and cluster_size[0] > 1:
-        color_list = np.concatenate(([[1.0, 0.0, 0.0, 1.0]], color_list))
+        color_list = np.concatenate(([mle_rgba], color_list))
 
     # We have clustered the results. However, clusters may have size 1,
     # so we need to rearrange the regroup the results into "no_clusters",
@@ -64,8 +111,8 @@ def assign_clustered_colors(
     if balance_alpha:
         # set minimal alpha value to avoid non-visible colors
         min_alpha = 0.01
-        # assign neutral color, add 1 for avoiding division by zero
-        grey = [0.7, 0.7, 0.7, min(1.0, 5.0 / (no_clusters.size + 1.0))]
+        # alpha shrinks with the number of singletons to avoid overplotting
+        grey = [*outlier_rgb, min(1.0, 5.0 / (no_clusters.size + 1.0))]
 
         # reduce alpha level depend on size of each cluster
         n_cluster_size = np.delete(cluster_size, no_clusters)
@@ -74,8 +121,7 @@ def assign_clustered_colors(
                 1.0, max(5.0 / n_cluster_size[icluster], min_alpha)
             )
     else:
-        # assign neutral color
-        grey = [0.7, 0.7, 0.7, 1.0]
+        grey = [*outlier_rgb, 1.0]
 
     # create a color list, prfilled with grey values
     colors = np.array([grey] * clusters.size)
@@ -86,9 +132,9 @@ def assign_clustered_colors(
         ind_of_iclust = np.argwhere(clusters == iclust).flatten()
         colors[ind_of_iclust, :] = color_list[icol, :]
 
-    # if best value was found only once: replace it with red
+    # if best value was found only once: replace it with MLE red
     if highlight_global and cluster_size[0] == 1:
-        colors[0] = [1.0, 0.0, 0.0, 1.0]
+        colors[0] = mle_rgba
 
     return colors
 
@@ -98,6 +144,7 @@ def assign_colors(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     balance_alpha: bool = True,
     highlight_global: bool = True,
+    style: dict | None = None,
 ) -> np.ndarray:
     """
     Assign colors or format user specified colors.
@@ -113,6 +160,9 @@ def assign_colors(
         avoid overplotting
     highlight_global:
         flag indicating whether global optimum should be highlighted
+    style:
+        Resolved pyPESTO visualization style. Forwarded to
+        :func:`assign_clustered_colors`. Defaults to the global style.
 
     Returns
     -------
@@ -129,6 +179,7 @@ def assign_colors(
             vals,
             balance_alpha=balance_alpha,
             highlight_global=highlight_global,
+            style=style,
         )
 
     # Get number of elements and use user assigned colors
@@ -160,6 +211,7 @@ def assign_colors(
 def assign_colors_for_list(
     num_entries: int,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    style: dict | None = None,
 ) -> list[list[float]] | np.ndarray:
     """
     Create a list of colors for a list of items.
@@ -173,6 +225,9 @@ def assign_colors_for_list(
         number of results in list
     colors:
         list of colors, or single color
+    style:
+        Resolved pyPESTO visualization style. Forwarded to
+        :func:`assign_colors`. Defaults to the global style.
 
     Returns
     -------
@@ -188,7 +243,10 @@ def assign_colors_for_list(
 
         # we don't want alpha levels for all plotting routines in this case...
         colors = assign_colors(
-            dummy_clusters, balance_alpha=False, highlight_global=False
+            dummy_clusters,
+            balance_alpha=False,
+            highlight_global=False,
+            style=style,
         )
 
         # dummy cluster had twice as many entries as really there. Reduce.
@@ -201,4 +259,5 @@ def assign_colors_for_list(
         colors=colors,
         balance_alpha=False,
         highlight_global=False,
+        style=style,
     )

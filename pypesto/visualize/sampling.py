@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import logging
 import warnings
 from collections.abc import Sequence
-from colorsys import rgb_to_hls
+from typing import Literal
 
+import matplotlib as mpl
 import matplotlib.axes
 import matplotlib.pyplot as plt
+import matplotlib.ticker
+import matplotlib.transforms
 import numpy as np
 import pandas as pd
 from matplotlib.collections import LineCollection
@@ -13,24 +18,38 @@ from matplotlib.lines import Line2D
 
 from ..C import (
     CONDITION,
+    LABEL_LOGPOSTERIOR,
     LEN_RGB,
     MEDIAN,
     OUTPUT,
     RGB,
-    RGBA_BLACK,
-    RGBA_MAX,
-    RGBA_MIN,
     STANDARD_DEVIATION,
 )
 from ..ensemble import EnsemblePrediction, get_percentile_label
+from ..problem import Problem
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
+from ._style import (
+    BOUND_VIEW_MARGIN,
+    CI_BAR_HEIGHT,
+    COLORBAR_WIDTH,
+    GRID_SIZE_PER_COL,
+    GRID_SIZE_PER_ROW,
+    add_colorbar,
+    draw_bounds_1d,
+    draw_bounds_2d,
+    format_parameter_axis_labels,
+    resolve_style,
+)
 from .misc import (
     _UNSET,
+    _ci_panel_lowlevel,
+    ci_panel_size,
     get_ax,
     get_axes_array,
     hide_unused_axes,
     make_grid_shape,
+    plot_density_panel,
     plot_diagonal_marginal,
     process_deprecated_kwarg,
     rgba2rgb,
@@ -39,21 +58,15 @@ from .misc import (
 logger = logging.getLogger(__name__)
 
 
-prediction_errorbar_settings = {
-    "fmt": "none",
-    "color": "k",
-    "capsize": 10,
-}
-
-
 def sampling_fval_traces(
     result: Result,
     i_chain: int = 0,
     full_trace: bool = False,
     stepsize: int = 1,
-    title: str | None = None,
+    title: str | None = "Log-posterior trace",
     size: tuple[float, float] | None = None,
     ax: matplotlib.axes.Axes | None = None,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot log-posterior (=function value) over iterations.
@@ -69,18 +82,32 @@ def sampling_fval_traces(
     stepsize:
         Only one in `stepsize` values is plotted.
     title:
-        Axes title.
-    size: ndarray
-        Figure size in inches.
+        Axes title. Pass ``None`` to suppress.
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``ax`` is
+        ``None``.
     ax:
         Axes object to use.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``scatter_size`` — marker area; trace markers are drawn at half
+          this value.
+        - ``scatter_color`` — color of the posterior-sample points.
+        - ``scatter_zorder`` — z-order of the posterior-sample layer.
+        - ``mcmc_scatter_alpha`` — MCMC sample marker opacity.
+        - ``mcmc_burnin_color`` — burn-in marker color.
+        - ``mcmc_burnin_cutoff_color`` — burn-in cutoff line color.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
-    import seaborn as sns
+    style = resolve_style(style_kwargs)
 
     # get data which should be plotted
     _, params_fval, _, _, _ = get_data_to_plot(
@@ -92,34 +119,56 @@ def sampling_fval_traces(
 
     ax = get_ax(ax, size)
 
-    kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
-    if full_trace:
-        kwargs["hue"] = "converged"
-        if len(params_fval[kwargs["hue"]].unique()) == 1:
-            kwargs["palette"] = ["#477ccd"]
-        elif len(params_fval[kwargs["hue"]].unique()) == 2:
-            kwargs["palette"] = ["#868686", "#477ccd"]
-        kwargs["legend"] = False
+    burn_in = result.sample_result.burn_in or 0
 
-    sns.scatterplot(
-        x="iteration", y="logPosterior", data=params_fval, ax=ax, **kwargs
+    iterations = params_fval["iteration"].to_numpy()
+    log_posterior = params_fval["logPosterior"].to_numpy()
+    if full_trace and burn_in > 0:
+        is_burnin = iterations < burn_in
+    else:
+        is_burnin = np.zeros_like(iterations, dtype=bool)
+
+    if is_burnin.any():
+        ax.scatter(
+            iterations[is_burnin],
+            log_posterior[is_burnin],
+            color=style["mcmc_burnin_color"],
+            alpha=style["mcmc_scatter_alpha"],
+            s=style["scatter_size"] / 2,
+            linewidths=0.0,
+            zorder=2,
+            label="Burn-in samples",
+        )
+    ax.scatter(
+        iterations[~is_burnin],
+        log_posterior[~is_burnin],
+        color=style["scatter_color"],
+        alpha=style["mcmc_scatter_alpha"],
+        s=style["scatter_size"] / 2,
+        linewidths=0.0,
+        zorder=style["scatter_zorder"],
+        label="Posterior samples",
     )
 
-    if result.sample_result.burn_in is None:
-        _burn_in = 0
-    else:
-        _burn_in = result.sample_result.burn_in
+    if full_trace and burn_in > 0:
+        ax.axvline(
+            burn_in,
+            linestyle="--",
+            linewidth=style["bound_linewidth"],
+            color=style["mcmc_burnin_cutoff_color"],
+            alpha=style["bound_alpha"],
+            label="Burn-in cutoff",
+        )
 
-    if full_trace and _burn_in > 0:
-        ax.axvline(_burn_in, linestyle="--", linewidth=1.5, color="k")
+    ax.set_xlabel("Iteration")
+    ax.set_ylabel(LABEL_LOGPOSTERIOR)
 
-    ax.set_xlabel("iteration index")
-    ax.set_ylabel("log-posterior")
-
-    if title:
+    if title is not None:
         ax.set_title(title)
 
-    sns.despine()
+    handles, labels = ax.get_legend_handles_labels()
+    if handles:
+        ax.legend(handles=handles, labels=labels)
 
     return ax
 
@@ -149,6 +198,105 @@ def _get_level_percentiles(level: float) -> tuple[float, float]:
     """
     lower_percentile = (100 - level) / 2
     return lower_percentile, 100 - lower_percentile
+
+
+def _format_percent(level: float) -> str:
+    """Format a percentage without a noisy trailing decimal."""
+    return f"{level:g}%"
+
+
+def _normalize_prediction_confidence_levels(
+    confidence_levels: float | Sequence[float] | None,
+) -> tuple[list[float], list[float]]:
+    """Return confidence levels in 0-1 units and percentage units."""
+    if confidence_levels is None:
+        confidence_levels = [0.95]
+    elif isinstance(confidence_levels, (int, float)):
+        confidence_levels = [float(confidence_levels)]
+    else:
+        confidence_levels = [float(level) for level in confidence_levels]
+
+    if any(level > 1 for level in confidence_levels):
+        warnings.warn(
+            "`confidence_levels` should use 0-1 units "
+            "(e.g. `confidence_levels=[0.95]`). Values larger than 1 "
+            "are interpreted as percentages and divided by 100.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        confidence_levels = [
+            level / 100 if level > 1 else level
+            for level in confidence_levels
+        ]
+
+    if any(level <= 0 or level > 1 for level in confidence_levels):
+        raise ValueError("`confidence_levels` must be in the interval (0, 1].")
+
+    confidence_levels = sorted(confidence_levels, reverse=True)
+    confidence_percentages = [100 * level for level in confidence_levels]
+    return confidence_levels, confidence_percentages
+
+
+def _measurements_from_problem(
+    problem: Problem,
+    condition_ids: Sequence[str],
+    output_ids: Sequence[str],
+) -> dict[tuple[str, str], list[np.ndarray]]:
+    """Extract per-(condition, output) measurements from an AMICI problem.
+
+    The mapping between ``condition_ids`` (in the order returned by the
+    ensemble prediction) and ``problem.objective.edatas`` is positional.
+    Missing values (NaN in ``edata.get_measurements()``) are filtered out.
+
+    Returns an empty mapping when ``problem.objective`` is not an
+    :class:`~pypesto.objective.AmiciObjective`; a warning is emitted to make
+    the silent skip discoverable.
+    """
+    from ..objective import AmiciObjective
+
+    if not isinstance(problem.objective, AmiciObjective):
+        warnings.warn(
+            "Cannot extract measurements: `problem.objective` is not an "
+            "AmiciObjective. Skipping measurement overlay.",
+            stacklevel=3,
+        )
+        return {}
+
+    edatas = problem.objective.edatas
+    observable_ids = list(
+        problem.objective.amici_model.get_observable_ids()
+    )
+    grouped: dict[tuple[str, str], list[np.ndarray]] = {}
+    for cond_idx, condition_id in enumerate(condition_ids):
+        if cond_idx >= len(edatas):
+            break
+        edata = edatas[cond_idx]
+        timepoints = np.asarray(edata.get_timepoints())
+        observed = np.asarray(edata.get_measurements()).reshape(
+            len(timepoints), len(observable_ids)
+        )
+        for output_id in output_ids:
+            if output_id not in observable_ids:
+                continue
+            obs_idx = observable_ids.index(output_id)
+            values = observed[:, obs_idx]
+            valid = ~np.isnan(values)
+            grouped[(condition_id, output_id)] = [
+                timepoints[valid],
+                values[valid],
+            ]
+    return grouped
+
+
+def _prediction_errorbar_settings(style: dict) -> dict:
+    """Return errorbar styling consistent with prediction trajectory lines."""
+    return {
+        "fmt": "none",
+        "color": style["line_color"],
+        "capsize": 2.0 * style["line_marker_size"],
+        "elinewidth": style["trace_linewidth"],
+        "capthick": style["marker_linewidth"],
+    }
 
 
 def _get_statistic_data(
@@ -192,14 +340,16 @@ def _plot_trajectories_by_condition(
     output_ids: Sequence[str],
     axes: matplotlib.axes.Axes,
     levels: Sequence[float],
-    level_opacities: dict[int, float],
+    level_opacities: Sequence[float],
     labels: dict[str, str],
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
     grouped_measurements: dict[
         tuple[str, str], Sequence[Sequence[float]]
-    ] = None,
+    ]
+    | None = None,
+    style: dict | None = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by condition.
 
@@ -213,16 +363,16 @@ def _plot_trajectories_by_condition(
     output_ids:
         The IDs of outputs to plot.
     axes:
-        The axes to plot with. Should contain atleast `len(output_ids)`
+        The axes to plot with. Should contain at least `len(condition_ids)`
         subplots.
     levels:
-        Credibility levels, e.g. [95] for a 95% credibility interval. See the
-        :py:func:`_get_level_percentiles` method for a description of how these
-        levels are handled, and current limitations.
+        Confidence levels as percentages, e.g. [95] for a 95% interval. See
+        :py:func:`_get_level_percentiles` for a description of how these
+        levels are handled.
     level_opacities:
-        A mapping from the credibility levels to the opacities that they should
+        A mapping from the confidence levels to the opacities that they should
         be plotted with. Opacity is the only thing that differentiates
-        credibility levels in the resulting plot.
+        confidence levels in the resulting plot.
     labels:
         Keys should be ensemble output IDs, values should be the desired
         label for that output. Defaults to output IDs.
@@ -239,13 +389,17 @@ def _plot_trajectories_by_condition(
         where the keys are `(condition_id, output_id)` 2-tuples, and the values
         are `[sequence of x-axis values, sequence of y-axis values]`.
     """
+    style = resolve_style(style)
+    errorbar_settings = _prediction_errorbar_settings(style)
+    if grouped_measurements is None:
+        grouped_measurements = {}
+
     # Each subplot has all data for a single condition.
     for condition_index, condition_id in enumerate(condition_ids):
         ax = axes.flat[condition_index]
-        ax.set_title(f"Condition: {labels[condition_id]}")
+        ax.set_title(labels[condition_id])
         # Each subplot has all data for all condition-specific outputs.
         for output_index, output_id in enumerate(output_ids):
-            facecolor0 = variable_colors[output_index]
             # Plot the average for each output.
             t_average, y_average = _get_statistic_data(
                 summary,
@@ -256,7 +410,8 @@ def _plot_trajectories_by_condition(
             ax.plot(
                 t_average,
                 y_average,
-                "k-",
+                color=style["line_color"],
+                linewidth=style["trace_linewidth"],
             )
             if add_sd:
                 t_std, y_std = _get_statistic_data(
@@ -274,12 +429,12 @@ def _plot_trajectories_by_condition(
                     t_average,
                     y_average,
                     yerr=y_std,
-                    **prediction_errorbar_settings,
+                    **errorbar_settings,
                 )
-            # Plot the regions described by the credibility level,
+            # Plot the regions described by the confidence level,
             # for each output.
             for level_index, level in enumerate(levels):
-                # Get the percentiles that correspond to the credibility level,
+                # Get the percentiles that correspond to the confidence level,
                 # as their labels in the `summary`.
                 lower_label, upper_label = (
                     get_percentile_label(percentile)
@@ -323,13 +478,13 @@ def _plot_trajectories_by_condition(
                 ax.scatter(
                     measurements[0],
                     measurements[1],
-                    marker="o",
-                    facecolor=facecolor0,
-                    edgecolor=(
-                        "white"
-                        if rgb_to_hls(*facecolor0)[1] < 0.5
-                        else "black"
-                    ),
+                    marker="s",
+                    color=variable_colors[output_index][:LEN_RGB],
+                    alpha=style["scatter_alpha"],
+                    s=style["scatter_size"],
+                    linewidths=style["scatter_linewidths"],
+                    edgecolors=style["scatter_edgecolors"],
+                    zorder=style["scatter_zorder"],
                 )
 
 
@@ -339,14 +494,17 @@ def _plot_trajectories_by_output(
     output_ids: Sequence[str],
     axes: matplotlib.axes.Axes,
     levels: Sequence[float],
-    level_opacities: dict[int, float],
+    level_opacities: Sequence[float],
     labels: dict[str, str],
     variable_colors: Sequence[RGB],
     average: str = MEDIAN,
     add_sd: bool = False,
     grouped_measurements: dict[
         tuple[str, str], Sequence[Sequence[float]]
-    ] = None,
+    ]
+    | None = None,
+    condition_gap: float = 0.0,
+    style: dict | None = None,
 ) -> None:
     """Plot predicted trajectories, with subplots grouped by output.
 
@@ -358,22 +516,32 @@ def _plot_trajectories_by_output(
     `doc/example/sampling_diagnostics.ipynb`.
 
     See :py:func:`_plot_trajectories_by_condition` for parameter descriptions.
+    ``condition_gap`` is added between consecutive condition blocks on the
+    cumulative time axis.
     """
+    style = resolve_style(style)
+    errorbar_settings = _prediction_errorbar_settings(style)
+    if grouped_measurements is None:
+        grouped_measurements = {}
+
     # Each subplot has all data for a single output.
     for output_index, output_id in enumerate(output_ids):
         # Store the end timepoint of the previous condition plot, such that the
         # next condition plot starts at the end of the previous condition plot.
         t0 = 0
         ax = axes.flat[output_index]
-        ax.set_title(f"Trajectory: {labels[output_id]}")
+        ax.set_title(labels[output_id])
+        # Collect (abs_start, raw_timepoints, condition_label) for tick relabeling.
+        segment_info: list[tuple[float, np.ndarray, str]] = []
         # Each subplot is divided by conditions, with vertical lines.
         for condition_index, condition_id in enumerate(condition_ids):
+            seg_start = t0
             facecolor0 = variable_colors[condition_index]
             if condition_index != 0:
                 ax.axvline(
                     t0,
-                    linewidth=2,
-                    color="k",
+                    linewidth=style["trace_linewidth"],
+                    color=style["ref_line_color"],
                 )
 
             t_max = t0
@@ -389,7 +557,8 @@ def _plot_trajectories_by_output(
             ax.plot(
                 t_average_shifted,
                 y_average,
-                "k-",
+                color=style["line_color"],
+                linewidth=style["trace_linewidth"],
             )
             if add_sd:
                 t_std, y_std = _get_statistic_data(
@@ -407,11 +576,11 @@ def _plot_trajectories_by_output(
                     t_average_shifted,
                     y_average,
                     yerr=y_std,
-                    **prediction_errorbar_settings,
+                    **errorbar_settings,
                 )
             t_max = max(t_max, *t_average_shifted)
             for level_index, level in enumerate(levels):
-                # Get the percentiles that correspond to the credibility level,
+                # Get the percentiles that correspond to the confidence level,
                 # as their labels in the `summary`.
                 lower_label, upper_label = (
                     get_percentile_label(percentile)
@@ -459,17 +628,63 @@ def _plot_trajectories_by_output(
                 ax.scatter(
                     [t0 + _t for _t in measurements[0]],
                     measurements[1],
-                    marker="o",
-                    facecolor=facecolor0,
-                    edgecolor=(
-                        "white"
-                        if rgb_to_hls(*facecolor0)[1] < 0.5
-                        else "black"
-                    ),
+                    marker="s",
+                    color=variable_colors[condition_index][:LEN_RGB],
+                    alpha=style["scatter_alpha"],
+                    s=style["scatter_size"],
+                    linewidths=style["scatter_linewidths"],
+                    edgecolors=style["scatter_edgecolors"],
+                    zorder=style["scatter_zorder"],
                 )
             # Set t0 to the last plotted timepoint of the current condition
             # plot.
-            t0 = t_max
+            segment_info.append(
+                (seg_start, t_average, labels[condition_id], condition_index)
+            )
+            t0 = t_max + condition_gap
+
+        # Per-segment x-ticks: labels restart at the raw (relative) time for
+        # each condition so that the axis reads "0 … t_max" four times rather
+        # than showing cumulative values.
+        tick_positions: list[float] = []
+        tick_labels: list[str] = []
+        locator = matplotlib.ticker.MaxNLocator(nbins=3, integer=True)
+        last_idx = len(segment_info) - 1
+        for seg_idx, (seg_start_i, t_raw, _, _) in enumerate(segment_info):
+            t_lo, t_hi = float(t_raw[0]), float(t_raw[-1])
+            nice = locator.tick_values(t_lo, t_hi)
+            # Drop the right endpoint for all but the last segment to avoid
+            # boundary collisions with the next segment's leftmost tick.
+            upper_inclusive = seg_idx == last_idx
+            mask = (nice >= t_lo) & (
+                nice <= t_hi if upper_inclusive else nice < t_hi
+            )
+            for t_rel in nice[mask]:
+                tick_positions.append(float(seg_start_i) + float(t_rel))
+                tick_labels.append(
+                    f"{t_rel:.0f}" if t_rel % 1 == 0 else f"{t_rel:.2g}"
+                )
+        ax.set_xticks(tick_positions)
+        ax.set_xticklabels(tick_labels)
+
+        # Condition-name annotations inside the plot near the top of each
+        # segment, colour-matched to the condition.
+        blended = matplotlib.transforms.blended_transform_factory(
+            ax.transData, ax.transAxes
+        )
+        for seg_start_i, t_raw, cond_label, cond_idx in segment_info:
+            seg_mid = float(seg_start_i) + (float(t_raw[-1]) - float(t_raw[0])) / 2
+            ax.text(
+                seg_mid,
+                0.97,
+                cond_label,
+                transform=blended,
+                ha="center",
+                va="top",
+                fontsize="x-small",
+                color=variable_colors[cond_idx][:3],
+                clip_on=True,
+            )
 
 
 def _get_condition_and_output_ids(
@@ -517,125 +732,110 @@ def _get_condition_and_output_ids(
 
 
 def _handle_legends(
-    fig: matplotlib.figure.Figure,
-    axes: matplotlib.axes.Axes,
-    levels: float | Sequence[float],
+    fig: mpl.figure.Figure,
+    confidence_level_percentages: Sequence[float],
     labels: dict[str, str],
     level_opacities: Sequence[float],
     variable_names: Sequence[str],
     variable_colors: Sequence[RGB],
-    groupby: str,
-    artist_padding: float,
-    n_col: int,
     average: str,
     add_sd: bool,
     grouped_measurements: dict[tuple[str, str], Sequence[Sequence[float]]]
     | None,
+    style: dict,
 ) -> None:
-    """Add legends to a sampling prediction trajectories plot.
+    """Add a single combined figure-level legend below the subplot grid.
 
-    Create a dummy plot from fake data such that it can be used to produce
-    appropriate legends.
-
-    Variable here refers to the thing that differs in the plot. For example, if
-    the call to :py:func:`sampling_prediction_trajectories` has
-    `groupby=OUTPUT`, then the variable is `CONDITION`. Similarly, if
-    `groupby=CONDITION`, then the variable is `OUTPUT`.
+    Variables (coloured) fill the upper rows; prediction styles (greyscale)
+    occupy the bottom row. The deliberate "outside" placement is an exception
+    to pyPESTO's inside-legend convention because legend entries scale with
+    the number of observables / conditions, which would crowd in-axes legends.
+    Assumes the figure uses matplotlib's constrained layout so the engine
+    reserves space below the axes automatically.
 
     Parameters
     ----------
     fig:
-        The figure to add the legends to.
-    axes:
-        The axes of the figure to add the legend to.
-    levels:
-        The credibility levels.
+        Target figure for the figure-level legend.
+    confidence_level_percentages:
+        The confidence levels, expressed as percentages for legend labels.
     labels:
-        The labels for the IDs in the plot.
+        Display labels for output / condition IDs.
     level_opacities:
-        The opacity to plot each credibility level with.
+        The opacity to plot each confidence level with.
     variable_names:
         The name of each variable.
     variable_colors:
         The color to plot each variable in.
-    groupby:
-        The grouping of data in the subplots.
-    artist_padding:
-        The padding between the figure and the legends.
-    n_col:
-        The number of columns of subplots in the figure.
     average:
         The ID of the statistic that will be plotted as the average (e.g.,
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
     grouped_measurements:
-        Measurement data that has already been grouped by condition and output,
-        where the keys are `(condition_id, output_id)` 2-tuples, and the values
-        are `[sequence of x-axis values, sequence of y-axis values]`.
+        Measurement data already grouped by condition and output; presence of
+        any entries adds a "Data" entry to the prediction-style row.
+    style:
+        Resolved pyPESTO visualization style.
     """
-    # Fake plots for legend line styles
     fake_data = [[0], [0]]
+
+    # Build variable-colour legend handles (one line per output / condition).
     variable_lines = np.array(
         [
-            # Assumes that the color for a variable is always the same, with
-            # different opacity for different credibility interval levels.
-            # Create a line object with fake data for each variable value.
             [
                 labels[variable_name],
-                Line2D(*fake_data, color=variable_colors[index], lw=4),
+                Line2D(
+                    *fake_data,
+                    color=variable_colors[index],
+                    linewidth=style["trace_linewidth"],
+                ),
             ]
             for index, variable_name in enumerate(variable_names)
         ]
     )
-    # Assumes that different CI levels are represented as
-    # different opacities of the same color.
-    # Create a line object with fake data for each credibility level.
+
+    # Build CI-level legend handles.
     ci_lines = []
-    for index, level in enumerate(levels):
+    ci_color = list(mpl.colors.to_rgb(style["line_color"]))
+    for index, level in enumerate(confidence_level_percentages):
         ci_lines.append(
             [
-                f"{level}% CI",
+                f"{_format_percent(level)} CI",
                 Line2D(
                     *fake_data,
-                    color=rgba2rgb(
-                        [*RGBA_BLACK[:LEN_RGB], level_opacities[index]]
-                    ),
-                    lw=4,
+                    color=rgba2rgb([*ci_color, level_opacities[index]]),
+                    linewidth=max(2.0, 2.0 * style["trace_linewidth"]),
                 ),
             ]
         )
 
-    # Create a line object with fake data for the average line.
     average_title = average.title()
-    average_line_object_line2d = Line2D(*fake_data, color=RGBA_BLACK)
+    average_line_object_line2d = Line2D(
+        *fake_data,
+        color=style["line_color"],
+        linewidth=style["trace_linewidth"],
+    )
     if add_sd:
         capline = Line2D(
             *fake_data,
-            color=prediction_errorbar_settings["color"],
-            # https://github.com/matplotlib/matplotlib/blob
-            # /710fce3df95e22701bd68bf6af2c8adbc9d67a79/lib/matplotlib/
-            # axes/_axes.py#L3424=
-            markersize=2.0 * prediction_errorbar_settings["capsize"],
+            color=style["line_color"],
+            markersize=4.0 * style["line_marker_size"],
         )
         average_title += " + SD"
         barline = LineCollection(
             np.empty((2, 2, 2)),
-            color=prediction_errorbar_settings["color"],
+            color=style["line_color"],
+            linewidth=style["trace_linewidth"],
         )
         average_line_object = ErrorbarContainer(
-            (
-                average_line_object_line2d,
-                [capline],
-                [barline],
-            ),
+            (average_line_object_line2d, [capline], [barline]),
             has_yerr=True,
         )
     else:
         average_line_object = average_line_object_line2d
     average_line = [[average_title, average_line_object]]
 
-    # Create a line object with fake data for the data points.
     data_line = []
     if grouped_measurements:
         data_line = [
@@ -644,57 +844,72 @@ def _handle_legends(
                 Line2D(
                     *fake_data,
                     linewidth=0,
-                    marker="o",
-                    markerfacecolor="grey",
-                    markeredgecolor="white",
+                    marker="s",
+                    markerfacecolor="0.7",
+                    markeredgecolor=style["scatter_edgecolors"],
+                    markersize=np.sqrt(style["scatter_size"]),
+                    markeredgewidth=style["scatter_linewidths"],
+                    alpha=style["scatter_alpha"],
                 ),
             ]
         ]
 
     level_lines = np.array(ci_lines + average_line + data_line)
 
-    # CI level, and variable name, legends.
-    legend_options_top_right = {
-        "bbox_to_anchor": (1 + artist_padding, 1),
-        "loc": "upper left",
-    }
-    legend_options_bottom_right = {
-        "bbox_to_anchor": (1 + artist_padding, 0),
-        "loc": "lower left",
-    }
-    legend_titles = {
-        OUTPUT: "Conditions",
-        CONDITION: "Trajectories",
-    }
-    legend_variables = axes.flat[n_col - 1].legend(
-        variable_lines[:, 1],
-        variable_lines[:, 0],
-        **legend_options_top_right,
-        title=legend_titles[groupby],
+    # Combined legend with a row-major display: variables fill the top rows,
+    # prediction styles occupy the bottom row. matplotlib fills legends
+    # column-by-column, so handles are interleaved per-column to achieve the
+    # desired row-major appearance.
+    n_pred = len(level_lines)
+    ncol = n_pred
+    blank = Line2D([], [], color="none", linewidth=0)
+
+    if len(variable_names) > 1:
+        n_vars = len(variable_names)
+        n_var_rows = (n_vars + ncol - 1) // ncol
+        var_h = list(variable_lines[:, 1]) + [blank] * (
+            n_var_rows * ncol - n_vars
+        )
+        var_l = list(variable_lines[:, 0]) + [""] * (
+            n_var_rows * ncol - n_vars
+        )
+        legend_handles: list = []
+        legend_labels: list = []
+        for c in range(ncol):
+            for r in range(n_var_rows):
+                idx = r * ncol + c
+                legend_handles.append(var_h[idx])
+                legend_labels.append(var_l[idx])
+            legend_handles.append(level_lines[c, 1])
+            legend_labels.append(level_lines[c, 0])
+    else:
+        legend_handles = list(level_lines[:, 1])
+        legend_labels = list(level_lines[:, 0])
+
+    fig.legend(
+        legend_handles,
+        legend_labels,
+        loc="outside lower center",
+        ncol=ncol,
     )
-    # Legend for CI levels
-    axes.flat[-1].legend(
-        level_lines[:, 1],
-        level_lines[:, 0],
-        **legend_options_bottom_right,
-        title="Prediction",
-    )
-    fig.add_artist(legend_variables)
 
 
 def _handle_colors(
-    levels: float | Sequence[float],
+    confidence_levels: Sequence[float],
     n_variables: int,
+    style: dict,
     reverse: bool = False,
 ) -> tuple[Sequence[float], Sequence[RGB]]:
     """Calculate the colors for the prediction trajectories plot.
 
     Parameters
     ----------
-    levels:
-        The credibility levels.
+    confidence_levels:
+        The confidence levels.
     n_variables:
         The maximum possible number of variables per subplot.
+    style:
+        Resolved pyPESTO visualization style.
 
     Returns
     -------
@@ -702,18 +917,18 @@ def _handle_colors(
     - `0`: a list of opacities, one per level.
     - `1`: a list of colors, one per variable.
     """
+    max_alpha = float(style["ci_alpha"])
     level_opacities = sorted(
-        # min 30%, max 100%, opacity
-        np.linspace(0.3 * RGBA_MAX, RGBA_MAX, len(levels)),
+        np.linspace(0.35 * max_alpha, max_alpha, len(confidence_levels)),
         reverse=reverse,
     )
-    cmap_min = RGBA_MIN
-    cmap_max = 0.85 * (RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
-    # define colormap
+    cmap = plt.get_cmap(style["cmap_discrete"])
+    # Use endpoint=False so qualitative cmaps (tab10, tab20, …) sample
+    # distinct colour bands rather than interpolating towards the same hue.
     variable_colors = [
-        list(matplotlib.cm.viridis(v))[:LEN_RGB]
-        for v in np.linspace(cmap_min, cmap_max, n_variables)
+        list(cmap(v))[:LEN_RGB]
+        for v in np.linspace(0, 1, max(n_variables, 1), endpoint=False)
     ]
 
     return level_opacities, variable_colors
@@ -721,54 +936,59 @@ def _handle_colors(
 
 def sampling_prediction_trajectories(
     ensemble_prediction: EnsemblePrediction,
-    levels: float | Sequence[float],
+    problem: Problem | None = None,
+    confidence_levels: float | Sequence[float] | None = None,
     title: str | None = None,
     size: tuple[float, float] | None = None,
     axes: matplotlib.axes.Axes | np.ndarray | None = None,
     labels: dict[str, str] | None = None,
-    axis_label_padding: int = 50,
     groupby: str = CONDITION,
     condition_gap: float = 0.01,
-    condition_ids: Sequence[str] = None,
-    output_ids: Sequence[str] = None,
+    condition_ids: Sequence[str] | None = None,
+    output_ids: Sequence[str] | None = None,
     weighting: bool = False,
     reverse_opacities: bool = False,
     average: str = MEDIAN,
     add_sd: bool = False,
-    measurement_df: pd.DataFrame | None = None,
+    style_kwargs: dict | None = None,
+    axis_label_padding: int = _UNSET,
+    levels: float | Sequence[float] = _UNSET,
 ) -> np.ndarray:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
 
-    Plot MCMC-based prediction credibility intervals for the
-    model states or outputs. One or various credibility levels
-    can be depicted. Plots are grouped by condition.
+    Plot MCMC-based prediction confidence intervals for the model states or
+    outputs. One or various confidence levels can be depicted.
 
     Parameters
     ----------
     ensemble_prediction:
         The ensemble prediction.
-    levels:
-        Credibility levels, e.g. [95] for a 95% credibility interval. See the
-        :py:func:`_get_level_percentiles` method for a description of how these
-        levels are handled, and current limitations.
+    problem:
+        Optional pyPESTO problem. When provided with an AMICI objective,
+        measurement data is overlaid on the trajectories.
+    confidence_levels:
+        Confidence levels in 0-1 units, e.g. ``[0.95]`` for a 95%
+        interval. Levels are split symmetrically; see
+        :py:func:`_get_level_percentiles`.
     title:
-        Axes title.
-    size: ndarray
-        Figure size in inches.
+        Figure title.
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``axes`` is
+        ``None``.
     axes:
-        Axes object to use.
+        Axes grid to use. Must match the computed subplot layout.
     labels:
         Keys should be ensemble output IDs, values should be the desired
         label for that output. Defaults to output IDs.
     axis_label_padding:
-        Pixels between axis labels and plots.
+        Deprecated. Has no effect; axis labels are now set via
+        ``ax.set_xlabel`` / ``ax.set_ylabel``.
     groupby:
         Group plots by `pypesto.C.OUTPUT` or
         `pypesto.C.CONDITION`.
     condition_gap:
-        Gap between conditions when
-        `groupby == pypesto.C.CONDITION`.
+        Gap between conditions when ``groupby == pypesto.C.OUTPUT``.
     condition_ids:
         If provided, only data for the provided condition IDs will be plotted.
     output_ids:
@@ -782,25 +1002,56 @@ def sampling_prediction_trajectories(
         `MEDIAN` or `MEAN`).
     add_sd:
         Whether to add the standard deviation of the predictions to the plot.
-    measurement_df:
-        Plot measurement data. NB: This should take the form of a PEtab
-        measurements table, and the `observableId` column should correspond
-        to the output IDs in the ensemble prediction.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete`` — qualitative colormap used to distinguish
+          outputs or conditions.
+        - ``ci_alpha`` — maximum opacity of the confidence interval bands.
+        - ``line_color`` — mean/median trajectory color.
+        - ``ref_line_color`` — condition separator color for
+          ``groupby="output"``.
+        - ``trace_linewidth`` — line width of trajectories, separators, and
+          standard-deviation error bars.
+        - ``scatter_size``, ``scatter_alpha``, ``scatter_linewidths``,
+          ``scatter_edgecolors``, ``scatter_zorder`` — measurement point
+          geometry.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
+    levels:
+        Deprecated. Use ``confidence_levels`` in 0-1 units instead. Old
+        percentage values are converted automatically.
 
     Returns
     -------
     axes:
         2-D NumPy array containing one matplotlib Axes per panel.
     """
+    style = resolve_style(style_kwargs)
+    process_deprecated_kwarg(
+        canonical_name=None,
+        canonical_value=None,
+        deprecated_name="axis_label_padding",
+        deprecated_value=axis_label_padding,
+        note="Axis labels are now set via ax.set_xlabel / ax.set_ylabel.",
+    )
+    confidence_levels = process_deprecated_kwarg(
+        "confidence_levels",
+        confidence_levels,
+        "levels",
+        levels,
+    )
+    confidence_levels, confidence_level_percentages = (
+        _normalize_prediction_confidence_levels(confidence_levels)
+    )
+
     if labels is None:
         labels = {}
-    if len(list(levels)) == 1:
-        levels = list(levels)
-    levels = sorted(levels, reverse=True)
-    # Get the percentiles that correspond to the requested credibility levels.
+    # Get the percentiles that correspond to the requested confidence levels.
     percentiles = [
         percentile
-        for level in levels
+        for level in confidence_level_percentages
         for percentile in _get_level_percentiles(level)
     ]
 
@@ -816,39 +1067,13 @@ def sampling_prediction_trajectories(
         output_ids = all_output_ids
     output_ids = list(output_ids)
 
-    # Handle data
-    grouped_measurements = {}
-    if measurement_df is not None:
-        import petab.v1 as petab
-
-        for condition_id in condition_ids:
-            if petab.PARAMETER_SEPARATOR in condition_id:
-                (
-                    preequilibration_condition_id,
-                    simulation_condition_id,
-                ) = condition_id.split(petab.PARAMETER_SEPARATOR)
-            else:
-                preequilibration_condition_id, simulation_condition_id = (
-                    "",
-                    condition_id,
-                )
-            condition = {
-                petab.SIMULATION_CONDITION_ID: simulation_condition_id,
-            }
-            if preequilibration_condition_id:
-                condition[petab.PREEQUILIBRATION_CONDITION_ID] = (
-                    preequilibration_condition_id
-                )
-            for output_id in output_ids:
-                _df = petab.get_rows_for_condition(
-                    measurement_df=measurement_df,
-                    condition=condition,
-                )
-                _df = _df.loc[_df[petab.OBSERVABLE_ID] == output_id]
-                grouped_measurements[(condition_id, output_id)] = [
-                    _df[petab.TIME],
-                    _df[petab.MEASUREMENT],
-                ]
+    # Extract measurements from the AMICI objective if a problem was passed.
+    if problem is not None:
+        grouped_measurements = _measurements_from_problem(
+            problem, condition_ids, output_ids
+        )
+    else:
+        grouped_measurements = {}
 
     # Set default labels for any unspecified labels.
     labels = {id_: labels.get(id_, id_) for id_ in condition_ids + output_ids}
@@ -865,18 +1090,16 @@ def sampling_prediction_trajectories(
         raise ValueError(f"Unsupported groupby value: {groupby}")
 
     level_opacities, variable_colors = _handle_colors(
-        levels=levels,
+        confidence_levels=confidence_levels,
         n_variables=n_variables,
+        style=style,
         reverse=reverse_opacities,
     )
 
-    n_row = int(np.round(np.sqrt(n_subplots)))
-    n_col = int(np.ceil(n_subplots / n_row))
-
+    n_row, n_col = make_grid_shape(n_subplots)
     axes = get_axes_array(axes=axes, nrows=n_row, ncols=n_col, size=size)
     fig = axes.flat[0].figure
     axes = hide_unused_axes(axes=axes, n_used=n_subplots, clear=True)
-    artist_padding = axis_label_padding / (fig.get_size_inches() * fig.dpi)[0]
 
     if groupby == CONDITION:
         _plot_trajectories_by_condition(
@@ -884,13 +1107,14 @@ def sampling_prediction_trajectories(
             condition_ids=condition_ids,
             output_ids=output_ids,
             axes=axes,
-            levels=levels,
+            levels=confidence_level_percentages,
             level_opacities=level_opacities,
             labels=labels,
             variable_colors=variable_colors,
             average=average,
             add_sd=add_sd,
             grouped_measurements=grouped_measurements,
+            style=style,
         )
     elif groupby == OUTPUT:
         _plot_trajectories_by_output(
@@ -898,112 +1122,109 @@ def sampling_prediction_trajectories(
             condition_ids=condition_ids,
             output_ids=output_ids,
             axes=axes,
-            levels=levels,
+            levels=confidence_level_percentages,
             level_opacities=level_opacities,
             labels=labels,
             variable_colors=variable_colors,
             average=average,
             add_sd=add_sd,
             grouped_measurements=grouped_measurements,
+            condition_gap=condition_gap,
+            style=style,
         )
 
-    if title:
+    if title is not None:
         fig.suptitle(title)
 
     _handle_legends(
         fig=fig,
-        axes=axes,
-        levels=levels,
+        confidence_level_percentages=confidence_level_percentages,
         labels=labels,
         level_opacities=level_opacities,
         variable_names=variable_names,
         variable_colors=variable_colors,
-        groupby=groupby,
-        artist_padding=artist_padding,
-        n_col=n_col,
         average=average,
         add_sd=add_sd,
         grouped_measurements=grouped_measurements,
+        style=style,
     )
 
-    # X and Y labels
-    visible_axes = [ax for ax in axes.flat if ax.get_visible()]
-    xmin = min(ax.get_position().xmin for ax in visible_axes)
-    ymin = min(ax.get_position().ymin for ax in visible_axes)
-    xlabel = (
-        "Cumulative time across all conditions"
-        if groupby == OUTPUT
-        else "Time"
-    )
-    fig.text(
-        0.5,
-        ymin - artist_padding,
-        xlabel,
-        ha="center",
-        va="center",
-        transform=fig.transFigure,
-    )
-    fig.text(
-        xmin - artist_padding,
-        0.5,
-        "Simulated values",
-        ha="center",
-        va="center",
-        transform=fig.transFigure,
-        rotation="vertical",
-    )
+    # Axis labels: x on every visible panel; y on leftmost column only.
+    # For groupby=OUTPUT the x-axis shows per-segment time (restarting at 0 for
+    # each condition); condition names are annotated directly on the subplots.
+    xlabel = "Time"
+    for idx, ax in enumerate(axes.flat):
+        if not ax.get_visible():
+            continue
+        ax.set_xlabel(xlabel)
+        if idx % n_col == 0:
+            ax.set_ylabel("Simulated values")
 
-    # plt.tight_layout()  # Ruins layout for `groupby == OUTPUT`.
     return axes
 
 
 def sampling_parameter_cis(
     result: Result,
-    confidence_levels: Sequence[float] = None,
-    step: float = 0.05,
+    confidence_levels: Sequence[float] | None = None,
     show_median: bool = True,
-    title: str | None = None,
+    show_bounds: bool = True,
+    orientation: Literal["v", "h"] = "v",
     size: tuple[float, float] | None = None,
     ax: matplotlib.axes.Axes | None = None,
-    alpha: Sequence[int] = None,
+    title: str | None = "Sampling credibility intervals",
+    alpha: Sequence[int] | None = None,
+    step: float = _UNSET,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot MCMC-based parameter credibility intervals.
+
+    Uses :func:`~pypesto.visualize.misc._ci_panel_lowlevel` for rendering,
+    sharing the same visual language as :func:`profile_cis`.
 
     Parameters
     ----------
     result:
         The pyPESTO result object with filled sample result.
     confidence_levels:
-        Credibility levels as fractions in (0, 1), e.g. ``[0.95]`` for a
-        95% credibility interval. Defaults to ``[0.95]``.
-    alpha:
-        Deprecated. Use ``confidence_levels`` instead.
-        Previously accepted integer percentages (e.g. ``[95]``); values
-        are divided by 100 automatically during the transition.
-    step:
-        Height of boxes for projectile plot, defaults to 0.05.
+        Credibility levels as fractions in (0, 1), e.g. ``[0.95]``.
+        Defaults to ``[0.95]``.
     show_median:
-        Plot the median of the MCMC chain. Default: True.
-    title:
-        Axes title.
-    size: ndarray
-        Figure size in inches.
+        Mark the posterior median with a tick on each CI bar.
+    show_bounds:
+        Whether to draw parameter bounds.
+    orientation:
+        ``"v"`` (default): parameters on y-axis, values on x-axis.
+        ``"h"``: transposed — parameters on x-axis, values on y-axis.
+    size:
+        Figure size in inches. Defaults to scaling with number of parameters.
     ax:
         Axes object to use.
+    title:
+        Axes title. Pass ``None`` to suppress.
+    alpha:
+        Deprecated. Use ``confidence_levels`` instead.
+    step:
+        Deprecated. Has no effect; bar heights are now computed automatically.
+    style_kwargs:
+        Optional style overrides. Supported keys:
+
+        - ``"cmap_ci"`` – colormap for CI bars (default ``"Blues"``).
+        - ``"bound_color"``, ``"bound_linestyle"``, ``"bound_linewidth"``,
+          ``"bound_alpha"`` – bound line appearance.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
+
     if alpha is not None:
         if confidence_levels is not None:
             raise ValueError(
                 "Pass either `confidence_levels` or the deprecated `alpha`, not both."
             )
-        import warnings
-
         warnings.warn(
             "`alpha` is deprecated; use `confidence_levels` instead. "
             "Note: units have changed — pass fractions in (0, 1) "
@@ -1014,89 +1235,77 @@ def sampling_parameter_cis(
         )
         confidence_levels = [a / 100 for a in alpha]
 
+    if step is not _UNSET:
+        warnings.warn(
+            "`step` is deprecated and has no effect. Bar heights are now "
+            "determined automatically from the number of confidence levels.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
     if confidence_levels is None:
         confidence_levels = [0.95]
 
-    # automatically sort values in decreasing order
-    levels_sorted = sorted(confidence_levels, reverse=True)
-    # define colormap
-    evenly_spaced_interval = np.linspace(0, 1, len(levels_sorted))
-    colors = [plt.cm.tab20c_r(x) for x in evenly_spaced_interval]
-    # number of sampled parameters
+    levels_sorted = sorted([float(cl) for cl in confidence_levels], reverse=True)
+    n_cls = len(levels_sorted)
+    ws = [(CI_BAR_HEIGHT / n_cls) * i for i in range(1, n_cls + 1)]
+    cmap = mpl.colormaps[style["cmap_ci"]]
+    colors = [cmap(0.3 + 0.6 * w / max(ws)) for w in ws]
+
     n_pars = result.sample_result.trace_x.shape[-1]
 
+    # build ci_data: one entry per level, widest first
+    ci_data = []
+    for level, color in zip(levels_sorted, colors):
+        lb, ub = calculate_ci_mcmc_sample(result=result, ci_level=level)
+        ci_data.append((level, lb, ub, color))
+
+    # posterior median as point estimate
+    point_estimates = None
+    if show_median:
+        burn_in = result.sample_result.burn_in
+        trace = result.sample_result.trace_x[0, burn_in:, :]
+        point_estimates = np.median(trace, axis=0)
+
+    lb_full = list(result.problem.get_reduced_vector(result.problem.lb_full))
+    ub_full = list(result.problem.get_reduced_vector(result.problem.ub_full))
+    x_names = list(result.problem.get_reduced_vector(result.problem.x_names))
+    x_scales = (
+        list(result.problem.get_reduced_vector(result.problem.x_scales))
+        if getattr(result.problem, "x_scales", None) is not None
+        else None
+    )
+
+    if size is None:
+        size = ci_panel_size(n_pars, orientation)
     ax = get_ax(ax, size)
 
-    # loop over parameters
-    for npar in range(n_pars):
-        # initialize height of boxes
-        _step = step
-        # loop over confidence levels
-        for n, level in enumerate(levels_sorted):
-            # extract percentile-based confidence intervals
-            lb, ub = calculate_ci_mcmc_sample(
-                result=result,
-                ci_level=level,
-            )
-
-            # assemble boxes for projectile plot
-            x1 = [lb[npar], ub[npar]]
-            y1 = [npar + _step, npar + _step]
-            y2 = [npar - _step, npar - _step]
-            # Plot boxes
-            ax.fill(
-                np.append(x1, x1[::-1]),
-                np.append(y1, y2[::-1]),
-                color=colors[n],
-                label=f"{level:.0%} CI",
-            )
-
-            if show_median:
-                if n == len(levels_sorted) - 1:
-                    burn_in = result.sample_result.burn_in
-                    converged = result.sample_result.trace_x[0, burn_in:, npar]
-                    _median = np.median(converged)
-                    ax.plot(
-                        [_median, _median],
-                        [npar - _step, npar + _step],
-                        "k-",
-                        label="MCMC median",
-                    )
-
-            # increment height of boxes
-            _step += step
-
-    ax.set_yticks(range(n_pars))
-    ax.set_yticklabels(
-        result.problem.get_reduced_vector(result.problem.x_names)
+    return _ci_panel_lowlevel(
+        ax, ci_data, x_names, x_scales, lb_full, ub_full, style,
+        point_estimates=point_estimates,
+        point_estimate_label="Posterior median",
+        show_bounds=show_bounds,
+        title=title,
+        legend_title="Credibility level:",
+        orientation=orientation,
     )
-    ax.set_xlabel("Parameter value")
-    ax.set_ylabel("Parameter name")
-
-    if title:
-        ax.set_title(title)
-
-    # handle legend
-    plt.gca().invert_yaxis()
-    handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles, strict=True))
-    ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1))
-
-    return ax
 
 
 def sampling_parameter_traces(
     result: Result,
     i_chain: int = 0,
-    parameter_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] | None = None,
     full_trace: bool = False,
     stepsize: int = 1,
-    use_problem_bounds: bool = True,
-    suptitle: str | None = None,
+    use_problem_bounds: bool = _UNSET,
+    show_bounds: bool | None = None,
+    title: str | None = None,
     size: tuple[float, float] | None = None,
     axes: np.ndarray | None = None,
     ax: np.ndarray | None = _UNSET,
     par_indices: Sequence[int] = _UNSET,
+    suptitle: str | None = _UNSET,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
     Plot parameter values over iterations.
@@ -1115,20 +1324,47 @@ def sampling_parameter_traces(
     stepsize:
         Only one in `stepsize` values is plotted.
     use_problem_bounds:
-        Defines if the y-limits shall be the lower and upper bounds of
-        parameter estimation problem.
-    suptitle:
-        Figure suptitle.
+        Deprecated. Use ``show_bounds`` instead.
+    show_bounds:
+        Whether to draw lower and upper parameter bounds and frame the y-axis
+        to include them.
+    title:
+        Figure title.
     size:
-        Figure size in inches.
+        Figure size ``(width, height)`` in inches; only used when ``axes``
+        is ``None``.
     axes:
         Axes grid to use. Must match the computed subplot layout.
+    ax:
+        Deprecated. Use ``axes`` instead.
+    par_indices:
+        Deprecated. Use ``parameter_indices`` instead.
+    suptitle:
+        Deprecated. Use ``title`` instead.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``scatter_size`` — marker area; trace markers are drawn at half
+          this value.
+        - ``scatter_color`` — color of the posterior-sample points.
+        - ``scatter_zorder`` — z-order of the posterior-sample layer.
+        - ``mcmc_scatter_alpha`` — MCMC sample marker opacity.
+        - ``mcmc_burnin_color`` — burn-in marker color.
+        - ``mcmc_burnin_cutoff_color`` — burn-in cutoff line color.
+        - ``bound_color``, ``bound_linestyle``, ``bound_linewidth``,
+          ``bound_alpha`` — parameter-bound line style.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     axes:
         2-D NumPy array containing one matplotlib Axes per panel.
     """
+    style = resolve_style(style_kwargs)
+    title = process_deprecated_kwarg("title", title, "suptitle", suptitle)
+
     parameter_indices = process_deprecated_kwarg(
         "parameter_indices",
         parameter_indices,
@@ -1136,8 +1372,14 @@ def sampling_parameter_traces(
         par_indices,
     )
     axes = process_deprecated_kwarg("axes", axes, "ax", ax)
-
-    import seaborn as sns
+    show_bounds = process_deprecated_kwarg(
+        "show_bounds",
+        show_bounds,
+        "use_problem_bounds",
+        use_problem_bounds,
+    )
+    if show_bounds is None:
+        show_bounds = True
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
@@ -1149,56 +1391,87 @@ def sampling_parameter_traces(
     )
 
     num_row, num_col = make_grid_shape(nr_params)
-    if size is None and axes is None:
-        size = (3.5 * num_col, 2.5 * num_row)
     axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
     fig = axes.flat[0].figure
     axes = hide_unused_axes(axes=axes, n_used=nr_params, clear=True)
 
-    par_ax = dict(zip(param_names, axes.flat, strict=True))
+    par_ax = dict(zip(param_names, axes.flat))
+    all_reduced_names = result.problem.get_reduced_vector(result.problem.x_names)
+    name_to_reduced_idx = {name: i for i, name in enumerate(all_reduced_names)}
 
-    kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
-
-    if full_trace:
-        kwargs["hue"] = "converged"
-        if len(params_fval[kwargs["hue"]].unique()) == 1:
-            kwargs["palette"] = ["#477ccd"]
-        elif len(params_fval[kwargs["hue"]].unique()) == 2:
-            kwargs["palette"] = ["#868686", "#477ccd"]
-        kwargs["legend"] = False
-
-    if result.sample_result.burn_in is None:
-        _burn_in = 0
+    burn_in = result.sample_result.burn_in or 0
+    iterations = params_fval["iteration"].to_numpy()
+    if full_trace and burn_in > 0:
+        is_burnin = iterations < burn_in
     else:
-        _burn_in = result.sample_result.burn_in
+        is_burnin = np.zeros_like(iterations, dtype=bool)
 
     for idx, plot_id in enumerate(param_names):
         _ax = par_ax[plot_id]
+        values = params_fval[plot_id].to_numpy()
 
-        _ax = sns.scatterplot(
-            x="iteration",
-            y=plot_id,
-            data=params_fval,
-            ax=_ax,
-            **kwargs,
+        if is_burnin.any():
+            _ax.scatter(
+                iterations[is_burnin],
+                values[is_burnin],
+                color=style["mcmc_burnin_color"],
+                alpha=style["mcmc_scatter_alpha"],
+                s=style["scatter_size"] / 2,
+                linewidths=0.0,
+                zorder=2,
+                label="Burn-in samples" if idx == 0 else None,
+            )
+        _ax.scatter(
+            iterations[~is_burnin],
+            values[~is_burnin],
+            color=style["scatter_color"],
+            alpha=style["mcmc_scatter_alpha"],
+            s=style["scatter_size"] / 2,
+            linewidths=0.0,
+            zorder=style["scatter_zorder"],
+            label="Posterior samples" if idx == 0 else None,
         )
 
-        if full_trace and _burn_in > 0:
+        if full_trace and burn_in > 0:
             _ax.axvline(
-                _burn_in,
+                burn_in,
                 linestyle="--",
-                linewidth=1.5,
-                color="k",
+                linewidth=style["bound_linewidth"],
+                color=style["mcmc_burnin_cutoff_color"],
+                alpha=style["bound_alpha"],
+                label="Burn-in cutoff" if idx == 0 else None,
             )
 
-        _ax.set_xlabel("iteration index")
+        _ax.set_xlabel("Iteration")
         _ax.set_ylabel(param_names[idx])
-        if use_problem_bounds:
-            _ax.set_ylim([theta_lb[idx], theta_ub[idx]])
+        if show_bounds:
+            par_reduced_idx = name_to_reduced_idx.get(plot_id, idx)
+            draw_bounds_1d(
+                _ax,
+                float(theta_lb[par_reduced_idx]),
+                float(theta_ub[par_reduced_idx]),
+                axis="y",
+                view_margin=True,
+                style=style,
+            )
+            if idx == 0:
+                _ax.plot(
+                    [],
+                    [],
+                    color=style["bound_color"],
+                    linestyle=style["bound_linestyle"],
+                    linewidth=style["bound_linewidth"],
+                    alpha=style["bound_alpha"],
+                    label="Bounds",
+                )
 
-    if suptitle:
-        fig.suptitle(suptitle)
-    sns.despine()
+        if idx == 0:
+            handles, labels = _ax.get_legend_handles_labels()
+            if handles:
+                _ax.legend(handles=handles, labels=labels)
+
+    if title is not None:
+        fig.suptitle(title)
 
     return axes
 
@@ -1207,11 +1480,14 @@ def sampling_scatter(
     result: Result,
     i_chain: int = 0,
     stepsize: int = 1,
-    suptitle: str | None = None,
+    parameter_indices: Sequence[int] | None = None,
+    title: str | None = None,
     diag_kind: str = "kde",
     size: tuple[float, float] | None = None,
     show_bounds: bool = True,
     axes: np.ndarray | None = None,
+    suptitle: str | None = _UNSET,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
     Parameter scatter plot.
@@ -1224,35 +1500,86 @@ def sampling_scatter(
         Which chain to plot. Default: First chain.
     stepsize:
         Only one in `stepsize` values is plotted.
-    suptitle:
-        Figure super title.
+    parameter_indices:
+        Indices of parameters to show. Defaults to all free parameters.
+    title:
+        Figure title.
     diag_kind:
         Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’, None}
     size:
         Figure size in inches.
     show_bounds:
         Whether to show, and extend the plot to, the lower and upper bounds.
+    suptitle:
+        Deprecated. Use ``title`` instead.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``scatter_size``, ``scatter_alpha``, ``scatter_linewidths``,
+          ``scatter_edgecolors``, ``scatter_zorder`` — off-diagonal
+          scatter point geometry.
+        - ``cmap_posterior`` — colormap used for the log-posterior-encoded
+          scatter colours and the colorbar.
+        - ``rectangle_color`` — diagonal marginal fill colour.
+        - ``bound_color``, ``bound_linestyle``, ``bound_linewidth``,
+          ``bound_alpha`` — parameter-bound line style.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     axes:
         2-D NumPy array containing one matplotlib Axes per panel.
     """
+    style = resolve_style(style_kwargs)
+    title = process_deprecated_kwarg("title", title, "suptitle", suptitle)
+
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
-        result=result, i_chain=i_chain, stepsize=stepsize
+        result=result, i_chain=i_chain, stepsize=stepsize,
+        parameter_indices=parameter_indices,
     )
 
     if size is None and axes is None:
-        size = (2.5 * nr_params + 0.5, 2.5 * nr_params + 0.5)
+        # grid panels + extra width for the shared colorbar
+        size = (
+            GRID_SIZE_PER_COL * nr_params + COLORBAR_WIDTH,
+            GRID_SIZE_PER_ROW * nr_params,
+        )
 
     axes = get_axes_array(
         axes=axes, nrows=nr_params, ncols=nr_params, size=size
     )
     fig = axes.flat[0].figure
+    previous_colorbar_axes = []
+    for ax in axes.flat:
+        colorbar_ax = getattr(ax, "_pypesto_sampling_scatter_colorbar_ax", None)
+        if (
+            colorbar_ax is not None
+            and colorbar_ax not in previous_colorbar_axes
+        ):
+            previous_colorbar_axes.append(colorbar_ax)
+    for colorbar_ax in previous_colorbar_axes:
+        if colorbar_ax in fig.axes:
+            colorbar_ax.remove()
+
     for ax in axes.flat:
         ax.clear()
         ax.set_visible(True)
+        if hasattr(ax, "_pypesto_sampling_scatter_colorbar_ax"):
+            delattr(ax, "_pypesto_sampling_scatter_colorbar_ax")
+
+    log_posterior_values = params_fval["logPosterior"].to_numpy()
+
+    import matplotlib.colors as mpl_colors
+
+    _cmap = style["cmap_posterior"]
+    _norm = mpl_colors.Normalize(
+        vmin=float(log_posterior_values.min()),
+        vmax=float(log_posterior_values.max()),
+    )
+    _cmap_obj = plt.get_cmap(_cmap) if isinstance(_cmap, str) else _cmap
 
     data = params_fval[param_names]
     for row in range(nr_params):
@@ -1265,38 +1592,85 @@ def sampling_scatter(
 
             if row == col:
                 plot_diagonal_marginal(
-                    ax=ax, values=col_vals, diag_kind=diag_kind
+                    ax=ax,
+                    values=col_vals,
+                    diag_kind=diag_kind,
+                    color=style["rectangle_color"],
                 )
             else:
                 ax.scatter(
                     col_vals,
                     row_vals,
-                    color="C0",
-                    alpha=0.85,
-                    s=35,
-                    linewidths=0.6,
-                    edgecolors="white",
-                    zorder=3,
+                    c=log_posterior_values,
+                    cmap=_cmap_obj,
+                    norm=_norm,
+                    alpha=style["scatter_alpha"],
+                    s=style["scatter_size"],
+                    linewidths=style["scatter_linewidths"],
+                    edgecolors=style["scatter_edgecolors"],
+                    zorder=style["scatter_zorder"],
                 )
                 ax.set_ylabel(row_name)
 
             ax.set_xlabel(col_name)
-            ax.spines["top"].set_visible(False)
-            ax.spines["right"].set_visible(False)
 
     if show_bounds:
+        # Compute lim per col/row including data + bounds + view margin
         for col in range(nr_params):
-            xlim = (theta_lb[col], theta_ub[col])
+            col_vals = data[param_names[col]].to_numpy()
+            lo = min(float(col_vals.min()), float(theta_lb[col]))
+            hi = max(float(col_vals.max()), float(theta_ub[col]))
+            span = hi - lo
+            pad = span * BOUND_VIEW_MARGIN if span > 0 else 0.5
+            xlim = (lo - pad, hi + pad)
             for row in range(nr_params):
                 axes[row, col].set_xlim(xlim)
         for row in range(nr_params):
-            ylim = (theta_lb[row], theta_ub[row])
+            row_vals = data[param_names[row]].to_numpy()
+            lo = min(float(row_vals.min()), float(theta_lb[row]))
+            hi = max(float(row_vals.max()), float(theta_ub[row]))
+            span = hi - lo
+            pad = span * BOUND_VIEW_MARGIN if span > 0 else 0.5
+            ylim = (lo - pad, hi + pad)
             for col in range(nr_params):
                 if row != col:
                     axes[row, col].set_ylim(ylim)
+        for row in range(nr_params):
+            for col in range(nr_params):
+                ax = axes[row, col]
+                if row == col:
+                    draw_bounds_1d(
+                        ax,
+                        float(theta_lb[col]),
+                        float(theta_ub[col]),
+                        axis="x",
+                        view_margin=False,
+                        style=style,
+                    )
+                else:
+                    draw_bounds_2d(
+                        ax,
+                        float(theta_lb[col]),
+                        float(theta_ub[col]),
+                        float(theta_lb[row]),
+                        float(theta_ub[row]),
+                        view_margin=False,
+                        style=style,
+                    )
 
-    if suptitle:
-        fig.suptitle(suptitle)
+    cbar = add_colorbar(
+        fig,
+        axes,
+        log_posterior_values,
+        LABEL_LOGPOSTERIOR,
+        cmap=style["cmap_posterior"],
+        norm=_norm,
+    )
+    for ax in axes.flat:
+        ax._pypesto_sampling_scatter_colorbar_ax = cbar.ax
+
+    if title is not None:
+        fig.suptitle(title)
 
     return axes
 
@@ -1304,14 +1678,17 @@ def sampling_scatter(
 def sampling_1d_marginals(
     result: Result,
     i_chain: int = 0,
-    parameter_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] | None = None,
     stepsize: int = 1,
     plot_type: str = "both",
     bw_method: str = "scott",
-    suptitle: str | None = None,
+    show_bounds: bool = True,
+    title: str | None = None,
     size: tuple[float, float] | None = None,
     axes: np.ndarray | None = None,
     par_indices: Sequence[int] = _UNSET,
+    suptitle: str | None = _UNSET,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
     Plot marginals.
@@ -1332,26 +1709,43 @@ def sampling_1d_marginals(
         ('kde'), or both ('both').
     bw_method: {'scott', 'silverman' | scalar | pair of scalars}
         Kernel bandwidth method.
-    suptitle:
-        Figure super title.
+    show_bounds:
+        If ``True`` (default) draw the parameter bound lines and frame each
+        panel's x-axis to include them. If ``False`` frame each panel tightly
+        to its data range and omit the bound lines.
+    title:
+        Figure title.
     size:
         Figure size in inches.
     axes:
         Axes grid to use. Must match the computed subplot layout.
+    suptitle:
+        Deprecated. Use ``title`` instead.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``rectangle_color``, ``rectangle_alpha``, ``rectangle_edgecolor``,
+          ``rectangle_linewidth`` — histogram bar styling.
+        - ``bound_color``, ``bound_linestyle``, ``bound_linewidth``,
+          ``bound_alpha`` — parameter-bound line style.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Return
     --------
     axes:
         2-D NumPy array containing one matplotlib Axes per panel.
     """
+    style = resolve_style(style_kwargs)
+    title = process_deprecated_kwarg("title", title, "suptitle", suptitle)
+
     parameter_indices = process_deprecated_kwarg(
         "parameter_indices",
         parameter_indices,
         "par_indices",
         par_indices,
     )
-
-    import seaborn as sns
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
@@ -1362,43 +1756,86 @@ def sampling_1d_marginals(
     )
 
     num_row, num_col = make_grid_shape(nr_params)
-    if size is None and axes is None:
-        size = (3.5 * num_col, 2.5 * num_row)
     axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
     fig = axes.flat[0].figure
     axes = hide_unused_axes(axes=axes, n_used=nr_params, clear=True)
 
-    par_ax = dict(zip(param_names, axes.flat, strict=True))
+    par_ax = dict(zip(param_names, axes.flat))
 
-    # fig, ax = plt.subplots(nr_params, figsize=size)[1]
+    # Build name→index map for looking up per-parameter lb/ub/scale.
+    # theta_lb/theta_ub from get_data_to_plot are the full reduced vectors,
+    # but param_names may be a subset when parameter_indices is given.
+    all_reduced_names = result.problem.get_reduced_vector(result.problem.x_names)
+    name_to_reduced_idx = {name: i for i, name in enumerate(all_reduced_names)}
+    x_scales_reduced = (
+        result.problem.get_reduced_vector(result.problem.x_scales)
+        if getattr(result.problem, "x_scales", None) is not None
+        else None
+    )
+
+    _show_kde = plot_type in ("kde", "both")
+    _show_rug = plot_type in ("hist", "both")
+
     for idx, par_id in enumerate(param_names):
-        if plot_type == "kde":
-            # TODO: add bw_adjust as option?
-            sns.kdeplot(
-                params_fval[par_id], bw_method=bw_method, ax=par_ax[par_id]
-            )
-        elif plot_type == "hist":
-            # fixes usage of sns distplot which throws a future warning
-            sns.histplot(
-                x=params_fval[par_id], ax=par_ax[par_id], stat="density"
-            )
-            sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
-        elif plot_type == "both":
-            sns.histplot(
-                x=params_fval[par_id],
-                kde=True,
-                ax=par_ax[par_id],
-                stat="density",
-            )
-            sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
+        ax = par_ax[par_id]
+        used_color = plot_density_panel(
+            ax,
+            np.asarray(params_fval[par_id]),
+            bins="auto",
+            bw_method=bw_method,
+            rectangle_color=style["rectangle_color"],
+            rectangle_alpha=style["rectangle_alpha"],
+            rectangle_edgecolor=style["rectangle_edgecolor"],
+            rectangle_linewidth=style["rectangle_linewidth"],
+            show_hist=(plot_type in ("hist", "both")),
+            show_kde=_show_kde,
+            show_rug=_show_rug,
+        )
+        par_reduced_idx = name_to_reduced_idx.get(par_id, idx)
+        lb_val = theta_lb[par_reduced_idx]
+        ub_val = theta_ub[par_reduced_idx]
 
-        par_ax[par_id].set_xlabel(param_names[idx])
-        par_ax[par_id].set_ylabel("Density")
+        legend_handles, legend_labels = [], []
+        if used_color is not None and idx == 0:
+            if _show_kde:
+                legend_handles.append(Line2D([0], [0], color=used_color, lw=2))
+                legend_labels.append("KDE")
+            if _show_rug:
+                legend_handles.append(
+                    Line2D([0], [0], color=used_color, marker="|", lw=0,
+                           markersize=10, markeredgewidth=1.2)
+                )
+                legend_labels.append("Samples")
 
-    sns.despine()
+        if not show_bounds:
+            # clip x-axis to the data range instead of the parameter bounds
+            vals = np.asarray(params_fval[par_id])
+            finite_vals = vals[np.isfinite(vals)]
+            if finite_vals.size > 0:
+                spread = finite_vals.max() - finite_vals.min()
+                pad = max(spread * 0.05, np.abs(finite_vals).max() * 0.01)
+                ax.set_xlim(finite_vals.min() - pad, finite_vals.max() + pad)
+        elif np.isfinite(lb_val) and np.isfinite(ub_val):
+            bound_handle = draw_bounds_1d(ax, lb_val, ub_val, axis="x", style=style)
+            if idx == 0:
+                legend_handles.append(bound_handle)
+                legend_labels.append("Bounds")
 
-    if suptitle:
-        fig.suptitle(suptitle)
+        if legend_handles:
+            ax.legend(handles=legend_handles, labels=legend_labels)
+
+        scale = (
+            x_scales_reduced[par_reduced_idx]
+            if x_scales_reduced is not None
+            else None
+        )
+        xlabel = f"{par_id} ({scale})" if scale is not None else par_id
+        ax.set_xlabel(xlabel)
+        # y-label only on the leftmost column to avoid grid-wide repetition
+        ax.set_ylabel("Density" if idx % num_col == 0 else "")
+
+    if title is not None:
+        fig.suptitle(title)
 
     return axes
 
@@ -1408,7 +1845,7 @@ def get_data_to_plot(
     i_chain: int,
     stepsize: int,
     full_trace: bool = False,
-    parameter_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] | None = None,
 ):
     """Get the data which should be plotted as a pandas.DataFrame.
 

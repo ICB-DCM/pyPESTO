@@ -1,246 +1,217 @@
+from __future__ import annotations
+
 from collections.abc import Sequence
 from typing import Literal
+import warnings
 
+import matplotlib as mpl
 import matplotlib.axes
-import matplotlib.cm as cm
 import numpy as np
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Patch, Rectangle
+from matplotlib.colors import is_color_like
 
 from ..profile import calculate_approximate_ci, chi2_quantile_to_ratio
 from ..result import Result
-from .misc import get_ax
-
-# kwargs passed to `matplotlib.axes.Axes.errorbar` for plotting confidence levels
-cis_visualization_settings = {
-    "capsize": 5,
-    "linewidth": 2,
-}
+from .misc import (
+    _UNSET,
+    _ci_panel_lowlevel,
+    ci_panel_size,
+    get_ax,
+    process_deprecated_kwarg,
+)
+from ._style import CI_BAR_HEIGHT, resolve_style
 
 
 def profile_cis(
     result: Result,
-    confidence_level: float = 0.95,
+    confidence_levels: float | Sequence[float] | None = None,
     df: int = 1,
-    profile_indices: Sequence[int] = None,
+    profile_indices: Sequence[int] | None = None,
     profile_list: int = 0,
-    color: str | tuple = "C0",
-    show_bounds: bool = False,
+    colors: Sequence | None = None,
+    show_bounds: bool = True,
+    show_mle: bool = True,
     ax: matplotlib.axes.Axes | None = None,
+    orientation: Literal["v", "h"] = "v",
+    size: tuple[float, float] | None = None,
+    title: str | None = "Profile confidence intervals",
+    style_kwargs: dict | None = None,
+    confidence_level: float = _UNSET,
+    color: str | tuple = _UNSET,
 ) -> matplotlib.axes.Axes:
     """
     Plot approximate confidence intervals based on profiles.
+
+    Supports one or more confidence levels rendered as nested bars with a
+    legend identifying each level.  Uses
+    :func:`~pypesto.visualize.misc._ci_panel_lowlevel` for rendering,
+    which is shared with :func:`sampling_parameter_cis`.
 
     Parameters
     ----------
     result:
         The result object after profiling.
-    confidence_level:
-        The confidence level in (0,1), which is translated to an approximate
-        threshold assuming a chi2 distribution, using
-        `pypesto.profile.chi2_quantile_to_ratio`.
+    confidence_levels:
+        One confidence level (float in (0,1)) or a sequence of them.
+        Each is translated to an approximate threshold via
+        :func:`pypesto.profile.chi2_quantile_to_ratio`.
     df:
         Degrees of freedom of the chi2 distribution.
     profile_indices:
-        List of integer values specifying which profiles should be plotted.
-        Defaults to the indices for which profiles were generated in profile
-        list `profile_list`.
+        Integer indices specifying which profiles to plot.
+        Defaults to all indices for which profiles exist.
     profile_list:
         Index of the profile list to be used.
-    color:
-        Main plot color.
+    colors:
+        One color per confidence level. If not given, a gradient from
+        ``style_kwargs["cmap_ci"]`` is used (lighter = wider CI).
     show_bounds:
-        Whether to show, and extend the plot to, the lower and upper bounds.
+        Whether to draw parameter bounds.
+    show_mle:
+        Whether to mark the MLE (best optimizer result) with a tick on
+        each CI bar.
     ax:
-        Axes object to use. Default: Create a new one.
+        Axes object to use. Default: create a new one.
+    orientation:
+        ``"v"`` (default): parameter names on the y-axis, value on x-axis.
+        ``"h"``: transposed.
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``ax`` is
+        ``None``. When ``None`` it is derived from the parameter count via
+        :func:`~pypesto.visualize.misc.ci_panel_size` (the bar axis grows
+        with the number of parameters).
+    title:
+        Axes title. Pass ``None`` to suppress.
+    style_kwargs:
+        Optional style overrides. Supported keys:
+
+        - ``"cmap_ci"`` – colormap for CI bars (default ``"Blues"``);
+          ignored when ``colors`` is provided.
+        - ``"bound_color"`` – color of the parameter-bound lines.
+        - ``"bound_linestyle"`` – linestyle of the bound lines (default ``"--"``).
+        - ``"bound_linewidth"`` – linewidth of the bound lines.
+        - ``"bound_alpha"`` – opacity of the bound lines.
+
+    Returns
+    -------
+    ax:
+        The plot axes.
     """
-    # extract problem
+    style = resolve_style(style_kwargs)
+
+    confidence_levels = process_deprecated_kwarg(
+        "confidence_levels",
+        confidence_levels,
+        "confidence_level",
+        confidence_level,
+    )
+    colors = process_deprecated_kwarg("colors", colors, "color", color)
+
+    if confidence_levels is None:
+        confidence_levels = 0.95
+    if isinstance(confidence_levels, (int, float)):
+        confidence_levels = [float(confidence_levels)]
+    else:
+        confidence_levels = [float(cl) for cl in confidence_levels]
+
     problem = result.problem
-    # extract profile list
-    profile_list = result.profile_result.list[profile_list]
+    profile_list_data = result.profile_result.list[profile_list]
 
     if profile_indices is None:
-        profile_indices = [ix for ix, res in enumerate(profile_list) if res]
+        profile_indices = [ix for ix, res in enumerate(profile_list_data) if res]
 
-    ax = get_ax(ax)
+    n_par = len(profile_indices)
+    n_cls = len(confidence_levels)
+    ws = [(CI_BAR_HEIGHT / n_cls) * i for i in range(1, n_cls + 1)]
 
-    confidence_ratio = chi2_quantile_to_ratio(confidence_level, df=df)
+    if colors is None:
+        cmap = mpl.colormaps[style["cmap_ci"]]
+        colors = [cmap(0.3 + 0.6 * w / max(ws)) for w in ws]
+    elif is_color_like(colors):
+        colors = [colors] * n_cls
 
-    # calculate intervals
-    intervals = []
-    for i_par in range(problem.dim_full):
-        if i_par not in profile_indices:
-            continue
-        xs = profile_list[i_par].x_path[i_par]
-        ratios = profile_list[i_par].ratio_path
-        lb, ub = calculate_approximate_ci(
-            xs=xs, ratios=ratios, confidence_ratio=confidence_ratio
-        )
-        intervals.append((lb, ub))
+    # sort widest CI first; pair with colors before sorting
+    levels_colors = sorted(zip(confidence_levels, colors, strict=True), reverse=True)
 
+    # build ci_data: one entry per level, widest first
+    ci_data = []
+    for level, color in levels_colors:
+        confidence_ratio = chi2_quantile_to_ratio(level, df=df)
+        lb_arr = np.zeros(n_par)
+        ub_arr = np.zeros(n_par)
+        for j, i_par in enumerate(profile_indices):
+            xs = profile_list_data[i_par].x_path[i_par]
+            ratios = profile_list_data[i_par].ratio_path
+            lb_arr[j], ub_arr[j] = calculate_approximate_ci(
+                xs=xs, ratios=ratios, confidence_ratio=confidence_ratio
+            )
+        ci_data.append((level, lb_arr, ub_arr, color))
+
+    # MLE point estimates
+    point_estimates = None
+    if (
+        show_mle
+        and result.optimize_result is not None
+        and len(result.optimize_result.list) > 0
+    ):
+        best_x = result.optimize_result.list[0].x
+        if best_x is not None:
+            point_estimates = np.array([best_x[i_par] for i_par in profile_indices])
+
+    lbs = [float(problem.lb_full[i_par]) for i_par in profile_indices]
+    ubs = [float(problem.ub_full[i_par]) for i_par in profile_indices]
     x_names = [problem.x_names[ix] for ix in profile_indices]
+    parameter_scales = (
+        [problem.x_scales[ix] for ix in profile_indices]
+        if getattr(problem, "x_scales", None) is not None
+        else None
+    )
 
-    for ix, (lb, ub) in enumerate(intervals):
-        half = (ub - lb) / 2
-        ax.errorbar(
-            lb + half,
-            ix + 1,
-            xerr=half,
-            color=color,
-            **cis_visualization_settings,
-        )
+    if size is None:
+        size = ci_panel_size(n_par, orientation)
+    ax = get_ax(ax, size)
 
-    parameters_ind = np.arange(1, len(intervals) + 1)
-    ax.set_yticks(parameters_ind)
-    ax.set_yticklabels(x_names)
-    ax.set_ylabel("Parameter")
-    ax.set_xlabel("Parameter value")
-
-    if show_bounds:
-        lb = problem.lb_full[profile_indices]
-        ax.plot(lb, parameters_ind, "k--", marker="+")
-        ub = problem.ub_full[profile_indices]
-        ax.plot(ub, parameters_ind, "k--", marker="+")
-
-    return ax
+    return _ci_panel_lowlevel(
+        ax, ci_data, x_names, parameter_scales, lbs, ubs, style,
+        point_estimates=point_estimates,
+        point_estimate_label="MLE",
+        show_bounds=show_bounds,
+        title=title,
+        legend_title="Confidence level:",
+        orientation=orientation,
+    )
 
 
 def profile_nested_cis(
     result: Result,
     confidence_levels: Sequence[float] = (0.95, 0.9),
     df: int = 1,
-    profile_indices: Sequence[int] = None,
+    profile_indices: Sequence[int] | None = None,
     profile_list: int = 0,
-    colors: Sequence = None,
+    colors: Sequence | None = None,
     ax: matplotlib.axes.Axes | None = None,
     orientation: Literal["v", "h"] = "v",
+    title: str | None = "Profile confidence intervals",
 ) -> matplotlib.axes.Axes:
+    """Deprecated wrapper for :func:`profile_cis` with multiple levels.
+
+    The ``title`` argument is forwarded as the axes title.
     """
-    Plot approximate nested confidence intervals based on profiles.
-
-    Parameters
-    ----------
-    result:
-        The result object with profiling results.
-    confidence_levels:
-        The confidence levels in (0,1), which are translated to an approximate
-        threshold assuming a chi2 distribution, using
-        `pypesto.profile.chi2_quantile_to_ratio`.
-    df:
-        Degrees of freedom of the chi2 distribution.
-    profile_indices:
-        List of integer values specifying which profiles should be plotted.
-        Defaults to the indices for which profiles were generated in profile
-        list `profile_list`.
-    profile_list:
-        Index of the profile list to be used.
-    colors:
-        A color for each confidence interval.
-    ax:
-        Axes object to use. Default: Create a new one.
-    orientation:
-        Orientation of the plot, either vertical or horizontal.
-    """
-    # extract problem
-    problem = result.problem
-    # extract profile list
-    profile_list = result.profile_result.list[profile_list]
-
-    n_cls = len(confidence_levels)
-    ws = [(0.6 / n_cls) * i for i in range(1, n_cls + 1)]
-    if colors is None:
-        blues = cm.get_cmap("Blues")
-        colors = [blues(i) for i in ws]
-
-    # ensure that the confidence levels are sorted in decreasing order
-    confidence_levels, colors = zip(
-        *sorted(zip(confidence_levels, colors, strict=True), reverse=True),
-        strict=True,
+    warnings.warn(
+        "`profile_nested_cis` is deprecated; use `profile_cis` with "
+        "`confidence_levels` instead.",
+        DeprecationWarning,
+        stacklevel=2,
     )
-
-    if profile_indices is None:
-        profile_indices = [ix for ix, res in enumerate(profile_list) if res]
-
-    ax = get_ax(ax)
-
-    legends = []
-    for i, confidence_level in enumerate(confidence_levels):
-        confidence_ratio = chi2_quantile_to_ratio(confidence_level, df=df)
-
-        xs_list = []
-        x = -ws[i] / 2
-        rectangles = []
-        for j, i_par in enumerate(profile_indices):
-            conf_l_indices = [
-                idx
-                for idx, ratio in enumerate(profile_list[i_par].ratio_path)
-                if ratio >= confidence_ratio
-            ]
-            xs = profile_list[i_par].x_path[i_par][conf_l_indices]
-            xs_list.append(xs)
-
-            par_ci = [np.min(xs), np.max(xs)]
-            h = par_ci[1] - par_ci[0]
-
-            if orientation == "v":
-                rectangles.append(Rectangle((par_ci[0], x), h, ws[i]))
-            else:
-                rectangles.append(Rectangle((x, par_ci[0]), ws[i], h))
-            x += 1
-
-            # visualize parameter boundaries
-            if orientation == "v":
-                ax.plot(
-                    [result.problem.lb_full[i_par]] * 2,
-                    [j - 0.4, j + 0.4],
-                    color="grey",
-                )
-                ax.plot(
-                    [result.problem.ub_full[i_par]] * 2,
-                    [j - 0.4, j + 0.4],
-                    color="grey",
-                )
-            else:
-                ax.plot(
-                    [j - 0.4, j + 0.4],
-                    [result.problem.lb_full[i_par]] * 2,
-                    color="grey",
-                )
-                ax.plot(
-                    [j - 0.4, j + 0.4],
-                    [result.problem.ub_full[i_par]] * 2,
-                    color="grey",
-                )
-
-        ax.add_collection(
-            PatchCollection(
-                rectangles, facecolors=colors[i], edgecolors="dimgrey"
-            )
-        )
-        legends.append(
-            Patch(color=colors[i], label=f"{confidence_level * 100}%")
-        )
-
-    x_names = [problem.x_names[ix] for ix in profile_indices]
-    parameters_ind = np.arange(0, len(profile_indices))
-
-    if orientation == "v":
-        ax.set_yticks(parameters_ind)
-        ax.set_yticklabels(x_names)
-        ax.set_ylabel("Parameter")
-        ax.set_xlabel("Parameter value")
-    else:
-        ax.set_xticks(parameters_ind)
-        ax.set_xticklabels(ax.get_xticklabels(), ha="right")
-        ax.set_xlabel("Parameter")
-        ax.set_ylabel("Parameter value")
-
-    ax.legend(
-        title="Confidence level:",
-        handles=legends,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 1.16),
-        ncol=len(legends),
+    return profile_cis(
+        result=result,
+        confidence_levels=confidence_levels,
+        df=df,
+        profile_indices=profile_indices,
+        profile_list=profile_list,
+        colors=colors,
+        show_bounds=True,
+        show_mle=False,
+        ax=ax,
+        orientation=orientation,
+        title=title,
     )
-
-    return ax

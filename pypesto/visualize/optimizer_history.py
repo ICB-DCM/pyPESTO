@@ -1,13 +1,17 @@
+from __future__ import annotations
+
 import logging
 import warnings
 from collections.abc import Iterable
 
 import matplotlib.axes
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
 from ..C import (
     COLOR,
+    LABEL_OBJECTIVE,
     TRACE_X_STEPS,
     TRACE_X_TIME,
     TRACE_Y_FVAL,
@@ -15,6 +19,8 @@ from ..C import (
 )
 from ..history import HistoryBase
 from ..result import Result
+from pypesto.util import assign_clusters
+
 from .clust_color import assign_colors
 from .misc import (
     get_ax,
@@ -23,6 +29,10 @@ from .misc import (
     process_y_limits,
 )
 from .reference_points import ReferencePoint, create_references
+from ._style import (
+    cluster_legend_handles_from_data,
+    resolve_style,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +40,8 @@ logger = logging.getLogger(__name__)
 def optimizer_history(
     results: Result | list[Result],
     ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] = (18.5, 10.5),
+    size: tuple[float, float] | None = None,
+    title: str | None = "Optimizer history",
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
     scale_y: str = "log10",
@@ -44,6 +55,7 @@ def optimizer_history(
     | list[dict]
     | None = None,
     legends: str | list[str] | None = None,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot history of optimizer.
@@ -60,6 +72,8 @@ def optimizer_history(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+    title:
+        Axes title. Pass ``None`` to suppress.
     trace_x:
         What should be plotted on the x-axis?
         Possibilities: TRACE_X
@@ -86,6 +100,16 @@ def optimizer_history(
         least a function value fval
     legends:
         Labels for line plots, one label per result object
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``trace_linewidth`` — width of the connecting trace line.
+        - ``trace_alpha`` — opacity of each trace (softens overlap).
+        - ``trace_marker_size`` — size of the dot marker at each evaluation step.
+
+        Trace colors are determined by the cluster coloring algorithm and
+        are not style-controlled.  All valid keys and their defaults are
+        listed in :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
@@ -95,8 +119,12 @@ def optimizer_history(
     if isinstance(start_indices, int):
         start_indices = list(range(start_indices))
 
+    style = resolve_style(style_kwargs)
+
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     for j, result in enumerate(results):
         # extract cost function values from result
@@ -119,6 +147,8 @@ def optimizer_history(
             x_label=x_label,
             y_label=y_label,
             legend_text=legends[j],
+            title=title,
+            style_kwargs=style_kwargs,
         )
 
     # parse and apply plotting options
@@ -135,10 +165,12 @@ def optimizer_history_lowlevel(
     scale_y: str = "log10",
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] = (18.5, 10.5),
+    size: tuple[float, float] | None = None,
+    title: str | None = "Optimizer history",
     x_label: str = "Optimizer steps",
-    y_label: str = "Objective value",
+    y_label: str = LABEL_OBJECTIVE,
     legend_text: str | None = None,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot optimizer history using list of numpy arrays.
@@ -156,18 +188,29 @@ def optimizer_history_lowlevel(
         Axes object to use.
     size:
         see waterfall
+    title:
+        Axes title. Pass ``None`` to suppress.
     x_label:
         label for x-axis
     y_label:
         label for y-axis
     legend_text:
         Label for line plots
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``trace_linewidth``, ``trace_alpha``, ``trace_marker_size`` —
+          per-start trace line / marker styling.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
     ax = get_ax(ax, size)
 
     # parse input
@@ -194,7 +237,8 @@ def optimizer_history_lowlevel(
     # assign colors
     # note: this has to happen before sorting
     # to get the same colors in different plots
-    colors = assign_colors(fvals, colors)
+    user_supplied_colors = colors is not None
+    colors = assign_colors(fvals, colors, style=style)
 
     # sort
     indices = sorted(range(n_fvals), key=lambda j: fvals[j])
@@ -210,18 +254,35 @@ def optimizer_history_lowlevel(
         else:
             tmp_legend = None
 
-        # line plots
-        if scale_y == "log10":
-            ax.semilogy(val[0, :], val[1, :], color=color, label=tmp_legend)
-        else:
-            ax.plot(val[0, :], val[1, :], color=color, label=tmp_legend)
+        # line + small marker per evaluation; alpha softens overlap when
+        # many starts overlay each other.
+        plot_fn = ax.semilogy if scale_y == "log10" else ax.plot
+        plot_fn(
+            val[0, :],
+            val[1, :],
+            color=color,
+            label=tmp_legend,
+            linewidth=style["trace_linewidth"],
+            alpha=style["trace_alpha"],
+            marker=".",
+            markersize=style["trace_marker_size"],
+        )
 
     # set labels
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    ax.set_title("Optimizer history")
+    if title is not None:
+        ax.set_title(title)
+
     if legend_text is not None:
         ax.legend()
+    elif not user_supplied_colors:
+        clusters, cluster_size = assign_clusters(np.asarray(fvals))
+        handles = cluster_legend_handles_from_data(
+            clusters, cluster_size, np.array(colors)
+        )
+        if handles:
+            ax.legend(handles=handles)
 
     return ax
 
@@ -403,10 +464,10 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> tuple[str, str]:
     if trace_y == TRACE_Y_GRADNORM:
         y_label = "Gradient norm"
     else:
-        y_label = "Objective value"
+        y_label = LABEL_OBJECTIVE
 
     if offset_y != 0:
-        y_label = "Offsetted " + y_label.lower()
+        y_label = "Offset " + y_label.lower()
 
     return x_label, y_label
 
@@ -542,12 +603,14 @@ def monotonic_history(
 def sacess_history(
     histories: list[HistoryBase],
     ax: matplotlib.axes.Axes | None = None,
+    title: str | None = "SacessOptimizer convergence",
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """Plot `SacessOptimizer` history.
 
     Plot the history of the best objective values for each
     :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
-    worker over computation time as step splot.
+    worker over computation time as a step plot.
 
     Parameters
     ----------
@@ -556,26 +619,58 @@ def sacess_history(
         :attr:`pypesto.optimize.ess.sacess.SacessOptimizer.histories`.
     ax:
         Axes object to use.
+    title:
+        Axes title. Pass ``None`` to suppress.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``ref_line_color`` — colour of the overall best trace
+          (rendered at full opacity so it always reads clearly).
+        - ``cmap_discrete`` — qualitative colormap from which per-worker
+          trace colours are sampled.
+        - ``trace_linewidth`` — width of the convergence traces.
+        - ``trace_alpha`` — opacity of the per-worker convergence traces.
+        - ``trace_marker_size`` — worker trace marker size.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     The plot axes. `ax` or a new axes if `ax` was `None`.
     """
+    style = resolve_style(style_kwargs)
     ax = get_ax(ax)
+    ax.set_xlabel("Wall-clock time (s)")
+    ax.set_ylabel(LABEL_OBJECTIVE)
+    if title is not None:
+        ax.set_title(title)
     if len(histories) == 0:
         warnings.warn("No histories to plot.", stacklevel=2)
+        return ax
 
-    # plot overall minimum
+    # plot overall minimum — full opacity so it reads cleanly over the
+    # worker traces.
     t_overall, fx_overall = monotonic_history(histories)
     ax.step(
         t_overall,
         fx_overall,
         linestyle="dotted",
-        color="grey",
+        color=style["ref_line_color"],
+        linewidth=style["trace_linewidth"],
         where="post",
         label="overall",
-        alpha=0.8,
+        alpha=1.0,
     )
+
+    # worker colors sampled from the qualitative cmap_discrete palette
+    cmap = plt.get_cmap(style["cmap_discrete"])
+    n_workers = max(len(histories), 1)
+    worker_colors = [
+        cmap(i / n_workers) if not hasattr(cmap, "colors")
+        else cmap(i % len(cmap.colors))
+        for i in range(n_workers)
+    ]
 
     # plot steps of individual workers
     for worker_idx, history in enumerate(histories):
@@ -587,7 +682,15 @@ def sacess_history(
         x = np.append(x, [np.max(t_overall)])
         y = np.append(y, [np.min(y)])
         lines = ax.step(
-            x, y, ".-", where="post", label=f"worker {worker_idx}", alpha=0.8
+            x,
+            y,
+            ".-",
+            where="post",
+            color=worker_colors[worker_idx],
+            label=f"worker {worker_idx}",
+            linewidth=style["trace_linewidth"],
+            markersize=style["trace_marker_size"],
+            alpha=style["trace_alpha"],
         )
         # Plot last point without marker, unless we actually had an improvement there.
         # The time point of the overall last improvement is appended to all histories,
@@ -596,7 +699,4 @@ def sacess_history(
             line.set_markevery([True] * (len(x) - 1) + [False])
 
     ax.legend()
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("fval")
-    ax.set_title("SacessOptimizer convergence")
     return ax

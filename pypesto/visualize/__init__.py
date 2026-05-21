@@ -9,6 +9,7 @@ import pypesto.visualize.
 
 from pypesto.util import assign_clusters, delete_nan_inf
 
+from ._style import apply_style
 from .clust_color import assign_clustered_colors, assign_colors
 from .dimension_reduction import (
     ensemble_crosstab_scatter_lowlevel,
@@ -27,7 +28,7 @@ from .observable_mapping import (
 )
 from .optimization_stats import (
     optimization_run_properties_one_plot,
-    optimization_run_properties_per_multistart,
+    optimization_run_properties_subplots,
     optimization_run_property_per_multistart,
 )
 from .optimizer_convergence import optimizer_convergence

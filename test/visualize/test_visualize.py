@@ -28,6 +28,10 @@ from pypesto.visualize.model_fit import (
     time_trajectory_model,
     visualize_optimized_model_fit,
 )
+from pypesto.visualize.ordinal_categories import (
+    _condition_tick_rotation,
+    _format_condition_axis,
+)
 
 from ..conftest import close_fig
 
@@ -42,7 +46,7 @@ def create_bounds(n_parameters: int = 2):
     return lb, ub
 
 
-def create_problem(n_parameters: int = 2, x_names: Sequence[str] = None):
+def create_problem(n_parameters: int = 2, x_names: Sequence[str] | None = None):
     # define a pypesto objective
     objective = pypesto.Objective(
         fun=so.rosen, grad=so.rosen_der, hess=so.rosen_hess, x_names=x_names
@@ -663,6 +667,7 @@ def test_projection_scatter_umap_original(monkeypatch):
     def fake_points(umap_object, values=None, theme=None, **kwargs):
         assert values == [0.0, 1.0]
         assert theme == "viridis"
+        assert umap_object.embedding_.shape == (2, 2)
         return kwargs["ax"]
 
     plot_module.points = fake_points
@@ -677,6 +682,7 @@ def test_projection_scatter_umap_original(monkeypatch):
             self.embedding_ = np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]])
 
     dummy_umap = DummyUmap()
+    original_embedding = dummy_umap.embedding_.copy()
     _, ax = plt.subplots()
 
     returned_ax = visualize.projection_scatter_umap_original(
@@ -687,7 +693,7 @@ def test_projection_scatter_umap_original(monkeypatch):
     )
 
     assert returned_ax is ax
-    assert dummy_umap.embedding_.shape == (2, 2)
+    np.testing.assert_array_equal(dummy_umap.embedding_, original_embedding)
 
 
 @close_fig
@@ -759,7 +765,13 @@ def test_profiles():
     visualize.profiles(result_1)
 
     # test plotting of lists
-    visualize.profiles([result_1, result_2])
+    axes = visualize.profiles(
+        [result_1, result_2], legends=["run A", "run B"]
+    )
+    legend = axes[0].get_legend()
+    assert legend is not None
+    legend_labels = [text.get_text() for text in legend.get_texts()]
+    assert legend_labels[-2:] == ["run A", "run B"]
 
     # test colors
     visualize.profiles(result_1, quality_colors=True)
@@ -828,36 +840,47 @@ def test_profile_lowlevel():
 
     assert returned_ax is ax
     assert ax.get_xlabel() == "Parameter value"
-    assert ax.get_ylabel() == "Log-posterior ratio"
+    assert ax.get_ylabel() == "Likelihood ratio"
 
 
 @close_fig
 def test_profile_cis():
     """Test the profile approximate confidence interval visualization."""
     result = create_profile_result()
-    visualize.profile_cis(result, confidence_level=0.99)
+    # single confidence level (float)
+    visualize.profile_cis(result, confidence_levels=0.99)
+    with pytest.warns(DeprecationWarning, match="confidence_level"):
+        visualize.profile_cis(result, confidence_level=0.99)
+    with pytest.warns(DeprecationWarning, match="color"):
+        visualize.profile_cis(result, color=(0.1, 0.2, 0.3))
+    # show_bounds + profile_indices
     visualize.profile_cis(result, show_bounds=True, profile_indices=[0])
-
-
-@close_fig
-def test_nested_profile_cis():
-    """Test the profile approximate confidence interval visualization."""
-    result = create_profile_result()
-    visualize.profile_nested_cis(result, confidence_levels=[0.99, 0.95, 0.9])
-    visualize.profile_nested_cis(result, colors=["#5F9ED1", "#007ACC"])
+    # multiple confidence levels (sequence) — replaces former profile_nested_cis
+    visualize.profile_cis(result, confidence_levels=[0.99, 0.95, 0.9])
+    with pytest.warns(DeprecationWarning, match="profile_nested_cis"):
+        visualize.profile_nested_cis(result, confidence_levels=[0.99, 0.95])
+    # custom colors
+    visualize.profile_cis(
+        result,
+        confidence_levels=[0.95, 0.9],
+        colors=["#5F9ED1", "#007ACC"],
+    )
+    # horizontal orientation
+    visualize.profile_cis(result, orientation="h")
 
 
 @close_fig
 def test_visualize_2d_profile():
     result = create_profile_result()
     # basic call — all profiles, default settings
-    _, axes = visualize.visualize_2d_profile(result)
-    assert axes[0, 1].yaxis.labelpad == 2
-    assert axes[0, 1].yaxis.label.get_size() == 14
-    assert not axes[0, 1].spines["top"].get_visible()
-    assert not axes[0, 1].spines["right"].get_visible()
+    axes = visualize.visualize_2d_profile(result)
+    fig = axes.flat[0].figure
+    # Single legend on (0, 0); off-diagonals have no inset legend.
     assert axes[0, 0].get_legend() is not None
-    assert axes[0, 1].get_legend() is not None
+    assert axes[0, 1].get_legend() is None
+    colorbar_ax = fig.axes[-1]
+    assert colorbar_ax.get_ylabel() == "Likelihood ratio"
+    assert colorbar_ax.yaxis.label.get_rotation() == 90
     # explicit profile indices and ratio cutoff
     visualize.visualize_2d_profile(
         result, profile_indices=[0, 1], ratio_min=0.1
@@ -866,6 +889,10 @@ def test_visualize_2d_profile():
     visualize.visualize_2d_profile(result, plot_objective_values=True)
     # custom figure size
     visualize.visualize_2d_profile(result, size=(8, 8))
+    # show_bounds=False — no "Bounds" entry in the legend
+    axes_nb = visualize.visualize_2d_profile(result, show_bounds=False)
+    labels = [t.get_text() for t in axes_nb[0, 0].get_legend().get_texts()]
+    assert "Bounds" not in labels
 
 
 @close_fig
@@ -1032,13 +1059,13 @@ def test_optimization_stats():
         plot_type="hist",
     )
 
-    axes = visualize.optimization_run_properties_per_multistart(
-        [result_1, result_2]
+    axes = visualize.optimization_run_properties_subplots(
+        [result_1, result_2], properties_to_plot=["time"]
     )
     assert axes.ndim == 2
     custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
-    returned_axes = visualize.optimization_run_properties_per_multistart(
-        [result_1, result_2], axes=custom_axes
+    returned_axes = visualize.optimization_run_properties_subplots(
+        [result_1, result_2], properties_to_plot=["time"], axes=custom_axes
     )
     assert returned_axes is custom_axes
 
@@ -1236,17 +1263,30 @@ def test_sampling_parameter_traces():
     # call with custom arguments
     custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
     returned_axes = visualize.sampling_parameter_traces(
-        result, i_chain=1, stepsize=5, size=(10, 10), use_problem_bounds=False
+        result, i_chain=1, stepsize=5, size=(10, 10), show_bounds=False
     )
     assert returned_axes.ndim == 2
     returned_axes = visualize.sampling_parameter_traces(
         result,
         i_chain=1,
         stepsize=5,
-        use_problem_bounds=False,
+        show_bounds=False,
         axes=custom_axes,
     )
     assert returned_axes is custom_axes
+    with pytest.warns(DeprecationWarning, match="use_problem_bounds"):
+        visualize.sampling_parameter_traces(result, use_problem_bounds=False)
+
+    axes = visualize.sampling_parameter_traces(result, full_trace=True)
+    legend = axes.flat[0].get_legend()
+    assert legend is not None
+    legend_labels = [text.get_text() for text in legend.get_texts()]
+    assert legend_labels == [
+        "Burn-in samples",
+        "Posterior samples",
+        "Burn-in cutoff",
+        "Bounds",
+    ]
 
 
 @close_fig
@@ -1302,7 +1342,7 @@ def test_sampling_parameter_cis():
 @close_fig
 def test_sampling_prediction_trajectories():
     """Test pypesto.visualize.sampling_prediction_trajectories"""
-    credibility_interval_levels = [99, 68]
+    confidence_levels = [0.99, 0.68]
     result = sample_petab_problem()
     post_processor_amici_x = functools.partial(
         post_processor,
@@ -1332,23 +1372,25 @@ def test_sampling_prediction_trajectories():
     # Plot by
     axes = visualize.sampling_prediction_trajectories(
         ensemble_prediction,
-        levels=credibility_interval_levels,
+        confidence_levels=confidence_levels,
         groupby=pypesto.C.CONDITION,
     )
     assert axes.ndim == 2
     custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
     returned_axes = visualize.sampling_prediction_trajectories(
         ensemble_prediction,
-        levels=credibility_interval_levels,
+        confidence_levels=confidence_levels,
         groupby=pypesto.C.CONDITION,
         axes=custom_axes,
+        style_kwargs={"cmap_discrete": "plasma", "trace_linewidth": 2.0},
     )
     assert returned_axes is custom_axes
     returned_axes = visualize.sampling_prediction_trajectories(
         ensemble_prediction,
-        levels=credibility_interval_levels,
+        confidence_levels=0.95,
         size=(10, 10),
         groupby=pypesto.C.OUTPUT,
+        condition_gap=1.0,
     )
     assert returned_axes.ndim == 2
 
@@ -1661,11 +1703,18 @@ def test_visualize_estimated_observable_mapping():
     axes = visualize.visualize_estimated_observable_mapping(result, problem)
     assert isinstance(axes, np.ndarray)
     assert axes.ndim == 2
+    visible_axes = [ax for ax in axes.flat if ax.get_visible()]
+    assert sum(ax.get_legend() is not None for ax in visible_axes) == 1
+    assert visible_axes[0].collections[0].get_paths()[0].vertices.shape == (
+        5,
+        2,
+    )
     custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
     returned_axes = visualize.visualize_estimated_observable_mapping(
         result,
         problem,
         axes=custom_axes,
+        style_kwargs={"data_color": "0.1", "line_color": "0.2"},
     )
     assert returned_axes is custom_axes
 

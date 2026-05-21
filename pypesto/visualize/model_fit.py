@@ -4,6 +4,9 @@ Visualization of the model fit after optimization.
 Currently only for PEtab problems.
 """
 
+from __future__ import annotations
+
+
 import copy
 import logging
 from collections.abc import Sequence
@@ -49,6 +52,7 @@ def visualize_optimized_model_fit(
     result: Result | Sequence[Result],
     pypesto_problem: Problem,
     start_index: int = 0,
+    title: str | None = None,
     return_dict: bool = False,
     unflattened_petab_problem: petab.Problem = None,
     **kwargs,
@@ -71,6 +75,9 @@ def visualize_optimized_model_fit(
     start_index:
         The index of the optimization run in `result.optimize_result.list`.
         Ignored if `problem_parameters` is provided.
+    title:
+        Plot title. Applied as an axes title for a single axes object and as a
+        figure title for a grid/dict of axes.
     pypesto_problem:
         The pyPESTO problem.
     return_dict:
@@ -176,6 +183,7 @@ def visualize_optimized_model_fit(
                     axes=axes,
                 )
 
+        _apply_title_to_axes_result(axes, title)
         axes_list.append(axes)
         simulation_df_list.append(simulation_df)
 
@@ -203,12 +211,13 @@ def time_trajectory_model(
     result: Result | Sequence[Result],
     problem: Problem = None,
     # TODO: conditions: Union[str, Sequence[str]] = None,
-    timepoints: np.ndarray | Sequence[np.ndarray] = None,
+    timepoints: np.ndarray | Sequence[np.ndarray] | None = None,
     n_timepoints: int = 1000,
     start_index: int = 0,
-    state_ids: str | Sequence[str] = None,
-    state_names: str | Sequence[str] = None,
-    observable_ids: str | Sequence[str] = None,
+    state_ids: str | Sequence[str] | None = None,
+    state_names: str | Sequence[str] | None = None,
+    observable_ids: str | Sequence[str] | None = None,
+    title: str | None = "Model trajectory",
 ) -> matplotlib.axes.Axes | None:
     """
     Visualize the time trajectory of the model with given timepoints.
@@ -235,6 +244,9 @@ def time_trajectory_model(
         Names of the states to be plotted.
     observable_ids:
         Ids of the observables to be plotted.
+    title:
+        Plot title. Applied as an axes title for a single axes object and as a
+        figure title for a grid of axes. Pass ``None`` to suppress.
 
     Returns
     -------
@@ -271,7 +283,24 @@ def time_trajectory_model(
             observable_ids=observable_ids,
         )
 
+    _apply_title_to_axes_result(axes, title)
     return axes
+
+
+def _apply_title_to_axes_result(axes, title: str | None) -> None:
+    """Apply a title to a single axes or figure-level axes container."""
+    if title is None or axes is None:
+        return
+    if isinstance(axes, matplotlib.axes.Axes):
+        axes.set_title(title)
+        return
+    if isinstance(axes, dict):
+        axes = list(axes.values())
+    axes = np.asarray(axes, dtype=object)
+    if axes.size == 1 and isinstance(axes.flat[0], matplotlib.axes.Axes):
+        axes.flat[0].set_title(title)
+    elif axes.size > 0 and isinstance(axes.flat[0], matplotlib.axes.Axes):
+        axes.flat[0].figure.suptitle(title)
 
 
 def _get_simulation_rdatas(

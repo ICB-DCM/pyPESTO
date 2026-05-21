@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import warnings
 from collections.abc import Sequence
 
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 
 import pypesto
@@ -22,6 +23,7 @@ from ..C import (
 from ..problem import HierarchicalProblem, Problem
 from ..result import Result
 from .misc import get_axes_array, hide_unused_axes, make_grid_shape
+from ._style import resolve_style
 
 try:
     import amici.sim.sundials as asd
@@ -45,17 +47,11 @@ except ImportError:
 def _prepare_observable_mapping_axes(
     axes: matplotlib.axes.Axes | np.ndarray | None,
     n_panels: int,
-    **kwargs,
+    size: tuple[float, float] | None = None,
 ) -> np.ndarray:
     """Return a cleared axes grid for observable-mapping plots."""
     n_rows, n_cols = make_grid_shape(n_panels)
-
-    if axes is None:
-        kwargs.setdefault("layout", "constrained")
-        _, axes = plt.subplots(n_rows, n_cols, squeeze=False, **kwargs)
-    else:
-        axes = get_axes_array(axes=axes, nrows=n_rows, ncols=n_cols)
-
+    axes = get_axes_array(axes=axes, nrows=n_rows, ncols=n_cols, size=size)
     return hide_unused_axes(axes=axes, n_used=n_panels, clear=True)
 
 
@@ -63,33 +59,64 @@ def _plot_observable_mapping_measurements(
     ax: matplotlib.axes.Axes,
     simulation: np.ndarray,
     measurements: np.ndarray,
+    style: dict | None = None,
+    label: str | None = "Measurements",
 ) -> None:
     """Plot measurement points with the shared visualization styling."""
+    if style is None:
+        style = resolve_style()
     ax.scatter(
         simulation,
         measurements,
-        color="C0",
-        s=40,
-        alpha=0.9,
-        linewidths=0.6,
-        edgecolors="white",
-        label="Measurements",
-        zorder=3,
+        marker="s",
+        color=style["data_color"],
+        s=style["scatter_size"],
+        alpha=style["scatter_alpha"],
+        linewidths=style["scatter_linewidths"],
+        edgecolors=style["scatter_edgecolors"],
+        zorder=style["scatter_zorder"],
+        label=label,
     )
 
 
 def _finalize_observable_mapping_axes(
     ax: matplotlib.axes.Axes,
     title: str,
+    *,
+    show_legend: bool,
 ) -> None:
     """Apply consistent styling to observable-mapping panels."""
     ax.set_title(title)
     ax.set_xlabel("Model output")
     ax.set_ylabel("Measurements")
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
     ax.margins(x=0.05, y=0.08)
-    ax.legend(frameon=False, loc="best")
+    if show_legend:
+        ax.legend()
+
+
+def _trim_observable_mapping_grid_labels(axes: np.ndarray) -> None:
+    """Avoid repeated axis labels in observable-mapping grids."""
+    if axes.size <= 1:
+        return
+    n_rows, n_cols = axes.shape
+    for idx, ax in enumerate(axes.flat):
+        if not ax.get_visible():
+            continue
+        if idx % n_cols != 0:
+            ax.set_ylabel("")
+        if n_rows > 1 and idx // n_cols < n_rows - 1:
+            ax.set_xlabel("")
+
+
+def _observable_data_mask(scaling_factor, offset):
+    """Return the data mask from whichever relative inner parameter exists."""
+    if scaling_factor is not None:
+        return scaling_factor.ixs
+    if offset is not None:
+        return offset.ixs
+    raise ValueError(
+        "Relative observable mapping requires a scaling or offset parameter."
+    )
 
 
 def visualize_estimated_observable_mapping(
@@ -97,7 +124,9 @@ def visualize_estimated_observable_mapping(
     pypesto_problem: HierarchicalProblem,
     start_index: int = 0,
     axes: matplotlib.axes.Axes | np.ndarray | None = None,
-    **kwargs,
+    size: tuple[float, float] | None = None,
+    title: str | None = None,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray | None:
     """Visualize the estimated observable mapping for relative and semi-quantitative observables.
 
@@ -114,9 +143,26 @@ def visualize_estimated_observable_mapping(
         The observable mapping from this start's optimized vector will be plotted.
     axes:
         Optional axes grid to draw into.
-    kwargs:
-        Additional arguments to passed to ``matplotlib.pyplot.subplots``
-        (e.g. `figsize= ...`).
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``axes`` is
+        ``None``. Defaults to a grid-scaled size.
+    title:
+        Figure title.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``data_color`` — measurement point color.
+        - ``scatter_size``, ``scatter_alpha``, ``scatter_linewidths``,
+          ``scatter_edgecolors``, ``scatter_zorder`` — measurement point
+          geometry.
+        - ``line_color`` — observable-mapping/spline line color.
+        - ``mle_color`` — spline-knot marker color.
+        - ``ref_line_color`` — regularization line color.
+        - ``trace_linewidth``, ``line_marker_size``, ``marker_linewidth`` —
+          line and marker geometry.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
@@ -124,6 +170,8 @@ def visualize_estimated_observable_mapping(
         A 2-D NumPy array of matplotlib Axes, or ``None`` if the required
         simulation fails.
     """
+
+    style = resolve_style(style_kwargs)
 
     # Check if the pyPESTO problem is hierarchical.
     if not isinstance(pypesto_problem, HierarchicalProblem):
@@ -170,7 +218,7 @@ def visualize_estimated_observable_mapping(
     axes = _prepare_observable_mapping_axes(
         axes=axes,
         n_panels=n_axes,
-        **kwargs,
+        size=size,
     )
 
     # Plot the estimated observable mapping for relative observables.
@@ -181,6 +229,7 @@ def visualize_estimated_observable_mapping(
             start_index=start_index,
             axes=axes,
             rel_and_semiquant_obs_indices=rel_and_semiquant_obs_indices,
+            style_kwargs=style,
         )
 
     # Plot the estimated spline approximations for semi-quantitative observables.
@@ -190,10 +239,15 @@ def visualize_estimated_observable_mapping(
             start_index=start_index,
             axes=axes,
             rel_and_semiquant_obs_indices=rel_and_semiquant_obs_indices,
+            style_kwargs=style,
         )
         if spline_axes is None:
             return None
         axes = spline_axes
+
+    if title is not None:
+        axes.flat[0].figure.suptitle(title)
+    _trim_observable_mapping_grid_labels(axes)
 
     return axes
 
@@ -204,7 +258,9 @@ def plot_linear_observable_mappings_from_pypesto_result(
     start_index=0,
     axes: np.ndarray | None = None,
     rel_and_semiquant_obs_indices: list[int] | None = None,
-    **kwargs,
+    size: tuple[float, float] | None = None,
+    title: str | None = None,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """Plot the linear observable mappings from a pyPESTO result.
 
@@ -223,14 +279,31 @@ def plot_linear_observable_mappings_from_pypesto_result(
         Sorted indices of the relative and semi-quantitative observables in
         the AMICI model. Each observable is plotted on the subplot at the
         corresponding position in ``axes.flat``.
-    **kwargs:
-        Additional arguments to pass to the ``matplotlib.pyplot.subplots`` function.
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``axes`` is
+        ``None``. Defaults to a grid-scaled size.
+    title:
+        Figure title.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``data_color`` — measurement point color.
+        - ``scatter_size``, ``scatter_alpha``, ``scatter_linewidths``,
+          ``scatter_edgecolors``, ``scatter_zorder`` — measurement point
+          geometry.
+        - ``line_color`` — linear mapping color.
+        - ``trace_linewidth`` — linear mapping linewidth.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     axes:
         A 2-D NumPy array of matplotlib Axes.
     """
+    style = resolve_style(style_kwargs)
+
     # Check the calculator is the InnerCalculatorCollector.
     if not isinstance(
         pypesto_problem.objective.calculator, InnerCalculatorCollector
@@ -274,7 +347,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         axes = _prepare_observable_mapping_axes(
             axes=axes,
             n_panels=n_relative_observables,
-            **kwargs,
+            size=size,
         )
     else:
         if axes is None:
@@ -361,8 +434,8 @@ def plot_linear_observable_mappings_from_pypesto_result(
     ######################################
 
     # plot the linear observable mapping for each relative_observable_id
-    for observable_index, observable_id in zip(
-        relative_observable_indices, relative_observable_ids, strict=True
+    for local_idx, (observable_index, observable_id) in enumerate(
+        zip(relative_observable_indices, relative_observable_ids, strict=True)
     ):
         # Get the ax for the current observable.
         if rel_and_semiquant_obs_indices is not None:
@@ -396,7 +469,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
         )
 
         # Get the data mask for the current observable.
-        observable_data_mask = scaling_factor.ixs or offset.ixs
+        observable_data_mask = _observable_data_mask(scaling_factor, offset)
 
         # Get the measurements for the current observable.
         measurements = extract_expdata_using_mask(
@@ -408,7 +481,14 @@ def plot_linear_observable_mappings_from_pypesto_result(
             expdata=sim, mask=observable_data_mask
         )
 
-        _plot_observable_mapping_measurements(ax, simulation, measurements)
+        show_legend = local_idx == 0
+        _plot_observable_mapping_measurements(
+            ax,
+            simulation,
+            measurements,
+            style=style,
+            label="Measurements" if show_legend else None,
+        )
 
         # Plot the linear mapping.
         sorted_simulation = np.sort(simulation)
@@ -416,16 +496,22 @@ def plot_linear_observable_mappings_from_pypesto_result(
             sorted_simulation,
             scaling_factor_value * sorted_simulation + offset_value,
             linestyle="-",
-            color="C1",
-            linewidth=1.8,
-            label="Linear mapping",
+            color=style["line_color"],
+            linewidth=style["trace_linewidth"],
+            label="Linear mapping" if show_legend else None,
             zorder=2,
         )
 
         _finalize_observable_mapping_axes(
             ax,
-            title=f"Observable {observable_id}",
+            title=f"Obs. {observable_id}",
+            show_legend=show_legend,
         )
+
+    if title is not None:
+        axes.flat[0].figure.suptitle(title)
+    if rel_and_semiquant_obs_indices is None:
+        _trim_observable_mapping_grid_labels(axes)
 
     return axes
 
@@ -435,7 +521,9 @@ def plot_splines_from_pypesto_result(
     start_index=0,
     axes: matplotlib.axes.Axes | np.ndarray | None = None,
     rel_and_semiquant_obs_indices: list[int] | None = None,
-    **kwargs,
+    size: tuple[float, float] | None = None,
+    title: str | None = None,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray | None:
     """Plot the estimated spline approximations from a pypesto result.
 
@@ -451,8 +539,26 @@ def plot_splines_from_pypesto_result(
         The indices of the relative and semi-quantitative observables in the
         amici model. Important if both relative and semi-quantitative observables
         will be plotted on the same axes.
-    kwargs:
-        Additional arguments to pass to the plotting function.
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``axes`` is
+        ``None``. Defaults to a grid-scaled size.
+    title:
+        Figure title.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``data_color`` — measurement point color.
+        - ``scatter_size``, ``scatter_alpha``, ``scatter_linewidths``,
+          ``scatter_edgecolors``, ``scatter_zorder`` — measurement point
+          geometry.
+        - ``line_color`` — spline function color.
+        - ``mle_color`` — spline-knot marker color.
+        - ``ref_line_color`` — regularization line color.
+        - ``trace_linewidth``, ``line_marker_size``, ``marker_linewidth`` —
+          line and marker geometry.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
@@ -460,6 +566,8 @@ def plot_splines_from_pypesto_result(
         A 2-D NumPy array of matplotlib Axes, or ``None`` if the required
         simulation fails.
     """
+    style = resolve_style(style_kwargs)
+
     # Check that the problem contains an objective.
     if pypesto_result.problem.objective is None:
         raise ValueError(
@@ -575,7 +683,9 @@ def plot_splines_from_pypesto_result(
         observable_ids,
         axes=axes,
         rel_and_semiquant_obs_indices=rel_and_semiquant_obs_indices,
-        **kwargs,
+        size=size,
+        title=title,
+        style_kwargs=style,
     )
 
 
@@ -587,7 +697,9 @@ def plot_splines_from_inner_result(
     observable_ids=None,
     axes: np.ndarray | None = None,
     rel_and_semiquant_obs_indices: list[int] | None = None,
-    **kwargs,
+    size: tuple[float, float] | None = None,
+    title: str | None = None,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """Plot the estimated spline approximations from inner results.
 
@@ -610,14 +722,33 @@ def plot_splines_from_inner_result(
         Sorted indices of the relative and semi-quantitative observables in
         the AMICI model. Each observable is plotted on the subplot at the
         corresponding position in ``axes.flat``.
-    kwargs:
-        Additional arguments to pass to the plotting function.
+    size:
+        Figure size ``(width, height)`` in inches; only used when ``axes`` is
+        ``None``. Defaults to a grid-scaled size.
+    title:
+        Figure title.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``data_color`` — measurement point color.
+        - ``scatter_size``, ``scatter_alpha``, ``scatter_linewidths``,
+          ``scatter_edgecolors``, ``scatter_zorder`` — measurement point
+          geometry.
+        - ``line_color`` — spline function color.
+        - ``mle_color`` — spline-knot marker color.
+        - ``ref_line_color`` — regularization line color.
+        - ``trace_linewidth``, ``line_marker_size``, ``marker_linewidth`` —
+          line and marker geometry.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     axes:
         A 2-D NumPy array of matplotlib Axes.
     """
+    style = resolve_style(style_kwargs)
 
     if len(results) != len(inner_problem.groups):
         raise ValueError(
@@ -632,7 +763,7 @@ def plot_splines_from_inner_result(
         axes = _prepare_observable_mapping_axes(
             axes=axes,
             n_panels=n_groups,
-            **kwargs,
+            size=size,
         )
     else:
         if axes is None:
@@ -650,7 +781,9 @@ def plot_splines_from_inner_result(
     flat_axes = axes.flat
 
     # for each result and group, plot the inner solution
-    for result, group in zip(results, inner_problem.groups, strict=True):
+    for local_idx, (result, group) in enumerate(
+        zip(results, inner_problem.groups, strict=True)
+    ):
         if rel_and_semiquant_obs_indices is not None:
             ax_index = rel_and_semiquant_obs_indices.index(group - 1)
         else:
@@ -679,29 +812,32 @@ def plot_splines_from_inner_result(
             K=len(simulation),
         )
 
+        show_legend = local_idx == 0
         _plot_observable_mapping_measurements(
             flat_axes[ax_index],
             simulation,
             measurements,
+            style=style,
+            label="Measurements" if show_legend else None,
         )
         flat_axes[ax_index].scatter(
             spline_bases,
             spline_knots,
-            color="C2",
-            s=30,
-            alpha=0.9,
-            linewidths=0.4,
-            edgecolors="white",
-            label="Spline knots",
+            color=style["mle_color"],
+            s=style["marker_size"],
+            alpha=style["scatter_alpha"],
+            linewidths=style["marker_linewidth"],
+            edgecolors=style["scatter_edgecolors"],
+            label="Spline knots" if show_legend else None,
             zorder=4,
         )
         flat_axes[ax_index].plot(
             spline_bases,
             spline_knots,
             linestyle="-",
-            color="C2",
-            linewidth=1.8,
-            label="Spline function",
+            color=style["line_color"],
+            linewidth=style["trace_linewidth"],
+            label="Spline function" if show_legend else None,
             zorder=2,
         )
         if inner_solver.options[REGULARIZE_SPLINE]:
@@ -714,21 +850,27 @@ def plot_splines_from_inner_result(
                 spline_bases,
                 alpha_opt * spline_bases + beta_opt,
                 linestyle="--",
-                color="C1",
-                linewidth=1.5,
-                label="Regularization line",
+                color=style["ref_line_color"],
+                linewidth=style["trace_linewidth"],
+                label="Regularization line" if show_legend else None,
                 zorder=1,
             )
 
         if observable_ids is not None:
-            title = f"Observable {observable_ids[group - 1]}"
+            panel_title = f"Obs. {observable_ids[group - 1]}"
         else:
-            title = f"Group {group}"
+            panel_title = f"Group {group}"
 
         _finalize_observable_mapping_axes(
             flat_axes[ax_index],
-            title=title,
+            title=panel_title,
+            show_legend=show_legend,
         )
+
+    if title is not None:
+        axes.flat[0].figure.suptitle(title)
+    if rel_and_semiquant_obs_indices is None:
+        _trim_observable_mapping_grid_labels(axes)
 
     return axes
 

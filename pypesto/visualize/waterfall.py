@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Sequence
 
 import matplotlib.axes
@@ -7,7 +9,7 @@ from mpl_toolkits.axes_grid1 import inset_locator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import ALL, COLOR, WATERFALL_MAX_VALUE
+from ..C import ALL, COLOR, LABEL_OBJECTIVE, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
@@ -18,12 +20,14 @@ from .misc import (
     process_y_limits,
 )
 from .reference_points import ReferencePoint, create_references
+from ._style import resolve_style
 
 
 def waterfall(
     results: Result | Sequence[Result],
     ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] | None = (18.5, 10.5),
+    size: tuple[float, float] | None = None,
+    title: str | None = "Waterfall plot",
     y_limits: tuple[float] | None = None,
     scale_y: str | None = "log10",
     offset_y: float | None = None,
@@ -33,6 +37,7 @@ def waterfall(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: Sequence[str] | str | None = None,
     order_by_id: bool = False,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot.
@@ -46,6 +51,8 @@ def waterfall(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+    title:
+        Axes title. Pass ``None`` to suppress.
     y_limits: float or ndarray, optional
         Maximum value to be plotted on the y-axis, or y-limits
     scale_y:
@@ -71,6 +78,17 @@ def waterfall(
         the same x-axis position. Only applicable when a list of result
         objects are provided. Default behavior is to sort the function values
         of each result independently of other results.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours of
+          the per-start scatter dots when clustering is used (best
+          cluster, secondary clusters, isolated starts respectively).
+        - ``ref_line_color`` — colour of the connecting waterfall line.
+        - ``marker_size``, ``marker_linewidth`` — start-dot geometry.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
@@ -78,6 +96,7 @@ def waterfall(
         The plot axes.
     """
     ax = get_ax(ax, size)
+    style = resolve_style(style_kwargs)
 
     if n_starts_to_zoom:
         # create zoom in
@@ -89,7 +108,9 @@ def waterfall(
         inset_axes = None
 
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     # handle `order_by_id`
     if order_by_id:
@@ -153,7 +174,7 @@ def waterfall(
             fvals.sort()
 
         # assign colors
-        coloring = assign_colors(fvals, colors=colors[j])
+        coloring = assign_colors(fvals, colors=colors[j], style=style)
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(
@@ -164,6 +185,8 @@ def waterfall(
             size=size,
             colors=coloring,
             legend_text=legends[j],
+            title=None,
+            style_kwargs=style_kwargs,
         )
 
         if inset_axes is not None:
@@ -172,6 +195,8 @@ def waterfall(
                 scale_y=scale_y,
                 ax=inset_axes,
                 colors=coloring[:n_starts_to_zoom],
+                title=None,
+                style_kwargs=style_kwargs,
             )
             # remove the title and axes labels for the zoom in subplot
             inset_axes.set(title=None, xlabel=None, ylabel=None)
@@ -188,21 +213,24 @@ def waterfall(
     # labels
     ax.set_xlabel("Ordered optimizer run")
     if offset_y == 0.0:
-        ax.set_ylabel("Function value")
+        ax.set_ylabel(LABEL_OBJECTIVE)
     else:
-        ax.set_ylabel(f"Objective value (offset={offset_y:0.3e})")
-    ax.set_title("Waterfall plot")
+        ax.set_ylabel(f"{LABEL_OBJECTIVE} (offset={offset_y:0.3e})")
+    if title is not None:
+        ax.set_title(title)
     return ax
 
 
 def waterfall_lowlevel(
     fvals,
     ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] | None = (18.5, 10.5),
+    size: tuple[float, float] | None = None,
+    title: str | None = "Waterfall plot",
     scale_y: str = "log10",
     offset_y: float = 0.0,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legend_text: str | None = None,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot using list of function values.
@@ -217,6 +245,8 @@ def waterfall_lowlevel(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
+    title:
+        Axes title. Pass ``None`` to suppress.
     scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     offset_y:
@@ -226,12 +256,17 @@ def waterfall_lowlevel(
         and colors are assigned automatically
     legend_text:
         Label for line plots
+    style_kwargs:
+        Style overrides; see :func:`waterfall` for the keys this plotter
+        consumes. All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax: matplotlib.Axes
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
     ax = get_ax(ax, size)
 
     start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
@@ -240,16 +275,16 @@ def waterfall_lowlevel(
         colors = [colors[i] for i in start_indices]
 
     # assign colors
-    colors = assign_colors(fvals, colors=colors)
+    colors = assign_colors(fvals, colors=colors, style=style)
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     # plot line
     if scale_y == "log10":
-        ax.semilogy(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
+        ax.semilogy(start_indices, fvals, color=style["ref_line_color"])
         ax.set_yscale("log")
     else:
-        ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
+        ax.plot(start_indices, fvals, color=style["ref_line_color"])
 
     # Overlay with scatter points with individual colors
     # plotting in reverse order to ensure that the best points are plotted on top
@@ -258,7 +293,8 @@ def waterfall_lowlevel(
         fvals[::-1],
         c=colors[::-1],
         marker="o",
-        linewidth=1.0,
+        s=style["marker_size"],
+        linewidth=style["marker_linewidth"],
         label=legend_text,
         zorder=2.0,
         alpha=1.0,
@@ -280,10 +316,11 @@ def waterfall_lowlevel(
     # labels
     ax.set_xlabel("Ordered optimizer run")
     if offset_y == 0.0:
-        ax.set_ylabel("Function value")
+        ax.set_ylabel(LABEL_OBJECTIVE)
     else:
-        ax.set_ylabel(f"Objective value (offset={offset_y:0.3e})")
-    ax.set_title("Waterfall plot")
+        ax.set_ylabel(f"{LABEL_OBJECTIVE} (offset={offset_y:0.3e})")
+    if title is not None:
+        ax.set_title(title)
     if legend_text is not None:
         ax.legend()
 
