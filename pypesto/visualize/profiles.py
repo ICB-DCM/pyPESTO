@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from warnings import warn
 
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import is_color_like
@@ -9,9 +10,10 @@ from matplotlib.ticker import MaxNLocator
 
 from ..C import COLOR
 from ..problem import Problem
+from ..profile import chi2_quantile_to_ratio
 from ..result import Result
 from .clust_color import assign_colors
-from .misc import process_result_list
+from .misc import get_ax, process_result_list
 from .reference_points import ReferencePoint, create_references
 
 
@@ -31,7 +33,9 @@ def _parameter_label(problem: Problem, idx: int) -> str:
 _BOUND_VIEW_MARGIN = 0.03
 
 
-def _add_bound_lines_1d(ax: plt.Axes, lb: float, ub: float) -> None:
+def _add_bound_lines_1d(
+    ax: matplotlib.axes.Axes, lb: float, ub: float
+) -> None:
     """Draw dashed vertical lines at the lower and upper parameter bounds."""
     for bound in (lb, ub):
         ax.axvline(
@@ -45,7 +49,7 @@ def _add_bound_lines_1d(ax: plt.Axes, lb: float, ub: float) -> None:
 
 
 def _add_bound_lines_2d(
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     x_lb: float,
     x_ub: float,
     y_lb: float,
@@ -73,7 +77,7 @@ def _add_bound_lines_2d(
 
 
 def _add_panel_legend(
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     handles: list[Line2D],
     fontsize: int,
     loc: str = "upper left",
@@ -106,7 +110,7 @@ def _add_panel_legend(
 
 def profiles(
     results: Result | Sequence[Result],
-    ax=None,
+    ax: matplotlib.axes.Axes | None = None,
     profile_indices: Sequence[int] = None,
     size: tuple[float, float] = (18.5, 6.5),
     reference: ReferencePoint | Sequence[ReferencePoint] = None,
@@ -115,10 +119,11 @@ def profiles(
     x_labels: Sequence[str] = None,
     profile_list_ids: int | Sequence[int] = 0,
     ratio_min: float = 0.0,
+    confidence_level: float | None = None,
     show_bounds: bool = False,
     plot_objective_values: bool = False,
     quality_colors: bool = False,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Plot classical 1D profile plot.
 
@@ -149,7 +154,12 @@ def profiles(
     profile_list_ids:
         Index or list of indices of the profile lists to visualize.
     ratio_min:
-        Minimum ratio below which to cut off.
+        Minimum likelihood-ratio value below which to cut off profile points.
+        Mutually exclusive with ``confidence_level``.
+    confidence_level:
+        Confidence level in (0, 1) (e.g. ``0.95``). Converted to
+        ``ratio_min`` via :func:`pypesto.profile.chi2_quantile_to_ratio`.
+        Convenience alternative to specifying ``ratio_min`` directly.
     show_bounds:
         Whether to show, and extend the plot to, the lower and upper bounds.
     plot_objective_values:
@@ -175,6 +185,13 @@ def profiles(
             "Cannot visualize the profiles with `quality_colors` of profiler_result.color_path "
             " and `colors` provided at the same time. Please provide only one of them."
         )
+
+    if confidence_level is not None:
+        if ratio_min != 0.0:
+            raise ValueError(
+                "Pass either `confidence_level` or `ratio_min`, not both."
+            )
+        ratio_min = chi2_quantile_to_ratio(confidence_level)
 
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
@@ -247,14 +264,12 @@ def profiles(
     # plot reference points
     ax = handle_reference_points(ref, ax, profile_indices)
 
-    plt.tight_layout()
-
     return ax
 
 
 def profiles_lowlevel(
     fvals: float | Sequence[float],
-    ax: Sequence[plt.Axes] | None = None,
+    ax: Sequence[matplotlib.axes.Axes] | None = None,
     size: tuple[float, float] = (18.5, 6.5),
     color: COLOR | list[np.ndarray] | None = None,
     legend_text: str = None,
@@ -263,7 +278,7 @@ def profiles_lowlevel(
     lb_full: Sequence[float] = None,
     ub_full: Sequence[float] = None,
     plot_objective_values: bool = False,
-) -> list[plt.Axes]:
+) -> list[matplotlib.axes.Axes]:
     """
     Lowlevel routine for profile plotting.
 
@@ -405,14 +420,14 @@ def profiles_lowlevel(
 
 def profile_lowlevel(
     fvals: Sequence[float],
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] = (18.5, 6.5),
     color: COLOR | np.ndarray | None = None,
-    legend_text: str = None,
+    legend_text: str | None = None,
     show_bounds: bool = False,
-    lb: float = None,
-    ub: float = None,
-) -> plt.Axes:
+    lb: float | None = None,
+    ub: float | None = None,
+) -> matplotlib.axes.Axes:
     """
     Lowlevel routine for plotting one profile, working with a numpy array only.
 
@@ -449,13 +464,9 @@ def profile_lowlevel(
     else:
         single_color = False
 
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        ax.set_xlabel("Parameter value")
-        ax.set_ylabel("Log-posterior ratio")
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
+    ax.set_xlabel("Parameter value")
+    ax.set_ylabel("Log-posterior ratio")
 
     # plot
     if fvals.size != 0:
@@ -512,7 +523,7 @@ def handle_reference_points(ref, ax, profile_indices):
     ref: list, optional
         List of reference points for optimization results, containing et
         least a function value fval
-    ax: matplotlib.Axes, optional
+    ax: matplotlib.axes.Axes, optional
         Axes object to use.
     profile_indices: list of integer values
         List of integer values specifying which profiles should be plotted.
@@ -706,7 +717,7 @@ def profile_lowlevel_2d(
     result: Result,
     profile_index: int,
     second_par_index: int,
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     profile_list_id: int = 0,
     ratio_min: float = 0.0,
     cmap: str = "viridis",
@@ -714,7 +725,7 @@ def profile_lowlevel_2d(
     x_labels: Sequence[str] = None,
     vmin: float = None,
     vmax: float = None,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Lowlevel routine for plotting a two-parameter profile visualization.
 
