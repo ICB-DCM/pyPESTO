@@ -133,12 +133,7 @@ class PymcVariational(PymcSampler):
         # get InferenceData object
         with self.model:
             pymc_data = self.data.sample(n_samples)
-        posterior = pymc_data.posterior
-        # ArviZ may expose posterior either as an xarray Dataset (older) or
-        # as a DataTree group (newer). If the minimum ArviZ version is bumped
-        # to DataTree-only, simplify this to `pymc_data.posterior.dataset`.
-        if not hasattr(posterior, "to_array"):
-            posterior = posterior.dataset
+        posterior = pymc_data.posterior.dataset
 
         x_names_free = self.problem.get_reduced_vector(self.problem.x_names)
         post_samples = np.concatenate(
