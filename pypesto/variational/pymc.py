@@ -133,7 +133,7 @@ class PymcVariational(PymcSampler):
         # get InferenceData object
         with self.model:
             pymc_data = self.data.sample(n_samples)
-        posterior = pymc_data.posterior.dataset
+        posterior = pymc_data.posterior
 
         x_names_free = self.problem.get_reduced_vector(self.problem.x_names)
         post_samples = np.concatenate(

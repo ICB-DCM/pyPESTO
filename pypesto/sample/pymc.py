@@ -251,10 +251,10 @@ class PymcSampler(Sampler):
 
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
-        posterior = self.data.posterior.dataset
-
         # dimensions
-        n_par, n_chain, n_iter = np.asarray(posterior.to_array()).shape
+        n_par, n_chain, n_iter = np.asarray(
+            self.data.posterior.to_array()
+        ).shape
         n_par -= 1  # remove log-posterior
 
         # parameters
@@ -263,10 +263,10 @@ class PymcSampler(Sampler):
         if len(par_ids) != n_par:
             raise AssertionError("Mismatch of parameter dimension")
         for i_par, par_id in enumerate(par_ids):
-            trace_x[:, :, i_par] = np.asarray(posterior[par_id])
+            trace_x[:, :, i_par] = np.asarray(self.data.posterior[par_id])
 
         # function values
-        trace_neglogpost = -np.asarray(posterior["loggyposty"])
+        trace_neglogpost = -np.asarray(self.data.posterior["loggyposty"])
 
         if (
             trace_x.shape[0] != trace_neglogpost.shape[0]
