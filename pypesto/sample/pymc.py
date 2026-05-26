@@ -34,6 +34,14 @@ else:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
+def _get_posterior_dataset(data: Any) -> Any:
+    """Return posterior as an xarray Dataset across ArviZ versions."""
+    posterior = data.posterior
+    if hasattr(posterior, "to_array"):
+        return posterior
+    return posterior.to_dataset()
+
+
 class PymcObjectiveOp(_PT_OP_BASE):
     """PyTensor wrapper around a (non-normalized) log-probability function."""
 
@@ -246,7 +254,7 @@ class PymcSampler(Sampler):
 
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
-        posterior = self.data.posterior
+        posterior = _get_posterior_dataset(self.data)
 
         # dimensions
         n_par, n_chain, n_iter = np.asarray(posterior.to_array()).shape
