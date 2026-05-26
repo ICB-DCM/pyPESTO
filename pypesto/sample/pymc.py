@@ -34,6 +34,8 @@ else:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
+# TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0
+#  and simplify this helper to `data.posterior.to_dataset()`.
 def _get_posterior_dataset(data: Any) -> Any:
     """Return posterior as an xarray Dataset across ArviZ versions."""
     posterior = data.posterior
