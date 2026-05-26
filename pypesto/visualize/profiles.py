@@ -12,6 +12,7 @@ from ..C import COLOR
 from ..problem import Problem
 from ..profile import chi2_quantile_to_ratio
 from ..result import Result
+from ._style import resolve_style
 from .clust_color import assign_colors
 from .misc import get_ax, process_result_list
 from .reference_points import ReferencePoint, create_references
@@ -123,6 +124,7 @@ def profiles(
     show_bounds: bool = False,
     plot_objective_values: bool = False,
     quality_colors: bool = False,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot classical 1D profile plot.
@@ -173,12 +175,24 @@ def profiles(
         had to resample the parameter vector due to optimization failure of the previous two.
         Black indicates a step for which none of the above was necessary. This option is only
         available if there is only one result and one profile_list_id (one profile per plot).
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-result / per-profile-list profile lines (best
+          cluster, secondary clusters, isolated starts respectively).
+          Only consulted when ``colors`` is ``None``; an explicit
+          ``colors`` short-circuits clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
 
     if colors is not None and quality_colors:
         raise ValueError(
@@ -195,7 +209,7 @@ def profiles(
 
     # parse input
     results, profile_list_ids, colors, legends = process_result_list_profiles(
-        results, profile_list_ids, legends, colors
+        results, profile_list_ids, legends, colors, style=style
     )
 
     # get the parameter ids to be plotted
@@ -621,6 +635,7 @@ def process_result_list_profiles(
     profile_list_ids: int | Sequence[int] | None,
     legends: str | list[str],
     colors: COLOR | list[COLOR] | np.ndarray | None = None,  # todo: check
+    style: dict | None = None,
 ) -> tuple[list[Result], list[int] | Sequence[int], list, list[str]]:
     """
     Assign colors and legends to a list of results.
@@ -637,6 +652,10 @@ def process_result_list_profiles(
         list of colors for plotting.
     legends:
         Legends for plotting
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
@@ -653,7 +672,7 @@ def process_result_list_profiles(
         if len(results) != 1:
             # if we have no single result, then use the standard api
             results, colors, legends = process_result_list(
-                results, colors, legends
+                results, colors, legends, style=style
             )
             return results, profile_list_ids, colors, legends
     else:
@@ -662,7 +681,9 @@ def process_result_list_profiles(
 
     # If we have a single result, we may still have multiple profile_list_ids
     # which should be plotted separately: use profile_list_ids as results dummy
-    _, colors, legends = process_result_list(profile_list_ids, colors, legends)
+    _, colors, legends = process_result_list(
+        profile_list_ids, colors, legends, style=style
+    )
 
     return results, profile_list_ids, colors, legends
 

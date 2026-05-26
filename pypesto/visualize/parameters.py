@@ -17,6 +17,7 @@ from ..C import (
     InnerParameterType,
 )
 from ..result import Result
+from ._style import resolve_style
 from .clust_color import assign_colors
 from .misc import (
     get_ax,
@@ -53,6 +54,7 @@ def parameters(
     scale_to_interval: tuple[float, float] | None = None,
     plot_inner_parameters: bool = True,
     log10_scale_hier_sigma: bool = True,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameter values.
@@ -95,14 +97,29 @@ def parameters(
     log10_scale_hier_sigma:
         Flag indicating whether to scale inner parameters of type
         ``InnerParameterType.SIGMA`` to log10 (default: True).
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start parameter traces when clustering is used
+          (best cluster, secondary clusters, isolated starts respectively).
+          Only consulted when ``colors`` is ``None``; an explicit
+          ``colors`` short-circuits clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
+
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     if isinstance(parameter_indices, str):
         if parameter_indices == "all":
@@ -161,6 +178,7 @@ def parameters(
             colors=colors[j],
             legend_text=legends[j],
             balance_alpha=balance_alpha,
+            style=style,
         )
 
     # parse and apply plotting options
@@ -264,6 +282,7 @@ def parameters_lowlevel(
     linestyle: str = "-",
     legend_text: str | None = None,
     balance_alpha: bool = True,
+    style: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot parameters plot using list of parameters.
@@ -292,13 +311,16 @@ def parameters_lowlevel(
     balance_alpha:
         Flag indicating whether alpha for large clusters should be reduced to
         avoid overplotting (default: True)
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
     ax:
         The plot axes.
     """
-
     if size is None:
         # 0.5 inch height per parameter
         size = (18.5, max(xs.shape[1], 1) / 2)
@@ -307,7 +329,7 @@ def parameters_lowlevel(
 
     # assign colors
     colors = assign_colors(
-        vals=fvals, colors=colors, balance_alpha=balance_alpha
+        vals=fvals, colors=colors, balance_alpha=balance_alpha, style=style
     )
 
     # parameter indices

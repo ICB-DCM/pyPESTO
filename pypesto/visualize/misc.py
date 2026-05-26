@@ -35,6 +35,7 @@ def process_result_list(
     results: Result | list[Result],
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
+    style: dict | None = None,
 ) -> tuple[list[Result], list[COLOR], list[str]]:
     """
     Assign colors and legends to a list of results, check user provided lists.
@@ -47,6 +48,10 @@ def process_result_list(
         list of colors recognized by matplotlib, or single color
     legends:
         labels for line plots
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
@@ -84,7 +89,7 @@ def process_result_list(
             legend_type_error = True
     else:
         # if more than one result is passed, we use one color per result
-        colors = assign_colors_for_list(len(results), colors)
+        colors = assign_colors_for_list(len(results), colors, style=style)
 
         # check whether list of legends has the correct length
         if legends is None:
