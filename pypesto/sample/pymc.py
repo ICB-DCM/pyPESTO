@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
-from typing import TYPE_CHECKING
+from typing import Any
 
 import numpy as np
 
@@ -19,9 +19,6 @@ logger = logging.getLogger(__name__)
 # Lazy import of pymc and pytensor
 # Check availability once at module load time
 _HAS_PYMC = importlib.util.find_spec("pymc") is not None
-
-if TYPE_CHECKING:
-    import xarray as xr
 
 if _HAS_PYMC:
     import pymc
@@ -149,7 +146,7 @@ class PymcSampler(Sampler):
         self.problem: Problem | None = None
         self.x0: np.ndarray | None = None
         self.trace: pymc.backends.Text | None = None
-        self.data: xr.DataTree | None = None
+        self.data: Any | None = None
 
     @classmethod
     def translate_options(cls, options):
