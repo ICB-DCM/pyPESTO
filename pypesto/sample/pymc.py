@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+from typing import Any
 
 import numpy as np
 
@@ -15,10 +16,9 @@ from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
-# Lazy import of pymc, arviz, and pytensor
+# Lazy import of pymc and pytensor
 # Check availability once at module load time
 _HAS_PYMC = importlib.util.find_spec("pymc") is not None
-_HAS_ARVIZ = importlib.util.find_spec("arviz") is not None
 
 if _HAS_PYMC:
     import pymc
@@ -30,13 +30,18 @@ else:
     pt = None
     _PT_OP_BASE = object
 
-if _HAS_ARVIZ:
-    import arviz as az
-else:
-    az = None
-
 # implementation based on:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
+
+
+# TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0
+#  and simplify this helper to `data.posterior.to_dataset()`.
+def _get_posterior_dataset(data: Any) -> Any:
+    """Return posterior as an xarray Dataset across ArviZ versions."""
+    posterior = data.posterior
+    if hasattr(posterior, "to_array"):
+        return posterior
+    return posterior.to_dataset()
 
 
 class PymcObjectiveOp(_PT_OP_BASE):
@@ -151,7 +156,7 @@ class PymcSampler(Sampler):
         self.problem: Problem | None = None
         self.x0: np.ndarray | None = None
         self.trace: pymc.backends.Text | None = None
-        self.data: az.InferenceData | None = None
+        self.data: Any | None = None
 
     @classmethod
     def translate_options(cls, options):
@@ -251,10 +256,10 @@ class PymcSampler(Sampler):
 
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
+        posterior = _get_posterior_dataset(self.data)
+
         # dimensions
-        n_par, n_chain, n_iter = np.asarray(
-            self.data.posterior.to_array()
-        ).shape
+        n_par, n_chain, n_iter = np.asarray(posterior.to_array()).shape
         n_par -= 1  # remove log-posterior
 
         # parameters
@@ -263,10 +268,10 @@ class PymcSampler(Sampler):
         if len(par_ids) != n_par:
             raise AssertionError("Mismatch of parameter dimension")
         for i_par, par_id in enumerate(par_ids):
-            trace_x[:, :, i_par] = np.asarray(self.data.posterior[par_id])
+            trace_x[:, :, i_par] = np.asarray(posterior[par_id])
 
         # function values
-        trace_neglogpost = -np.asarray(self.data.posterior["loggyposty"])
+        trace_neglogpost = -np.asarray(posterior["loggyposty"])
 
         if (
             trace_x.shape[0] != trace_neglogpost.shape[0]
