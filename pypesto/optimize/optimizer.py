@@ -1004,9 +1004,13 @@ class PyswarmOptimizer(Optimizer):
 
         check_finite_bounds(lb, ub)
 
-        xopt, fopt = pyswarm.pso(
+        result = pyswarm.pso(
             problem.objective.get_fval, lb, ub, **self.options
         )
+        if hasattr(result, "x") and hasattr(result, "fun"):
+            xopt, fopt = result.x, result.fun
+        else:
+            xopt, fopt = result
 
         optimizer_result = OptimizerResult(
             x=np.array(xopt), fval=fopt, optimizer=str(self)
