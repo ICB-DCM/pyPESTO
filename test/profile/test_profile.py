@@ -16,8 +16,8 @@ import pypesto.profile as profile
 import pypesto.visualize as visualize
 from pypesto import ObjectiveBase
 
+from ..conftest import close_fig
 from ..util import rosen_for_sensi
-from ..visualize import close_fig
 
 
 class ProfilerTest(unittest.TestCase):
