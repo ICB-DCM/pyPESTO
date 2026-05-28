@@ -21,8 +21,8 @@ from pypesto.profile.util import (
     resolve_profile_step_sizes_for_parameters,
 )
 
+from ..conftest import close_fig
 from ..util import rosen_for_sensi
-from ..visualize import close_fig
 
 
 class ProfilerTest(unittest.TestCase):
