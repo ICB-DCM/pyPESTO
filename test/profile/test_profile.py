@@ -22,8 +22,8 @@ from pypesto.profile.util import (
 )
 from pypesto.profile.walk_along_profile import profile_multistart_optimize
 
+from ..conftest import close_fig
 from ..util import rosen_for_sensi
-from ..visualize import close_fig
 
 
 class ProfilerTest(unittest.TestCase):
@@ -502,9 +502,9 @@ def test_options_valid():
         "expected_mode",
     ),
     [
-        ("lin", 0.0, 100.0, None, 0.5, 1.0, 4.0, "relative"),
+        ("lin", 0.0, 100.0, None, 0.125, 0.25, 2.5, "relative"),
         ("lin", 0.0, 1.0, None, 0.01, 0.02, 0.2, "absolute"),
-        ("log10", -6.0, 6.0, None, 0.06, 0.12, 0.48, "relative"),
+        ("log10", -6.0, 6.0, None, 0.015, 0.03, 0.3, "relative"),
         (
             "lin",
             0.0,

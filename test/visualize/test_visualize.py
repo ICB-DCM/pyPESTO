@@ -3,7 +3,6 @@ import logging
 import os
 from collections.abc import Sequence
 from copy import deepcopy
-from functools import wraps
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -30,18 +29,7 @@ from pypesto.visualize.model_fit import (
     visualize_optimized_model_fit,
 )
 
-
-def close_fig(fun):
-    """Close figure."""
-
-    @wraps(fun)
-    def wrapped_fun(*args, **kwargs):
-        ret = fun(*args, **kwargs)
-        plt.close("all")
-        return ret
-
-    return wrapped_fun
-
+from ..conftest import close_fig
 
 # Define some helper functions, to have the test code more readable
 
@@ -550,7 +538,30 @@ def test_parameters_hierarchical(scale_to_interval):
 @close_fig
 def test_optimization_scatter():
     result = create_optimization_result()
-    visualize.optimization_scatter(result)
+    axes = visualize.optimization_scatter(result)
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.optimization_scatter(result, axes=custom_axes)
+    assert returned_axes is custom_axes
+
+    nrows, ncols = axes.shape
+    fig = plt.figure()
+    grid_spec = fig.add_gridspec(nrows, ncols + 1)
+    custom_axes = np.empty((nrows, ncols), dtype=object)
+    for row in range(nrows):
+        for col in range(ncols):
+            custom_axes[row, col] = fig.add_subplot(grid_spec[row, col])
+    extra_ax = fig.add_subplot(grid_spec[:, -1])
+    visualize.optimization_scatter(result, axes=custom_axes)
+    assert extra_ax in fig.axes
+
+    for i, optimizer_result in enumerate(result.optimize_result.list):
+        optimizer_result.fval = 1.0 + i * 1e-12
+
+    axes = visualize.optimization_scatter(result)
+    colorbar_ax = axes[0, 0].figure.axes[-1]
+
+    assert colorbar_ax.get_ylim()[1] - colorbar_ax.get_ylim()[0] >= 1.0
 
 
 @close_fig
@@ -628,6 +639,55 @@ def _test_ensemble_dimension_reduction():
 
     # test call via lowlevel routine
     visualize.ensemble_scatter_lowlevel(pca_components[:, 0:2])
+
+
+@close_fig
+def test_ensemble_scatter_lowlevel():
+    dataset = np.array([[0.0, 1.0], [1.0, 0.0], [0.5, 0.5]])
+
+    ax = visualize.ensemble_scatter_lowlevel(
+        dataset, x_label="component x", y_label="component y"
+    )
+
+    assert ax.get_xlabel() == "component x"
+    assert ax.get_ylabel() == "component y"
+
+
+@close_fig
+def test_projection_scatter_umap_original(monkeypatch):
+    import sys
+    import types
+
+    plot_module = types.ModuleType("umap.plot")
+
+    def fake_points(umap_object, values=None, theme=None, **kwargs):
+        assert values == [0.0, 1.0]
+        assert theme == "viridis"
+        return kwargs["ax"]
+
+    plot_module.points = fake_points
+    umap_module = types.ModuleType("umap")
+    umap_module.plot = plot_module
+
+    monkeypatch.setitem(sys.modules, "umap", umap_module)
+    monkeypatch.setitem(sys.modules, "umap.plot", plot_module)
+
+    class DummyUmap:
+        def __init__(self):
+            self.embedding_ = np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]])
+
+    dummy_umap = DummyUmap()
+    _, ax = plt.subplots()
+
+    returned_ax = visualize.projection_scatter_umap_original(
+        dummy_umap,
+        color_by=[0.0, 1.0],
+        components=(0, 2),
+        ax=ax,
+    )
+
+    assert returned_ax is ax
+    assert dummy_umap.embedding_.shape == (2, 2)
 
 
 @close_fig
@@ -762,6 +822,13 @@ def test_profile_lowlevel():
         ]
     )
     visualize.profile_lowlevel(fvals=fvals, color="m")
+    _, ax = plt.subplots()
+
+    returned_ax = visualize.profile_lowlevel(fvals=fvals, color="m", ax=ax)
+
+    assert returned_ax is ax
+    assert ax.get_xlabel() == "Parameter value"
+    assert ax.get_ylabel() == "Log-posterior ratio"
 
 
 @close_fig
@@ -965,7 +1032,15 @@ def test_optimization_stats():
         plot_type="hist",
     )
 
-    visualize.optimization_run_properties_per_multistart([result_1, result_2])
+    axes = visualize.optimization_run_properties_per_multistart(
+        [result_1, result_2]
+    )
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.optimization_run_properties_per_multistart(
+        [result_1, result_2], axes=custom_axes
+    )
+    assert returned_axes is custom_axes
 
     visualize.optimization_run_properties_one_plot(
         result_1, ["time"], colors="C0"
@@ -975,13 +1050,24 @@ def test_optimization_stats():
         result_1, ["n_fval", "n_grad", "n_hess"]
     )
 
-    visualize.optimization_run_property_per_multistart(
+    axes = visualize.optimization_run_property_per_multistart(
         [result_1, result_2],
         "time",
         colors=["g", "C1"],
         legends=["result1", "result2"],
         plot_type="both",
     )
+    assert axes.shape == (1, 2)
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.optimization_run_property_per_multistart(
+        [result_1, result_2],
+        "time",
+        colors=["g", "C1"],
+        legends=["result1", "result2"],
+        plot_type="both",
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
 
 
 @close_fig
@@ -1145,31 +1231,56 @@ def test_sampling_fval_traces():
 def test_sampling_parameter_traces():
     """Test pypesto.visualize.sampling_parameter_traces"""
     result = create_sampling_result()
-    visualize.sampling_parameter_traces(result)
+    axes = visualize.sampling_parameter_traces(result)
+    assert axes.ndim == 2
     # call with custom arguments
-    visualize.sampling_parameter_traces(
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_parameter_traces(
         result, i_chain=1, stepsize=5, size=(10, 10), use_problem_bounds=False
     )
+    assert returned_axes.ndim == 2
+    returned_axes = visualize.sampling_parameter_traces(
+        result,
+        i_chain=1,
+        stepsize=5,
+        use_problem_bounds=False,
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
 
 
 @close_fig
 def test_sampling_scatter():
     """Test pypesto.visualize.sampling_scatter"""
     result = create_sampling_result()
-    visualize.sampling_scatter(result)
+    axes = visualize.sampling_scatter(result)
+    assert axes.ndim == 2
     # call with custom arguments
-    visualize.sampling_scatter(result, i_chain=1, stepsize=5, size=(10, 10))
+    returned_axes = visualize.sampling_scatter(
+        result, i_chain=1, stepsize=5, size=(10, 10), diag_kind="hist"
+    )
+    assert returned_axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_scatter(result, axes=custom_axes)
+    assert returned_axes is custom_axes
 
 
 @close_fig
 def test_sampling_1d_marginals():
     """Test pypesto.visualize.sampling_1d_marginals"""
     result = create_sampling_result()
-    visualize.sampling_1d_marginals(result)
+    axes = visualize.sampling_1d_marginals(result)
+    assert axes.ndim == 2
     # call with custom arguments
-    visualize.sampling_1d_marginals(
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_1d_marginals(
         result, i_chain=1, stepsize=5, size=(10, 10)
     )
+    assert returned_axes.ndim == 2
+    returned_axes = visualize.sampling_1d_marginals(
+        result, i_chain=1, stepsize=5, axes=custom_axes
+    )
+    assert returned_axes is custom_axes
     # call with other modes
     visualize.sampling_1d_marginals(result, plot_type="hist")
     visualize.sampling_1d_marginals(
@@ -1182,9 +1293,9 @@ def test_sampling_parameter_cis():
     """Test pypesto.visualize.sampling_parameter_cis"""
     result = create_sampling_result()
     visualize.sampling_parameter_cis(result)
-    # call with custom arguments
+    # call with canonical kwarg
     visualize.sampling_parameter_cis(
-        result, alpha=[99, 68], step=0.1, size=(10, 10)
+        result, confidence_levels=[0.99, 0.68], step=0.1, size=(10, 10)
     )
 
 
@@ -1219,17 +1330,27 @@ def test_sampling_prediction_trajectories():
     )
 
     # Plot by
-    visualize.sampling_prediction_trajectories(
+    axes = visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
         groupby=pypesto.C.CONDITION,
     )
-    visualize.sampling_prediction_trajectories(
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        groupby=pypesto.C.CONDITION,
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
+    returned_axes = visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
         size=(10, 10),
         groupby=pypesto.C.OUTPUT,
     )
+    assert returned_axes.ndim == 2
 
 
 @close_fig
@@ -1537,7 +1658,16 @@ def test_visualize_estimated_observable_mapping():
     result = pypesto.optimize.minimize(
         problem=problem, n_starts=1, optimizer=optimizer
     )
-    visualize.visualize_estimated_observable_mapping(result, problem)
+    axes = visualize.visualize_estimated_observable_mapping(result, problem)
+    assert isinstance(axes, np.ndarray)
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.visualize_estimated_observable_mapping(
+        result,
+        problem,
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
 
 
 @close_fig
@@ -1603,6 +1733,14 @@ def test_projection_scatter_pca_parameters():
 
     # Test visualization with specific components
     visualize.projection_scatter_pca(pca_repr, components=(0, 1))
+    dummy_pca = np.random.randn(20, 4)
+    axes = visualize.projection_scatter_pca(dummy_pca, components=range(4))
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.projection_scatter_pca(
+        dummy_pca, components=range(4), axes=custom_axes
+    )
+    assert returned_axes is custom_axes
 
 
 @close_fig

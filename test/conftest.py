@@ -1,6 +1,8 @@
 import os
 import tempfile
+from functools import wraps
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 import scipy.optimize as so
@@ -8,6 +10,19 @@ import scipy.optimize as so
 import pypesto
 import pypesto.optimize as optimize
 from pypesto.store import write_result
+
+
+def close_fig(fun):
+    """Close all figures after a test, even on failure."""
+
+    @wraps(fun)
+    def wrapped_fun(*args, **kwargs):
+        try:
+            return fun(*args, **kwargs)
+        finally:
+            plt.close("all")
+
+    return wrapped_fun
 
 
 @pytest.fixture
