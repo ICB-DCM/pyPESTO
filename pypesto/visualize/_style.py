@@ -1,29 +1,13 @@
 """
-Shared visualization constants and helpers for ``pypesto.visualize``.
+Visual style for ``pypesto.visualize``.
 
-TODO remove too much info after all PRs have been merged.
+Default constants, the ``style_kwargs`` registry, and small cross-module
+helpers.
 
-Grown incrementally across the PR 1.5 follow-on series: each per-viz PR
-adds the constants and helpers its consumers need, in the same diff as
-those consumers. The final PR in the series adds :func:`apply_style`
-(an opt-in rcParams preset).
-
-Style keys are surfaced to users via the ``style_kwargs`` parameter on
-every public plotter, validated against :data:`_DEFAULTS`::
+Users override any default per call via ``style_kwargs``, validated against
+:data:`_DEFAULTS`::
 
     waterfall(result, style_kwargs={"mle_color": "tab:purple"})
-
-How to extend
--------------
-- **Add a constant**: ``UPPER_SNAKE`` name with a 1-line comment on its
-  semantic role, under the appropriate section header. Add a new
-  section header (``# ===`` block) when the purpose is genuinely new.
-- **Add a registry key**: lowercase entry in :data:`_DEFAULTS` referencing
-  the constant. Unknown keys passed to :func:`resolve_style` raise
-  ``UserWarning`` so typos surface immediately.
-- **Add a helper**: under an existing section, or a new one. Helpers that
-  cross module boundaries belong here. Module-local helpers stay in
-  their module.
 """
 
 from __future__ import annotations
@@ -32,19 +16,12 @@ import warnings
 
 # Colors — semantic roles
 # -----------------------
-
-# matplotlib ``tab:red``; used for both the best-cluster colour and MLE markers.
-MLE_COLOR = "#d62728"
-
-# Neutral mid-grey; isolated (singleton) starts and outlier indicators.
-OUTLIER_COLOR = "#b3b3b3"
+MLE_COLOR = "#d62728"  # tab:red — best cluster + MLE markers
+OUTLIER_COLOR = "#b3b3b3"  # mid-grey — singleton / outlier starts
 
 # Colormaps
 # ---------
-
-# Qualitative palette; secondary cluster colours and per-variable colours in
-# prediction-trajectory plots are sampled from this.
-CMAP_DISCRETE = "tab10"
+CMAP_DISCRETE = "tab10"  # qualitative: cluster + per-variable colours
 
 # Style registry
 # --------------

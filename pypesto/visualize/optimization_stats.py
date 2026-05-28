@@ -101,9 +101,7 @@ def optimization_run_properties_one_plot(
         ]
 
     if colors is None:
-        colors = assign_colors_for_list(
-            len(properties_to_plot), style=style
-        )
+        colors = assign_colors_for_list(len(properties_to_plot), style=style)
     elif is_color_like(colors):
         colors = [colors]
 
