@@ -134,7 +134,7 @@ def assign_clustered_colors(
     else:
         grey = [*outlier_rgb, 1.0]
 
-    # create a color list, prfilled with grey values
+    # create a color list, prefilled with grey values
     colors = np.array([grey] * clusters.size)
 
     # assign colors to real clusters
