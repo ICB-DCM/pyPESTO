@@ -726,7 +726,9 @@ def plot_density_panel(
             kde = gaussian_kde(values, bw_method=bw_method)
             # Extend 3 bandwidths beyond the data so the curve tapers to zero.
             bw = kde.factor * np.std(values, ddof=1)
-            x_grid = np.linspace(values.min() - 3 * bw, values.max() + 3 * bw, 300)
+            x_grid = np.linspace(
+                values.min() - 3 * bw, values.max() + 3 * bw, 300
+            )
             ax.plot(
                 x_grid,
                 kde(x_grid),
@@ -761,8 +763,13 @@ def plot_density_panel(
 
     # Draw parameter bounds (xlim is extended by draw_bounds_1d when bounds
     # fall outside the data frame; never shrunk).
-    if show_bounds and lb is not None and ub is not None \
-            and np.isfinite(lb) and np.isfinite(ub):
+    if (
+        show_bounds
+        and lb is not None
+        and ub is not None
+        and np.isfinite(lb)
+        and np.isfinite(ub)
+    ):
         return draw_bounds_1d(ax, lb, ub, axis="x", style=style)
     return None
 

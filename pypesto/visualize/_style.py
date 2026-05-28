@@ -29,12 +29,12 @@ from matplotlib.lines import Line2D
 
 # Colors — semantic roles
 # -----------------------
-MLE_COLOR = "#d62728"      # tab:red — best cluster + MLE markers
+MLE_COLOR = "#d62728"  # tab:red — best cluster + MLE markers
 OUTLIER_COLOR = "#b3b3b3"  # mid-grey — singleton / outlier starts
 
 # Colormaps
 # ---------
-CMAP_DISCRETE = "tab10"    # qualitative: cluster + per-variable colours
+CMAP_DISCRETE = "tab10"  # qualitative: cluster + per-variable colours
 
 # Lines (KDE curves, simulation / model-fit lines, …)
 # ---------------------------------------------------
@@ -44,8 +44,8 @@ LINEWIDTH = 1.5
 # Dash markers (rug ticks, CI endpoints, …)
 # -----------------------------------------
 DASH_COLOR = "#174261"
-DASH_LINEWIDTH = 1.2   # markeredgewidth
-DASH_MARKERSIZE = 10   # marker length
+DASH_LINEWIDTH = 1.2  # markeredgewidth
+DASH_MARKERSIZE = 10  # marker length
 DASH_ALPHA = 0.8
 
 # Rectangle / histogram fills
@@ -66,7 +66,9 @@ BOUND_LINESTYLE = "--"
 BOUND_COLOR = "0.5"
 BOUND_LINEWIDTH = 1.4
 BOUND_ALPHA = 0.95
-BOUND_VIEW_MARGIN = 0.03   # axis-limit padding so bound lines aren't flush with the spine
+BOUND_VIEW_MARGIN = (
+    0.03  # axis-limit padding so bound lines aren't flush with the spine
+)
 
 # Style registry
 # --------------
@@ -135,32 +137,36 @@ def apply_style() -> None:
     Opt-in: not called automatically. Users (and pyPESTO's example
     notebooks/docs) call this once at the top of a session.
     """
-    mpl.rcParams.update({
-        "axes.labelsize": 13,
-        "axes.labelweight": mpl.rcParamsDefault["axes.labelweight"],
-        "axes.titlesize": 14,
-        "axes.titleweight": "bold",
-        "xtick.labelsize": 11,
-        "ytick.labelsize": 11,
-        "legend.fontsize": mpl.rcParamsDefault["legend.fontsize"],
-        # Legends: auto-placed, framed, and lightly translucent so text reads
-        # clearly without making the legend feel heavy.
-        "legend.loc": "best",
-        "legend.frameon": True,
-        "legend.framealpha": 0.6,
-        "legend.edgecolor": "0.7",
-        "axes.spines.top": False,
-        "axes.spines.right": False,
-        "axes.grid": False,
-        "figure.constrained_layout.use": True,
-    })
+    mpl.rcParams.update(
+        {
+            "axes.labelsize": 13,
+            "axes.labelweight": mpl.rcParamsDefault["axes.labelweight"],
+            "axes.titlesize": 14,
+            "axes.titleweight": "bold",
+            "xtick.labelsize": 11,
+            "ytick.labelsize": 11,
+            "legend.fontsize": mpl.rcParamsDefault["legend.fontsize"],
+            # Legends: auto-placed, framed, and lightly translucent so text reads
+            # clearly without making the legend feel heavy.
+            "legend.loc": "best",
+            "legend.frameon": True,
+            "legend.framealpha": 0.6,
+            "legend.edgecolor": "0.7",
+            "axes.spines.top": False,
+            "axes.spines.right": False,
+            "axes.grid": False,
+            "figure.constrained_layout.use": True,
+        }
+    )
 
 
 # Bound-line helpers
 # ------------------
 
 
-def _bounds_legend_handle(label: str = "Bounds", style: dict | None = None) -> Line2D:
+def _bounds_legend_handle(
+    label: str = "Bounds", style: dict | None = None
+) -> Line2D:
     """Return a Line2D matching the bound style suitable as a legend handle."""
     s = style or {}
     return Line2D(
@@ -205,7 +211,14 @@ def draw_bounds_1d(
     alpha = s.get("bound_alpha", BOUND_ALPHA)
     drawer = ax.axvline if axis == "x" else ax.axhline
     for bound in (lb, ub):
-        drawer(bound, color=color, linestyle=linestyle, linewidth=linewidth, alpha=alpha, zorder=1)
+        drawer(
+            bound,
+            color=color,
+            linestyle=linestyle,
+            linewidth=linewidth,
+            alpha=alpha,
+            zorder=1,
+        )
     if view_margin and np.isfinite(lb) and np.isfinite(ub) and ub > lb:
         margin = BOUND_VIEW_MARGIN * (ub - lb)
         if axis == "x":

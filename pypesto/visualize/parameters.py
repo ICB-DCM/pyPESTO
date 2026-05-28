@@ -311,11 +311,17 @@ def parameter_hist(
     scale = x_scales[parameter_index] if x_scales is not None else None
 
     bound_handle = plot_density_panel(
-        ax, parameter_values, bins=bins, bw_method=bw_method, style=style,
+        ax,
+        parameter_values,
+        bins=bins,
+        bw_method=bw_method,
+        style=style,
         show_hist=(plot_type in ("hist", "both")),
         show_kde=(plot_type in ("kde", "both")),
         show_rug=(plot_type in ("hist", "both")),
-        show_bounds=show_bounds, lb=lb_val, ub=ub_val,
+        show_bounds=show_bounds,
+        lb=lb_val,
+        ub=ub_val,
     )
 
     legend_handles, legend_labels = [], []
@@ -325,14 +331,19 @@ def parameter_hist(
     if finite_vals.size > 0:
         if show_kde:
             legend_handles.append(
-                Line2D([0], [0], color=style["line_color"], lw=style["linewidth"])
+                Line2D(
+                    [0], [0], color=style["line_color"], lw=style["linewidth"]
+                )
             )
             legend_labels.append("KDE")
         if show_rug:
             legend_handles.append(
                 Line2D(
-                    [0], [0],
-                    color=style["dash_color"], marker="|", lw=0,
+                    [0],
+                    [0],
+                    color=style["dash_color"],
+                    marker="|",
+                    lw=0,
                     markersize=style["dash_markersize"],
                     markeredgewidth=style["dash_linewidth"],
                 )
@@ -346,7 +357,9 @@ def parameter_hist(
     if legend_handles:
         ax.legend(handles=legend_handles, labels=legend_labels)
 
-    xlabel = f"{parameter_name} ({scale})" if scale is not None else parameter_name
+    xlabel = (
+        f"{parameter_name} ({scale})" if scale is not None else parameter_name
+    )
     if title is not None:
         ax.set_title(title)
     ax.set_xlabel(xlabel)

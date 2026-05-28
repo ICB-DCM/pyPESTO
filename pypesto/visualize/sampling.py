@@ -1405,7 +1405,9 @@ def sampling_1d_marginals(
     par_ax = dict(zip(param_names, axes.flat[:nr_params], strict=True))
 
     # Build name→index map for looking up per-parameter lb/ub/scale.
-    all_reduced_names = result.problem.get_reduced_vector(result.problem.x_names)
+    all_reduced_names = result.problem.get_reduced_vector(
+        result.problem.x_names
+    )
     name_to_reduced_idx = {name: i for i, name in enumerate(all_reduced_names)}
     x_scales_reduced = (
         result.problem.get_reduced_vector(result.problem.x_scales)
@@ -1433,21 +1435,31 @@ def sampling_1d_marginals(
             show_hist=(plot_type in ("hist", "both")),
             show_kde=_show_kde,
             show_rug=_show_rug,
-            show_bounds=show_bounds, lb=lb_val, ub=ub_val,
+            show_bounds=show_bounds,
+            lb=lb_val,
+            ub=ub_val,
         )
 
         legend_handles, legend_labels = [], []
         if finite_vals.size > 0 and idx == 0:
             if _show_kde:
                 legend_handles.append(
-                    Line2D([0], [0], color=style["line_color"], lw=style["linewidth"])
+                    Line2D(
+                        [0],
+                        [0],
+                        color=style["line_color"],
+                        lw=style["linewidth"],
+                    )
                 )
                 legend_labels.append("KDE")
             if _show_rug:
                 legend_handles.append(
                     Line2D(
-                        [0], [0],
-                        color=style["dash_color"], marker="|", lw=0,
+                        [0],
+                        [0],
+                        color=style["dash_color"],
+                        marker="|",
+                        lw=0,
                         markersize=style["dash_markersize"],
                         markeredgewidth=style["dash_linewidth"],
                     )
