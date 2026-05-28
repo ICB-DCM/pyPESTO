@@ -13,7 +13,7 @@ from ..problem import Problem
 from ..result import ProfileResult, ProfilerResult, Result
 from .options import ProfileOptions
 
-PROFILE_STEP_PRECHECK_NOMINAL_WARN_THRESHOLD = 200
+PROFILE_STEP_PRECHECK_NOMINAL_WARN_THRESHOLD = 500
 PROFILE_STEP_PRECHECK_DENSE_WARN_THRESHOLD = 1000
 
 
