@@ -25,12 +25,14 @@ from ..C import (
 from ..ensemble import EnsemblePrediction, get_percentile_label
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
+from ._style import resolve_style
 from .misc import (
     _UNSET,
     get_ax,
     get_axes_array,
     hide_unused_axes,
     make_grid_shape,
+    plot_density_panel,
     plot_diagonal_marginal,
     process_deprecated_kwarg,
     rgba2rgb,
@@ -1308,56 +1310,84 @@ def sampling_scatter(
 def sampling_1d_marginals(
     result: Result,
     i_chain: int = 0,
-    parameter_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] | None = None,
     stepsize: int = 1,
     plot_type: str = "both",
+    bins: int | str = "auto",
     bw_method: str = "scott",
-    suptitle: str | None = None,
+    show_bounds: bool = True,
+    title: str | None = None,
     size: tuple[float, float] | None = None,
     axes: np.ndarray | None = None,
+    style_kwargs: dict | None = None,
     par_indices: Sequence[int] = _UNSET,
+    suptitle: str | None = _UNSET,
 ) -> np.ndarray:
     """
-    Plot marginals.
+    Plot 1-D marginals of the sampled parameters as histogram + KDE + rug.
 
     Parameters
     ----------
     result:
         The pyPESTO result object with filled sample result.
     i_chain:
-        Which chain to plot. Default: First chain.
-    parameter_indices: list of integer values
-        List of integer values specifying which parameters to plot.
-        Default: All parameters are shown.
+        Which chain to plot. Default: first chain.
+    parameter_indices:
+        Which parameters to plot, as a list of indices. Default: all parameters.
     stepsize:
-        Only one in `stepsize` values is plotted.
+        Thinning factor — plot every ``stepsize``-th sample (``1`` = all).
+        Reduces overplotting and speeds up rendering for long chains.
     plot_type: {'hist'|'kde'|'both'}
-        Specify whether to plot a histogram ('hist'), a kernel density estimate
-        ('kde'), or both ('both').
+        Histogram only, KDE line only, or both with rug marks (default).
+    bins:
+        Number of bins, or a matplotlib binning strategy (``'auto'``,
+        ``'sturges'``, …). Passed to ``ax.hist``.
     bw_method: {'scott', 'silverman' | scalar | pair of scalars}
-        Kernel bandwidth method.
-    suptitle:
-        Figure super title.
+        Kernel bandwidth method for the KDE overlay.
+    show_bounds:
+        If ``True`` (default) draw the parameter bound lines and frame each
+        panel's x-axis to include them; if ``False`` frame each panel tightly
+        to its data.
+    title:
+        Figure title. Default: none (grids omit a title by default).
     size:
-        Figure size in inches.
+        Figure size in inches. When ``None`` the grid uses
+        ``GRID_SIZE_PER_COL * num_col`` × ``GRID_SIZE_PER_ROW * num_row``
+        (defaults from :mod:`pypesto.visualize._style`).
     axes:
         Axes grid to use. Must match the computed subplot layout.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``rectangle_color``, ``rectangle_alpha``, ``rectangle_edgecolor``,
+          ``rectangle_linewidth`` — histogram bar styling.
+        - ``line_color``, ``linewidth`` — KDE curve styling.
+        - ``dash_color``, ``dash_linewidth``, ``dash_markersize``,
+          ``dash_alpha`` — rug-mark styling.
+        - ``bound_color``, ``bound_linestyle``, ``bound_linewidth``,
+          ``bound_alpha`` — parameter-bound line styling.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
     par_indices:
         Deprecated. Use ``parameter_indices`` instead.
+    suptitle:
+        Deprecated. Use ``title`` instead.
 
-    Return
-    --------
+    Returns
+    -------
     axes:
         2-D NumPy array containing one matplotlib Axes per panel.
     """
+    style = resolve_style(style_kwargs)
+    title = process_deprecated_kwarg("title", title, "suptitle", suptitle)
+
     parameter_indices = process_deprecated_kwarg(
         "parameter_indices",
         parameter_indices,
         "par_indices",
         par_indices,
     )
-
-    import seaborn as sns
 
     # get data which should be plotted
     nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
@@ -1368,43 +1398,81 @@ def sampling_1d_marginals(
     )
 
     num_row, num_col = make_grid_shape(nr_params)
-    if size is None and axes is None:
-        size = (3.5 * num_col, 2.5 * num_row)
     axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
     fig = axes.flat[0].figure
     axes = hide_unused_axes(axes=axes, n_used=nr_params, clear=True)
 
-    par_ax = dict(zip(param_names, axes.flat, strict=True))
+    par_ax = dict(zip(param_names, axes.flat[:nr_params], strict=True))
 
-    # fig, ax = plt.subplots(nr_params, figsize=size)[1]
+    # Build name→index map for looking up per-parameter lb/ub/scale.
+    all_reduced_names = result.problem.get_reduced_vector(result.problem.x_names)
+    name_to_reduced_idx = {name: i for i, name in enumerate(all_reduced_names)}
+    x_scales_reduced = (
+        result.problem.get_reduced_vector(result.problem.x_scales)
+        if getattr(result.problem, "x_scales", None) is not None
+        else None
+    )
+
+    _show_kde = plot_type in ("kde", "both")
+    _show_rug = plot_type in ("hist", "both")
+
     for idx, par_id in enumerate(param_names):
-        if plot_type == "kde":
-            # TODO: add bw_adjust as option?
-            sns.kdeplot(
-                params_fval[par_id], bw_method=bw_method, ax=par_ax[par_id]
-            )
-        elif plot_type == "hist":
-            # fixes usage of sns distplot which throws a future warning
-            sns.histplot(
-                x=params_fval[par_id], ax=par_ax[par_id], stat="density"
-            )
-            sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
-        elif plot_type == "both":
-            sns.histplot(
-                x=params_fval[par_id],
-                kde=True,
-                ax=par_ax[par_id],
-                stat="density",
-            )
-            sns.rugplot(x=params_fval[par_id], ax=par_ax[par_id])
+        ax = par_ax[par_id]
+        vals = np.asarray(params_fval[par_id])
+        finite_vals = vals[np.isfinite(vals)]
+        par_reduced_idx = name_to_reduced_idx.get(par_id, idx)
+        lb_val = theta_lb[par_reduced_idx]
+        ub_val = theta_ub[par_reduced_idx]
 
-        par_ax[par_id].set_xlabel(param_names[idx])
-        par_ax[par_id].set_ylabel("Density")
+        bound_handle = plot_density_panel(
+            ax,
+            vals,
+            bins=bins,
+            bw_method=bw_method,
+            style=style,
+            show_hist=(plot_type in ("hist", "both")),
+            show_kde=_show_kde,
+            show_rug=_show_rug,
+            show_bounds=show_bounds, lb=lb_val, ub=ub_val,
+        )
 
-    sns.despine()
+        legend_handles, legend_labels = [], []
+        if finite_vals.size > 0 and idx == 0:
+            if _show_kde:
+                legend_handles.append(
+                    Line2D([0], [0], color=style["line_color"], lw=style["linewidth"])
+                )
+                legend_labels.append("KDE")
+            if _show_rug:
+                legend_handles.append(
+                    Line2D(
+                        [0], [0],
+                        color=style["dash_color"], marker="|", lw=0,
+                        markersize=style["dash_markersize"],
+                        markeredgewidth=style["dash_linewidth"],
+                    )
+                )
+                legend_labels.append("Samples")
 
-    if suptitle:
-        fig.suptitle(suptitle)
+        if bound_handle is not None and idx == 0:
+            legend_handles.append(bound_handle)
+            legend_labels.append("Bounds")
+
+        if legend_handles:
+            ax.legend(handles=legend_handles, labels=legend_labels)
+
+        scale = (
+            x_scales_reduced[par_reduced_idx]
+            if x_scales_reduced is not None
+            else None
+        )
+        xlabel = f"{par_id} ({scale})" if scale is not None else par_id
+        ax.set_xlabel(xlabel)
+        # y-label only on the leftmost column to avoid grid-wide repetition
+        ax.set_ylabel("Density" if idx % num_col == 0 else "")
+
+    if title is not None:
+        fig.suptitle(title)
 
     return axes
 

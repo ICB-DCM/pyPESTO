@@ -5,6 +5,7 @@ import matplotlib.axes
 import numpy as np
 import pandas as pd
 from matplotlib.colors import Colormap
+from matplotlib.lines import Line2D
 from matplotlib.ticker import MaxNLocator
 
 from pypesto.util import delete_nan_inf
@@ -20,9 +21,12 @@ from ..result import Result
 from ._style import resolve_style
 from .clust_color import assign_colors
 from .misc import (
+    _UNSET,
     get_ax,
     get_axes_array,
+    plot_density_panel,
     plot_diagonal_marginal,
+    process_deprecated_kwarg,
     process_parameter_indices,
     process_result_list,
     process_start_indices,
@@ -215,39 +219,78 @@ def parameters(
 def parameter_hist(
     result: Result,
     parameter_name: str,
-    bins: int | str = "auto",
-    ax: matplotlib.axes.Axes | None = None,
-    size: tuple[float, float] | None = (18.5, 10.5),
-    color: COLOR | None = None,
     start_indices: int | list[int] | None = None,
+    plot_type: str = "both",
+    bins: int | str = "auto",
+    bw_method: str = "scott",
+    show_bounds: bool = True,
+    title: str | None = "Parameter histogram",
+    size: tuple[float, float] | None = None,
+    ax: matplotlib.axes.Axes | None = None,
+    style_kwargs: dict | None = None,
+    color: COLOR = _UNSET,
 ) -> matplotlib.axes.Axes:
     """
-    Plot parameter values as a histogram.
+    Plot one parameter's values across starts as a histogram + KDE + rug.
 
     Parameters
     ----------
     result:
-        Optimization result obtained by 'optimize.py'
+        Optimization result obtained by 'optimize.py'.
     parameter_name:
-        The name of the parameter that should be plotted
-    bins:
-        Specifies bins of the histogram
-    ax:
-        Axes object to use
-    size:
-        Figure size (width, height) in inches. Is only applied when no ax
-        object is specified
-    color:
-        Color recognized by matplotlib.
+        Name of the parameter to plot.
     start_indices:
-        List of integers specifying the multistarts to be plotted or
-        int specifying up to which start index should be plotted
+        Which optimization starts to include: a list of indices, or an int
+        ``n`` for the first ``n`` starts. Default: all starts.
+    plot_type: {'hist'|'kde'|'both'}
+        Histogram only, KDE line only, or both with rug marks (default).
+    bins:
+        Number of bins, or a matplotlib binning strategy (``'auto'``,
+        ``'sturges'``, …). Passed to ``ax.hist``.
+    bw_method: {'scott', 'silverman' | scalar | pair of scalars}
+        Kernel bandwidth method for the KDE overlay.
+    show_bounds:
+        If ``True`` (default) draw the parameter bound lines and frame the
+        x-axis to include them; if ``False`` frame tightly to the data.
+    title:
+        Axes title. Pass ``None`` to suppress.
+    size:
+        Figure size in inches. Defaults to matplotlib's default.
+    ax:
+        Axes object to use.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``rectangle_color``, ``rectangle_alpha``, ``rectangle_edgecolor``,
+          ``rectangle_linewidth`` — histogram bar styling.
+        - ``line_color``, ``linewidth`` — KDE curve styling.
+        - ``dash_color``, ``dash_linewidth``, ``dash_markersize``,
+          ``dash_alpha`` — rug-mark styling.
+        - ``bound_color``, ``bound_linestyle``, ``bound_linewidth``,
+          ``bound_alpha`` — parameter-bound line styling.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
+    color:
+        Deprecated. Pass ``style_kwargs`` instead — see
+        ``rectangle_color`` / ``line_color`` / ``dash_color`` above.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    process_deprecated_kwarg(
+        canonical_name=None,
+        canonical_value=None,
+        deprecated_name="color",
+        deprecated_value=color,
+        note=(
+            "Pass style_kwargs={'rectangle_color': ..., 'line_color': ..., "
+            "'dash_color': ...} instead."
+        ),
+    )
+    style = resolve_style(style_kwargs)
     ax = get_ax(ax, size)
 
     xs = result.optimize_result.x
@@ -259,12 +302,55 @@ def parameter_hist(
         xs = [xs[ind] for ind in start_indices]
 
     parameter_index = result.problem.x_names.index(parameter_name)
-    parameter_values = [x[parameter_index] for x in xs]
+    parameter_values = np.array([x[parameter_index] for x in xs])
 
-    ax.hist(parameter_values, color=color, bins=bins, label=parameter_name)
-    ax.set_xlabel(parameter_name)
-    ax.set_ylabel("counts")
-    ax.set_title(f"{parameter_name}")
+    # bounds and scale for this parameter
+    lb_val = result.problem.lb_full[parameter_index]
+    ub_val = result.problem.ub_full[parameter_index]
+    x_scales = getattr(result.problem, "x_scales", None)
+    scale = x_scales[parameter_index] if x_scales is not None else None
+
+    bound_handle = plot_density_panel(
+        ax, parameter_values, bins=bins, bw_method=bw_method, style=style,
+        show_hist=(plot_type in ("hist", "both")),
+        show_kde=(plot_type in ("kde", "both")),
+        show_rug=(plot_type in ("hist", "both")),
+        show_bounds=show_bounds, lb=lb_val, ub=ub_val,
+    )
+
+    legend_handles, legend_labels = [], []
+    show_kde = plot_type in ("kde", "both")
+    show_rug = plot_type in ("hist", "both")
+    finite_vals = parameter_values[np.isfinite(parameter_values)]
+    if finite_vals.size > 0:
+        if show_kde:
+            legend_handles.append(
+                Line2D([0], [0], color=style["line_color"], lw=style["linewidth"])
+            )
+            legend_labels.append("KDE")
+        if show_rug:
+            legend_handles.append(
+                Line2D(
+                    [0], [0],
+                    color=style["dash_color"], marker="|", lw=0,
+                    markersize=style["dash_markersize"],
+                    markeredgewidth=style["dash_linewidth"],
+                )
+            )
+            legend_labels.append("Starts")
+
+    if bound_handle is not None:
+        legend_handles.append(bound_handle)
+        legend_labels.append("Bounds")
+
+    if legend_handles:
+        ax.legend(handles=legend_handles, labels=legend_labels)
+
+    xlabel = f"{parameter_name} ({scale})" if scale is not None else parameter_name
+    if title is not None:
+        ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Density")
 
     return ax
 
