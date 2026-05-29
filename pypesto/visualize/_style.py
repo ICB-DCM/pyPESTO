@@ -100,7 +100,7 @@ def resolve_style(style_kwargs: dict | None = None) -> dict:
     Parameters
     ----------
     style_kwargs:
-        User-supplied overrides. Unknown keys raise a ``UserWarning`` so
+        User-supplied overrides. Unknown keys emit a ``UserWarning`` so
         typos surface immediately.
 
     Returns
