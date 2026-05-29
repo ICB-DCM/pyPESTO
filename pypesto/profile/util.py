@@ -1,7 +1,9 @@
 """Utility function for profile module."""
 
+import warnings
 from collections.abc import Iterable
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
 import numpy as np
 import scipy.stats
@@ -9,6 +11,42 @@ import scipy.stats
 from ..C import GRAD
 from ..problem import Problem
 from ..result import ProfileResult, ProfilerResult, Result
+from .options import ProfileOptions
+
+PROFILE_STEP_PRECHECK_NOMINAL_WARN_THRESHOLD = 500
+PROFILE_STEP_PRECHECK_DENSE_WARN_THRESHOLD = 1000
+
+
+@dataclass(frozen=True)
+class ResolvedProfileStepSizes:
+    """
+    Effective step sizes for one profiled parameter.
+
+    The minimum, default, and maximum values always come from the same
+    step-size family.
+
+    Attributes
+    ----------
+    mode:
+        Selected step-size family, either `"absolute"` or `"relative"`.
+    default_step_size:
+        Resolved default step size.
+    min_step_size:
+        Resolved minimum step size.
+    max_step_size:
+        Resolved maximum step size.
+    span:
+        Parameter span `ub - lb` on the optimization scale.
+    """
+
+    mode: Literal["absolute", "relative"]
+    default_step_size: float
+    min_step_size: float
+    max_step_size: float
+    span: float
+
+
+ResolvedProfileStepSizeMap = dict[int, ResolvedProfileStepSizes]
 
 
 def chi2_quantile_to_ratio(alpha: float = 0.95, df: int = 1):
@@ -78,6 +116,189 @@ def calculate_approximate_ci(
         ub = np.interp(confidence_ratio, ratios[ind], xs[ind])
 
     return lb, ub
+
+
+def validate_profile_parameter_bounds(problem: Problem, i_par: int) -> float:
+    """Validate finite profile bounds for one parameter and return its span."""
+    lb = float(problem.lb_full[i_par])
+    ub = float(problem.ub_full[i_par])
+    if not np.isfinite(lb) or not np.isfinite(ub):
+        raise ValueError(
+            "Profiling requires finite lower and upper bounds for parameter "
+            f"'{problem.x_names[i_par]}' (index={i_par})."
+        )
+    span = ub - lb
+    if span <= 0:
+        raise ValueError(
+            "Profiling requires an upper bound greater than the lower bound "
+            f"for parameter '{problem.x_names[i_par]}' (index={i_par})."
+        )
+    return span
+
+
+def resolve_profile_step_sizes(
+    problem: Problem,
+    i_par: int,
+    options: ProfileOptions,
+) -> ResolvedProfileStepSizes:
+    """
+    Resolve effective profile step sizes for one parameter.
+
+    Relative step sizes are scaled by the parameter span `ub - lb`. If the
+    resolved relative default is at least as large as the absolute default,
+    the full relative family is used. Otherwise the full absolute family is
+    used.
+
+    Parameters
+    ----------
+    problem:
+        The parameter estimation problem containing bounds and scales.
+    i_par:
+        Index of the profiled parameter in full dimension.
+    options:
+        Profile options containing absolute and relative step-size settings.
+
+    Returns
+    -------
+    resolved_steps:
+        Resolved step sizes and selection metadata.
+    """
+    # Bounds are required here because relative steps are defined from the
+    # finite parameter span on the optimization scale.
+    span = validate_profile_parameter_bounds(problem, i_par)
+
+    if options.default_step_size_relative > 0:
+        relative_default_step_size = options.default_step_size_relative * span
+        relative_min_step_size = options.min_step_size_relative * span
+        relative_max_step_size = options.max_step_size_relative * span
+
+        # Select one complete step-size family based on the default step size.
+        if (
+            options.default_step_size_absolute == 0
+            or relative_default_step_size >= options.default_step_size_absolute
+        ):
+            return ResolvedProfileStepSizes(
+                mode="relative",
+                default_step_size=relative_default_step_size,
+                min_step_size=relative_min_step_size,
+                max_step_size=relative_max_step_size,
+                span=span,
+            )
+
+    return ResolvedProfileStepSizes(
+        mode="absolute",
+        default_step_size=options.default_step_size_absolute,
+        min_step_size=options.min_step_size_absolute,
+        max_step_size=options.max_step_size_absolute,
+        span=span,
+    )
+
+
+def resolve_profile_step_sizes_for_parameters(
+    problem: Problem,
+    parameter_indices: Iterable[int],
+    options: ProfileOptions,
+) -> ResolvedProfileStepSizeMap:
+    """Resolve effective profile step sizes for multiple parameters."""
+    return {
+        i_par: resolve_profile_step_sizes(problem, i_par, options)
+        for i_par in parameter_indices
+    }
+
+
+def _format_profile_step_size_resolution_summary(
+    problem: Problem,
+    i_par: int,
+    resolved_steps: ResolvedProfileStepSizes,
+) -> str:
+    """Create a one-line summary of the resolved step-size family."""
+    scale = str(problem.x_scales[i_par]).lower()
+    parameter_name = problem.x_names[i_par]
+
+    return (
+        "Resolved profile step sizes for "
+        f"{parameter_name} (index={i_par}): "
+        f"family={resolved_steps.mode}, "
+        f"scale={scale}, span={resolved_steps.span}, "
+        f"min={resolved_steps.min_step_size}, "
+        f"default={resolved_steps.default_step_size}, "
+        f"max={resolved_steps.max_step_size}."
+    )
+
+
+def precheck_profile_step_size(
+    current_profile: ProfilerResult,
+    problem: Problem,
+    i_par: int,
+    par_direction: int,
+    options: ProfileOptions,
+    resolved_steps: ResolvedProfileStepSizes,
+) -> None:
+    """
+    Warn or raise if the resolved step sizes imply many profile steps.
+
+    Two estimates are formed: a nominal one from the default step size and a
+    worst-case one from the minimum step size. In ``"raise"`` mode, an error
+    is raised only when the worst-case estimate is excessive; a merely large
+    nominal estimate only triggers a warning, so valid runs are not broken.
+
+    Parameters
+    ----------
+    current_profile:
+        Current profile path.
+    problem:
+        The parameter estimation problem.
+    i_par:
+        Index of the profiled parameter in full dimension.
+    par_direction:
+        Profiling direction, either `-1` for descending or `1` for ascending.
+    options:
+        Profile options.
+    resolved_steps:
+        Pre-resolved step sizes for the profiled parameter.
+    """
+    if options.step_size_precheck_mode == "off":
+        return
+
+    # Estimate how much of the bounded parameter range is left in this
+    # profiling direction.
+    x0 = float(current_profile.x_path[i_par, -1])
+    if par_direction == -1:
+        available_span = x0 - float(problem.lb_full[i_par])
+    elif par_direction == 1:
+        available_span = float(problem.ub_full[i_par]) - x0
+    else:
+        raise ValueError("par_direction must be either -1 or 1.")
+
+    if not np.isfinite(available_span) or available_span <= 0:
+        return
+
+    # Use the resolved default and minimum steps as nominal and dense estimates.
+    nominal_count = available_span / resolved_steps.default_step_size
+    dense_count = available_span / resolved_steps.min_step_size
+
+    nominal_warn = nominal_count > PROFILE_STEP_PRECHECK_NOMINAL_WARN_THRESHOLD
+    dense_warn = dense_count > PROFILE_STEP_PRECHECK_DENSE_WARN_THRESHOLD
+    if not nominal_warn and not dense_warn:
+        return
+
+    parameter_name = problem.x_names[i_par]
+    message = (
+        f"Profiling parameter '{parameter_name}' may require many steps "
+        f"({nominal_count:.1f} with the default step size, "
+        f"up to {dense_count:.1f} with the minimum step size). "
+        "Consider increasing the profile step sizes."
+    )
+    if not options.whole_path:
+        message += (
+            " This is a bound-based upper estimate; profiling may stop "
+            "earlier at the likelihood-ratio threshold."
+        )
+
+    if dense_warn and options.step_size_precheck_mode == "raise":
+        raise ValueError(message)
+
+    warnings.warn(message, UserWarning, stacklevel=2)
 
 
 def initialize_profile(
