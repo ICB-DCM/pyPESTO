@@ -38,11 +38,11 @@
 /pypesto/problem/ @PaulJonasJost @vwiela
 /pypesto/profile/ @PaulJonasJost @Doresic
 /pypesto/result/ @PaulJonasJost
-/pypesto/sample/ @dilpath @arrjon
+/pypesto/sample/ @dilpath @arrjon @vwiela
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
-/pypesto/visualize/ @stephanmg
+/pypesto/visualize/ @Doresic
 
 # Tests
 /test/base/ @PaulJonasJost @vwiela
@@ -52,5 +52,5 @@
 /test/optimize/ @PaulJonasJost
 /test/petab/ @dweindl @FFroehlich
 /test/profile/ @PaulJonasJost @Doresic
-/test/sample/ @dilpath @arrjon
+/test/sample/ @dilpath @arrjon @vwiela
 /test/select/ @dilpath
