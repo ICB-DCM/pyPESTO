@@ -139,7 +139,7 @@ class AmiciObjective(ObjectiveBase):
             derivatives.
         amici_reporting:
             Determines which quantities will be computed by AMICI,
-            see ``amici.Solver.setReturnDataReportingMode``. Set to ``None``
+            see ``amici.Solver.set_return_data_reporting_mode``. Set to ``None``
             to compute only the minimum required information.
         """
         import amici

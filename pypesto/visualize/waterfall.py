@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import inset_locator
@@ -11,6 +11,7 @@ from ..C import ALL, COLOR, WATERFALL_MAX_VALUE
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
+    get_ax,
     process_offset_y,
     process_result_list,
     process_start_indices,
@@ -21,7 +22,7 @@ from .reference_points import ReferencePoint, create_references
 
 def waterfall(
     results: Result | Sequence[Result],
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = (18.5, 10.5),
     y_limits: tuple[float] | None = None,
     scale_y: str | None = "log10",
@@ -32,7 +33,7 @@ def waterfall(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: Sequence[str] | str | None = None,
     order_by_id: bool = False,
-):
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot.
 
@@ -76,11 +77,7 @@ def waterfall(
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     if n_starts_to_zoom:
         # create zoom in
@@ -200,13 +197,13 @@ def waterfall(
 
 def waterfall_lowlevel(
     fvals,
-    ax: plt.Axes | None = None,
-    size: tuple[float] | None = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (18.5, 10.5),
     scale_y: str = "log10",
     offset_y: float = 0.0,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legend_text: str | None = None,
-):
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot using list of function values.
 
@@ -235,11 +232,7 @@ def waterfall_lowlevel(
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
     fvals = [fvals[i] for i in start_indices]
