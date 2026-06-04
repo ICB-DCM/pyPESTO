@@ -20,7 +20,7 @@ authors = [
 maintainers = [
   { name = "Paul Jonas Jost", email = "paul.jost@uni-bonn.de" },
   { name = "Domagoj Dorešić", email = "domagoj.doresic@uni-bonn.de" },
-  { name = "Vincent Wieland", email = "vwieland@uni-bonn.de" },
+  { name = "Moritz Richter", email = "moritz.richter@uni-bonn.de" },
   { name = "Fabian Fröhlich", email = "fabian.frohlich@crick.ac.uk" },
 ]
 license-files = ["LICENSE"]
