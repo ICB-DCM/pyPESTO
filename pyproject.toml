@@ -20,7 +20,7 @@ authors = [
 maintainers = [
   { name = "Paul Jonas Jost", email = "paul.jost@uni-bonn.de" },
   { name = "Domagoj Dorešić", email = "domagoj.doresic@uni-bonn.de" },
-  { name = "Vincent Wieland", email = "vwieland@uni-bonn.de" },
+  { name = "Moritz Richter", email = "moritz.richter@uni-bonn.de" },
   { name = "Fabian Fröhlich", email = "fabian.frohlich@crick.ac.uk" },
 ]
 license-files = ["LICENSE"]
@@ -106,7 +106,9 @@ mpi = [
 ]
 
 pymc = [
-  "arviz>=0.12.1",
+  # TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0.
+  "arviz>=0.12.1,<1.0; python_version < '3.12'",
+  "arviz>=1.1.0; python_version >= '3.12'",
   "pymc>=4.2.1",
 ]
 
