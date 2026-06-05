@@ -131,7 +131,7 @@ mltools = [
 ]
 
 julia = [
-  "julia>=0.5.7",
+  "juliacall>=0.9.31",
   "ipython>=8.4.0",
   "pygments>=2.12.0",
 ]

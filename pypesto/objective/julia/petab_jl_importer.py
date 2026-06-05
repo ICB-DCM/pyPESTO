@@ -116,10 +116,10 @@ class PetabJlImporter:
         """
         # lazy imports
         try:
-            from julia import Main  # noqa: F401
+            from juliacall import Main as jl  # noqa: F401
         except ImportError:
             raise ImportError(
-                "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
+                "Install juliacall, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
             ) from None
         if self.source_file is None:
