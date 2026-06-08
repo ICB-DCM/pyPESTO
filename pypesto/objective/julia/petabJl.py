@@ -46,6 +46,8 @@ class PEtabJlObjective(JuliaObjective):
         try:
             from juliacall import Main as jl  # noqa: F401
 
+            # Load Pkg into Julia session
+            jl.seval("using Pkg")
             jl.Pkg.activate(".")
         except ImportError:
             raise ImportError(
@@ -96,6 +98,8 @@ class PEtabJlObjective(JuliaObjective):
         try:
             from juliacall import Main as jl  # noqa: F401
 
+            # Load Pkg into Julia session
+            jl.seval("using Pkg")
             jl.Pkg.activate(".")
         except ImportError:
             raise ImportError(
@@ -150,6 +154,8 @@ class PEtabJlObjective(JuliaObjective):
             ) from None
         # setting up a local project, where the precompilation will be done in
 
+        # Load Pkg into Julia session
+        jl.seval("using Pkg")
         jl.Pkg.activate(".")
         # create a Project f"{self.module}_pre".
         try:
