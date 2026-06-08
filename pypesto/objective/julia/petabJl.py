@@ -3,6 +3,13 @@
 import logging
 import os
 
+# Import juliacall early to avoid conflicts with other libraries (especially numpy)
+# See: https://juliapy.github.io/PythonCall.jl/dev/faq/
+try:
+    from juliacall import Main as jl  # noqa: F401
+except ImportError:
+    jl = None
+
 import numpy as np
 
 from .base import JuliaObjective, _read_source

@@ -7,8 +7,6 @@ from pypesto.engine import MultiProcessEngine, SingleCoreEngine
 from pypesto.objective.julia import JuliaObjective, display_source_ipython
 from pypesto.objective.julia.petab_jl_importer import PetabJlImporter
 
-# The pyjulia wrapper appears to ignore global noqas, thus per line here
-
 
 def test_pyjulia_pipeline():
     """Test that a pipeline with julia objective works."""

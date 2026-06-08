@@ -6,6 +6,13 @@ import logging
 import os.path
 from collections.abc import Iterable
 
+# Import juliacall early to avoid conflicts with other libraries (especially numpy)
+# See: https://juliapy.github.io/PythonCall.jl/dev/faq/
+try:
+    from juliacall import Main as jl  # noqa: F401
+except ImportError:
+    jl = None
+
 import numpy as np
 
 from pypesto.objective.julia import PEtabJlObjective
