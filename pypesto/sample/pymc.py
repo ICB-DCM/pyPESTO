@@ -287,9 +287,7 @@ class PymcSampler(Sampler):
             # convert parameters to PyTensor tensor variable
             theta = pt.as_tensor_variable(_k)
 
-            # evaluate the log-posterior once and reuse the same node, so the
-            # objective is not evaluated separately for the density and the
-            # recorded function values
+            # evaluate the log-posterior once and reuse the same node
             log_post_theta = log_post(theta)
 
             # define distribution with log-posterior as density
