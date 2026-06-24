@@ -49,6 +49,16 @@ class PEtabJlObjective(JuliaObjective):
             # Load Pkg into Julia session
             jl.seval("using Pkg")
             jl.Pkg.activate(".")
+
+            # Install required packages if not already available
+            # This ensures packages are available even when precompile=False
+            try:
+                jl.seval("using OrdinaryDiffEq")
+            except Exception:
+                logger.info("Installing required Julia packages...")
+                jl.Pkg.add("OrdinaryDiffEq")
+                jl.Pkg.add("PEtab")
+                jl.Pkg.add("Sundials")
         except ImportError:
             raise ImportError(
                 "Install juliacall, e.g. via `pip install pypesto[julia]`, "
@@ -69,6 +79,12 @@ class PEtabJlObjective(JuliaObjective):
 
         petab_jl_problem = self.get(petab_problem_name)
         self.petab_jl_problem = petab_jl_problem
+
+        if petab_jl_problem is None:
+            raise ValueError(
+                f"Could not find petab problem '{petab_problem_name}' in module '{module}'. "
+                f"Make sure the Julia module defines this variable."
+            )
 
         # get functions
         fun = self.petab_jl_problem.nllh
@@ -101,6 +117,16 @@ class PEtabJlObjective(JuliaObjective):
             # Load Pkg into Julia session
             jl.seval("using Pkg")
             jl.Pkg.activate(".")
+
+            # Install required packages if not already available
+            # This ensures packages are available even when precompile=False
+            try:
+                jl.seval("using OrdinaryDiffEq")
+            except Exception:
+                logger.info("Installing required Julia packages...")
+                jl.Pkg.add("OrdinaryDiffEq")
+                jl.Pkg.add("PEtab")
+                jl.Pkg.add("Sundials")
         except ImportError:
             raise ImportError(
                 "Install juliacall, e.g. via `pip install pypesto[julia]`, "
@@ -111,6 +137,12 @@ class PEtabJlObjective(JuliaObjective):
 
         petab_jl_problem = self.get(self._petab_problem_name)
         self.petab_jl_problem = petab_jl_problem
+
+        if petab_jl_problem is None:
+            raise ValueError(
+                f"Could not find petab problem '{self._petab_problem_name}' in module '{self.module}'. "
+                f"Make sure the Julia module defines this variable."
+            )
 
         # get functions
         fun = self.petab_jl_problem.nllh
