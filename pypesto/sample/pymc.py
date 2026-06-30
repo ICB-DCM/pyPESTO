@@ -34,11 +34,11 @@ else:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
 
 
-def _eval_cached(
+def _eval_last_evaluation(
     objective: ObjectiveBase,
     beta: float,
     theta: np.ndarray,
-    cache: dict,
+    last_evaluation: dict,
 ) -> dict:
     """Evaluate log-posterior value and gradient, caching the last result.
 
@@ -57,22 +57,22 @@ def _eval_cached(
         Inverse temperature (e.g. in parallel tempering).
     theta:
         Parameter vector.
-    cache:
+    last_evaluation:
         Mutable dict shared between the value and gradient Op, holding the
         last evaluated parameter vector and the corresponding (scaled) value
         and gradient.
 
     Returns
     -------
-    The (updated) cache, with keys ``"key"``, ``"fval"`` and ``"grad"``.
+    The (updated) last_evaluation, with keys ``"key"``, ``"fval"`` and ``"grad"``.
     """
     key = theta.tobytes()
-    if cache.get("key") != key:
+    if last_evaluation.get("key") != key:
         fval, grad = objective(theta, sensi_orders=(0, 1))
-        cache["key"] = key
-        cache["fval"] = -beta * np.asarray(fval)
-        cache["grad"] = -beta * np.asarray(grad)
-    return cache
+        last_evaluation["key"] = key
+        last_evaluation["fval"] = -beta * np.asarray(fval)
+        last_evaluation["grad"] = -beta * np.asarray(grad)
+    return last_evaluation
 
 
 # TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0
@@ -136,14 +136,18 @@ class PymcObjectiveWithGradientOp(PymcObjectiveOp):
 
         # cache shared with the gradient Op, so value and gradient at the same
         # theta require only a single objective (simulator) evaluation
-        self._cache: dict = {}
-        self._log_prob_grad = PymcGradientOp(objective, beta, self._cache)
+        self._last_evaluation: dict = {}
+        self._log_prob_grad = PymcGradientOp(
+            objective, beta, self._last_evaluation
+        )
 
     def perform(self, node, inputs, outputs, params=None):
         """Calculate the objective function value (reusing the shared cache)."""
         (theta,) = inputs
-        cache = _eval_cached(self._objective, self._beta, theta, self._cache)
-        outputs[0][0] = np.array(cache["fval"])
+        last_evaluation = _eval_last_evaluation(
+            self._objective, self._beta, theta, self._last_evaluation
+        )
+        outputs[0][0] = np.array(last_evaluation["fval"])
 
     def grad(self, inputs, g):  # noqa
         """Calculate the vector-Jacobian product."""
@@ -163,7 +167,10 @@ class PymcGradientOp(_PT_OP_BASE):
     otypes = [pt.dvector] if pt is not None else None
 
     def __init__(
-        self, objective: ObjectiveBase, beta: float, cache: dict | None = None
+        self,
+        objective: ObjectiveBase,
+        beta: float,
+        last_evaluation: dict | None = None,
     ):
         # Check dependencies
         if not _HAS_PYMC:
@@ -172,14 +179,16 @@ class PymcGradientOp(_PT_OP_BASE):
         self._beta: float = beta
         # shared with the value Op so that value and gradient at the same theta
         # require only a single objective (simulator) evaluation
-        self._cache: dict = cache if cache is not None else {}
+        self._last_evaluation: dict = last_evaluation or {}
 
     def perform(self, node, inputs, outputs, params=None):
         """Calculate the gradients of the objective function."""
         (theta,) = inputs
         # calculate gradients (reusing the shared cache)
-        cache = _eval_cached(self._objective, self._beta, theta, self._cache)
-        outputs[0][0] = cache["grad"]
+        last_evaluation = _eval_last_evaluation(
+            self._objective, self._beta, theta, self._last_evaluation
+        )
+        outputs[0][0] = last_evaluation["grad"]
 
 
 class PymcSampler(Sampler):
