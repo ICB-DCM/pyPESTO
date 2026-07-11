@@ -770,7 +770,7 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def _create_amici_importer(
         self,
-    ) -> amici.petab.petab_importer.PetabImporter:
+    ) -> amici.importers.petab.PetabImporter:
         """Create an AMICI PEtab importer."""
         from amici.importers.petab import PetabImporter
 
@@ -801,16 +801,16 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         verbose: bool = True,
     ) -> list[amici.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
+        from amici.sim.sundials.petab import ExperimentManager
+
         # create model
-        # if model is None:
-        #     model = self.create_model(verbose=verbose)
-        #
-        # return amici.petab.conditions.create_edatas(
-        #     amici_model=model,
-        #     petab_problem=self.petab_problem,
-        #     simulation_conditions=simulation_conditions,
-        # )
-        raise NotImplementedError()
+        if model is None:
+            model = self.create_model(verbose=verbose)
+
+        return ExperimentManager(
+            model=model,
+            petab_problem=self.petab_problem,
+        ).create_edatas()
 
     def create_objective(
         self,
@@ -837,10 +837,7 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
             Passed to AMICI's model compilation. If True, the compilation
             progress is printed.
         **kwargs:
-            Additional arguments passed on to the objective. In case of ordinal
-            or semiquantitative measurements, ``inner_options`` can optionally
-            be passed here. If none are given, ``inner_options`` given to the
-            importer constructor (or inner defaults) will be chosen.
+            Additional arguments passed on to the objective.
 
         Returns
         -------
@@ -848,123 +845,17 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         """
         from ..objective.amici.amici import AmiciPetabV2Objective
 
+        # the objective builds its own simulator from the importer;
+        #  model/solver/edatas are ignored (kept for API compatibility)
         petab_importer = self._create_amici_importer()
 
         return AmiciPetabV2Objective(
             petab_importer=petab_importer,
             amici_object_builder=self,
             x_ids=self.petab_problem.x_ids,
-        )
-
-        # TODO
-
-        simulation_conditions = petab.get_simulation_conditions(
-            self.petab_problem.measurement_df
-        )
-        if model is None:
-            model = self.create_model(
-                force_compile=force_compile, verbose=verbose
-            )
-        if solver is None:
-            solver = self.create_solver(model)
-        # create conditions and edatas from measurement data
-        if edatas is None:
-            edatas = self.create_edatas(
-                model=model, simulation_conditions=simulation_conditions
-            )
-        parameter_mapping = (
-            amici.petab.parameter_mapping.create_parameter_mapping(
-                petab_problem=self.petab_problem,
-                simulation_conditions=simulation_conditions,
-                scaled_parameters=True,
-                amici_model=model,
-                fill_fixed_parameters=False,
-            )
-        )
-        par_ids = self.petab_problem.x_ids
-
-        # fill in dummy parameters (this is needed since some objective
-        #  initialization e.g. checks for preeq parameters)
-        problem_parameters = dict(
-            zip(
-                self.petab_problem.x_ids,
-                self.petab_problem.x_nominal_scaled,
-                strict=True,
-            )
-        )
-        amici.petab.conditions.fill_in_parameters(
-            edatas=edatas,
-            problem_parameters=problem_parameters,
-            scaled_parameters=True,
-            parameter_mapping=parameter_mapping,
-            amici_model=model,
-        )
-
-        calculator = None
-        amici_reporting = None
-
-        if (
-            self._non_quantitative_data_types is not None
-            and self._hierarchical
-        ):
-            inner_options = kwargs.pop("inner_options", None)
-            inner_options = (
-                inner_options
-                if inner_options is not None
-                else self.inner_options
-            )
-            calculator = InnerCalculatorCollector(
-                self._non_quantitative_data_types,
-                self.petab_problem,
-                model,
-                edatas,
-                inner_options,
-            )
-            amici_reporting = amici.RDataReporting.full
-
-            # FIXME: currently not supported with hierarchical
-            if "guess_steadystate" in kwargs and kwargs["guess_steadystate"]:
-                warnings.warn(
-                    "`guess_steadystate` not supported with hierarchical "
-                    "optimization. Disabling `guess_steadystate`.",
-                    stacklevel=1,
-                )
-            kwargs["guess_steadystate"] = False
-            inner_parameter_ids = calculator.get_inner_par_ids()
-            par_ids = [x for x in par_ids if x not in inner_parameter_ids]
-
-        max_sensi_order = kwargs.get("max_sensi_order", None)
-
-        if (
-            self._non_quantitative_data_types is not None
-            and any(
-                data_type in self._non_quantitative_data_types
-                for data_type in [ORDINAL, CENSORED, SEMIQUANTITATIVE]
-            )
-            and max_sensi_order is not None
-            and max_sensi_order > 1
-        ):
-            raise ValueError(
-                "Ordinal, censored and semiquantitative data cannot be "
-                "used with second order sensitivities. Use a up to first order "
-                "method or disable ordinal, censored and semiquantitative "
-            )
-
-        # create objective
-        obj = AmiciObjective(
-            amici_model=model,
-            amici_solver=solver,
-            edatas=edatas,
-            x_ids=par_ids,
-            x_names=par_ids,
-            parameter_mapping=parameter_mapping,
-            amici_object_builder=self,
-            calculator=calculator,
-            amici_reporting=amici_reporting,
+            force_compile=force_compile,
             **kwargs,
         )
-
-        return obj
 
     def create_predictor(
         self,
@@ -978,7 +869,9 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         condition_ids: Sequence[str] = None,
     ) -> AmiciPredictor:
         """Create a :class:`pypesto.predict.AmiciPredictor`."""
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "Creating a predictor is not yet supported for PEtab v2 problems."
+        )
 
     def rdatas_to_measurement_df(
         self,
@@ -1005,15 +898,13 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         A dataframe built from the rdatas in the format as in
         ``self.petab_problem.measurement_df``.
         """
+        from amici.importers.petab import rdatas_to_measurement_df
+
         # create model
         if model is None:
             model = self.create_model(verbose=verbose)
 
-        measurement_df = self.petab_problem.measurement_df
-
-        return amici.petab.simulations.rdatas_to_measurement_df(
-            rdatas, model, measurement_df
-        )
+        return rdatas_to_measurement_df(rdatas, model, self.petab_problem)
 
     def rdatas_to_simulation_df(
         self,
@@ -1026,9 +917,13 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         Except a petab simulation dataframe is created, i.e. the measurement
         column label is adjusted.
         """
-        return self.rdatas_to_measurement_df(rdatas, model).rename(
-            columns={petab.MEASUREMENT: petab.SIMULATION}
-        )
+        from amici.importers.petab import rdatas_to_simulation_df
+
+        # create model
+        if model is None:
+            model = self.create_model()
+
+        return rdatas_to_simulation_df(rdatas, model, self.petab_problem)
 
     def prediction_to_petab_measurement_df(
         self,
@@ -1036,7 +931,10 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         predictor: AmiciPredictor = None,
     ) -> pd.DataFrame:
         """Not implemented yet."""
-        raise NotImplementedError()
+        raise NotImplementedError(
+            "Converting predictions to PEtab dataframes is not yet supported "
+            "for PEtab v2 problems."
+        )
 
     def prediction_to_petab_simulation_df(
         self,

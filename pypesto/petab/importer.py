@@ -320,6 +320,12 @@ class PetabImporter:
             petab_c.UNIFORM: pypesto_c.UNIFORM,
         }
 
+        # the prior index refers to the position of the parameter in the full
+        #  parameter vector (see get_parameter_prior_dict)
+        id_to_index = {
+            x_id: index for index, x_id in enumerate(self.petab_problem.x_ids)
+        }
+
         prior_list = []
         for parameter in self.petab_problem.parameters:
             if not parameter.estimate or parameter.prior_distribution is None:
@@ -327,13 +333,13 @@ class PetabImporter:
 
             prior_list.append(
                 get_parameter_prior_dict(
-                    index=len(prior_list),
-                    # TODO map names
+                    index=id_to_index[parameter.id],
                     prior_type=petab_to_pypesto.get(
                         str(parameter.prior_distribution),
                         str(parameter.prior_distribution),
                     ),
                     prior_parameters=parameter.prior_parameters,
+                    # PEtab v2 does not support parameter scales
                     parameter_scale="lin",
                 )
             )

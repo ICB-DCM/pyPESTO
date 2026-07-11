@@ -38,6 +38,7 @@ from .amici_util import (
 
 if TYPE_CHECKING:
     import amici.importers.petab
+    import amici.sim.sundials.petab
 
     from ...hierarchical import InnerCalculatorCollector
 
@@ -729,12 +730,25 @@ class AmiciPetabV2Objective(AmiciObjective):
     def __init__(
         self,
         petab_importer: amici.importers.petab.PetabImporter,
+        force_compile: bool = False,
         **kwargs,
     ) -> None:
+        """Initialize the objective.
+
+        Parameters
+        ----------
+        petab_importer:
+            The AMICI PEtab importer for the (v2) PEtab problem.
+        force_compile:
+            If ``True``, force (re-)import/compilation of the AMICI model even
+            if a compiled model already exists.
+        kwargs:
+            Additional arguments passed on to :class:`AmiciObjective`.
+        """
         from .amici_calculator import AmiciCalculatorPetabV2
 
-        self._petab_simulator: amici.petab.petab_importer.PetabSimulator = (
-            petab_importer.create_simulator()
+        self._petab_simulator: amici.sim.sundials.petab.PetabSimulator = (
+            petab_importer.create_simulator(force_import=force_compile)
         )
         self.petab_problem = petab_importer.petab_problem
         amici_model = self._petab_simulator.model
@@ -747,6 +761,35 @@ class AmiciPetabV2Objective(AmiciObjective):
             edatas=edatas,
             calculator=AmiciCalculatorPetabV2(self._petab_simulator),
             **kwargs,
+        )
+
+    def update_from_problem(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ) -> None:
+        """Handle fixed parameters.
+
+        In addition to the base class behaviour, forward the fixed parameter
+        values to the calculator. The PEtab v2 calculator drives the
+        simulation through the PEtab simulator, which ignores the AMICI
+        ``parameter_mapping`` that the base class updates; without this, fixed
+        parameters would be simulated at their PEtab nominal values.
+        """
+        super().update_from_problem(
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals,
+        )
+        self.calculator.fixed_parameters = dict(
+            zip(
+                (self.x_ids[i] for i in x_fixed_indices),
+                x_fixed_vals,
+                strict=True,
+            )
         )
 
     def __deepcopy__(self, memo=None):

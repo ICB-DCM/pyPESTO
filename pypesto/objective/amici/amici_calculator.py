@@ -159,11 +159,14 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
 
     def __init__(
         self,
-        petab_simulator: amici.petab.petab_importer.PetabSimulator,
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.petab_simulator = petab_simulator
+        # fixed-parameter values (set by update_from_problem); merged into the
+        #  simulation so the simulator doesn't fall back to PEtab nominal values
+        self.fixed_parameters: dict[str, float] = {}
 
     def __call__(
         self,
@@ -208,31 +211,27 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
         """
         amici_solver = self.petab_simulator._solver
 
-        if mode != MODE_FUN:
-            raise NotImplementedError(
-                "Only function value mode is currently supported for "
-                f"PEtab v2. Got mode {mode}."
-            )
+        # request the full return data (llh, sllh, FIM, residuals, sres); this
+        #  is the simulator default, set explicitly to be robust to prior state
+        amici_solver.set_return_data_reporting_mode(asd.RDataReporting.full)
 
-        # TODO: -> method
-        # set order in solver
-        sensi_order = 0
-        if sensi_orders:
-            sensi_order = max(sensi_orders)
-
+        # set the sensitivity order in the solver
+        sensi_order = max(sensi_orders) if sensi_orders else 0
         if sensi_order == 2 and fim_for_hess:
-            # we use the FIM
+            # use the FIM instead of the Hessian
             amici_solver.set_sensitivity_order(sensi_order - 1)
         else:
             amici_solver.set_sensitivity_order(sensi_order)
 
         dim = len(x_ids)
 
-        # run amici simulation
-        result = self.petab_simulator.simulate(x_dct)
+        # add back fixed-parameter values (stripped from x_dct by the objective)
+        #  so the simulator doesn't fall back to the PEtab nominal values
+        problem_parameters = {**self.fixed_parameters, **x_dct}
+        result = self.petab_simulator.simulate(problem_parameters)
         rdatas = result.rdatas
 
-        # check if the simulation failed
+        # check whether the simulation failed
         if any(rdata["status"] < 0.0 for rdata in rdatas):
             return get_error_output(
                 amici_model, edatas, rdatas, sensi_orders, mode, dim
@@ -243,61 +242,76 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
         )
         nllh = -result.llh
 
-        if (
-            not self._known_least_squares_safe
-            and mode == MODE_RES
-            and 1 in sensi_orders
-        ):
-            if not amici_model.get_add_sigma_residuals() and any(
-                (
-                    (r["ssigmay"] is not None and np.any(r["ssigmay"]))
-                    or (r["ssigmaz"] is not None and np.any(r["ssigmaz"]))
-                )
-                for r in rdatas
-            ):
-                raise RuntimeError(
-                    "Cannot use least squares solver with"
-                    "parameter dependent sigma! Support can be "
-                    "enabled via "
-                    "amici_model.setAddSigmaResiduals()."
-                )
-            self._known_least_squares_safe = True  # don't check this again
+        # column indices of the free optimization parameters within the
+        #  estimated-parameter ordering used by result.sllh/s2llh/sres
+        estimated_ids = list(self.petab_simulator._petab_problem.x_free_ids)
+        free_ids = [x_id for x_id in x_ids if x_id in x_dct]
 
-        # TODO: compute res, sres
+        def _free_block_indices() -> list[int]:
+            try:
+                return [estimated_ids.index(x_id) for x_id in free_ids]
+            except ValueError as e:
+                raise ValueError(
+                    "Missing sensitivities for free parameters "
+                    f"{set(free_ids) - set(estimated_ids)}. A free parameter "
+                    "is likely constant in the AMICI model "
+                    "(non_estimated_parameters_as_constants=True)."
+                ) from e
 
-        if 1 in sensi_orders:
-            if result.sllh is None and np.isnan(result["llh"]):
-                # TODO: to amici -- set sllh even if llh is nan?
-                snllh = np.full(len(x_ids), np.nan)
-            else:
-                try:
-                    # llh to nllh, dict to array
-                    snllh = -np.array(
-                        [
-                            result.sllh[
-                                x_id
-                            ]  # if x_id in res["sllh"] else 0.0
-                            for x_id in x_ids
-                            if x_id in x_dct.keys()
-                        ]
+        if mode == MODE_FUN:
+            if 1 in sensi_orders:
+                if result.sllh is None and np.isnan(result.llh):
+                    snllh = np.full(len(x_ids), np.nan)
+                else:
+                    try:
+                        # llh-gradient (dict) -> nllh-gradient (array over the
+                        #  free parameters)
+                        snllh = -np.array(
+                            [result.sllh[x_id] for x_id in free_ids]
+                        )
+                    except KeyError as e:
+                        raise ValueError(
+                            "Cannot compute gradient, missing entry for "
+                            f"{set(free_ids) - set(result.sllh)}."
+                        ) from e
+            if 2 in sensi_orders:
+                if result.s2llh is None and np.isnan(result.llh):
+                    s2nllh = np.full((len(x_ids), len(x_ids)), np.nan)
+                else:
+                    # result.s2llh is the FIM (~Hessian of the negative
+                    #  log-likelihood, so no sign flip), ordered by the
+                    #  estimated PEtab parameters; select the free block
+                    sel = _free_block_indices()
+                    s2nllh = result.s2llh[np.ix_(sel, sel)]
+        elif mode == MODE_RES:
+            if 1 in sensi_orders and not self._known_least_squares_safe:
+                # least-squares residuals only match the likelihood for
+                #  parameter-independent sigma, unless sigma residuals are
+                #  added to the model
+                if (
+                    not self.petab_simulator._model.get_add_sigma_residuals()
+                    and any(
+                        (r["ssigmay"] is not None and np.any(r["ssigmay"]))
+                        or (r["ssigmaz"] is not None and np.any(r["ssigmaz"]))
+                        for r in rdatas
                     )
-                except KeyError as e:
-                    # A requested sensitivity is missing.
-                    # Probably the affected parameter is a fixed parameter
-                    # in amici instead of a sensitivity parameter
-                    # (non_estimated_parameters_as_constants=True ?).
-                    # In this case, only max(sensi_orders) == 0 is supported
-                    # unless this parameter is fixed in the pypesto problem.
+                ):
+                    raise RuntimeError(
+                        "Cannot use the least-squares solver with parameter-"
+                        "dependent sigma. Enable sigma residuals on the model "
+                        "via `set_add_sigma_residuals(True)`."
+                    )
+                self._known_least_squares_safe = True
+            if 0 in sensi_orders:
+                res = result.res
+            if 1 in sensi_orders:
+                if result.sres is None:
                     raise ValueError(
-                        f"Cannot compute gradient, missing entry for "
-                        f"{set(result.sllh) - set(x_dct.keys())}."
-                    ) from e
-        if 2 in sensi_orders:
-            if result.s2llh is None and np.isnan(result.llh):
-                # TODO: to amici -- set s2llh even if llh is nan?
-                s2nllh = np.full((len(x_ids), len(x_ids)), np.nan)
-            else:
-                s2nllh = -result.s2llh
+                        "Residual sensitivities (sres) were not computed."
+                    )
+                # result.sres has one column per estimated PEtab parameter;
+                #  select the free-parameter columns
+                sres = result.sres[:, _free_block_indices()]
 
         ret = {
             FVAL: nllh,

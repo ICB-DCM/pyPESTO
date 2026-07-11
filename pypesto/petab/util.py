@@ -7,10 +7,8 @@ try:
     from petab import v2
     from petab.v1.C import (
         ESTIMATE,
-        LIN,
         NOISE_PARAMETERS,
         OBSERVABLE_ID,
-        PARAMETER_SCALE_UNIFORM,
     )
 except ImportError:
     petab = None
@@ -103,7 +101,7 @@ class PetabStartpoints(CheckedStartpoints):
     """Startpoint method for PEtab problems.
 
     Samples optimization startpoints from the distributions defined in the
-    provided PEtab problem. The PEtab-problem is copied.
+    provided PEtab problem.
     """
 
     def __init__(self, petab_problem: petab.Problem | v2.Problem, **kwargs):
@@ -147,17 +145,14 @@ class PetabStartpoints(CheckedStartpoints):
                 )
             )
         else:
+            # PEtab v2: keep the prior distribution object (None -> uniform
+            #  over the bounds); sampled directly in `sample`, since the v1
+            #  `sample_from_prior` uses different distribution names
             id_to_prior = {
                 parameter.id: (
-                    # prior_type, prior_pars, par_scale, par_bounds
-                    PARAMETER_SCALE_UNIFORM
-                    if parameter.prior_distribution is None
-                    else parameter.prior_distribution,
-                    (parameter.lb, parameter.ub)
-                    if parameter.prior_distribution is None
-                    else parameter.prior_parameters,
-                    LIN,
-                    (parameter.lb, parameter.ub),
+                    parameter.prior_dist,
+                    parameter.lb,
+                    parameter.ub,
                 )
                 for parameter in self._petab_problem.parameters
                 if parameter.estimate
@@ -187,7 +182,18 @@ class PetabStartpoints(CheckedStartpoints):
         Must only be called through `self.__call__` to ensure that the list of priors
         matches the currently free parameters in the :class:`pypesto.Problem`.
         """
-        sampler = partial(petab.sample_from_prior, n_starts=n_starts)
-        startpoints = list(map(sampler, self._priors))
+        if isinstance(self._petab_problem, petab.Problem):
+            # PEtab v1
+            sampler = partial(petab.sample_from_prior, n_starts=n_starts)
+            startpoints = list(map(sampler, self._priors))
+        else:
+            # PEtab v2 -- sample from the parameter prior distributions,
+            #  falling back to a uniform distribution over the bounds
+            startpoints = [
+                prior_dist.sample(n_starts)
+                if prior_dist is not None
+                else np.random.uniform(par_lb, par_ub, n_starts)
+                for prior_dist, par_lb, par_ub in self._priors
+            ]
 
         return np.array(startpoints).T
