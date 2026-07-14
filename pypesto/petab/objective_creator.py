@@ -662,25 +662,79 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
         for i_edata, (edata, par_map) in enumerate(
             zip(edatas, parameter_mapping, strict=True)
         ):
-            for j_formula, noise_formula in enumerate(edata.noise_formulae):
-                # constant values are allowed
-                if isinstance(noise_formula, numbers.Number):
-                    continue
-                # single parameters are allowed
-                if noise_formula in par_map[1].keys():
-                    continue
-                # extract the observable name via regex pattern
-                pattern = r"noiseParameter1_(.*?)($|\s)"
-                observable_name = re.search(pattern, noise_formula).group(1)
-                to_change.append((i_edata, j_formula, observable_name))
+            # Handle both 1D and 2D noise_formulae arrays
+            noise_formulae_array = edata.noise_formulae
+
+            # For 2D arrays, we need to handle each unique formula
+            if noise_formulae_array.ndim == 2:
+                # Get unique non-numeric formulae
+                unique_formulae = set()
+                for formula in noise_formulae_array.flatten():
+                    # Skip numbers
+                    try:
+                        float(formula)
+                        continue
+                    except (ValueError, TypeError):
+                        pass
+                    # Skip if already a simple parameter
+                    if formula not in par_map[1].keys():
+                        unique_formulae.add(formula)
+
+                # Process unique complex formulae
+                for noise_formula in unique_formulae:
+                    pattern = r"noiseParameter1_(.*?)($|\s)"
+                    match = re.search(pattern, noise_formula)
+                    if match:
+                        observable_name = match.group(1)
+                        to_change.append(
+                            (i_edata, noise_formula, observable_name)
+                        )
+            else:
+                # 1D case: process as before
+                for _j_formula, noise_formula in enumerate(
+                    noise_formulae_array
+                ):
+                    # constant values are allowed
+                    if isinstance(noise_formula, numbers.Number):
+                        continue
+                    # Try to convert string to number
+                    try:
+                        float(noise_formula)
+                        continue
+                    except (ValueError, TypeError):
+                        pass
+                    # single parameters are allowed
+                    if noise_formula in par_map[1].keys():
+                        continue
+                    # extract the observable name via regex pattern
+                    pattern = r"noiseParameter1_(.*?)($|\s)"
+                    match = re.search(pattern, noise_formula)
+                    if match:
+                        observable_name = match.group(1)
+                        to_change.append(
+                            (i_edata, noise_formula, observable_name)
+                        )
+
         # change formulae
         formulae_changed = []
-        for i_edata, j_formula, obs_name in to_change:
-            # assign new parameter, formula in RR and parameter into mapping
-            original_formula = edatas[i_edata].noise_formulae[j_formula]
-            edatas[i_edata].noise_formulae[j_formula] = (
-                f"noiseFormula_{obs_name}"
-            )
+        for i_edata, formula_to_replace, obs_name in to_change:
+            # For 2D arrays, replace all occurrences; for 1D, replace the specific one
+            if edatas[i_edata].noise_formulae.ndim == 2:
+                # Replace all occurrences of this formula in the 2D array
+                mask = edatas[i_edata].noise_formulae == formula_to_replace
+                edatas[i_edata].noise_formulae[mask] = (
+                    f"noiseFormula_{obs_name}"
+                )
+                original_formula = formula_to_replace
+            else:
+                # 1D case: use j_formula index (but we stored formula instead)
+                # Find the formula and replace it
+                mask = edatas[i_edata].noise_formulae == formula_to_replace
+                edatas[i_edata].noise_formulae[mask] = (
+                    f"noiseFormula_{obs_name}"
+                )
+                original_formula = formula_to_replace
+
             # different conditions will have the same noise formula
             if (obs_name, original_formula) not in formulae_changed:
                 self.rr.addParameter(f"noiseFormula_{obs_name}", 0.0, False)
@@ -760,6 +814,7 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
             parameter_df=self.petab_problem.parameter_df,
             observable_df=self.petab_problem.observable_df,
             model=self.petab_problem.model,
+            allow_timepoint_specific_numeric_noise_parameters=True,
         )
         # check whether any species in the condition table are assigned
         species = self.rr.model.getFloatingSpeciesIds()

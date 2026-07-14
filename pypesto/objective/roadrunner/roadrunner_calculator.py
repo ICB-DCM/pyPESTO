@@ -415,29 +415,84 @@ def calculate_llh(
         """Fill in the noise formula."""
         if isinstance(noise_formula, numbers.Number):
             return float(noise_formula)
+        # Try to convert string to number
+        try:
+            return float(noise_formula)
+        except (ValueError, TypeError):
+            pass
         # if it is not a number, it is assumed to be a string
         if noise_formula in parameter_mapping.keys():
             return parameter_mapping[noise_formula]
         # if the string starts with "noiseFormula_" it is saved in the model
-        if noise_formula.startswith("noiseFormula_"):
+        if isinstance(noise_formula, str) and noise_formula.startswith(
+            "noiseFormula_"
+        ):
             return roadrunner_instance.getValue(noise_formula)
+        # If we couldn't resolve it, return None (will cause error downstream)
+        return None
 
     # replace noise formula with actual value from mapping
-    noise_formulae = np.array(
-        [_fill_in_noise_formula(formula) for formula in edata.noise_formulae]
-    )
-    # check that the rows of noise are the columns of the simulation
-    if noise_formulae.shape[0] != simulations.shape[1]:
-        raise ValueError("Noise and Simulation have different dimensions.")
-    # per observable, decide on the llh function based on the noise dist
-    llhs = np.array(
-        [
-            LLH_TYPES[noise_dist](
-                measurements[:, i], simulations[:, i], noise_formulae[i]
+    # Handle both 1D (n_observables,) and 2D (n_timepoints, n_observables) arrays
+    if edata.noise_formulae.ndim == 1:
+        # 1D case: one noise parameter per observable (broadcast to all timepoints)
+        noise_formulae = np.array(
+            [
+                _fill_in_noise_formula(formula)
+                for formula in edata.noise_formulae
+            ]
+        )
+    elif edata.noise_formulae.ndim == 2:
+        # 2D case: timepoint-specific noise parameters
+        noise_formulae = np.array(
+            [
+                [_fill_in_noise_formula(formula) for formula in row]
+                for row in edata.noise_formulae
+            ]
+        )
+    else:
+        raise ValueError(
+            f"noise_formulae must be 1D or 2D, got {edata.noise_formulae.ndim}D"
+        )
+
+    # Handle noise_distributions similarly
+    if edata.noise_distributions.ndim == 1:
+        # 1D case: broadcast to all timepoints
+        noise_distributions = edata.noise_distributions
+    elif edata.noise_distributions.ndim == 2:
+        # 2D case: use first row (distributions should be constant across timepoints)
+        noise_distributions = edata.noise_distributions[0, :]
+    else:
+        raise ValueError(
+            f"noise_distributions must be 1D or 2D, got {edata.noise_distributions.ndim}D"
+        )
+
+    # Calculate likelihood
+    if noise_formulae.ndim == 1:
+        # 1D noise: one value per observable, broadcast to all timepoints
+        if noise_formulae.shape[0] != simulations.shape[1]:
+            raise ValueError("Noise and Simulation have different dimensions.")
+        llhs = np.array(
+            [
+                LLH_TYPES[noise_dist](
+                    measurements[:, i], simulations[:, i], noise_formulae[i]
+                )
+                for i, noise_dist in enumerate(noise_distributions)
+            ]
+        ).transpose()
+    else:
+        # 2D noise: timepoint-specific values
+        if noise_formulae.shape != simulations.shape:
+            raise ValueError(
+                f"Noise shape {noise_formulae.shape} and Simulation shape {simulations.shape} must match."
             )
-            for i, noise_dist in enumerate(edata.noise_distributions)
-        ]
-    ).transpose()
+        llhs = np.array(
+            [
+                LLH_TYPES[noise_dist](
+                    measurements[:, i], simulations[:, i], noise_formulae[:, i]
+                )
+                for i, noise_dist in enumerate(noise_distributions)
+            ]
+        ).transpose()
     # check whether all nan values in llhs coincide with nan measurements
     if not np.all(np.isnan(llhs) == np.isnan(measurements)):
         return np.nan
