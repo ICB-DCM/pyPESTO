@@ -711,8 +711,9 @@ def _handle_colors(
     cmap_max = 0.85 * (RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
     # define colormap
+    viridis = plt.colormaps["viridis"]
     variable_colors = [
-        list(matplotlib.cm.viridis(v))[:LEN_RGB]
+        list(viridis(v))[:LEN_RGB]
         for v in np.linspace(cmap_min, cmap_max, n_variables)
     ]
 
@@ -1021,7 +1022,8 @@ def sampling_parameter_cis(
     levels_sorted = sorted(confidence_levels, reverse=True)
     # define colormap
     evenly_spaced_interval = np.linspace(0, 1, len(levels_sorted))
-    colors = [plt.cm.tab20c_r(x) for x in evenly_spaced_interval]
+    tab20c_r = plt.colormaps["tab20c_r"]
+    colors = [tab20c_r(x) for x in evenly_spaced_interval]
     # number of sampled parameters
     n_pars = result.sample_result.trace_x.shape[-1]
 
