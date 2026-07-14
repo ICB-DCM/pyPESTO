@@ -658,6 +658,28 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
             edatas = self.create_edatas()
         # save formulae that need to be changed
         to_change = []
+
+        def _is_simple_value(formula, par_map):
+            """Check if formula is a simple numeric or parameter value."""
+            if isinstance(formula, numbers.Number):
+                return True
+            try:
+                float(formula)
+                return True
+            except (ValueError, TypeError):
+                return formula in par_map[1].keys()
+
+        def _extract_complex_formulae(formulae_iter, par_map):
+            """Extract formulae that need noiseFormula_ conversion."""
+            complex = []
+            for formula in formulae_iter:
+                if _is_simple_value(formula, par_map):
+                    continue
+                match = re.search(r"noiseParameter1_(.*?)($|\s)", formula)
+                if match:
+                    complex.append((formula, match.group(1)))
+            return complex
+
         # check that noise formulae are valid
         for i_edata, (edata, par_map) in enumerate(
             zip(edatas, parameter_mapping, strict=True)
@@ -665,55 +687,19 @@ class RoadRunnerObjectiveCreator(ObjectiveCreator):
             # Handle both 1D and 2D noise_formulae arrays
             noise_formulae_array = edata.noise_formulae
 
-            # For 2D arrays, we need to handle each unique formula
-            if noise_formulae_array.ndim == 2:
-                # Get unique non-numeric formulae
-                unique_formulae = set()
-                for formula in noise_formulae_array.flatten():
-                    # Skip numbers
-                    try:
-                        float(formula)
-                        continue
-                    except (ValueError, TypeError):
-                        pass
-                    # Skip if already a simple parameter
-                    if formula not in par_map[1].keys():
-                        unique_formulae.add(formula)
+            # Flatten to iterate over all unique formulae
+            formulae_to_check = (
+                set(noise_formulae_array.flatten())
+                if noise_formulae_array.ndim == 2
+                else noise_formulae_array
+            )
 
-                # Process unique complex formulae
-                for noise_formula in unique_formulae:
-                    pattern = r"noiseParameter1_(.*?)($|\s)"
-                    match = re.search(pattern, noise_formula)
-                    if match:
-                        observable_name = match.group(1)
-                        to_change.append(
-                            (i_edata, noise_formula, observable_name)
-                        )
-            else:
-                # 1D case: process as before
-                for _j_formula, noise_formula in enumerate(
-                    noise_formulae_array
-                ):
-                    # constant values are allowed
-                    if isinstance(noise_formula, numbers.Number):
-                        continue
-                    # Try to convert string to number
-                    try:
-                        float(noise_formula)
-                        continue
-                    except (ValueError, TypeError):
-                        pass
-                    # single parameters are allowed
-                    if noise_formula in par_map[1].keys():
-                        continue
-                    # extract the observable name via regex pattern
-                    pattern = r"noiseParameter1_(.*?)($|\s)"
-                    match = re.search(pattern, noise_formula)
-                    if match:
-                        observable_name = match.group(1)
-                        to_change.append(
-                            (i_edata, noise_formula, observable_name)
-                        )
+            # Extract complex formulae that need conversion
+            complex_formulae = _extract_complex_formulae(
+                formulae_to_check, par_map
+            )
+            for formula, obs_name in complex_formulae:
+                to_change.append((i_edata, formula, obs_name))
 
         # change formulae
         formulae_changed = []

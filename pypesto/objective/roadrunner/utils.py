@@ -100,6 +100,42 @@ class ExpData:
         """
         return self.observable_ids
 
+    def _validate_array_shape(
+        self,
+        array: np.ndarray,
+        name: str,
+        n_observables: int,
+        n_timepoints: int,
+    ):
+        """Validate that array has correct shape (1D or 2D).
+
+        Parameters
+        ----------
+        array:
+            Array to validate
+        name:
+            Name of the array for error messages
+        n_observables:
+            Expected number of observables (for 1D: array length, for 2D: second dimension)
+        n_timepoints:
+            Expected number of timepoints (for 2D: first dimension)
+        """
+        if array.ndim == 1:
+            if len(array) != n_observables:
+                raise ValueError(
+                    f"{name} length ({len(array)}) doesn't match "
+                    f"number of observable ids ({n_observables})."
+                )
+        elif array.ndim == 2:
+            expected_shape = (n_timepoints, n_observables)
+            if array.shape != expected_shape:
+                raise ValueError(
+                    f"{name} shape {array.shape} doesn't match "
+                    f"expected (n_timepoints, n_observables) = {expected_shape}."
+                )
+        else:
+            raise ValueError(f"{name} must be 1D or 2D, got {array.ndim}D")
+
     def sanity_check(self):
         """Perform a sanity check of the data."""
         if self.measurements.shape[1] != len(self.observable_ids) + 1:
@@ -112,23 +148,16 @@ class ExpData:
         n_timepoints = self.measurements.shape[0]
         n_observables = len(self.observable_ids)
 
-        # noise_distributions can be 1D or 2D
-        if self.noise_distributions.ndim == 1:
-            if len(self.noise_distributions) != n_observables:
-                raise ValueError(
-                    f"Number of noise distributions ({len(self.noise_distributions)}) "
-                    f"does not match number of observable ids ({n_observables})."
-                )
-        elif self.noise_distributions.ndim == 2:
-            if self.noise_distributions.shape != (n_timepoints, n_observables):
-                raise ValueError(
-                    f"Shape of noise distributions {self.noise_distributions.shape} "
-                    f"does not match (n_timepoints, n_observables) = ({n_timepoints}, {n_observables})."
-                )
-        else:
-            raise ValueError(
-                f"noise_distributions must be 1D or 2D, got {self.noise_distributions.ndim}D"
-            )
+        # Validate both arrays using helper method
+        self._validate_array_shape(
+            self.noise_distributions,
+            "noise_distributions",
+            n_observables,
+            n_timepoints,
+        )
+        self._validate_array_shape(
+            self.noise_formulae, "noise_formulae", n_observables, n_timepoints
+        )
 
     @staticmethod
     def from_petab_problem(petab_problem: petab.Problem) -> list[ExpData]:
