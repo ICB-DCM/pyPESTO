@@ -1,8 +1,8 @@
 from collections.abc import Sequence
 from typing import Literal
 
+import matplotlib
 import matplotlib.axes
-import matplotlib.cm as cm
 import numpy as np
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch, Rectangle
@@ -149,7 +149,7 @@ def profile_nested_cis(
     n_cls = len(confidence_levels)
     ws = [(0.6 / n_cls) * i for i in range(1, n_cls + 1)]
     if colors is None:
-        blues = cm.get_cmap("Blues")
+        blues = matplotlib.colormaps["Blues"]
         colors = [blues(i) for i in ws]
 
     # ensure that the confidence levels are sorted in decreasing order
