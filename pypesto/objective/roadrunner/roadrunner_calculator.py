@@ -411,19 +411,25 @@ def calculate_llh(
     simulations = simulations[:, 1:]
     measurements = edata.measurements[:, 1:]
 
+    def _try_convert_to_float(value):
+        """Convert value to float if possible, returns None if not numeric."""
+        if isinstance(value, numbers.Number):
+            return float(value)
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return None
+
     def _fill_in_noise_formula(noise_formula):
         """Fill in the noise formula."""
-        if isinstance(noise_formula, numbers.Number):
-            return float(noise_formula)
-        # Try to convert string to number
-        try:
-            return float(noise_formula)
-        except (ValueError, TypeError):
-            pass
-        # if it is not a number, it is assumed to be a string
+        # Try numeric conversion first
+        numeric_value = _try_convert_to_float(noise_formula)
+        if numeric_value is not None:
+            return numeric_value
+        # Check if it's a parameter in the mapping
         if noise_formula in parameter_mapping.keys():
             return parameter_mapping[noise_formula]
-        # if the string starts with "noiseFormula_" it is saved in the model
+        # Check if it's a noiseFormula_ parameter in the model
         if isinstance(noise_formula, str) and noise_formula.startswith(
             "noiseFormula_"
         ):
