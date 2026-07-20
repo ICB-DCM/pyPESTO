@@ -28,7 +28,7 @@ jobs:
       run: sed -i '/git+https/d' pyproject.toml
 
     - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
