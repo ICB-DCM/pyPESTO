@@ -397,7 +397,7 @@ def construct_noise_matrices(
     # extract noise distributions and noise formulae
     noise = [_get_noise(observable_id) for observable_id in observable_ids]
 
-    noise_distributions, noise_formulae = zip(*noise)
+    noise_distributions, noise_formulae = zip(*noise, strict=True)
     return np.array(noise_distributions), np.array(noise_formulae)
 
 

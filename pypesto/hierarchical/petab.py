@@ -152,10 +152,10 @@ def validate_inner_parameter_pairings(
     scalings_with_offsets = {}
     offsets_with_scalings = {}
 
-    for _, row in inner_parameter_df.iterrows():
-        offset = row[InnerParameterType.OFFSET]
-        scaling = row[InnerParameterType.SCALING]
-        sigma = row[InnerParameterType.SIGMA]
+    for row in inner_parameter_df.itertuples():
+        offset = getattr(row, InnerParameterType.OFFSET)
+        scaling = getattr(row, InnerParameterType.SCALING)
+        sigma = getattr(row, InnerParameterType.SIGMA)
 
         # Ensures each scaling is only ever paired with one sigma.
         if scaling is not None and sigma is not None:
@@ -496,7 +496,7 @@ def _get_symbolic_formula_from_measurement(
             if isinstance(overrides, str)
             else [overrides]
         )
-        subs = dict(zip(formula_placeholders, overrides))
+        subs = dict(zip(formula_placeholders, overrides, strict=True))
         symbolic_formula = symbolic_formula.subs(subs)
 
     if disallowed_formula_placeholders:
@@ -509,7 +509,11 @@ def _get_symbolic_formula_from_measurement(
             else [disallowed_overrides]
         )
         disallowed_subs = dict(
-            zip(disallowed_formula_placeholders, disallowed_overrides)
+            zip(
+                disallowed_formula_placeholders,
+                disallowed_overrides,
+                strict=True,
+            )
         )
         symbolic_formula = symbolic_formula.subs(disallowed_subs)
 

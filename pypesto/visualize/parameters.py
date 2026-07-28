@@ -1,9 +1,8 @@
 import logging
 from collections.abc import Callable, Iterable, Sequence
-from typing import Optional
 
+import matplotlib
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from matplotlib.colors import Colormap
@@ -21,6 +20,9 @@ from ..C import (
 from ..result import Result
 from .clust_color import assign_colors
 from .misc import (
+    get_ax,
+    get_axes_array,
+    plot_diagonal_marginal,
     process_parameter_indices,
     process_result_list,
     process_start_indices,
@@ -197,11 +199,11 @@ def parameter_hist(
     result: Result,
     parameter_name: str,
     bins: int | str = "auto",
-    ax: Optional["matplotlib.Axes"] = None,
-    size: tuple[float] | None = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (18.5, 10.5),
     color: COLOR | None = None,
     start_indices: int | list[int] | None = None,
-):
+) -> matplotlib.axes.Axes:
     """
     Plot parameter values as a histogram.
 
@@ -229,10 +231,7 @@ def parameter_hist(
     ax:
         The plot axes.
     """
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     xs = result.optimize_result.x
 
@@ -305,10 +304,7 @@ def parameters_lowlevel(
         # 0.5 inch height per parameter
         size = (18.5, max(xs.shape[1], 1) / 2)
 
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     # assign colors
     colors = assign_colors(
@@ -583,6 +579,8 @@ def parameters_correlation_matrix(
     cluster: bool = True,
     cmap: Colormap | str = "bwr",
     return_table: bool = False,
+    heatmap_kwargs: dict | None = None,
+    size: tuple[float, float] | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot correlation of optimized parameters.
@@ -597,8 +595,8 @@ def parameters_correlation_matrix(
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted
     method:
-        The method to compute correlation. Allowed are `pearson, kendall,
-        spearman` or a callable function.
+        The method to compute correlation. Allowed values are ``pearson``,
+        ``kendall``, ``spearman`` or a callable.
     cluster:
         Whether to cluster the correlation matrix.
     cmap:
@@ -606,6 +604,10 @@ def parameters_correlation_matrix(
     return_table:
         Whether to return the parameter table additionally for further
         inspection.
+    heatmap_kwargs:
+        Additional keyword arguments to :func:`seaborn.heatmap`.
+    size:
+        Figure size (width, height) in inches.
 
     Returns
     -------
@@ -631,14 +633,22 @@ def parameters_correlation_matrix(
     ]
     df = pd.DataFrame(parameters, columns=x_labels)
     corr_matrix = df.corr(method=method)
+    heatmap_kwargs = {
+        "data": corr_matrix,
+        "yticklabels": True,
+        "vmin": -1,
+        "vmax": 1,
+        "cmap": cmap,
+        "linewidth": 1,
+    } | (heatmap_kwargs or {})
     if cluster:
-        ax = sns.clustermap(
-            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
-        )
+        if size is not None:
+            heatmap_kwargs["figsize"] = size
+        ax = sns.clustermap(**heatmap_kwargs)
     else:
-        ax = sns.heatmap(
-            data=corr_matrix, yticklabels=True, vmin=-1, vmax=1, cmap=cmap
-        )
+        ax = sns.heatmap(**heatmap_kwargs)
+        if size is not None:
+            ax.figure.set_size_inches(*size)
     if return_table:
         return ax, df
     return ax
@@ -649,38 +659,45 @@ def optimization_scatter(
     parameter_indices: str | Sequence[int] = "free_only",
     start_indices: int | Iterable[int] | None = None,
     diag_kind: str = "kde",
-    suptitle: str = None,
-    size: tuple[float, float] = None,
+    suptitle: str | None = None,
+    size: tuple[float, float] | None = None,
     show_bounds: bool = False,
-):
+    axes: np.ndarray | None = None,
+) -> np.ndarray:
     """
-    Plot a scatter plot of all pairs of parameters for the given starts.
+    Plot a scatter matrix of all parameter pairs for the given starts.
 
     Parameters
     ----------
     result:
-        Optimization result obtained by 'optimize.py'.
+        Optimization result obtained by ‘optimize.py’.
     parameter_indices:
         List of integers specifying the parameters to be considered.
     start_indices:
         List of integers specifying the multistarts to be plotted or
         int specifying up to which start index should be plotted.
     diag_kind:
-        Visualization mode for marginal densities {‘auto’, ‘hist’, ‘kde’,
-        None}.
+        Marginal distribution shown on the diagonal: ``’kde’`` (default)
+        or ``’hist’``.
     suptitle:
-        Title of the plot.
+        Title of the figure.
     size:
-        Size of the plot.
+        Figure size (width, height) in inches. Defaults to
+        ``(2.5 * n + 0.5, 2.5 * n + 0.5)``.
     show_bounds:
-        Whether to show the parameter bounds.
+        Whether to draw dashed lines at the parameter bounds.
+    axes:
+        Optional axes grid to draw into. Must have shape
+        ``(n_params, n_params)``.
 
     Returns
     -------
-    ax:
-        The plot axis.
+    axes:
+        2-D NumPy array of shape ``(n_params, n_params)`` containing one
+        matplotlib Axes per panel.
     """
-    import seaborn as sns
+    import matplotlib.cm as mpl_cm
+    from matplotlib.colors import Normalize
 
     start_indices = process_start_indices(
         start_indices=start_indices, result=result
@@ -688,33 +705,129 @@ def optimization_scatter(
     parameter_indices = process_parameter_indices(
         parameter_indices=parameter_indices, result=result
     )
-    # put all parameters into a dataframe, where columns are parameters
-    parameters = [
-        result.optimize_result[i_start]["x"][parameter_indices]
-        for i_start in start_indices
-    ]
-    x_labels = [
-        result.problem.x_names[parameter_index]
-        for parameter_index in parameter_indices
-    ]
-    df = pd.DataFrame(parameters, columns=x_labels)
 
-    sns.set(style="ticks")
+    n = len(parameter_indices)
+    x_labels = [result.problem.x_names[i] for i in parameter_indices]
 
-    ax = sns.pairplot(
-        df,
-        diag_kind=diag_kind,
+    # data matrix: rows = starts, cols = selected parameters
+    data = np.array(
+        [
+            result.optimize_result[i]["x"][parameter_indices]
+            for i in start_indices
+        ]
+    )
+    fvals = np.array([result.optimize_result[i].fval for i in start_indices])
+
+    # continuous colormap: viridis, low fval (best) → yellow, high fval (worst) → dark
+    cmap = matplotlib.colormaps["viridis_r"]
+    min_fval_range = 1.0
+    fval_min = fvals.min()
+    fval_max = fvals.max()
+    fval_mid = 0.5 * (fval_min + fval_max)
+    fval_half_range = max(fval_max - fval_min, min_fval_range) / 2
+    fval_norm = Normalize(
+        vmin=fval_mid - fval_half_range,
+        vmax=fval_mid + fval_half_range,
     )
 
-    if size is not None:
-        ax.fig.set_size_inches(size)
-    if suptitle:
-        ax.fig.suptitle(suptitle)
-    if show_bounds:
-        # set bounds of plot to parameter bounds. Only use diagonal as
-        # sns.PairGrid has sharex,sharey = True by default.
-        for i_axis, axis in enumerate(np.diag(ax.axes)):
-            axis.set_xlim(result.problem.lb[i_axis], result.problem.ub[i_axis])
-            axis.set_ylim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+    if size is None and axes is None:
+        size = (2.5 * n + 0.5, 2.5 * n + 0.5)
 
-    return ax
+    axes = get_axes_array(axes=axes, nrows=n, ncols=n, size=size)
+    fig = axes.flat[0].figure
+    fig.set_layout_engine("constrained")
+
+    previous_colorbar_axes = []
+    for ax in axes.flat:
+        colorbar_ax = getattr(
+            ax,
+            "_pypesto_optimization_scatter_colorbar_ax",
+            None,
+        )
+        if (
+            colorbar_ax is not None
+            and colorbar_ax not in previous_colorbar_axes
+        ):
+            previous_colorbar_axes.append(colorbar_ax)
+    for colorbar_ax in previous_colorbar_axes:
+        if colorbar_ax in fig.axes:
+            colorbar_ax.remove()
+
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
+        if hasattr(ax, "_pypesto_optimization_scatter_colorbar_ax"):
+            delattr(ax, "_pypesto_optimization_scatter_colorbar_ax")
+
+    for row in range(n):
+        for col in range(n):
+            ax = axes[row, col]
+            col_vals = data[:, col]
+            row_vals = data[:, row]
+
+            if row == col:
+                plot_diagonal_marginal(
+                    ax=ax, values=col_vals, diag_kind=diag_kind
+                )
+            else:
+                ax.scatter(
+                    col_vals,
+                    row_vals,
+                    c=fvals,
+                    cmap=cmap,
+                    norm=fval_norm,
+                    s=35,
+                    alpha=0.85,
+                    linewidths=0.6,
+                    edgecolors="white",
+                    zorder=3,
+                )
+                ax.set_ylabel(x_labels[row])
+
+            ax.set_xlabel(x_labels[col])
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+
+            if show_bounds:
+                pi_col = parameter_indices[col]
+                pi_row = parameter_indices[row]
+                for val in (
+                    result.problem.lb_full[pi_col],
+                    result.problem.ub_full[pi_col],
+                ):
+                    ax.axvline(val, color="k", ls="--", lw=0.8)
+                if row != col:
+                    for val in (
+                        result.problem.lb_full[pi_row],
+                        result.problem.ub_full[pi_row],
+                    ):
+                        ax.axhline(val, color="k", ls="--", lw=0.8)
+
+    # shared x-limits per column, shared y-limits per row (non-diagonal)
+    for col in range(n):
+        vals = data[:, col]
+        data_range = vals.max() - vals.min()
+        pad = data_range * 0.1 if data_range > 0 else 0.5
+        xlim = (vals.min() - pad, vals.max() + pad)
+        for row in range(n):
+            axes[row, col].set_xlim(xlim)
+    for row in range(n):
+        vals = data[:, row]
+        data_range = vals.max() - vals.min()
+        pad = data_range * 0.1 if data_range > 0 else 0.5
+        ylim = (vals.min() - pad, vals.max() + pad)
+        for col in range(n):
+            if col != row:
+                axes[row, col].set_ylim(ylim)
+
+    sm = mpl_cm.ScalarMappable(cmap=cmap, norm=fval_norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=axes.ravel().tolist(), shrink=0.8, pad=0.03)
+    cbar.set_label("Objective value")
+    for ax in axes.flat:
+        ax._pypesto_optimization_scatter_colorbar_ax = cbar.ax
+
+    if suptitle:
+        fig.suptitle(suptitle)
+
+    return axes

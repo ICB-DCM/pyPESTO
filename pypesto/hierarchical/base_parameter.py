@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Literal, Optional
+from typing import Any, Literal
 
 import numpy as np
 
@@ -144,7 +144,7 @@ class InnerParameter:
             return False
         return True
 
-    def get_unsatisfied_bound(self, value) -> Optional[str]:
+    def get_unsatisfied_bound(self, value) -> str | None:
         """Get the unsatisfied bound index, if any."""
         if value < self.lb:
             return LOWER_BOUND

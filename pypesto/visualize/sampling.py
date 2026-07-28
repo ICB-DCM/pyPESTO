@@ -2,7 +2,6 @@ import logging
 import warnings
 from collections.abc import Sequence
 from colorsys import rgb_to_hls
-from typing import Optional, Union
 
 import matplotlib.axes
 import matplotlib.pyplot as plt
@@ -26,9 +25,17 @@ from ..C import (
 from ..ensemble import EnsemblePrediction, get_percentile_label
 from ..result import McmcPtResult, PredictionResult, Result
 from ..sample import calculate_ci_mcmc_sample
-from .misc import rgba2rgb
+from .misc import (
+    _UNSET,
+    get_ax,
+    get_axes_array,
+    hide_unused_axes,
+    make_grid_shape,
+    plot_diagonal_marginal,
+    process_deprecated_kwarg,
+    rgba2rgb,
+)
 
-cmap = matplotlib.cm.viridis
 logger = logging.getLogger(__name__)
 
 
@@ -44,10 +51,10 @@ def sampling_fval_traces(
     i_chain: int = 0,
     full_trace: bool = False,
     stepsize: int = 1,
-    title: str = None,
-    size: tuple[float, float] = None,
-    ax: matplotlib.axes.Axes = None,
-):
+    title: str | None = None,
+    size: tuple[float, float] | None = None,
+    ax: matplotlib.axes.Axes | None = None,
+) -> matplotlib.axes.Axes:
     """
     Plot log-posterior (=function value) over iterations.
 
@@ -83,11 +90,8 @@ def sampling_fval_traces(
         full_trace=full_trace,
     )
 
-    # set axes and figure
-    if ax is None:
-        _, ax = plt.subplots(figsize=size)
+    ax = get_ax(ax, size)
 
-    sns.set(style="ticks")
     kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
     if full_trace:
         kwargs["hue"] = "converged"
@@ -515,7 +519,7 @@ def _get_condition_and_output_ids(
 def _handle_legends(
     fig: matplotlib.figure.Figure,
     axes: matplotlib.axes.Axes,
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     labels: dict[str, str],
     level_opacities: Sequence[float],
     variable_names: Sequence[str],
@@ -525,9 +529,8 @@ def _handle_legends(
     n_col: int,
     average: str,
     add_sd: bool,
-    grouped_measurements: Optional[
-        dict[tuple[str, str], Sequence[Sequence[float]]]
-    ],
+    grouped_measurements: dict[tuple[str, str], Sequence[Sequence[float]]]
+    | None,
 ) -> None:
     """Add legends to a sampling prediction trajectories plot.
 
@@ -680,7 +683,7 @@ def _handle_legends(
 
 
 def _handle_colors(
-    levels: Union[float, Sequence[float]],
+    levels: float | Sequence[float],
     n_variables: int,
     reverse: bool = False,
 ) -> tuple[Sequence[float], Sequence[RGB]]:
@@ -708,8 +711,9 @@ def _handle_colors(
     cmap_max = 0.85 * (RGBA_MAX - RGBA_MIN) + RGBA_MIN  # exclude yellows
 
     # define colormap
+    viridis = plt.colormaps["viridis"]
     variable_colors = [
-        list(cmap(v))[:LEN_RGB]
+        list(viridis(v))[:LEN_RGB]
         for v in np.linspace(cmap_min, cmap_max, n_variables)
     ]
 
@@ -718,11 +722,11 @@ def _handle_colors(
 
 def sampling_prediction_trajectories(
     ensemble_prediction: EnsemblePrediction,
-    levels: Union[float, Sequence[float]],
-    title: str = None,
-    size: tuple[float, float] = None,
-    axes: matplotlib.axes.Axes = None,
-    labels: dict[str, str] = None,
+    levels: float | Sequence[float],
+    title: str | None = None,
+    size: tuple[float, float] | None = None,
+    axes: matplotlib.axes.Axes | np.ndarray | None = None,
+    labels: dict[str, str] | None = None,
     axis_label_padding: int = 50,
     groupby: str = CONDITION,
     condition_gap: float = 0.01,
@@ -732,8 +736,8 @@ def sampling_prediction_trajectories(
     reverse_opacities: bool = False,
     average: str = MEDIAN,
     add_sd: bool = False,
-    measurement_df: pd.DataFrame = None,
-) -> matplotlib.axes.Axes:
+    measurement_df: pd.DataFrame | None = None,
+) -> np.ndarray:
     """
     Visualize prediction trajectory of an EnsemblePrediction.
 
@@ -787,7 +791,7 @@ def sampling_prediction_trajectories(
     Returns
     -------
     axes:
-        The plot axes.
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
     if labels is None:
         labels = {}
@@ -867,21 +871,12 @@ def sampling_prediction_trajectories(
         reverse=reverse_opacities,
     )
 
-    if axes is None:
-        n_row = int(np.round(np.sqrt(n_subplots)))
-        n_col = int(np.ceil(n_subplots / n_row))
-        fig, axes = plt.subplots(n_row, n_col, figsize=size, squeeze=False)
-        for ax in axes.flat[n_subplots:]:
-            ax.remove()
-    else:
-        fig = axes.get_figure()
-        if not isinstance(axes, np.ndarray):
-            axes = np.array([[axes]])
-        if len(axes.flat) < n_subplots:
-            raise ValueError(
-                "Provided `axes` contains insufficient subplots. At least "
-                f"{n_subplots} are required."
-            )
+    n_row = int(np.round(np.sqrt(n_subplots)))
+    n_col = int(np.ceil(n_subplots / n_row))
+
+    axes = get_axes_array(axes=axes, nrows=n_row, ncols=n_col, size=size)
+    fig = axes.flat[0].figure
+    axes = hide_unused_axes(axes=axes, n_used=n_subplots, clear=True)
     artist_padding = axis_label_padding / (fig.get_size_inches() * fig.dpi)[0]
 
     if groupby == CONDITION:
@@ -933,8 +928,9 @@ def sampling_prediction_trajectories(
     )
 
     # X and Y labels
-    xmin = min(ax.get_position().xmin for ax in axes.flat)
-    ymin = min(ax.get_position().ymin for ax in axes.flat)
+    visible_axes = [ax for ax in axes.flat if ax.get_visible()]
+    xmin = min(ax.get_position().xmin for ax in visible_axes)
+    ymin = min(ax.get_position().ymin for ax in visible_axes)
     xlabel = (
         "Cumulative time across all conditions"
         if groupby == OUTPUT
@@ -964,12 +960,13 @@ def sampling_prediction_trajectories(
 
 def sampling_parameter_cis(
     result: Result,
-    alpha: Sequence[int] = None,
+    confidence_levels: Sequence[float] = None,
     step: float = 0.05,
     show_median: bool = True,
-    title: str = None,
-    size: tuple[float, float] = None,
-    ax: matplotlib.axes.Axes = None,
+    title: str | None = None,
+    size: tuple[float, float] | None = None,
+    ax: matplotlib.axes.Axes | None = None,
+    alpha: Sequence[int] = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot MCMC-based parameter credibility intervals.
@@ -978,8 +975,13 @@ def sampling_parameter_cis(
     ----------
     result:
         The pyPESTO result object with filled sample result.
+    confidence_levels:
+        Credibility levels as fractions in (0, 1), e.g. ``[0.95]`` for a
+        95% credibility interval. Defaults to ``[0.95]``.
     alpha:
-        List of lower tail probabilities, defaults to 95% interval.
+        Deprecated. Use ``confidence_levels`` instead.
+        Previously accepted integer percentages (e.g. ``[95]``); values
+        are divided by 100 automatically during the transition.
     step:
         Height of boxes for projectile plot, defaults to 0.05.
     show_median:
@@ -996,31 +998,47 @@ def sampling_parameter_cis(
     ax:
         The plot axes.
     """
-    if alpha is None:
-        alpha = [95]
+    if alpha is not None:
+        if confidence_levels is not None:
+            raise ValueError(
+                "Pass either `confidence_levels` or the deprecated `alpha`, not both."
+            )
+        import warnings
+
+        warnings.warn(
+            "`alpha` is deprecated; use `confidence_levels` instead. "
+            "Note: units have changed — pass fractions in (0, 1) "
+            "(e.g. `confidence_levels=[0.95]`) instead of integer percentages "
+            "(e.g. `alpha=[95]`). Your values have been divided by 100 automatically.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        confidence_levels = [a / 100 for a in alpha]
+
+    if confidence_levels is None:
+        confidence_levels = [0.95]
 
     # automatically sort values in decreasing order
-    alpha_sorted = sorted(alpha, reverse=True)
+    levels_sorted = sorted(confidence_levels, reverse=True)
     # define colormap
-    evenly_spaced_interval = np.linspace(0, 1, len(alpha_sorted))
-    colors = [plt.cm.tab20c_r(x) for x in evenly_spaced_interval]
+    evenly_spaced_interval = np.linspace(0, 1, len(levels_sorted))
+    tab20c_r = plt.colormaps["tab20c_r"]
+    colors = [tab20c_r(x) for x in evenly_spaced_interval]
     # number of sampled parameters
     n_pars = result.sample_result.trace_x.shape[-1]
 
-    # set axes and figure
-    if ax is None:
-        _, ax = plt.subplots(figsize=size)
+    ax = get_ax(ax, size)
 
     # loop over parameters
     for npar in range(n_pars):
         # initialize height of boxes
         _step = step
         # loop over confidence levels
-        for n, level in enumerate(alpha_sorted):
+        for n, level in enumerate(levels_sorted):
             # extract percentile-based confidence intervals
             lb, ub = calculate_ci_mcmc_sample(
                 result=result,
-                ci_level=level / 100,
+                ci_level=level,
             )
 
             # assemble boxes for projectile plot
@@ -1032,11 +1050,11 @@ def sampling_parameter_cis(
                 np.append(x1, x1[::-1]),
                 np.append(y1, y2[::-1]),
                 color=colors[n],
-                label=str(level) + "% CI",
+                label=f"{level:.0%} CI",
             )
 
             if show_median:
-                if n == len(alpha_sorted) - 1:
+                if n == len(levels_sorted) - 1:
                     burn_in = result.sample_result.burn_in
                     converged = result.sample_result.trace_x[0, burn_in:, npar]
                     _median = np.median(converged)
@@ -1063,7 +1081,7 @@ def sampling_parameter_cis(
     # handle legend
     plt.gca().invert_yaxis()
     handles, labels = plt.gca().get_legend_handles_labels()
-    by_label = dict(zip(labels, handles))
+    by_label = dict(zip(labels, handles, strict=True))
     ax.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1.05, 1))
 
     return ax
@@ -1072,14 +1090,16 @@ def sampling_parameter_cis(
 def sampling_parameter_traces(
     result: Result,
     i_chain: int = 0,
-    par_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] = None,
     full_trace: bool = False,
     stepsize: int = 1,
     use_problem_bounds: bool = True,
-    suptitle: str = None,
-    size: tuple[float, float] = None,
-    ax: matplotlib.axes.Axes = None,
-):
+    suptitle: str | None = None,
+    size: tuple[float, float] | None = None,
+    axes: np.ndarray | None = None,
+    ax: np.ndarray | None = _UNSET,
+    par_indices: Sequence[int] = _UNSET,
+) -> np.ndarray:
     """
     Plot parameter values over iterations.
 
@@ -1089,7 +1109,7 @@ def sampling_parameter_traces(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    par_indices: list of integer values
+    parameter_indices: list of integer values
         List of integer values specifying which parameters to plot.
         Default: All parameters are shown.
     full_trace:
@@ -1103,14 +1123,26 @@ def sampling_parameter_traces(
         Figure suptitle.
     size:
         Figure size in inches.
+    axes:
+        Axes grid to use. Must match the computed subplot layout.
     ax:
-        Axes object to use.
+        Deprecated. Use ``axes`` instead.
+    par_indices:
+        Deprecated. Use ``parameter_indices`` instead.
 
     Returns
     -------
-    ax:
-        The plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
+    parameter_indices = process_deprecated_kwarg(
+        "parameter_indices",
+        parameter_indices,
+        "par_indices",
+        par_indices,
+    )
+    axes = process_deprecated_kwarg("axes", axes, "ax", ax)
+
     import seaborn as sns
 
     # get data which should be plotted
@@ -1119,22 +1151,18 @@ def sampling_parameter_traces(
         i_chain=i_chain,
         stepsize=stepsize,
         full_trace=full_trace,
-        par_indices=par_indices,
+        parameter_indices=parameter_indices,
     )
 
-    # compute, how many rows and columns we need for the subplots
-    num_row = int(np.round(np.sqrt(nr_params)))
-    num_col = int(np.ceil(nr_params / num_row))
+    num_row, num_col = make_grid_shape(nr_params)
+    if size is None and axes is None:
+        size = (3.5 * num_col, 2.5 * num_row)
+    axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
+    fig = axes.flat[0].figure
+    axes = hide_unused_axes(axes=axes, n_used=nr_params, clear=True)
 
-    # set axes and figure
-    if ax is None:
-        fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
-    else:
-        fig = ax.get_figure()
+    par_ax = dict(zip(param_names, axes.flat, strict=True))
 
-    par_ax = dict(zip(param_names, ax.flat))
-
-    sns.set(style="ticks")
     kwargs = {"edgecolor": "w", "linewidth": 0.3, "s": 10}  # for edge color
 
     if full_trace:
@@ -1176,22 +1204,21 @@ def sampling_parameter_traces(
 
     if suptitle:
         fig.suptitle(suptitle)
-
-    fig.tight_layout()
     sns.despine()
 
-    return ax
+    return axes
 
 
 def sampling_scatter(
     result: Result,
     i_chain: int = 0,
     stepsize: int = 1,
-    suptitle: str = None,
+    suptitle: str | None = None,
     diag_kind: str = "kde",
-    size: tuple[float, float] = None,
+    size: tuple[float, float] | None = None,
     show_bounds: bool = True,
-):
+    axes: np.ndarray | None = None,
+) -> np.ndarray:
     """
     Parameter scatter plot.
 
@@ -1214,50 +1241,84 @@ def sampling_scatter(
 
     Returns
     -------
-    ax:
-        The plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
-    import seaborn as sns
-
     # get data which should be plotted
-    nr_params, params_fval, theta_lb, theta_ub, _ = get_data_to_plot(
+    nr_params, params_fval, theta_lb, theta_ub, param_names = get_data_to_plot(
         result=result, i_chain=i_chain, stepsize=stepsize
     )
 
-    sns.set(style="ticks")
+    if size is None and axes is None:
+        size = (2.5 * nr_params + 0.5, 2.5 * nr_params + 0.5)
 
-    # TODO: Think this throws the axis errors in seaborn.
-    ax = sns.pairplot(
-        params_fval.drop(["logPosterior", "iteration"], axis=1),
-        diag_kind=diag_kind,
+    axes = get_axes_array(
+        axes=axes, nrows=nr_params, ncols=nr_params, size=size
     )
+    fig = axes.flat[0].figure
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
 
-    if size is not None:
-        ax.fig.set_size_inches(size)
+    data = params_fval[param_names]
+    for row in range(nr_params):
+        for col in range(nr_params):
+            ax = axes[row, col]
+            col_name = param_names[col]
+            row_name = param_names[row]
+            col_vals = data[col_name]
+            row_vals = data[row_name]
 
-    if suptitle:
-        ax.fig.suptitle(suptitle)
+            if row == col:
+                plot_diagonal_marginal(
+                    ax=ax, values=col_vals, diag_kind=diag_kind
+                )
+            else:
+                ax.scatter(
+                    col_vals,
+                    row_vals,
+                    color="C0",
+                    alpha=0.85,
+                    s=35,
+                    linewidths=0.6,
+                    edgecolors="white",
+                    zorder=3,
+                )
+                ax.set_ylabel(row_name)
+
+            ax.set_xlabel(col_name)
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
 
     if show_bounds:
-        # set bounds of plot to parameter bounds. Only use diagonal as
-        # sns.PairGrid has sharex,sharey = True by default.
-        for i_axis, axis in enumerate(np.diag(ax.axes)):
-            axis.set_xlim(result.problem.lb[i_axis], result.problem.ub[i_axis])
-            axis.set_ylim(result.problem.lb[i_axis], result.problem.ub[i_axis])
+        for col in range(nr_params):
+            xlim = (theta_lb[col], theta_ub[col])
+            for row in range(nr_params):
+                axes[row, col].set_xlim(xlim)
+        for row in range(nr_params):
+            ylim = (theta_lb[row], theta_ub[row])
+            for col in range(nr_params):
+                if row != col:
+                    axes[row, col].set_ylim(ylim)
 
-    return ax
+    if suptitle:
+        fig.suptitle(suptitle)
+
+    return axes
 
 
 def sampling_1d_marginals(
     result: Result,
     i_chain: int = 0,
-    par_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] = None,
     stepsize: int = 1,
     plot_type: str = "both",
     bw_method: str = "scott",
-    suptitle: str = None,
-    size: tuple[float, float] = None,
-):
+    suptitle: str | None = None,
+    size: tuple[float, float] | None = None,
+    axes: np.ndarray | None = None,
+    par_indices: Sequence[int] = _UNSET,
+) -> np.ndarray:
     """
     Plot marginals.
 
@@ -1267,7 +1328,7 @@ def sampling_1d_marginals(
         The pyPESTO result object with filled sample result.
     i_chain:
         Which chain to plot. Default: First chain.
-    par_indices: list of integer values
+    parameter_indices: list of integer values
         List of integer values specifying which parameters to plot.
         Default: All parameters are shown.
     stepsize:
@@ -1281,12 +1342,23 @@ def sampling_1d_marginals(
         Figure super title.
     size:
         Figure size in inches.
+    axes:
+        Axes grid to use. Must match the computed subplot layout.
+    par_indices:
+        Deprecated. Use ``parameter_indices`` instead.
 
     Return
     --------
-    ax:
-        matplotlib-axes
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
+    parameter_indices = process_deprecated_kwarg(
+        "parameter_indices",
+        parameter_indices,
+        "par_indices",
+        par_indices,
+    )
+
     import seaborn as sns
 
     # get data which should be plotted
@@ -1294,17 +1366,17 @@ def sampling_1d_marginals(
         result=result,
         i_chain=i_chain,
         stepsize=stepsize,
-        par_indices=par_indices,
+        parameter_indices=parameter_indices,
     )
 
-    # compute, how many rows and columns we need for the subplots
-    num_row = int(np.round(np.sqrt(nr_params)))
-    num_col = int(np.ceil(nr_params / num_row))
+    num_row, num_col = make_grid_shape(nr_params)
+    if size is None and axes is None:
+        size = (3.5 * num_col, 2.5 * num_row)
+    axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
+    fig = axes.flat[0].figure
+    axes = hide_unused_axes(axes=axes, n_used=nr_params, clear=True)
 
-    fig, ax = plt.subplots(num_row, num_col, squeeze=False, figsize=size)
-
-    par_ax = dict(zip(param_names, ax.flat))
-    sns.set(style="ticks")
+    par_ax = dict(zip(param_names, axes.flat, strict=True))
 
     # fig, ax = plt.subplots(nr_params, figsize=size)[1]
     for idx, par_id in enumerate(param_names):
@@ -1336,9 +1408,7 @@ def sampling_1d_marginals(
     if suptitle:
         fig.suptitle(suptitle)
 
-    fig.tight_layout()
-
-    return ax
+    return axes
 
 
 def get_data_to_plot(
@@ -1346,7 +1416,7 @@ def get_data_to_plot(
     i_chain: int,
     stepsize: int,
     full_trace: bool = False,
-    par_indices: Sequence[int] = None,
+    parameter_indices: Sequence[int] = None,
 ):
     """Get the data which should be plotted as a pandas.DataFrame.
 
@@ -1360,7 +1430,7 @@ def get_data_to_plot(
         Only one in `stepsize` values is plotted.
     full_trace:
         Keep the full length of the chain. Default: False.
-    par_indices: list of integer values
+    parameter_indices: list of integer values
         List of integer values specifying which parameters to plot.
         Default: All parameters are shown.
 
@@ -1434,9 +1504,9 @@ def get_data_to_plot(
     # some global parameters
     nr_params = arr_param.shape[1]  # number of parameters
 
-    if par_indices is not None:
-        param_names = params_fval.columns.values[par_indices]
-        nr_params = len(par_indices)
+    if parameter_indices is not None:
+        param_names = params_fval.columns.values[parameter_indices]
+        nr_params = len(parameter_indices)
     else:
         param_names = params_fval.columns.values[0:nr_params]
 

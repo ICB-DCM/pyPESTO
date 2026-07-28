@@ -1,7 +1,7 @@
 """Various methods for estimating the log evidence of a model."""
 
 import logging
-from typing import Optional, Union
+from collections.abc import Callable
 
 import numpy as np
 from scipy import stats
@@ -56,8 +56,8 @@ def laplace_approximation_log_evidence(
 
 def harmonic_mean_log_evidence(
     result: Result,
-    prior_samples: Optional[np.ndarray] = None,
-    neg_log_likelihood_fun: Optional[callable] = None,
+    prior_samples: np.ndarray | None = None,
+    neg_log_likelihood_fun: Callable | None = None,
 ) -> float:
     """
     Compute the log evidence using the harmonic mean estimator.
@@ -142,7 +142,7 @@ def parallel_tempering_log_evidence(
     result: Result,
     method: str = "trapezoid",
     use_all_chains: bool = True,
-) -> Union[float, None]:
+) -> float | None:
     """Perform thermodynamic integration or steppingstone sampling to estimate the log evidence.
 
     Thermodynamic integration is performed by integrating the mean log likelihood over the temperatures.
@@ -262,8 +262,8 @@ def steppingstone(temps: np.ndarray, trace_loglike: np.ndarray) -> float:
 
 def bridge_sampling_log_evidence(
     result: Result,
-    n_posterior_samples_init: Optional[int] = None,
-    initial_guess_log_evidence: Optional[float] = None,
+    n_posterior_samples_init: int | None = None,
+    initial_guess_log_evidence: float | None = None,
     max_iter: int = 1000,
     tol: float = 1e-6,
 ) -> float:

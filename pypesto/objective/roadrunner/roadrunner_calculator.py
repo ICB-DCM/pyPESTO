@@ -38,31 +38,38 @@ except ImportError:
     roadrunner = None
 
 LLH_TYPES = {
-    "lin_normal": lambda measurement, simulation, sigma: -0.5
-    * (
-        np.log(2 * np.pi * (sigma**2))
-        + ((measurement - simulation) / sigma) ** 2
+    "lin_normal": lambda measurement, simulation, sigma: (
+        -0.5
+        * (
+            np.log(2 * np.pi * (sigma**2))
+            + ((measurement - simulation) / sigma) ** 2
+        )
     ),
-    "log_normal": lambda measurement, simulation, sigma: -0.5
-    * (
-        np.log(2 * np.pi * (sigma**2) * (measurement**2))
-        + ((np.log(measurement) - np.log(simulation)) / sigma) ** 2
+    "log_normal": lambda measurement, simulation, sigma: (
+        -0.5
+        * (
+            np.log(2 * np.pi * (sigma**2) * (measurement**2))
+            + ((np.log(measurement) - np.log(simulation)) / sigma) ** 2
+        )
     ),
-    "log10_normal": lambda measurement, simulation, sigma: -0.5
-    * (
-        np.log(2 * np.pi * (sigma**2) * (measurement**2) * np.log(10) ** 2)
-        + ((np.log10(measurement) - np.log10(simulation)) / sigma) ** 2
+    "log10_normal": lambda measurement, simulation, sigma: (
+        -0.5
+        * (
+            np.log(2 * np.pi * (sigma**2) * (measurement**2) * np.log(10) ** 2)
+            + ((np.log10(measurement) - np.log10(simulation)) / sigma) ** 2
+        )
     ),
-    "lin_laplace": lambda measurement, simulation, sigma: -np.log(2 * sigma)
-    - (np.abs(measurement - simulation) / sigma),
-    "log_laplace": lambda measurement, simulation, sigma: -np.log(
-        2 * sigma * simulation
-    )
-    - (np.abs(np.log(measurement) - np.log(simulation)) / sigma),
-    "log10_laplace": lambda measurement, simulation, sigma: -np.log(
-        2 * sigma * simulation * np.log(10)
-    )
-    - (np.abs(np.log10(measurement) - np.log10(simulation)) / sigma),
+    "lin_laplace": lambda measurement, simulation, sigma: (
+        -np.log(2 * sigma) - (np.abs(measurement - simulation) / sigma)
+    ),
+    "log_laplace": lambda measurement, simulation, sigma: (
+        -np.log(2 * sigma * simulation)
+        - (np.abs(np.log(measurement) - np.log(simulation)) / sigma)
+    ),
+    "log10_laplace": lambda measurement, simulation, sigma: (
+        -np.log(2 * sigma * simulation * np.log(10))
+        - (np.abs(np.log10(measurement) - np.log10(simulation)) / sigma)
+    ),
 }
 
 
@@ -117,7 +124,9 @@ class RoadRunnerCalculator:
         solver_options.apply_to_roadrunner(roadrunner_instance)
         simulation_results = {}
         llh_tot = 0
-        for edata, mapping_per_condition in zip(edatas, parameter_mapping):
+        for edata, mapping_per_condition in zip(
+            edatas, parameter_mapping, strict=True
+        ):
             sim_res, llh = self.simulate_per_condition(
                 x_dct, roadrunner_instance, edata, mapping_per_condition
             )

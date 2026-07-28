@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+from typing import Any
 
 import numpy as np
 
@@ -15,28 +16,32 @@ from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
-# Lazy import of pymc, arviz, and pytensor
-# Only import if available, otherwise create dummy types for type checking
-if importlib.util.find_spec("pymc") is not None:
+# Lazy import of pymc and pytensor
+# Check availability once at module load time
+_HAS_PYMC = importlib.util.find_spec("pymc") is not None
+
+if _HAS_PYMC:
     import pymc
     import pytensor.tensor as pt
 
     _PT_OP_BASE = pt.Op
 else:
-    pymc = type("", (), {})()
-    pymc.backends = type("", (), {})()
-    pymc.backends.Text = None
+    pymc = None
     pt = None
     _PT_OP_BASE = object
 
-if importlib.util.find_spec("arviz") is not None:
-    import arviz as az
-else:
-    az = type("", (), {})()
-    az.InferenceData = None
-
 # implementation based on:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
+
+
+# TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0
+#  and simplify this helper to `data.posterior.to_dataset()`.
+def _get_posterior_dataset(data: Any) -> Any:
+    """Return posterior as an xarray Dataset across ArviZ versions."""
+    posterior = data.posterior
+    if hasattr(posterior, "to_array"):
+        return posterior
+    return posterior.to_dataset()
 
 
 class PymcObjectiveOp(_PT_OP_BASE):
@@ -70,7 +75,7 @@ class PymcObjectiveOp(_PT_OP_BASE):
 
     def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
         # Check dependencies
-        if importlib.util.find_spec("pymc") is None:
+        if not _HAS_PYMC:
             raise SamplerImportError("pymc")
         self._objective: ObjectiveBase = objective
         self._beta: float = beta
@@ -109,7 +114,7 @@ class PymcGradientOp(_PT_OP_BASE):
 
     def __init__(self, objective: ObjectiveBase, beta: float):
         # Check dependencies
-        if importlib.util.find_spec("pymc") is None:
+        if not _HAS_PYMC:
             raise SamplerImportError("pymc")
         self._objective: ObjectiveBase = objective
         self._beta: float = beta
@@ -143,7 +148,7 @@ class PymcSampler(Sampler):
         **kwargs,
     ):
         # Check dependencies
-        if importlib.util.find_spec("pymc") is None:
+        if not _HAS_PYMC:
             raise SamplerImportError("pymc")
 
         super().__init__(kwargs)
@@ -151,7 +156,7 @@ class PymcSampler(Sampler):
         self.problem: Problem | None = None
         self.x0: np.ndarray | None = None
         self.trace: pymc.backends.Text | None = None
-        self.data: az.InferenceData | None = None
+        self.data: Any | None = None
 
     @classmethod
     def translate_options(cls, options):
@@ -208,7 +213,9 @@ class PymcSampler(Sampler):
         if self.x0 is not None:
             x0 = {
                 x_name: val
-                for x_name, val in zip(problem.x_names, self.x0)
+                # FIXME: address https://github.com/ICB-DCM/pyPESTO/issues/1681
+                #  and change to strict=True
+                for x_name, val in zip(problem.x_names, self.x0, strict=False)
                 if x_name in x_names_free
             }
 
@@ -218,9 +225,7 @@ class PymcSampler(Sampler):
             _k = [
                 pymc.Uniform(x_name, lower=lb, upper=ub)
                 for x_name, lb, ub in zip(
-                    x_names_free,
-                    problem.lb,
-                    problem.ub,
+                    x_names_free, problem.lb, problem.ub, strict=True
                 )
             ]
 
@@ -251,10 +256,10 @@ class PymcSampler(Sampler):
 
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
+        posterior = _get_posterior_dataset(self.data)
+
         # dimensions
-        n_par, n_chain, n_iter = np.asarray(
-            self.data.posterior.to_array()
-        ).shape
+        n_par, n_chain, n_iter = np.asarray(posterior.to_array()).shape
         n_par -= 1  # remove log-posterior
 
         # parameters
@@ -263,10 +268,10 @@ class PymcSampler(Sampler):
         if len(par_ids) != n_par:
             raise AssertionError("Mismatch of parameter dimension")
         for i_par, par_id in enumerate(par_ids):
-            trace_x[:, :, i_par] = np.asarray(self.data.posterior[par_id])
+            trace_x[:, :, i_par] = np.asarray(posterior[par_id])
 
         # function values
-        trace_neglogpost = -np.asarray(self.data.posterior["loggyposty"])
+        trace_neglogpost = -np.asarray(posterior["loggyposty"])
 
         if (
             trace_x.shape[0] != trace_neglogpost.shape[0]

@@ -16,4 +16,5 @@ from .base import (
     to_startpoint_method,
 )
 from .latin_hypercube import LatinHypercubeStartpoints, latin_hypercube
+from .prior import PriorStartpoints
 from .uniform import UniformStartpoints, uniform

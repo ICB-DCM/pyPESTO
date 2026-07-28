@@ -5,7 +5,6 @@ import threading
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
-from typing import Optional
 from warnings import warn
 
 import numpy as np
@@ -84,8 +83,6 @@ class FunctionEvaluator:
         The objective function values in the same order as the inputs.
         """
         res = np.fromiter(map(self.single, xs), dtype=float)
-        self.n_eval += len(xs)
-        self.n_eval_round += len(xs)
         return res
 
     def single_random(self) -> tuple[np.array, float]:
@@ -185,7 +182,7 @@ class FunctionEvaluatorMT(FunctionEvaluator):
         #  objectives thread-safe.
         self._thread_local: threading.local = threading.local()
         # The thread-pool to be used for parallel objective evaluations
-        self._executor: Optional[ThreadPoolExecutor] = (
+        self._executor: ThreadPoolExecutor | None = (
             ThreadPoolExecutor(
                 max_workers=self._n_threads,
                 thread_name_prefix=__name__,
@@ -222,10 +219,10 @@ class FunctionEvaluatorMT(FunctionEvaluator):
                 ),
                 dtype=float,
             )
+            self.n_eval += len(xs)
+            self.n_eval_round += len(xs)
         else:
             res = np.fromiter(map(self.single, xs), dtype=float)
-        self.n_eval += len(xs)
-        self.n_eval_round += len(xs)
         return res
 
 

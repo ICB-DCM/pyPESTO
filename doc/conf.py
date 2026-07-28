@@ -102,6 +102,7 @@ intersphinx_mapping = {
     "petab_select": ("https://petab-select.readthedocs.io/en/develop/", None),
     "python": ("https://docs.python.org/3", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "seaborn": ("https://seaborn.pydata.org/", None),
 }
 
 

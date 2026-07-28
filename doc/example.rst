@@ -67,3 +67,4 @@ Application examples
 
    example/conversion_reaction.ipynb
    example/synthetic_data.ipynb
+   example/example_amici_splines_swameye/example_amici_splines_Swameye2003.ipynb

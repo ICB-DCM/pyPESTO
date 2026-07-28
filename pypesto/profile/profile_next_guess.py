@@ -1,11 +1,13 @@
 import logging
-from typing import Callable, Literal
+from collections.abc import Callable
+from typing import Literal
 
 import numpy as np
 
 from ..problem import Problem
 from ..result import ProfilerResult
 from .options import ProfileOptions
+from .util import ResolvedProfileStepSizeMap, ResolvedProfileStepSizes
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,7 @@ def next_guess(
     current_profile: ProfilerResult,
     problem: Problem,
     global_opt: float,
+    resolved_steps_by_par: ResolvedProfileStepSizeMap,
     min_step_increase_factor: float = 1.0,
     max_step_reduce_factor: float = 1.0,
 ) -> np.ndarray:
@@ -58,6 +61,8 @@ def next_guess(
         The problem to be solved.
     global_opt:
         Log-posterior value of the global optimum.
+    resolved_steps_by_par:
+        Pre-resolved profile step sizes.
     min_step_increase_factor:
         Factor to increase the minimal step size bound. Used only in
         :func:`adaptive_step`.
@@ -71,7 +76,12 @@ def next_guess(
     """
     if update_type == "fixed_step":
         next_initial_guess = fixed_step(
-            x, par_index, par_direction, profile_options, problem
+            x,
+            par_index,
+            par_direction,
+            profile_options,
+            problem,
+            resolved_steps_by_par,
         )
     elif update_type == "adaptive_step_order_0":
         order = 0
@@ -92,12 +102,13 @@ def next_guess(
             current_profile,
             problem,
             global_opt,
+            resolved_steps_by_par,
             order,
             min_step_increase_factor,
             max_step_reduce_factor,
         )
 
-    logger.info(
+    logger.debug(
         f"Next guess for {problem.x_names[par_index]} in direction "
         f"{par_direction} is {next_initial_guess[par_index]:.4f}. Step size: "
         f"{next_initial_guess[par_index] - x[par_index]:.4f}."
@@ -112,11 +123,12 @@ def fixed_step(
     par_direction: Literal[1, -1],
     options: ProfileOptions,
     problem: Problem,
+    resolved_steps_by_par: ResolvedProfileStepSizeMap,
 ) -> np.ndarray:
     """Most simple method to create the next guess.
 
-    Computes the next point based on the fixed step size given by
-    :attr:`pypesto.profile.ProfileOptions.default_step_size`.
+    Computes the next point based on the resolved default step size for the
+    profiled parameter.
 
     Parameters
     ----------
@@ -130,13 +142,16 @@ def fixed_step(
         Various options applied to the profile optimization.
     problem:
         The problem to be solved.
+    resolved_steps_by_par:
+        Pre-resolved profile step sizes.
 
     Returns
     -------
     The updated parameter vector, of size `dim_full`.
     """
+    resolved_steps = resolved_steps_by_par[par_index]
     delta_x = np.zeros(len(x))
-    delta_x[par_index] = par_direction * options.default_step_size
+    delta_x[par_index] = par_direction * resolved_steps.default_step_size
 
     # check whether the next point is maybe outside the bounds
     # and correct it
@@ -157,6 +172,7 @@ def adaptive_step(
     current_profile: ProfilerResult,
     problem: Problem,
     global_opt: float,
+    resolved_steps_by_par: ResolvedProfileStepSizeMap,
     order: int = 1,
     min_step_increase_factor: float = 1.0,
     max_step_reduce_factor: float = 1.0,
@@ -182,6 +198,8 @@ def adaptive_step(
         The problem to be solved.
     global_opt:
         Log-posterior value of the global optimum.
+    resolved_steps_by_par:
+        Pre-resolved profile step sizes.
     order:
         Specifies the precise algorithm for extrapolation.
         Available options are:
@@ -200,11 +218,15 @@ def adaptive_step(
     -------
     The updated parameter vector, of size `dim_full`.
     """
+    resolved_steps = resolved_steps_by_par[par_index]
+    trust_region_max_step = np.zeros(len(x))
+    for i_step_par, i_resolved_steps in resolved_steps_by_par.items():
+        trust_region_max_step[i_step_par] = i_resolved_steps.max_step_size
 
     # restrict step proposal to minimum and maximum step size
     def clip_to_minmax(step_size_proposal):
-        min_step_size = options.min_step_size * min_step_increase_factor
-        max_step_size = options.max_step_size * max_step_reduce_factor
+        min_step_size = resolved_steps.min_step_size * min_step_increase_factor
+        max_step_size = resolved_steps.max_step_size * max_step_reduce_factor
         return np.clip(step_size_proposal, min_step_size, max_step_size)
 
     # restrict step proposal to bounds
@@ -229,13 +251,16 @@ def adaptive_step(
         current_profile,
         problem,
         options,
+        resolved_steps,
     )
 
     # check whether we must make a minimum step anyway, since we're close to
     # the next bound
     min_delta_x = (
         x[par_index]
-        + par_direction * options.min_step_size * min_step_increase_factor
+        + par_direction
+        * resolved_steps.min_step_size
+        * min_step_increase_factor
     )
 
     if par_direction == -1 and (min_delta_x < problem.lb_full[par_index]):
@@ -274,7 +299,9 @@ def adaptive_step(
             # Define a trust region for the step size in all directions
             # to avoid overshooting
             x_step = np.clip(
-                x_step, x - options.max_step_size, x + options.max_step_size
+                x_step,
+                x - trust_region_max_step,
+                x + trust_region_max_step,
             )
 
             return clip_to_bounds(x_step)
@@ -286,8 +313,8 @@ def adaptive_step(
             # to avoid overshooting
             step_in_x = np.clip(
                 step_length * delta_x_dir,
-                -options.max_step_size,
-                options.max_step_size,
+                -trust_region_max_step,
+                trust_region_max_step,
             )
             x_stepped = x + step_in_x
             return clip_to_bounds(x_stepped)
@@ -338,6 +365,8 @@ def adaptive_step(
         par_index,
         problem,
         options,
+        resolved_steps.min_step_size,
+        resolved_steps.max_step_size,
         min_step_increase_factor,
         max_step_reduce_factor,
     )
@@ -352,7 +381,8 @@ def handle_profile_history(
     current_profile: ProfilerResult,
     problem: Problem,
     options: ProfileOptions,
-) -> tuple[float, np.array, list[float], float]:
+    resolved_steps: ResolvedProfileStepSizes,
+) -> tuple[float, np.ndarray, list[float], float, float]:
     """Compute the very first step direction update guesses.
 
     Check whether enough steps have been taken for applying regression,
@@ -385,7 +415,7 @@ def handle_profile_history(
         current_profile.x_path[par_index, -2],
     ):
         # try to use the default step size
-        step_size_guess = options.default_step_size
+        step_size_guess = resolved_steps.default_step_size
         delta_obj_value = 0.0
         last_delta_fval = 0.0
 
@@ -397,10 +427,11 @@ def handle_profile_history(
         )
         # Bound the step size by default values
         step_size_guess = min(
-            last_delta_x_par_index, options.default_step_size
+            last_delta_x_par_index,
+            resolved_steps.default_step_size,
         )
         # Step size cannot be smaller than the minimum step size
-        step_size_guess = max(step_size_guess, options.min_step_size)
+        step_size_guess = max(step_size_guess, resolved_steps.min_step_size)
 
         delta_obj_value = current_profile.fval_path[-1] - global_opt
         last_delta_fval = (
@@ -490,6 +521,8 @@ def do_line_search(
     par_index: int,
     problem: Problem,
     options: ProfileOptions,
+    effective_min_step_size: float,
+    effective_max_step_size: float,
     min_step_increase_factor: float,
     max_step_reduce_factor: float,
 ) -> np.ndarray:
@@ -555,18 +588,12 @@ def do_line_search(
         step_size_guess = clip_to_minmax(step_size_guess * adapt_factor)
         next_x = clip_to_bounds(par_extrapol(step_size_guess))
 
-        # Check if we hit the bounds
-        if (
-            direction == "decrease"
-            and step_size_guess
-            == options.min_step_size * min_step_increase_factor
-        ):
+        # Check if the step-size clipping hit the adaptive bounds.
+        min_step_bound = effective_min_step_size * min_step_increase_factor
+        max_step_bound = effective_max_step_size * max_step_reduce_factor
+        if direction == "decrease" and step_size_guess <= min_step_bound:
             return next_x
-        if (
-            direction == "increase"
-            and step_size_guess
-            == options.max_step_size * max_step_reduce_factor
-        ):
+        if direction == "increase" and step_size_guess >= max_step_bound:
             return next_x
 
         # compute new objective value

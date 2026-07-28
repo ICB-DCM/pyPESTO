@@ -2,7 +2,6 @@
 
 import logging
 from copy import deepcopy
-from typing import Optional
 
 from scipy.stats import chi2
 
@@ -17,10 +16,10 @@ logger = logging.getLogger(__name__)
 def validation_profile_significance(
     problem_full_data: Problem,
     result_training_data: Result,
-    result_full_data: Optional[Result] = None,
-    n_starts: Optional[int] = 1,
-    optimizer: Optional[Optimizer] = None,
-    engine: Optional[Engine] = None,
+    result_full_data: Result | None = None,
+    n_starts: int | None = 1,
+    optimizer: Optimizer | None = None,
+    engine: Engine | None = None,
     lsq_objective: bool = False,
     return_significance: bool = True,
 ) -> float:
