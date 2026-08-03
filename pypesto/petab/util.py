@@ -138,6 +138,7 @@ class PetabStartpoints(CheckedStartpoints):
                 petab.parameters.get_priors_from_df(
                     self._parameter_df, mode=petab.INITIALIZATION
                 ),
+                strict=True,
             )
         )
 
@@ -159,6 +160,7 @@ class PetabStartpoints(CheckedStartpoints):
         n_starts: int,
         lb: np.ndarray,
         ub: np.ndarray,
+        priors=None,
     ) -> np.ndarray:
         """Actual startpoint sampling.
 

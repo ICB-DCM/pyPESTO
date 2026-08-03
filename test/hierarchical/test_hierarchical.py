@@ -3,10 +3,10 @@
 import copy
 import time
 
-import amici
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
+from amici.sim.sundials import SensitivityMethod
 
 import pypesto
 from pypesto.C import (
@@ -59,11 +59,11 @@ def test_hierarchical_optimization_pipeline():
     for flag in flags:
         importer = PetabImporter(petab_problems[flag], hierarchical=flag)
         problem = importer.create_problem()
-        problem.objective.amici_solver.setSensitivityMethod(
-            amici.SensitivityMethod_adjoint
+        problem.objective.amici_solver.set_sensitivity_method(
+            SensitivityMethod.adjoint
         )
-        problem.objective.amici_solver.setAbsoluteTolerance(1e-8)
-        problem.objective.amici_solver.setRelativeTolerance(1e-8)
+        problem.objective.amici_solver.set_absolute_tolerance(1e-8)
+        problem.objective.amici_solver.set_relative_tolerance(1e-8)
         problems[flag] = problem
 
     # Check for same optimization result
@@ -160,11 +160,11 @@ def test_hierarchical_calculator_and_objective():
         importer = PetabImporter(petab_problem, hierarchical=flag)
         objective = importer.create_objective()
         problem = importer.create_problem(objective)
-        problem.objective.amici_solver.setSensitivityMethod(
-            amici.SensitivityMethod_adjoint
+        problem.objective.amici_solver.set_sensitivity_method(
+            SensitivityMethod.adjoint
         )
-        problem.objective.amici_solver.setAbsoluteTolerance(1e-8)
-        problem.objective.amici_solver.setRelativeTolerance(1e-8)
+        problem.objective.amici_solver.set_absolute_tolerance(1e-8)
+        problem.objective.amici_solver.set_relative_tolerance(1e-8)
         problems[flag] = problem
 
     def calculate(problem, x_dct):
@@ -181,7 +181,9 @@ def test_hierarchical_calculator_and_objective():
             fim_for_hess=False,
         )
 
-    x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
+    x_dct = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
     # Nominal sigma values are close to optimal.
     # One is changed here to facilitate testing.
     x_dct["sd_pSTAT5A_rel"] = 0.5
@@ -341,7 +343,7 @@ def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
     data[0::2] -= expected_values["sigma_"]
     data[1::2] += expected_values["sigma_"]
 
-    mask = np.full(data.shape, True)
+    mask = [np.full(data.shape, True)]
 
     inner_parameters = [
         InnerParameter(
@@ -508,7 +510,9 @@ def test_constrained_inner_solver():
         },
     ]
 
-    for lb, ub, expected_values in zip(all_lb, all_ub, all_expected_values):
+    for lb, ub, expected_values in zip(
+        all_lb, all_ub, all_expected_values, strict=True
+    ):
         # Set seed for reproducibility
         np.random.seed(1)
         inner_problem.get_for_id("scaling_").lb = lb[0]
@@ -555,6 +559,7 @@ def test_non_coupled_constrained_inner_solver():
         [False, False, True, True],
         [6, None, 3, None],
         [None, 4, None, 1],
+        strict=True,
     ):
         # Set seed for reproducibility
         np.random.seed(4)

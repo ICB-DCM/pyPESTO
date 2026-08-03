@@ -1,9 +1,9 @@
 """Ensemble utilities."""
 
 import os
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Literal, Union
+from typing import Literal
 
 import h5py
 import numpy as np
@@ -26,7 +26,7 @@ from ..C import (
     EnsembleType,
 )
 from ..result import PredictionConditionResult, PredictionResult
-from ..store import read_result, write_array
+from ..store import read_result
 from .ensemble import Ensemble, EnsemblePrediction
 
 
@@ -206,38 +206,6 @@ def write_ensemble_prediction_to_h5(
                 data=ensemble_prediction.prediction_id,
             )
 
-        # write lower bounds per condition, if available
-        if ensemble_prediction.lower_bound is not None:
-            if isinstance(ensemble_prediction.lower_bound[0], np.ndarray):
-                lb_grp = f.require_group(LOWER_BOUND)
-                for i_cond, lower_bounds in enumerate(
-                    ensemble_prediction.lower_bound
-                ):
-                    condition_id = ensemble_prediction.prediction_results[
-                        0
-                    ].condition_ids[i_cond]
-                    write_array(lb_grp, condition_id, lower_bounds)
-            elif isinstance(ensemble_prediction.lower_bound[0], float):
-                f.create_dataset(
-                    LOWER_BOUND, data=ensemble_prediction.lower_bound
-                )
-
-        # write upper bounds per condition, if available
-        if ensemble_prediction.upper_bound is not None:
-            if isinstance(ensemble_prediction.upper_bound[0], np.ndarray):
-                ub_grp = f.require_group(UPPER_BOUND)
-                for i_cond, upper_bounds in enumerate(
-                    ensemble_prediction.upper_bound
-                ):
-                    condition_id = ensemble_prediction.prediction_results[
-                        0
-                    ].condition_ids[i_cond]
-                    write_array(ub_grp, condition_id, upper_bounds)
-            elif isinstance(ensemble_prediction.upper_bound[0], float):
-                f.create_dataset(
-                    UPPER_BOUND, data=ensemble_prediction.upper_bound
-                )
-
         # write summary statistics to h5 file
         for (
             summary_id,
@@ -260,13 +228,13 @@ def write_ensemble_prediction_to_h5(
 
 
 def get_prediction_dataset(
-    ens: Union[Ensemble, EnsemblePrediction], prediction_index: int = 0
+    ens: Ensemble | EnsemblePrediction, prediction_index: int = 0
 ) -> np.ndarray:
     """
     Extract an array of prediction.
 
     Can be done from either an Ensemble object which contains a list of
-    predictions of from an EnsemblePrediction object.
+    predictions or from an EnsemblePrediction object.
 
     Parameters
     ----------
@@ -283,7 +251,9 @@ def get_prediction_dataset(
         numpy array containing the ensemble predictions
     """
     if isinstance(ens, Ensemble):
-        dataset = ens.predictions[prediction_index]
+        ensemble_prediction = ens.predictions[prediction_index]
+        ensemble_prediction.condense_to_arrays()
+        dataset = ensemble_prediction.prediction_arrays[OUTPUT].transpose()
     elif isinstance(ens, EnsemblePrediction):
         ens.condense_to_arrays()
         dataset = ens.prediction_arrays[OUTPUT].transpose()
@@ -297,7 +267,7 @@ def get_prediction_dataset(
 
 
 def read_ensemble_prediction_from_h5(
-    predictor: Union[Callable[[Sequence], PredictionResult], None],
+    predictor: Callable[[Sequence], PredictionResult] | None,
     input_file: str,
 ):
     """Read an ensemble prediction from an HDF5 File."""

@@ -1,7 +1,6 @@
 import copy
 import logging
-from collections.abc import Iterable
-from typing import Callable, Union
+from collections.abc import Callable, Iterable
 
 import numpy as np
 
@@ -13,7 +12,11 @@ from ..store import autosave
 from .options import ProfileOptions
 from .profile_next_guess import next_guess
 from .task import ProfilerTask
-from .util import initialize_profile
+from .util import (
+    _format_profile_step_size_resolution_summary,
+    initialize_profile,
+    resolve_profile_step_sizes_for_parameters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,10 +29,10 @@ def parameter_profile(
     profile_index: Iterable[int] = None,
     profile_list: int = None,
     result_index: int = 0,
-    next_guess_method: Union[Callable, str] = "adaptive_step_order_1",
+    next_guess_method: Callable | str = "adaptive_step_order_1",
     profile_options: ProfileOptions = None,
     progress_bar: bool = None,
-    filename: Union[str, Callable, None] = None,
+    filename: str | Callable | None = None,
     overwrite: bool = False,
 ) -> Result:
     """
@@ -95,6 +98,13 @@ def parameter_profile(
     profile_options = ProfileOptions.create_instance(profile_options)
     profile_options.validate()
 
+    # Resolve the step sizes once, up front
+    resolved_steps_by_par = resolve_profile_step_sizes_for_parameters(
+        problem=problem,
+        parameter_indices=problem.x_free_indices,
+        options=profile_options,
+    )
+
     # Create a function handle that will be called later to get the next point.
     # This function will be used to generate the initial points of optimization
     # steps in profiling in `walk_along_profile.py`
@@ -120,6 +130,7 @@ def parameter_profile(
                 current_profile_,
                 problem_,
                 global_opt_,
+                resolved_steps_by_par,
                 min_step_increase_factor_,
                 max_step_reduce_factor_,
             )
@@ -157,6 +168,14 @@ def parameter_profile(
             i_par=i_par,
             profile_list=profile_list,
         )
+        resolved_steps = resolved_steps_by_par[i_par]
+        logger.debug(
+            _format_profile_step_size_resolution_summary(
+                problem=problem,
+                i_par=i_par,
+                resolved_steps=resolved_steps,
+            )
+        )
 
         # create two tasks for each parameter: in descending and ascending direction
         for par_direction in [-1, 1]:
@@ -166,6 +185,7 @@ def parameter_profile(
                 optimizer=optimizer,
                 options=profile_options,
                 create_next_guess=create_next_guess,
+                resolved_steps_by_par=resolved_steps_by_par,
                 global_opt=global_opt,
                 i_par=i_par,
                 par_direction=par_direction,

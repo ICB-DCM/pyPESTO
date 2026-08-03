@@ -161,7 +161,9 @@ def test_spline_calculator_and_objective():
             fim_for_hess=False,
         )
 
-    x_dct = dict(zip(petab_problem.x_ids, petab_problem.x_nominal_scaled))
+    x_dct = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
 
     calculator_results = {
         minimal_diff: calculate(problems[minimal_diff], x_dct=x_dct)
@@ -508,7 +510,7 @@ def test_save_and_load_spline_knots():
         [
             np.allclose(knots_before, knots_after)
             for knots_before, knots_after in zip(
-                spline_knots_before, spline_knots_after
+                spline_knots_before, spline_knots_after, strict=True
             )
         ]
     )

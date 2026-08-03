@@ -19,7 +19,7 @@ class OptimizerTask(Task):
         self,
         optimizer: "pypesto.optimize.Optimizer",
         problem: Problem,
-        x0: np.ndarray,
+        x0: np.ndarray | None,
         id: str,
         history_options: HistoryOptions,
         optimize_options: "pypesto.optimize.OptimizeOptions",
@@ -33,7 +33,8 @@ class OptimizerTask(Task):
         problem:
             The problem to solve.
         x0:
-            The point from which to start.
+            The point from which to start. Can be ``None`` for optimizers that do not
+            require or support a starting point.
         id:
             The multistart id.
         options:
@@ -54,7 +55,7 @@ class OptimizerTask(Task):
         """Execute the task."""
         logger.debug(f"Executing task {self.id}.")
         # check for supplied x_guess support
-        self.optimizer.check_x0_support(self.problem.x_guesses)
+        self.optimizer.check_x0_support(self.x0)
 
         optimizer_result = self.optimizer.minimize(
             problem=self.problem,

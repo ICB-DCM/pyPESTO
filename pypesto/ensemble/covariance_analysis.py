@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 
 from .ensemble import Ensemble, EnsemblePrediction
@@ -25,7 +23,7 @@ def get_covariance_matrix_parameters(ens: Ensemble) -> np.ndarray:
 
 
 def get_covariance_matrix_predictions(
-    ens: Union[Ensemble, EnsemblePrediction], prediction_index: int = 0
+    ens: Ensemble | EnsemblePrediction, prediction_index: int = 0
 ) -> np.ndarray:
     """
     Compute the covariance of ensemble predictions.
@@ -46,6 +44,11 @@ def get_covariance_matrix_predictions(
     # extract the an array of predictions from either an Ensemble object or an
     # EnsemblePrediction object
     dataset = get_prediction_dataset(ens, prediction_index)
+
+    # For a covariance matrix, we need to reshape the dataset.
+    # To the form (n_samples, n_features).
+    n_samples = dataset.shape[0]
+    dataset = dataset.reshape(n_samples, -1)
 
     # call lowlevel routine using the prediction ensemble
     return np.cov(dataset)
@@ -256,7 +259,7 @@ def get_spectral_decomposition_lowlevel(
                     i_eig_abs > cutoff_absolute_separable
                     and i_eig_rel > cutoff_relative_separable
                     for i_eig_abs, i_eig_rel in zip(
-                        eigenvalues, rel_eigenvalues
+                        eigenvalues, rel_eigenvalues, strict=True
                     )
                 ]
             )
@@ -288,7 +291,9 @@ def get_spectral_decomposition_lowlevel(
             [
                 1 / i_eig_abs > cutoff_absolute_identifiable
                 and 1 / i_eig_rel > cutoff_relative_identifiable
-                for i_eig_abs, i_eig_rel in zip(eigenvalues, rel_eigenvalues)
+                for i_eig_abs, i_eig_rel in zip(
+                    eigenvalues, rel_eigenvalues, strict=True
+                )
             ]
         )
     elif cutoff_absolute_identifiable is not None:

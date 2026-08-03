@@ -3,10 +3,11 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 
-from .clust_color import RGBA
+from ..C import COLOR
+from .misc import get_ax, get_axes_array, hide_unused_axes
 
 if TYPE_CHECKING:
     try:
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 def projection_scatter_umap(
     umap_coordinates: np.ndarray, components: Sequence[int] = (0, 1), **kwargs
-):
+) -> matplotlib.axes.Axes | np.ndarray:
     """
     Plot a scatter plots for UMAP coordinates.
 
@@ -38,8 +39,8 @@ def projection_scatter_umap(
     Returns
     -------
     axs:
-        Either one axes object, or a dictionary of plot axes (depending on the
-        number of coordinates passed)
+        Either a single matplotlib Axes (2 components) or a 2-D NumPy array
+        of Axes (more than 2 components).
     """
     n_components = len(components)
     if n_components == 2:
@@ -71,8 +72,9 @@ def projection_scatter_umap_original(
     umap_object: UmapTypeObject,
     color_by: Sequence[float] = None,
     components: Sequence[int] = (0, 1),
+    ax: matplotlib.axes.Axes | None = None,
     **kwargs,
-):
+) -> matplotlib.axes.Axes:
     """
     See `projection_scatter_umap` for more documentation.
 
@@ -88,10 +90,12 @@ def projection_scatter_umap_original(
         A sequence/list of floats, which specify the color in the colormap
     components:
         Components to be plotted (corresponds to columns of umap_coordinates)
+    ax:
+        Axes object to use.
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
     import umap.plot
@@ -100,12 +104,20 @@ def projection_scatter_umap_original(
     umap_object.embedding_ = umap_object.embedding_[:, components]
 
     # use umap's original plotting routine to visualize
-    umap.plot.points(umap_object, values=color_by, theme="viridis", **kwargs)
+    if ax is not None:
+        kwargs["ax"] = ax
+
+    return umap.plot.points(
+        umap_object,
+        values=color_by,
+        theme="viridis",
+        **kwargs,
+    )
 
 
 def projection_scatter_pca(
     pca_coordinates: np.ndarray, components: Sequence[int] = (0, 1), **kwargs
-):
+) -> matplotlib.axes.Axes | np.ndarray:
     """
     Plot a scatter plot for PCA coordinates.
 
@@ -123,8 +135,8 @@ def projection_scatter_pca(
     Returns
     -------
     axs:
-        Either one axes object, or a dictionary of plot axes (depending on the
-        number of coordinates passed)
+        Either a single matplotlib Axes (2 components) or a 2-D NumPy array
+        of Axes (more than 2 components).
     """
     n_components = len(components)
     if n_components == 2:
@@ -154,8 +166,12 @@ def projection_scatter_pca(
 
 
 def ensemble_crosstab_scatter_lowlevel(
-    dataset: np.ndarray, component_labels: Sequence[str] = None, **kwargs
-):
+    dataset: np.ndarray,
+    component_labels: Sequence[str] = None,
+    axes: np.ndarray | None = None,
+    size: tuple[float, float] | None = None,
+    **kwargs,
+) -> np.ndarray:
     """
     Plot cross-classification table of scatter plots for different coordinates.
 
@@ -171,17 +187,24 @@ def ensemble_crosstab_scatter_lowlevel(
 
     Returns
     -------
-    axs:
-        A dictionary of plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
     # We got more than two components. Create a cross-classification table
     n_components = dataset.shape[1]
-    axs = _create_crosstab_axes(n_components)
+    if component_labels is None:
+        component_labels = [
+            f"component {i_component + 1}"
+            for i_component in range(n_components)
+        ]
 
-    # wo don't even try to plot this into an existing axes object.
-    # Overplotting a multi-axes figure is asking for trouble...
-    if "ax" in kwargs.keys():
-        del kwargs["ax"]
+    if "ax" in kwargs:
+        if axes is None:
+            axes = kwargs.pop("ax")
+        else:
+            del kwargs["ax"]
+
+    axes = _create_crosstab_axes(n_components, axes=axes, size=size)
 
     for x_comp in range(0, n_components - 1):
         for y_comp in range(x_comp + 1, n_components):
@@ -201,26 +224,25 @@ def ensemble_crosstab_scatter_lowlevel(
                 tmp_dataset,
                 x_label=x_label,
                 y_label=y_label,
-                ax=axs[(x_comp, y_comp)],
+                ax=axes[y_comp - 1, x_comp],
                 **kwargs,
             )
-    # return dict of axes
-    return axs
+    return axes
 
 
 def ensemble_scatter_lowlevel(
     dataset,
-    ax: plt.Axes | None = None,
-    size: tuple[float] | None = (12, 6),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (12, 6),
     x_label: str = "component 1",
     y_label: str = "component 2",
     color_by: Sequence[float] = None,
     color_map: str = "viridis",
-    background_color: RGBA = (0.0, 0.0, 0.0, 1.0),
+    background_color: COLOR = "white",
     marker_type: str = ".",
     scatter_size: float = 0.5,
     invert_scatter_order: bool = False,
-):
+) -> matplotlib.axes.Axes:
     """
     Create a scatter plot.
 
@@ -253,15 +275,10 @@ def ensemble_scatter_lowlevel(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
-    # first get the data to check identifiability
-    # axes
-    if ax is None:
-        fig, ax = plt.subplots()
-        fig.set_size_inches(*size)
-    plt.sca(ax)
+    ax = get_ax(ax, size)
 
     if color_by is None:
         color_by = np.array([1.0] * dataset.shape[0])
@@ -270,7 +287,7 @@ def ensemble_scatter_lowlevel(
     if invert_scatter_order:
         ordering = -1
 
-    plt.scatter(
+    ax.scatter(
         dataset[::ordering, 0],
         dataset[::ordering, 1],
         c=color_by,
@@ -281,17 +298,19 @@ def ensemble_scatter_lowlevel(
 
     # beautify
     ax.set_facecolor(background_color)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.xticks([])
-    plt.yticks([])
-
-    plt.tight_layout()
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(y_label)
+    ax.set_xticks([])
+    ax.set_yticks([])
 
     return ax
 
 
-def _create_crosstab_axes(n_comp: int):
+def _create_crosstab_axes(
+    n_comp: int,
+    axes: np.ndarray | None = None,
+    size: tuple[float, float] | None = None,
+) -> np.ndarray:
     """
     Create a figure with cross-classification table of axes.
 
@@ -302,15 +321,22 @@ def _create_crosstab_axes(n_comp: int):
 
     Returns
     -------
-    axs:
-        A dictionary of plot axes.
+    axes:
+        A 2-D NumPy array of plot axes.
     """
-    axs = {}
+    n_grid = n_comp - 1
+    if size is None and axes is None:
+        size = (3.0 * n_grid, 3.0 * n_grid)
 
-    # run over x- and y-coordinate
-    for x_comp in range(0, n_comp - 1):
-        for y_comp in range(x_comp + 1, n_comp):
-            i_ax = (y_comp - 1) * (n_comp - 1) + x_comp + 1
-            axs[(x_comp, y_comp)] = plt.subplot(n_comp - 1, n_comp - 1, i_ax)
-
-    return axs
+    axes = get_axes_array(axes=axes, nrows=n_grid, ncols=n_grid, size=size)
+    used_indices = [
+        (y_comp - 1) * n_grid + x_comp
+        for x_comp in range(0, n_comp - 1)
+        for y_comp in range(x_comp + 1, n_comp)
+    ]
+    axes = hide_unused_axes(
+        axes=axes,
+        used_indices=used_indices,
+        clear=True,
+    )
+    return axes

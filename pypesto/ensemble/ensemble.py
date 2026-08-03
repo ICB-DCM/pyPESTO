@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
@@ -71,8 +71,6 @@ class EnsemblePrediction:
         predictor: Callable[[Sequence], PredictionResult] | None = None,
         prediction_id: str = None,
         prediction_results: Sequence[PredictionResult] = None,
-        lower_bound: Sequence[np.ndarray] = None,
-        upper_bound: Sequence[np.ndarray] = None,
     ):
         """
         Initialize.
@@ -86,27 +84,12 @@ class EnsemblePrediction:
             Identifier for the predictions
         prediction_results:
             List of Prediction results
-        lower_bound:
-            Array of potential lower bounds for the predictions, should have
-            the same shape as the output of the predictions, i.e., a list of
-            numpy array (one list entry per condition), with the arrays having
-            the shape of n_timepoints x n_outputs for each condition.
-        upper_bound:
-            array of potential upper bounds for the parameters
         """
         self.predictor = predictor
         self.prediction_id = prediction_id
         self.prediction_results = prediction_results
         if prediction_results is None:
             self.prediction_results = []
-
-        # handle bounds, Not yet Implemented
-        if lower_bound is not None:
-            raise NotImplementedError
-        if upper_bound is not None:
-            raise NotImplementedError
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
 
         self.prediction_arrays = None
         self.prediction_summary = {
@@ -133,8 +116,6 @@ class EnsemblePrediction:
                 for i_key in self.prediction_summary.keys()
             },
         )
-        yield LOWER_BOUND, self.lower_bound
-        yield UPPER_BOUND, self.upper_bound
 
     def condense_to_arrays(self):
         """
@@ -146,6 +127,19 @@ class EnsemblePrediction:
         is often the case for large-scale data sets taken from online
         databases or similar.
         """
+
+        # Check if all conditions of a prediction have the same observables
+        n_conditions = len(self.prediction_results[0].conditions)
+        for i_cond in range(1, n_conditions):
+            if (
+                self.prediction_results[0].conditions[i_cond].output_ids
+                != self.prediction_results[0].conditions[i_cond - 1].output_ids
+            ):
+                raise ValueError(
+                    "Cannot condense prediction results to arrays, "
+                    "as not all conditions have the same observables."
+                )
+
         # prepare for storing results over all predictions
         output = []
         output_sensi = []
@@ -378,7 +372,7 @@ class EnsemblePrediction:
                     tmp_output, percentiles_list, tmp_weights, tmp_sigmas
                 )
             else:
-                output_summary = {i_key: None for i_key in cond_lists.keys()}
+                output_summary = dict.fromkeys(cond_lists.keys())
 
             # handle output sensitivities
             if tmp_output_sensi is not None:
@@ -386,9 +380,7 @@ class EnsemblePrediction:
                     tmp_output_sensi, percentiles_list
                 )
             else:
-                output_sensi_summary = {
-                    i_key: None for i_key in cond_lists.keys()
-                }
+                output_sensi_summary = dict.fromkeys(cond_lists.keys())
 
             # create some PredictionConditionResult to have an easier creation
             # of PredictionResults for the summaries later on
@@ -441,7 +433,7 @@ class EnsemblePrediction:
         chi_2 = []
         for i_cond in range(n_conditions):
             # get measurements and put into right form
-            y_meas = amici_objective.edatas[i_cond].getObservedData()
+            y_meas = amici_objective.edatas[i_cond].get_measurements()
             y_meas = np.array(y_meas)
             # bring into shape (n_t,n_y)
             y_meas = y_meas.reshape(
@@ -983,11 +975,16 @@ class Ensemble:
             for prediction_result in prediction_chunk
         ]
 
-        return EnsemblePrediction(
+        # Add the prediction to the ensemble predictions.
+        prediction = EnsemblePrediction(
             predictor=predictor,
             prediction_id=prediction_id,
             prediction_results=prediction_results,
         )
+
+        self.predictions.append(prediction)
+
+        return prediction
 
     def compute_summary(
         self, percentiles_list: Sequence[int] = (5, 20, 80, 95)

@@ -603,7 +603,9 @@ def test_trace_subset(history: pypesto.HistoryBase):
 
         # check partial traces coincide
         assert len(partial_trace) == len(arr), var
-        for a, b in zip(partial_trace, [full_trace[i] for i in arr]):
+        for a, b in zip(
+            partial_trace, [full_trace[i] for i in arr], strict=True
+        ):
             assert np.all(a == b) or np.isnan(a) and np.isnan(b), var
 
         # check sequence type
@@ -711,7 +713,7 @@ def test_hdf5_amici_history():
 
     with tempfile.TemporaryDirectory(dir=".") as tmpdirname:
         for f_ext, amici_history_class in zip(
-            [".csv", ".hdf5"], [CsvAmiciHistory, Hdf5AmiciHistory]
+            [".csv", ".hdf5"], [CsvAmiciHistory, Hdf5AmiciHistory], strict=True
         ):
             _, fn = tempfile.mkstemp(f_ext, "{id}", dir=f"{tmpdirname}")
 

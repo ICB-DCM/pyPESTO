@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Union
 
 import numpy as np
 
@@ -39,12 +38,12 @@ class MetropolisSampler(InternalSampler):
 
     def __init__(self, options: dict = None):
         super().__init__(options)
-        self.problem: Union[Problem, None] = None
-        self.neglogpost: Union[ObjectiveBase, None] = None
-        self.neglogprior: Union[NegLogPriors, None] = None
-        self.trace_x: Union[Sequence[np.ndarray], None] = None
-        self.trace_neglogpost: Union[Sequence[float], None] = None
-        self.trace_neglogprior: Union[Sequence[float], None] = None
+        self.problem: Problem | None = None
+        self.neglogpost: ObjectiveBase | None = None
+        self.neglogprior: NegLogPriors | None = None
+        self.trace_x: Sequence[np.ndarray] | None = None
+        self.trace_neglogpost: Sequence[float] | None = None
+        self.trace_neglogprior: Sequence[float] | None = None
         self.temper_lpost: bool = False
 
     @classmethod

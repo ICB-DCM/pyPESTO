@@ -63,7 +63,9 @@ def _test_evaluate_prior(struct):
     obj = pypesto.objective.AggregatedObjective(
         [struct["obj"], NegLogParameterPriors(prior_list)]
     )
-    for mode, max_sensi_order in zip([MODE_RES, MODE_FUN], [1, 2]):
+    for mode, max_sensi_order in zip(
+        [MODE_RES, MODE_FUN], [1, 2], strict=True
+    ):
         sensi_orders = range(max_sensi_order + 1)
         for num_orders in range(len(sensi_orders)):
             for sensi_order in itt.combinations(sensi_orders, num_orders):

@@ -47,7 +47,6 @@ from .util import PetabStartpoints, get_petab_non_quantitative_data_types
 
 try:
     import amici
-    import amici.petab.simulations
 except ImportError:
     amici = None
 
@@ -381,8 +380,16 @@ class PetabImporter:
         # inner subproblem are removed from the outer problem
         if self._hierarchical:
             inner_parameter_ids = objective.calculator.get_inner_par_ids()
-            lb = [b for x, b in zip(x_ids, lb) if x not in inner_parameter_ids]
-            ub = [b for x, b in zip(x_ids, ub) if x not in inner_parameter_ids]
+            lb = [
+                b
+                for x, b in zip(x_ids, lb, strict=True)
+                if x not in inner_parameter_ids
+            ]
+            ub = [
+                b
+                for x, b in zip(x_ids, ub, strict=True)
+                if x not in inner_parameter_ids
+            ]
             x_ids = [x for x in x_ids if x not in inner_parameter_ids]
             x_fixed_indices = list(
                 map(x_ids.index, self.petab_problem.x_fixed_ids)
@@ -408,6 +415,7 @@ class PetabImporter:
                     "is not yet supported."
                 )
             objective = AggregatedObjective([objective, prior])
+            logger.info("Created an aggregated objective using priors.")
 
         if self._hierarchical:
             problem_class = HierarchicalProblem

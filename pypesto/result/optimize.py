@@ -451,6 +451,8 @@ class LazyOptimizerResult(OptimizerResult):
         The path to the HDF5 file containing the optimizer results.
     group_name : str
         The name of the group in the HDF5 file where the results are stored.
+    with_history : bool
+        Whether to load the optimization history when accessed.
     _data : dict
         A dictionary to store loaded data.
     _metadata_loaded : bool
@@ -467,11 +469,16 @@ class LazyOptimizerResult(OptimizerResult):
             The path to the HDF5 file containing the optimizer results.
         group_name : str
             The name of the group in the HDF5 file where the results are stored.
+        with_history : bool
+            Whether to load the optimization history when accessed.
         """
+        # Initialize parent OptimizerResult (which inherits from dict)
         super().__init__()
-        self.filename = filename
-        self.group_name = group_name
-        self._data = {}
+        # Store these attributes in __dict__ instead of as dict items
+        # This avoids conflicts with the lazy loading mechanism
+        self.__dict__["filename"] = filename
+        self.__dict__["group_name"] = group_name
+        self.__dict__["_data"] = {}
 
     def _get_value(self, key):
         """
@@ -487,15 +494,39 @@ class LazyOptimizerResult(OptimizerResult):
         value
             The value of the key.
         """
-        if key not in self._data:
-            with h5py.File(self.filename, "r") as f:
-                if key in f[self.group_name]:
-                    self._data[key] = f[f"{self.group_name}/{key}"][()]
-                elif key in f[self.group_name].attrs:
-                    self._data[key] = f[self.group_name].attrs[key]
+        _data = self.__dict__["_data"]
+
+        if key not in _data:
+            filename = self.__dict__["filename"]
+            group_name = self.__dict__["group_name"]
+
+            with h5py.File(filename, "r") as f:
+                if key in f[group_name]:
+                    _data[key] = f[f"{group_name}/{key}"][()]
+                elif key in f[group_name].attrs:
+                    _data[key] = f[group_name].attrs[key]
                 else:
                     raise AttributeError(f"{key} not found in the HDF5 file.")
-        return self._data[key]
+        return _data[key]
+
+    def __getitem__(self, key):
+        """
+        Enable dictionary-style access to lazy-loaded attributes.
+
+        Parameters
+        ----------
+        key : str
+            The key to access.
+
+        Returns
+        -------
+        value
+            The value associated with the key.
+        """
+        try:
+            return self._get_value(key)
+        except AttributeError as e:
+            raise KeyError(str(e)) from None
 
     @property
     def id(self):

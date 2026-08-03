@@ -7,7 +7,7 @@ import os
 import unittest
 from itertools import chain
 
-import amici
+import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
 import petab.v1 as petab
@@ -56,7 +56,7 @@ class PetabImportTest(unittest.TestCase):
             )
 
             # observable ids
-            model_obs_ids = list(model.getObservableIds())
+            model_obs_ids = list(model.get_observable_ids())
             problem_obs_ids = list(petab_problem.get_observable_ids())
             self.assertEqual(set(model_obs_ids), set(problem_obs_ids))
 
@@ -77,7 +77,9 @@ class PetabImportTest(unittest.TestCase):
 
     def test_3_startpoints(self):
         # test startpoint sampling
-        for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
+        for obj_edatas, importer in zip(
+            self.obj_edatas, self.petab_importers, strict=True
+        ):
             obj = obj_edatas[0]
             problem = importer.create_problem(obj)
 
@@ -98,7 +100,9 @@ class PetabImportTest(unittest.TestCase):
 
     def test_4_optimize(self):
         # run optimization
-        for obj_edatas, importer in zip(self.obj_edatas, self.petab_importers):
+        for obj_edatas, importer in zip(
+            self.obj_edatas, self.petab_importers, strict=True
+        ):
             obj = obj_edatas[0]
             optimizer = pypesto.optimize.ScipyOptimizer(
                 options={"maxiter": 10}
@@ -123,13 +127,15 @@ class PetabImportTest(unittest.TestCase):
         )
 
         objective = importer.create_problem().objective
-        objective.amici_solver.setSensitivityMethod(
-            amici.SensitivityMethod_forward
+        objective.amici_solver.set_sensitivity_method(
+            asd.SensitivityMethod.forward
         )
-        objective.amici_solver.setAbsoluteTolerance(1e-10)
-        objective.amici_solver.setRelativeTolerance(1e-12)
+        objective.amici_solver.set_absolute_tolerance(1e-10)
+        objective.amici_solver.set_relative_tolerance(1e-12)
+        # enable least squares solver with residual mode
+        objective.amici_model.set_add_sigma_residuals(True)
 
-        self.assertFalse(
+        self.assertTrue(
             objective.check_gradients_match_finite_differences(
                 multi_eps=[1e-3, 1e-4, 1e-5]
             )
@@ -157,11 +163,11 @@ def test_plist_mapping():
         objective_creator.create_objective()
     )
     objective = problem.objective
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod.forward
+    objective.amici_solver.set_sensitivity_method(
+        asd.SensitivityMethod.forward
     )
-    objective.amici_solver.setAbsoluteTolerance(1e-16)
-    objective.amici_solver.setRelativeTolerance(1e-15)
+    objective.amici_solver.set_absolute_tolerance(1e-16)
+    objective.amici_solver.set_relative_tolerance(1e-15)
 
     # slightly perturb the parameters to avoid vanishing gradients
     par = np.asarray(petab_importer.petab_problem.x_nominal_free_scaled) * 1.01
@@ -187,7 +193,7 @@ def test_plist_mapping():
     #  `plist` later on)
     fixed_model_par_ids = ["init_b10", "init_bcry"]
     fixed_model_par_idxs = [
-        objective.amici_model.getParameterIds().index(id)
+        objective.amici_model.get_free_parameter_ids().index(id)
         for id in fixed_model_par_ids
     ]
     fixed_idxs = [problem.x_names.index(id) for id in fixed_ids]
@@ -226,13 +232,13 @@ def test_max_sensi_order():
     hess = objective(par, sensi_orders=(2,))
     assert hess.shape == (npar, npar)
     assert (hess != 0).any()
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_adjoint
+    objective.amici_solver.set_sensitivity_method(
+        asd.SensitivityMethod.adjoint
     )
     with pytest.raises(ValueError):
         objective(par, sensi_orders=(2,))
-    objective.amici_solver.setSensitivityMethod(
-        amici.SensitivityMethod_forward
+    objective.amici_solver.set_sensitivity_method(
+        asd.SensitivityMethod.forward
     )
 
     # fix max_sensi_order to 1

@@ -3,7 +3,6 @@ import logging
 import os
 from collections.abc import Sequence
 from copy import deepcopy
-from functools import wraps
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -14,6 +13,7 @@ import scipy.optimize as so
 
 import pypesto
 import pypesto.ensemble as ensemble
+import pypesto.ensemble.dimension_reduction as dr
 import pypesto.optimize as optimize
 import pypesto.petab
 import pypesto.predict as predict
@@ -24,22 +24,12 @@ from pypesto.testing.examples import (
     get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds,
 )
 from pypesto.visualize.model_fit import (
+    _get_simulation_rdatas,
     time_trajectory_model,
     visualize_optimized_model_fit,
 )
 
-
-def close_fig(fun):
-    """Close figure."""
-
-    @wraps(fun)
-    def wrapped_fun(*args, **kwargs):
-        ret = fun(*args, **kwargs)
-        plt.close("all")
-        return ret
-
-    return wrapped_fun
-
+from ..conftest import close_fig
 
 # Define some helper functions, to have the test code more readable
 
@@ -182,13 +172,13 @@ def create_optimization_history():
     return result_with_trace
 
 
-def create_profile_result():
+def create_profile_result(scaling: float = 1):
     # create a pypesto result
     result = create_optimization_result()
 
     # write some dummy results for profiling
-    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15])
-    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1])
+    ratio_path_1 = np.array([0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15]) * scaling
+    ratio_path_2 = np.array([0.1, 0.2, 0.7, 1.0, 0.8, 0.3, 0.1]) * scaling
     x_path_1 = np.array(
         [
             [2.0, 2.1, 2.3, 2.5, 2.7, 2.9, 3.0],
@@ -201,8 +191,8 @@ def create_profile_result():
             [2.1, 2.2, 2.4, 2.5, 2.8, 2.9, 3.1],
         ]
     )
-    fval_path_1 = [4.0, 3.0, 1.0, 0.0, 1.5, 2.5, 5.0]
-    fval_path_2 = [4.5, 3.5, 1.5, 0.0, 1.3, 2.3, 4.3]
+    fval_path_1 = np.array([4.0, 3.0, 1.0, 0.0, 1.5, 2.5, 5.0]) * scaling
+    fval_path_2 = np.array([4.5, 3.5, 1.5, 0.0, 1.3, 2.3, 4.3]) * scaling
     tmp_result_1 = pypesto.ProfilerResult(x_path_1, fval_path_1, ratio_path_1)
     tmp_result_2 = pypesto.ProfilerResult(x_path_2, fval_path_2, ratio_path_2)
 
@@ -300,7 +290,7 @@ def test_waterfall_with_nan_inf():
 @close_fig
 def test_waterfall_with_options():
     # create the necessary results
-    result_1 = create_optimization_result()
+    result_1 = create_optimization_result(n=8)
     result_2 = create_optimization_result()
 
     # alternative figure size and plotting options
@@ -331,6 +321,29 @@ def test_waterfall_with_options():
             start_indices=3,
             y_limits=5.0,
         )
+
+    # test colors
+    for color in [
+        "C3",
+        "#5F8FD4",
+        [
+            "#5F8FD4",
+            "#C62A9F",
+            "#49EFA2",
+            "#F4B63C",
+            "#7D3DF1",
+            "#F2272A",
+            "#3EC9DD",
+        ],
+    ]:
+        visualize.waterfall(
+            result_2,
+            colors=color,
+        )
+    visualize.waterfall(
+        [result_1, result_2],
+        colors=["C3", "C7"],
+    )
 
     # Test with linear scale
     visualize.waterfall(
@@ -451,6 +464,23 @@ def test_parameters_lowlevel():
     # test no bounds
     visualize.parameters_lowlevel(xs, fvals)
 
+    # test setting colors
+    # colors from tableu 10
+    hex_colors = [
+        "#1f77b4",
+        "#ff7f0e",
+        "#2ca02c",
+        "#d62728",
+        "#9467bd",
+        "#8c564b",
+        "#e377c2",
+        "#7f7f7f",
+        "#bcbd22",
+        "#17becf",
+    ]
+    visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub, colors="m")
+    visualize.parameters_lowlevel(xs, fvals, lb=lb, ub=ub, colors=hex_colors)
+
 
 @close_fig
 def test_parameters_hist():
@@ -508,7 +538,30 @@ def test_parameters_hierarchical(scale_to_interval):
 @close_fig
 def test_optimization_scatter():
     result = create_optimization_result()
-    visualize.optimization_scatter(result)
+    axes = visualize.optimization_scatter(result)
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.optimization_scatter(result, axes=custom_axes)
+    assert returned_axes is custom_axes
+
+    nrows, ncols = axes.shape
+    fig = plt.figure()
+    grid_spec = fig.add_gridspec(nrows, ncols + 1)
+    custom_axes = np.empty((nrows, ncols), dtype=object)
+    for row in range(nrows):
+        for col in range(ncols):
+            custom_axes[row, col] = fig.add_subplot(grid_spec[row, col])
+    extra_ax = fig.add_subplot(grid_spec[:, -1])
+    visualize.optimization_scatter(result, axes=custom_axes)
+    assert extra_ax in fig.axes
+
+    for i, optimizer_result in enumerate(result.optimize_result.list):
+        optimizer_result.fval = 1.0 + i * 1e-12
+
+    axes = visualize.optimization_scatter(result)
+    colorbar_ax = axes[0, 0].figure.axes[-1]
+
+    assert colorbar_ax.get_ylim()[1] - colorbar_ax.get_ylim()[0] >= 1.0
 
 
 @close_fig
@@ -586,6 +639,55 @@ def _test_ensemble_dimension_reduction():
 
     # test call via lowlevel routine
     visualize.ensemble_scatter_lowlevel(pca_components[:, 0:2])
+
+
+@close_fig
+def test_ensemble_scatter_lowlevel():
+    dataset = np.array([[0.0, 1.0], [1.0, 0.0], [0.5, 0.5]])
+
+    ax = visualize.ensemble_scatter_lowlevel(
+        dataset, x_label="component x", y_label="component y"
+    )
+
+    assert ax.get_xlabel() == "component x"
+    assert ax.get_ylabel() == "component y"
+
+
+@close_fig
+def test_projection_scatter_umap_original(monkeypatch):
+    import sys
+    import types
+
+    plot_module = types.ModuleType("umap.plot")
+
+    def fake_points(umap_object, values=None, theme=None, **kwargs):
+        assert values == [0.0, 1.0]
+        assert theme == "viridis"
+        return kwargs["ax"]
+
+    plot_module.points = fake_points
+    umap_module = types.ModuleType("umap")
+    umap_module.plot = plot_module
+
+    monkeypatch.setitem(sys.modules, "umap", umap_module)
+    monkeypatch.setitem(sys.modules, "umap.plot", plot_module)
+
+    class DummyUmap:
+        def __init__(self):
+            self.embedding_ = np.array([[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]])
+
+    dummy_umap = DummyUmap()
+    _, ax = plt.subplots()
+
+    returned_ax = visualize.projection_scatter_umap_original(
+        dummy_umap,
+        color_by=[0.0, 1.0],
+        components=(0, 2),
+        ax=ax,
+    )
+
+    assert returned_ax is ax
+    assert dummy_umap.embedding_.shape == (2, 2)
 
 
 @close_fig
@@ -667,13 +769,17 @@ def test_ensemble_parameters_plot():
 def test_profiles():
     # create the necessary results
     result_1 = create_profile_result()
-    result_2 = create_profile_result()
+    result_2 = create_profile_result(scaling=1.2)
 
     # test a standard call
     visualize.profiles(result_1)
 
     # test plotting of lists
     visualize.profiles([result_1, result_2])
+
+    # test colors
+    visualize.profiles(result_1, quality_colors=True)
+    visualize.profiles([result_1, result_2], colors=["C3", "C0"])
 
 
 @close_fig
@@ -716,7 +822,7 @@ def test_profiles_lowlevel():
         ]
     )
     fvals = [p1, p2]
-    visualize.profiles_lowlevel(fvals)
+    visualize.profiles_lowlevel(fvals, color="m")
 
 
 @close_fig
@@ -731,7 +837,14 @@ def test_profile_lowlevel():
             [0.15, 0.25, 0.7, 1.0, 0.8, 0.35, 0.15],
         ]
     )
-    visualize.profile_lowlevel(fvals=fvals)
+    visualize.profile_lowlevel(fvals=fvals, color="m")
+    _, ax = plt.subplots()
+
+    returned_ax = visualize.profile_lowlevel(fvals=fvals, color="m", ax=ax)
+
+    assert returned_ax is ax
+    assert ax.get_xlabel() == "Parameter value"
+    assert ax.get_ylabel() == "Log-posterior ratio"
 
 
 @close_fig
@@ -748,6 +861,55 @@ def test_nested_profile_cis():
     result = create_profile_result()
     visualize.profile_nested_cis(result, confidence_levels=[0.99, 0.95, 0.9])
     visualize.profile_nested_cis(result, colors=["#5F9ED1", "#007ACC"])
+
+
+@close_fig
+def test_visualize_2d_profile():
+    result = create_profile_result()
+    # basic call — all profiles, default settings
+    _, axes = visualize.visualize_2d_profile(result)
+    assert axes[0, 1].yaxis.labelpad == 2
+    assert axes[0, 1].yaxis.label.get_size() == 14
+    assert not axes[0, 1].spines["top"].get_visible()
+    assert not axes[0, 1].spines["right"].get_visible()
+    assert axes[0, 0].get_legend() is not None
+    assert axes[0, 1].get_legend() is not None
+    # explicit profile indices and ratio cutoff
+    visualize.visualize_2d_profile(
+        result, profile_indices=[0, 1], ratio_min=0.1
+    )
+    # objective values instead of ratio
+    visualize.visualize_2d_profile(result, plot_objective_values=True)
+    # custom figure size
+    visualize.visualize_2d_profile(result, size=(8, 8))
+
+
+@close_fig
+def test_profile_lowlevel_2d():
+    result = create_profile_result()
+    _, ax = plt.subplots()
+    visualize.profile_lowlevel_2d(
+        result, profile_index=0, second_par_index=1, ax=ax
+    )
+    assert (
+        len([line for line in ax.lines if line.get_linestyle() == "--"]) == 4
+    )
+    _, ax = plt.subplots()
+    visualize.profile_lowlevel_2d(
+        result,
+        profile_index=0,
+        second_par_index=1,
+        ax=ax,
+        plot_objective_values=True,
+    )
+    _, ax = plt.subplots()
+    visualize.profile_lowlevel_2d(
+        result,
+        profile_index=0,
+        second_par_index=1,
+        ax=ax,
+        ratio_min=0.1,
+    )
 
 
 @close_fig
@@ -886,21 +1048,42 @@ def test_optimization_stats():
         plot_type="hist",
     )
 
-    visualize.optimization_run_properties_per_multistart([result_1, result_2])
+    axes = visualize.optimization_run_properties_per_multistart(
+        [result_1, result_2]
+    )
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.optimization_run_properties_per_multistart(
+        [result_1, result_2], axes=custom_axes
+    )
+    assert returned_axes is custom_axes
 
-    visualize.optimization_run_properties_one_plot(result_1, ["time"])
+    visualize.optimization_run_properties_one_plot(
+        result_1, ["time"], colors="C0"
+    )
 
     visualize.optimization_run_properties_one_plot(
         result_1, ["n_fval", "n_grad", "n_hess"]
     )
 
-    visualize.optimization_run_property_per_multistart(
+    axes = visualize.optimization_run_property_per_multistart(
         [result_1, result_2],
         "time",
-        colors=[[0.5, 0.9, 0.9, 0.3], [0.9, 0.7, 0.8, 0.5]],
+        colors=["g", "C1"],
         legends=["result1", "result2"],
         plot_type="both",
     )
+    assert axes.shape == (1, 2)
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.optimization_run_property_per_multistart(
+        [result_1, result_2],
+        "time",
+        colors=["g", "C1"],
+        legends=["result1", "result2"],
+        plot_type="both",
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
 
 
 @close_fig
@@ -954,15 +1137,26 @@ def test_assign_colors():
     fvals = np.array(fvals)
     visualize.assign_colors(fvals)
     fvals = [0.01, 0.02, 1.0]
-    visualize.assign_colors(fvals, colors=[0.5, 0.9, 0.9, 0.3])
-    visualize.assign_colors(
-        fvals,
-        colors=[
-            [0.5, 0.9, 0.9, 0.3],
-            [0.5, 0.8, 0.8, 0.5],
-            [0.9, 0.1, 0.1, 0.1],
-        ],
-    )
+    for color in [
+        [0.5, 0.9, 0.9, 0.3],
+        "C1",
+        "#0f0f0f80",
+        "g",
+        "0.7",
+        "tab:purple",
+    ]:
+        visualize.assign_colors(fvals, colors=color)
+
+    color_list = [
+        [0.5, 0.9, 0.9, 0.3],
+        [0.5, 0.8, 0.8, 0.5],
+        [0.9, 0.1, 0.1, 0.1],
+    ]
+    for color in [color_list, np.array(color_list)]:
+        visualize.assign_colors(
+            fvals,
+            colors=color,
+        )
 
 
 def test_delete_nan_inf():
@@ -1053,31 +1247,56 @@ def test_sampling_fval_traces():
 def test_sampling_parameter_traces():
     """Test pypesto.visualize.sampling_parameter_traces"""
     result = create_sampling_result()
-    visualize.sampling_parameter_traces(result)
+    axes = visualize.sampling_parameter_traces(result)
+    assert axes.ndim == 2
     # call with custom arguments
-    visualize.sampling_parameter_traces(
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_parameter_traces(
         result, i_chain=1, stepsize=5, size=(10, 10), use_problem_bounds=False
     )
+    assert returned_axes.ndim == 2
+    returned_axes = visualize.sampling_parameter_traces(
+        result,
+        i_chain=1,
+        stepsize=5,
+        use_problem_bounds=False,
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
 
 
 @close_fig
 def test_sampling_scatter():
     """Test pypesto.visualize.sampling_scatter"""
     result = create_sampling_result()
-    visualize.sampling_scatter(result)
+    axes = visualize.sampling_scatter(result)
+    assert axes.ndim == 2
     # call with custom arguments
-    visualize.sampling_scatter(result, i_chain=1, stepsize=5, size=(10, 10))
+    returned_axes = visualize.sampling_scatter(
+        result, i_chain=1, stepsize=5, size=(10, 10), diag_kind="hist"
+    )
+    assert returned_axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_scatter(result, axes=custom_axes)
+    assert returned_axes is custom_axes
 
 
 @close_fig
 def test_sampling_1d_marginals():
     """Test pypesto.visualize.sampling_1d_marginals"""
     result = create_sampling_result()
-    visualize.sampling_1d_marginals(result)
+    axes = visualize.sampling_1d_marginals(result)
+    assert axes.ndim == 2
     # call with custom arguments
-    visualize.sampling_1d_marginals(
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_1d_marginals(
         result, i_chain=1, stepsize=5, size=(10, 10)
     )
+    assert returned_axes.ndim == 2
+    returned_axes = visualize.sampling_1d_marginals(
+        result, i_chain=1, stepsize=5, axes=custom_axes
+    )
+    assert returned_axes is custom_axes
     # call with other modes
     visualize.sampling_1d_marginals(result, plot_type="hist")
     visualize.sampling_1d_marginals(
@@ -1090,9 +1309,9 @@ def test_sampling_parameter_cis():
     """Test pypesto.visualize.sampling_parameter_cis"""
     result = create_sampling_result()
     visualize.sampling_parameter_cis(result)
-    # call with custom arguments
+    # call with canonical kwarg
     visualize.sampling_parameter_cis(
-        result, alpha=[99, 68], step=0.1, size=(10, 10)
+        result, confidence_levels=[0.99, 0.68], step=0.1, size=(10, 10)
     )
 
 
@@ -1104,12 +1323,12 @@ def test_sampling_prediction_trajectories():
     post_processor_amici_x = functools.partial(
         post_processor,
         output_type=pypesto.C.AMICI_X,
-        output_ids=result.problem.objective.amici_model.getStateIds(),
+        output_ids=result.problem.objective.amici_model.get_state_ids(),
     )
     predictor = predict.AmiciPredictor(
         result.problem.objective,
         post_processor=post_processor_amici_x,
-        output_ids=result.problem.objective.amici_model.getStateIds(),
+        output_ids=result.problem.objective.amici_model.get_state_ids(),
     )
 
     sample_ensemble = ensemble.Ensemble.from_sample(
@@ -1127,17 +1346,46 @@ def test_sampling_prediction_trajectories():
     )
 
     # Plot by
-    visualize.sampling_prediction_trajectories(
+    axes = visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
         groupby=pypesto.C.CONDITION,
     )
-    visualize.sampling_prediction_trajectories(
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.sampling_prediction_trajectories(
+        ensemble_prediction,
+        levels=credibility_interval_levels,
+        groupby=pypesto.C.CONDITION,
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
+    returned_axes = visualize.sampling_prediction_trajectories(
         ensemble_prediction,
         levels=credibility_interval_levels,
         size=(10, 10),
         groupby=pypesto.C.OUTPUT,
     )
+    assert returned_axes.ndim == 2
+
+
+@close_fig
+def test_get_simulation_rdatas_default_timepoints():
+    """Regression test for default AMICI timepoint access in model-fit plots."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        optimizer=optimize.ScipyOptimizer(
+            method="L-BFGS-B", options={"maxiter": 1}
+        ),
+        progress_bar=False,
+    )
+
+    rdatas = _get_simulation_rdatas(result=result, problem=problem)
+
+    assert len(rdatas) == len(problem.objective.edatas)
 
 
 @close_fig
@@ -1195,6 +1443,7 @@ def test_visualize_optimized_model_fit_aggregated():
         for lb, ub in zip(
             petab_problem.parameter_df.lowerBound,
             petab_problem.parameter_df.upperBound,
+            strict=True,
         )
     ]
     petab_problem.parameter_df["objectivePriorParameters"] = (
@@ -1248,7 +1497,101 @@ def test_time_trajectory_model():
     )
 
     # test call of time_trajectory_model
-    time_trajectory_model(result=result)
+    axes = time_trajectory_model(result=result)
+    assert axes is not None
+
+    # test call of time_trajectory_model for hierarchical problems
+    hierarchical_petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    importer = pypesto.petab.PetabImporter(
+        hierarchical_petab_problem, hierarchical=True
+    )
+    problem = importer.create_problem()
+
+    # Set nominal values as start point, mapped by name to avoid ordering
+    # assumptions about where inner parameters sit in x_nominal_scaled
+    x_nominal_by_id = dict(
+        zip(
+            hierarchical_petab_problem.x_ids,
+            hierarchical_petab_problem.x_nominal_scaled,
+            strict=True,
+        )
+    )
+    x_guess = np.array([x_nominal_by_id[xid] for xid in problem.x_names])
+    problem.set_x_guesses([x_guess])
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        optimizer=optimize.ScipyOptimizer(
+            method="L-BFGS-B", options={"maxiter": 1}
+        ),
+        progress_bar=False,
+    )
+
+    first_state_name = problem.objective.amici_model.get_state_names()[0]
+
+    axes = time_trajectory_model(
+        result=result,
+        problem=problem,
+        state_names=[first_state_name],
+    )
+
+    assert axes is not None
+
+
+def test_monotonic_history():
+    from pypesto.history.memory import MemoryHistory
+    from pypesto.visualize.optimizer_history import monotonic_history
+
+    def create_history(t, fx):
+        from pypesto.C import FVAL, TIME
+
+        history = MemoryHistory()
+        history._trace[TIME] = t
+        history._trace[FVAL] = fx
+        assert (history.get_time_trace() == t).all()
+        assert (history.get_fval_trace() == fx).all()
+        return history
+
+    t = np.arange(5, dtype=float)
+    history1 = create_history(t, -t)
+    t_mono, fx_mono = monotonic_history([history1, history1])
+    assert t_mono.tolist() == history1.get_time_trace()
+    assert fx_mono.tolist() == history1.get_fval_trace()
+
+    history2 = create_history(t, -2 * t)
+    for histories in (
+        [history1, history2],
+        [history2, history1],
+        [history1, history2, history1],
+        [history2, history1, history2],
+    ):
+        t_mono, fx_mono = monotonic_history(histories)
+        assert t_mono.tolist() == history2.get_time_trace()
+        assert fx_mono.tolist() == history2.get_fval_trace()
+
+    t = np.arange(0.5, 6.5, dtype=float)
+    history3 = create_history(t, 2 - 2 * t)
+    for histories in (
+        [history1, history3],
+        [history3, history1],
+        [history1, history3, history1],
+    ):
+        t_mono, fx_mono = monotonic_history(histories)
+        assert t_mono.tolist() == [0.0, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.5, 5.5]
+        assert fx_mono.tolist() == [
+            -0.0,
+            -1.0,
+            -1.0,
+            -2.0,
+            -3.0,
+            -3.0,
+            -5.0,
+            -7.0,
+            -9.0,
+        ]
 
 
 @close_fig
@@ -1331,4 +1674,150 @@ def test_visualize_estimated_observable_mapping():
     result = pypesto.optimize.minimize(
         problem=problem, n_starts=1, optimizer=optimizer
     )
-    visualize.visualize_estimated_observable_mapping(result, problem)
+    axes = visualize.visualize_estimated_observable_mapping(result, problem)
+    assert isinstance(axes, np.ndarray)
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.visualize_estimated_observable_mapping(
+        result,
+        problem,
+        axes=custom_axes,
+    )
+    assert returned_axes is custom_axes
+
+
+@close_fig
+def test_projection_scatter_umap_parameters():
+    """Test UMAP projection scatter visualization for parameters."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = ensemble.Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Get UMAP representation
+    umap_repr, _ = dr.get_umap_representation_parameters(ens)
+
+    # Test visualization
+    visualize.projection_scatter_umap(umap_repr, components=(0, 1))
+
+
+@close_fig
+def test_projection_scatter_pca_parameters():
+    """Test PCA projection scatter visualization for parameters."""
+    problem = create_petab_problem()
+
+    sampler = sample.AdaptiveMetropolisSampler(
+        options={"show_progress": False}
+    )
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=3,
+        progress_bar=False,
+    )
+
+    result = sample.sample(
+        problem=problem,
+        sampler=sampler,
+        n_samples=50,
+        result=result,
+    )
+
+    ens = ensemble.Ensemble.from_sample(result=result, remove_burn_in=False)
+
+    # Get PCA representation
+    pca_repr, _ = dr.get_pca_representation_parameters(ens)
+
+    # Test visualization with default components
+    visualize.projection_scatter_pca(pca_repr)
+
+    # Test visualization with specific components
+    visualize.projection_scatter_pca(pca_repr, components=(0, 1))
+    dummy_pca = np.random.randn(20, 4)
+    axes = visualize.projection_scatter_pca(dummy_pca, components=range(4))
+    assert axes.ndim == 2
+    custom_axes = plt.subplots(*axes.shape, squeeze=False)[1]
+    returned_axes = visualize.projection_scatter_pca(
+        dummy_pca, components=range(4), axes=custom_axes
+    )
+    assert returned_axes is custom_axes
+
+
+@close_fig
+def test_projection_scatter_umap_predictions():
+    """Test UMAP projection scatter visualization for predictions."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=5,
+        progress_bar=False,
+    )
+
+    ens = ensemble.Ensemble.from_optimization_endpoints(
+        result=result, max_size=10
+    )
+
+    # Create predictor
+    predictor = predict.AmiciPredictor(problem.objective)
+
+    # Get predictions
+    ensemble_prediction = ens.predict(
+        predictor,
+        prediction_id="test_pred",
+        progress_bar=False,
+    )
+
+    # Get UMAP representation
+    umap_repr, _ = dr.get_umap_representation_predictions(ensemble_prediction)
+
+    # Test visualization
+    visualize.projection_scatter_umap(umap_repr, components=(0, 1))
+
+
+@close_fig
+def test_projection_scatter_pca_predictions():
+    """Test PCA projection scatter visualization for predictions."""
+    problem = create_petab_problem()
+
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=5,
+        progress_bar=False,
+    )
+
+    ens = ensemble.Ensemble.from_optimization_endpoints(
+        result=result, max_size=10
+    )
+
+    # Create predictor
+    predictor = predict.AmiciPredictor(problem.objective)
+
+    # Get predictions
+    ensemble_prediction = ens.predict(
+        predictor,
+        prediction_id="test_pred",
+        progress_bar=False,
+    )
+
+    # Get PCA representation
+    pca_repr, _ = dr.get_pca_representation_predictions(ensemble_prediction)
+
+    # Test visualization
+    visualize.projection_scatter_pca(pca_repr, components=(0, 1))

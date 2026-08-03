@@ -1,17 +1,17 @@
 from collections.abc import Sequence
-from typing import Optional, Union
 
-import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import inset_locator
 
 from pypesto.util import delete_nan_inf
 
-from ..C import ALL, WATERFALL_MAX_VALUE
+from ..C import ALL, COLOR, WATERFALL_MAX_VALUE
 from ..result import Result
-from .clust_color import RGBA, assign_colors
+from .clust_color import assign_colors
 from .misc import (
+    get_ax,
     process_offset_y,
     process_result_list,
     process_start_indices,
@@ -21,19 +21,19 @@ from .reference_points import ReferencePoint, create_references
 
 
 def waterfall(
-    results: Union[Result, Sequence[Result]],
-    ax: Optional[plt.Axes] = None,
-    size: Optional[tuple[float, float]] = (18.5, 10.5),
-    y_limits: Optional[tuple[float]] = None,
-    scale_y: Optional[str] = "log10",
-    offset_y: Optional[float] = None,
-    start_indices: Optional[Union[Sequence[int], int]] = None,
+    results: Result | Sequence[Result],
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (18.5, 10.5),
+    y_limits: tuple[float] | None = None,
+    scale_y: str | None = "log10",
+    offset_y: float | None = None,
+    start_indices: Sequence[int] | int | None = None,
     n_starts_to_zoom: int = 0,
-    reference: Optional[Sequence[ReferencePoint]] = None,
-    colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
-    legends: Optional[Union[Sequence[str], str]] = None,
+    reference: Sequence[ReferencePoint] | None = None,
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legends: Sequence[str] | str | None = None,
     order_by_id: bool = False,
-):
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot.
 
@@ -62,7 +62,7 @@ def waterfall(
         Reference points for optimization results, containing at least a
         function value fval
     colors:
-        Colors or single color  for plotting. If not set, clustering is done
+        List of colors or single color for plotting. If not set, clustering is done
         and colors are assigned automatically
     legends:
         Labels for line plots, one label per result object
@@ -77,11 +77,7 @@ def waterfall(
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     if n_starts_to_zoom:
         # create zoom in
@@ -122,7 +118,11 @@ def waterfall(
         max_len_fvals = np.max([max_len_fvals, *fvals_raw.shape])
 
         # remove colors where value is infinite if colors were passed on
-        if colors[j] is not None and fvals_raw.size == colors[j].shape[0]:
+        if (
+            colors[j] is not None
+            and isinstance(colors[j], np.ndarray)
+            and fvals_raw.size == colors[j].shape[0]
+        ):
             colors[j] = colors[j][
                 np.isfinite(np.transpose(fvals_raw)).flatten()
             ]
@@ -197,33 +197,32 @@ def waterfall(
 
 def waterfall_lowlevel(
     fvals,
-    ax: Optional[plt.Axes] = None,
-    size: Optional[tuple[float]] = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (18.5, 10.5),
     scale_y: str = "log10",
     offset_y: float = 0.0,
-    colors: Optional[Union[RGBA, Sequence[RGBA]]] = None,
-    legend_text: Optional[str] = None,
-):
+    colors: COLOR | list[COLOR] | np.ndarray | None = None,
+    legend_text: str | None = None,
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot using list of function values.
 
     Parameters
     ----------
-    fvals: numeric list or array
+    fvals:
         Including values need to be plotted. `None` values indicate that the
         corresponding start index should be skipped.
-    ax: matplotlib.Axes
+    ax:
         Axes object to use.
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified
-    scale_y: str, optional
+    scale_y:
         May be logarithmic or linear ('log10' or 'lin')
     offset_y:
         offset for the y-axis, if it is supposed to be in log10-scale
-    colors: list, or RGBA, optional
-        list of colors, or single color
-        color or list of colors for plotting. If not set, clustering is done
+    colors:
+        Color recognized by matplotlib or list of colors for plotting. If not set, clustering is done
         and colors are assigned automatically
     legend_text:
         Label for line plots
@@ -233,11 +232,7 @@ def waterfall_lowlevel(
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
     fvals = [fvals[i] for i in start_indices]
@@ -257,10 +252,11 @@ def waterfall_lowlevel(
         ax.plot(start_indices, fvals, color=[0.7, 0.7, 0.7, 0.6])
 
     # Overlay with scatter points with individual colors
+    # plotting in reverse order to ensure that the best points are plotted on top
     ax.scatter(
-        start_indices,
-        fvals,
-        c=colors,
+        start_indices[::-1],
+        fvals[::-1],
+        c=colors[::-1],
         marker="o",
         linewidth=1.0,
         label=legend_text,
@@ -273,8 +269,8 @@ def waterfall_lowlevel(
     if scale_y == "log10":
         if np.log10(y_max) - np.log10(y_min) < 1.0:
             ax.set_ylim(
-                ax.dataLim.y0 - 0.001 * abs(ax.dataLim.y0),
-                ax.dataLim.y1 + 0.001 * abs(ax.dataLim.y1),
+                ax.dataLim.y0 - 0.05 * abs(ax.dataLim.y0),
+                ax.dataLim.y1 + 0.05 * abs(ax.dataLim.y1),
             )
     else:
         if y_max - y_min < 1.0:
@@ -286,7 +282,7 @@ def waterfall_lowlevel(
     if offset_y == 0.0:
         ax.set_ylabel("Function value")
     else:
-        ax.set_ylabel("Objective value (offset={offset_y:0.3e})")
+        ax.set_ylabel(f"Objective value (offset={offset_y:0.3e})")
     ax.set_title("Waterfall plot")
     if legend_text is not None:
         ax.legend()
@@ -297,9 +293,9 @@ def waterfall_lowlevel(
 def process_offset_for_list(
     offset_y: float,
     results: Sequence[Result],
-    scale_y: Optional[str],
-    start_indices: Optional[Sequence[int]] = None,
-    references: Optional[Sequence[ReferencePoint]] = None,
+    scale_y: str | None,
+    start_indices: Sequence[int] | None = None,
+    references: Sequence[ReferencePoint] | None = None,
 ) -> tuple[list[np.ndarray], float]:
     """
     Compute common offset_y and add it to `fvals` of results.

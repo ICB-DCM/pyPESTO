@@ -9,7 +9,7 @@ import numpy as np
 
 from ..C import SUFFIXES
 
-ResultDict = dict[str, Union[float, np.ndarray]]
+ResultDict = dict[str, float | np.ndarray]
 MaybeArray = Union[np.ndarray, "np.nan"]
 
 
@@ -42,8 +42,8 @@ def trace_wrap(f):
 
     @wraps(f)
     def wrapped_f(
-        self, ix: Union[Sequence[int], int, None] = None, trim: bool = False
-    ) -> Union[Sequence[Union[float, MaybeArray]], Union[float, MaybeArray]]:
+        self, ix: Sequence[int] | int | None = None, trim: bool = False
+    ) -> Sequence[float | MaybeArray] | float | MaybeArray:
         # whether to reduce the output
         reduce = isinstance(ix, numbers.Integral)
         # default: full list

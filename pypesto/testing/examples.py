@@ -27,6 +27,7 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
         for obs_id, obs_formula in zip(
             petab_problem.observable_df.index,
             petab_problem.observable_df[petab.OBSERVABLE_FORMULA],
+            strict=True,
         )
     ]
     # Set scaling and offset parameters for measurements
@@ -71,6 +72,7 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab() -> (
                 "scaling_rSTAT5A_rel",
             ),
             (3.85261197844677, 6.59147818673419, 3.15271275648527),
+            strict=True,
         )
     )
 
