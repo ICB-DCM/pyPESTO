@@ -26,6 +26,12 @@ from ..C import (
 )
 from ..result import Result
 from ..util import assign_clusters, delete_nan_inf
+from ._style import (
+    GRID_SIZE_PER_COL,
+    GRID_SIZE_PER_ROW,
+    draw_bounds_1d,
+    resolve_style,
+)
 from .clust_color import assign_colors_for_list
 
 logger = logging.getLogger(__name__)
@@ -491,7 +497,9 @@ def get_axes_array(
         Expected grid shape.
     size:
         Figure size ``(width, height)`` in inches; only used when ``axes``
-        is None.
+        is None. When ``None`` a single panel uses matplotlib's default
+        figure size, and a multi-panel grid uses
+        ``(GRID_SIZE_PER_COL * ncols, GRID_SIZE_PER_ROW * nrows)``.
 
     Returns
     -------
@@ -499,6 +507,8 @@ def get_axes_array(
         A 2-D NumPy object array containing matplotlib Axes.
     """
     if axes is None:
+        if size is None and nrows * ncols > 1:
+            size = (GRID_SIZE_PER_COL * ncols, GRID_SIZE_PER_ROW * nrows)
         _, axes = plt.subplots(
             nrows,
             ncols,
@@ -630,6 +640,140 @@ def plot_diagonal_marginal(
     ax.set_ylabel("Count")
 
 
+def plot_density_panel(
+    ax: matplotlib.axes.Axes,
+    values: np.ndarray,
+    bins: int | str = "auto",
+    bw_method: str = "scott",
+    style: dict | None = None,
+    *,
+    show_hist: bool = True,
+    show_kde: bool = True,
+    show_rug: bool = True,
+    show_bounds: bool = False,
+    lb: float | None = None,
+    ub: float | None = None,
+):
+    """Draw a density panel: histogram, KDE overlay, rug marks, and bounds.
+
+    Element styling is read from the resolved *style* dict:
+
+    - histogram bars: ``rectangle_*``
+    - KDE line: ``line_color`` / ``linewidth``
+    - rug marks: ``dash_color`` / ``dash_linewidth`` / ``dash_markersize`` /
+      ``dash_alpha``
+    - parameter-bound lines: ``bound_*`` (drawn only when ``show_bounds`` is
+      ``True`` and ``lb`` / ``ub`` are finite)
+
+    Sets x-axis limits to the data range with a 5% margin; if bounds are
+    drawn, the limits are extended to include them (never shrunk).
+
+    Parameters
+    ----------
+    ax:
+        Axes to draw into.
+    values:
+        1-D array of data values.
+    bins:
+        Histogram bins — passed directly to :func:`matplotlib.axes.Axes.hist`.
+    bw_method:
+        Bandwidth method for :class:`scipy.stats.gaussian_kde`.
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
+    show_hist:
+        Whether to draw the histogram bars.
+    show_kde:
+        Whether to draw the KDE line overlay.
+    show_rug:
+        Whether to draw rug marks along the x-axis.
+    show_bounds:
+        Whether to draw parameter-bound lines via
+        :func:`pypesto.visualize._style.draw_bounds_1d`. Requires ``lb`` and
+        ``ub`` to be passed and finite; silently skipped otherwise.
+    lb, ub:
+        Lower and upper parameter bounds. Used only when ``show_bounds`` is
+        ``True``.
+
+    Returns
+    -------
+    The bound legend handle if bounds were drawn, otherwise ``None``.
+    Callers wire this into their per-panel legend.
+    """
+    from scipy.stats import gaussian_kde
+
+    style = style if style is not None else resolve_style(None)
+
+    values = np.asarray(values, dtype=float)
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        return
+
+    if show_hist:
+        ax.hist(
+            values,
+            bins=bins,
+            density=True,
+            color=style["rectangle_color"],
+            alpha=style["rectangle_alpha"],
+            edgecolor=style["rectangle_edgecolor"],
+            linewidth=style["rectangle_linewidth"],
+        )
+
+    if show_kde and len(values) > 1 and np.std(values) > 0:
+        try:
+            kde = gaussian_kde(values, bw_method=bw_method)
+            # Extend 3 bandwidths beyond the data so the curve tapers to zero.
+            bw = kde.factor * np.std(values, ddof=1)
+            x_grid = np.linspace(
+                values.min() - 3 * bw, values.max() + 3 * bw, 300
+            )
+            ax.plot(
+                x_grid,
+                kde(x_grid),
+                color=style["line_color"],
+                linewidth=style["linewidth"],
+            )
+        except np.linalg.LinAlgError:
+            pass
+
+    if show_rug:
+        ax.plot(
+            values,
+            np.zeros(len(values)),
+            marker="|",
+            linestyle="none",
+            color=style["dash_color"],
+            alpha=style["dash_alpha"],
+            markersize=style["dash_markersize"],
+            markeredgewidth=style["dash_linewidth"],
+            transform=ax.get_xaxis_transform(),
+            clip_on=False,
+            zorder=5,
+        )
+
+    # Frame the panel tightly to the data (5% margin around the range, or a
+    # sensible fallback when the data is constant).
+    data_min = float(values.min())
+    data_max = float(values.max())
+    spread = data_max - data_min
+    margin = spread * 0.05 if spread > 0 else max(abs(data_min) * 0.05, 1.0)
+    ax.set_xlim(data_min - margin, data_max + margin)
+
+    # Draw parameter bounds (xlim is extended by draw_bounds_1d when bounds
+    # fall outside the data frame; never shrunk).
+    if (
+        show_bounds
+        and lb is not None
+        and ub is not None
+        and np.isfinite(lb)
+        and np.isfinite(ub)
+    ):
+        return draw_bounds_1d(ax, lb, ub, axis="x", style=style)
+    return None
+
+
 #: Sentinel meaning "this kwarg was not passed at all."
 #: Use as the default for deprecated kwargs so that an explicit
 #: ``f(old_kwarg=None)`` can be detected and warned about.
@@ -637,29 +781,38 @@ _UNSET = object()
 
 
 def process_deprecated_kwarg(
-    canonical_name: str,
+    canonical_name: str | None,
     canonical_value,
     deprecated_name: str,
     deprecated_value=_UNSET,
     stacklevel: int = 3,
+    note: str | None = None,
 ):
     """
-    Resolve a kwarg that has been renamed.
+    Resolve a kwarg that has been renamed or removed.
 
     The deprecated kwarg must use :data:`_UNSET` as its default in the
     calling function so that an explicit ``f(old_kwarg=None)`` is correctly
     detected and warned about.
 
-    Returns the canonical value if the deprecated kwarg was not passed,
-    the deprecated value (with a ``DeprecationWarning``) if only the old
-    name was used, or raises ``ValueError`` if both are given.
+    Two modes:
+
+    - **Rename** (``canonical_name`` is given): returns the canonical value
+      if the deprecated kwarg was not passed, the deprecated value (with a
+      ``DeprecationWarning``) if only the old name was used, or raises
+      ``ValueError`` if both are given.
+    - **Removal** (``canonical_name`` is ``None``): emits a
+      ``DeprecationWarning`` if the deprecated kwarg was passed and returns
+      ``None``. ``canonical_value`` is ignored.
 
     Parameters
     ----------
     canonical_name:
-        Name of the canonical (new) kwarg, used in messages.
+        Name of the canonical (new) kwarg, used in messages. Pass ``None``
+        to indicate the kwarg is removed without replacement.
     canonical_value:
-        Value passed under the canonical name (or ``None``).
+        Value passed under the canonical name (or ``None``). Ignored when
+        ``canonical_name`` is ``None``.
     deprecated_name:
         Name of the deprecated (old) kwarg, used in messages.
     deprecated_value:
@@ -668,12 +821,26 @@ def process_deprecated_kwarg(
         Forwarded to :func:`warnings.warn`. Default 3 attributes the
         warning to the caller of the public function that invoked this
         helper.
+    note:
+        Optional additional sentence appended to the deprecation message
+        (e.g. explaining where the behaviour moved to). Useful for the
+        removal case.
 
     Returns
     -------
     value:
-        The resolved value, or ``None`` if neither was given.
+        The resolved value, or ``None`` if neither was given (or in the
+        removal case).
     """
+    if canonical_name is None:
+        if deprecated_value is _UNSET:
+            return None
+        message = f"`{deprecated_name}` is deprecated and has no effect."
+        if note:
+            message = f"{message} {note}"
+        warnings.warn(message, DeprecationWarning, stacklevel=stacklevel)
+        return None
+
     if deprecated_value is _UNSET:
         return canonical_value
     if canonical_value is not None:
@@ -681,9 +848,10 @@ def process_deprecated_kwarg(
             f"Pass either `{canonical_name}` or the deprecated "
             f"`{deprecated_name}`, not both."
         )
-    warnings.warn(
-        f"`{deprecated_name}` is deprecated; use `{canonical_name}` instead.",
-        DeprecationWarning,
-        stacklevel=stacklevel,
+    message = (
+        f"`{deprecated_name}` is deprecated; use `{canonical_name}` instead."
     )
+    if note:
+        message = f"{message} {note}"
+    warnings.warn(message, DeprecationWarning, stacklevel=stacklevel)
     return deprecated_value
