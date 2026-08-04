@@ -422,21 +422,47 @@ def ensemble_parameters_plot(
     cmap=colormaps["Greys"],
 ):
     """
-    Visualize parameter ensemble.
+    Visualize a parameter ensemble.
+
+    For each parameter, this shows the full range of values taken across
+    all vectors contained in ``ensemble``: a rectangle spanning the
+    minimum to the maximum value, one scatter point per vector, and
+    dashed vertical lines marking the parameter bounds. Vectors are
+    colored by their position in ``ensemble.x_vectors``, under the
+    assumption that they are ordered from best to worst (as is the case,
+    e.g., if ``ensemble`` was created via
+    :meth:`Ensemble.from_optimization_endpoints
+    <pypesto.ensemble.Ensemble.from_optimization_endpoints>`, which
+    orders vectors by ascending objective value): the first (best)
+    vector is highlighted in red, all other vectors are shaded using
+    `cmap`.
+
+    As this always visualizes every vector currently contained in
+    ``ensemble``, the resulting range does not by itself represent a
+    confidence interval or credible region. To visualize such an
+    interval, construct ``ensemble`` such that it only contains the
+    corresponding vectors (e.g. via the ``rel_cutoff``/``percentile``
+    arguments of
+    :meth:`Ensemble.from_optimization_endpoints
+    <pypesto.ensemble.Ensemble.from_optimization_endpoints>`, or the
+    ``ci_level`` argument of
+    :meth:`Ensemble.from_sample <pypesto.ensemble.Ensemble.from_sample>`).
 
     Parameters
     ----------
     ensemble:
-        ensemble of parameter vectors (from pypesto.ensemble).
+        Ensemble of parameter vectors (from pypesto.ensemble).
     ax:
         Axes object to use.
     parameter_ids:
-        Indices of parameters to plot.
+        Indices of the parameters to plot. Defaults to all parameters in
+        `ensemble`.
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
     cmap:
-        Colormap to use for the parameter vectors.
+        Colormap used to color all vectors except the first one (which
+        is always shown in red).
 
     Returns
     -------
