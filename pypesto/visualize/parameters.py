@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Callable, Iterable, Sequence
 
+import matplotlib
 import matplotlib.axes
 import numpy as np
 import pandas as pd
@@ -740,7 +741,7 @@ def optimization_scatter(
     fvals = np.array([result.optimize_result[i].fval for i in start_indices])
 
     # continuous colormap: viridis, low fval (best) → yellow, high fval (worst) → dark
-    cmap = mpl_cm.viridis_r
+    cmap = matplotlib.colormaps["viridis_r"]
     min_fval_range = 1.0
     fval_min = fvals.min()
     fval_max = fvals.max()
