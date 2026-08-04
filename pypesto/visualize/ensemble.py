@@ -419,6 +419,7 @@ def ensemble_parameters_plot(
     ax: plt.Axes | None = None,
     parameter_ids: list[int] | None = None,
     size: tuple[float] | None = (6, 12),
+    cmap=colormaps["Greys"],
 ):
     """
     Visualize parameter ensemble.
@@ -434,6 +435,8 @@ def ensemble_parameters_plot(
     size:
         Figure size (width, height) in inches. Is only applied when no ax
         object is specified.
+    cmap:
+        Colormap to use for the parameter vectors.
 
     Returns
     -------
@@ -442,7 +445,7 @@ def ensemble_parameters_plot(
     """
 
     if ax is None:
-        fig, ax = plt.subplots(figsize=size)
+        _, ax = plt.subplots(figsize=size, layout="constrained")
 
     if parameter_ids:
         x_vectors = ensemble.x_vectors[parameter_ids]
@@ -455,7 +458,6 @@ def ensemble_parameters_plot(
     y_rect = -0.4
     h_rect = 0.8  # rectangle height
     rectangles = []
-    cmap = colormaps["Greys"]
     colors = np.flip(
         cmap(np.linspace(0.3, 0.8, (ensemble.n_vectors - 1))), axis=0
     )
@@ -467,6 +469,7 @@ def ensemble_parameters_plot(
             Rectangle((np.min(par_values), y_rect), w_rect, h_rect)
         )
         y_rect += h_rect + 0.2
+
     ax.add_collection(
         PatchCollection(
             rectangles, facecolors=[1.0, 1.0, 1.0, 1.0], edgecolors="dimgrey"
@@ -491,7 +494,7 @@ def ensemble_parameters_plot(
     ax.set_xlim(
         np.min(ensemble.lower_bound) * 1.1, np.max(ensemble.upper_bound) * 1.1
     )
-    plt.yticks(np.arange(n_x), np.asarray(ensemble.x_names)[parameter_ids])
-    plt.tight_layout()
-
+    ax.set_yticks(np.arange(n_x))
+    ax.set_yticklabels(np.asarray(ensemble.x_names)[parameter_ids])
+    ax.set_xlabel("Parameter value")
     return ax
