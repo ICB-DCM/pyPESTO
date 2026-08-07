@@ -317,7 +317,6 @@ class PetabImporter:
             petab_c.LOG_NORMAL: pypesto_c.LOG_NORMAL,
             petab_c.LOG_UNIFORM: pypesto_c.LOG_UNIFORM,
             petab_c.NORMAL: pypesto_c.NORMAL,
-            petab_c.UNIFORM: pypesto_c.UNIFORM,
         }
 
         # the prior index refers to the position of the parameter in the full
@@ -329,6 +328,16 @@ class PetabImporter:
         prior_list = []
         for parameter in self.petab_problem.parameters:
             if not parameter.estimate or parameter.prior_distribution is None:
+                continue
+
+            if str(parameter.prior_distribution) == petab_c.UNIFORM:
+                # A uniform prior only adds a constant to the objective inside
+                #  the parameter bounds, which are enforced by the pyPESTO
+                #  problem anyway. Skipping it keeps the objective comparable
+                #  to the PEtab v1 path, which skips `parameterScaleUniform`
+                #  for the same reason. Upgraded v1 problems can carry such
+                #  priors for every parameter, which would otherwise offset
+                #  the objective by `sum(log(ub - lb))`.
                 continue
 
             prior_list.append(
