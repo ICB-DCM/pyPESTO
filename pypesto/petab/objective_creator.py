@@ -607,8 +607,15 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
 
 
-class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
-    """ObjectiveCreator for creating an amici objective function."""
+class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
+    """ObjectiveCreator for creating an amici objective from a PEtab v2 problem.
+
+    Model import and compilation are the same as for PEtab v1, except that they
+    go through :class:`amici.importers.petab.PetabImporter`. Everything that
+    depends on the PEtab version -- creating the ``ExpData`` objects, the
+    objective, and the conversion of AMICI results to PEtab dataframes -- is
+    overridden here.
+    """
 
     def __init__(
         self,
@@ -616,138 +623,27 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         hierarchical: bool = False,
         non_quantitative_data_types: Iterable[str] | None = None,
         inner_options: dict[str, Any] | None = None,
-        output_folder: str | None = None,
-        model_name: str | None = None,
-        validate_petab: bool = True,
+        **kwargs,
     ):
         """
         Initialize the creator.
 
-        Parameters
-        ----------
-        petab_problem:
-            The PEtab problem.
-        hierarchical:
-            Whether to use hierarchical optimization.
-        non_quantitative_data_types:
-            The non-quantitative data types to consider.
-        inner_options:
-            Options for the inner optimization.
-        output_folder:
-            The output folder for the compiled model.
-        model_name:
-            The name of the AMICI model module.
-        validate_petab:
-            Whether to check the PEtab problem for errors.
+        See :class:`AmiciObjectiveCreator`. Hierarchical optimization and
+        non-quantitative data types are not supported for PEtab v2 yet.
         """
         if hierarchical or non_quantitative_data_types or inner_options:
-            raise NotImplementedError()
-
-        self.petab_problem = petab_problem
-        self._hierarchical = hierarchical
-        self._non_quantitative_data_types = non_quantitative_data_types
-        self.inner_options = inner_options
-        self.output_folder = output_folder
-        self.model_name = model_name
-        self.validate_petab = validate_petab
-
-    def create_model(
-        self,
-        force_compile: bool = False,
-        verbose: bool = True,
-        **kwargs,
-    ) -> amici.Model:
-        """
-        Import amici model.
-
-        Parameters
-        ----------
-        force_compile:
-            If False, the model is compiled only if the output folder does not
-            exist yet. If True, the output folder is deleted and the model
-            (re-)compiled in either case.
-
-            .. warning::
-                If `force_compile`, then an existing folder of that name will
-                be deleted.
-        verbose:
-            Passed to AMICI's model compilation. If True, the compilation
-            progress is printed.
-        kwargs:
-            Extra arguments passed to amici.SbmlImporter.sbml2amici
-        """
-        # courtesy check whether target is folder
-        if os.path.exists(self.output_folder) and not os.path.isdir(
-            self.output_folder
-        ):
-            raise AssertionError(
-                f"Refusing to remove {self.output_folder} for model "
-                f"compilation: Not a folder."
+            raise NotImplementedError(
+                "Hierarchical optimization and non-quantitative data types "
+                "are not supported for PEtab v2 problems yet."
             )
 
-        # compile
-        if self._must_compile(force_compile):
-            logger.info(
-                f"Compiling amici model to folder {self.output_folder}."
-            )
-            if self.petab_problem.model.type_id == MODEL_TYPE_SBML:
-                self.compile_model(
-                    validate=self.validate_petab,
-                    verbose=verbose,
-                    **kwargs,
-                )
-            else:
-                self.compile_model(verbose=verbose, **kwargs)
-        else:
-            logger.debug(
-                f"Using existing amici model in folder {self.output_folder}."
-            )
-
-        return self._create_model()
-
-    def _create_model(self) -> amici.Model:
-        """Load model module and return the model, no checks/compilation."""
-        # load moduĺe
-        module = amici.import_model_module(
-            module_name=self.model_name, module_path=self.output_folder
+        super().__init__(
+            petab_problem=petab_problem,
+            hierarchical=hierarchical,
+            non_quantitative_data_types=non_quantitative_data_types,
+            inner_options=inner_options,
+            **kwargs,
         )
-        model = module.get_model()
-
-        from amici.importers.petab.v1._import_helpers import check_model
-
-        check_model(
-            amici_model=model,
-            petab_problem=self.petab_problem,
-        )
-
-        return model
-
-    def _must_compile(self, force_compile: bool):
-        """Check whether the model needs to be compiled first."""
-        # asked by user
-        if force_compile:
-            return True
-
-        # folder does not exist
-        if not os.path.exists(self.output_folder) or not os.listdir(
-            self.output_folder
-        ):
-            return True
-
-        # try to import (in particular checks version)
-        try:
-            # importing will already raise an exception if version wrong
-            amici.import_model_module(self.model_name, self.output_folder)
-        except ModuleNotFoundError:
-            return True
-        except amici.AmiciVersionError as e:
-            logger.info(
-                f"amici model will be re-imported due to version mismatch: {e}"
-            )
-            return True
-
-        # no need to (re-)compile
-        return False
 
     def compile_model(self, **kwargs):
         """
@@ -781,25 +677,12 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         )
         return petab_importer
 
-    def create_solver(
-        self,
-        model: amici.Model = None,
-        verbose: bool = True,
-    ) -> amici.Solver:
-        """Return model solver."""
-        # create model
-        if model is None:
-            model = self.create_model(verbose=verbose)
-
-        solver = model.create_solver()
-        return solver
-
     def create_edatas(
         self,
-        model: amici.Model = None,
+        model: asd.Model = None,
         simulation_conditions=None,
         verbose: bool = True,
-    ) -> list[amici.ExpData]:
+    ) -> list[asd.ExpData]:
         """Create list of :class:`amici.amici.ExpData` objects."""
         from amici.sim.sundials.petab import ExperimentManager
 
@@ -817,9 +700,9 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def create_objective(
         self,
-        model: amici.Model = None,
-        solver: amici.Solver = None,
-        edatas: Sequence[amici.ExpData] = None,
+        model: asd.Model = None,
+        solver: asd.Solver = None,
+        edatas: Sequence[asd.ExpData] = None,
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
@@ -884,8 +767,8 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def rdatas_to_measurement_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
         """
@@ -917,8 +800,8 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
     def rdatas_to_simulation_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
     ) -> pd.DataFrame:
         """
         See :meth:`rdatas_to_measurement_df`.
