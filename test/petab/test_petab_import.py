@@ -461,7 +461,7 @@ def test_petab_v2_residuals():
     with pytest.raises(RuntimeError, match="parameter-dependent sigma"):
         objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
 
-    objective._petab_simulator._model.set_add_sigma_residuals(True)
+    objective.amici_model.set_add_sigma_residuals(True)
     ret = objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
     res, sres = np.asarray(ret["res"]), np.asarray(ret["sres"])
     assert sres.shape == (len(res), petab_problem.n_estimated)

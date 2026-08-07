@@ -809,7 +809,10 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
 
         return ExperimentManager(
             model=model,
-            petab_problem=self.petab_problem,
+            # the AMICI importer preprocesses the PEtab problem (e.g., the
+            #  experiment table is converted to the model), and only that
+            #  version matches the compiled model
+            petab_problem=self._create_amici_importer().petab_problem,
         ).create_edatas()
 
     def create_objective(
@@ -845,8 +848,14 @@ class AmiciPetabV2ObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         """
         from ..objective.amici.amici import AmiciPetabV2Objective
 
-        # the objective builds its own simulator from the importer;
-        #  model/solver/edatas are ignored (kept for API compatibility)
+        # the objective creates its own simulator from the PEtab importer,
+        #  which in turn owns the model, the solver and the ExpData objects
+        if model is not None or solver is not None or edatas is not None:
+            warnings.warn(
+                "`model`, `solver` and `edatas` are not supported for PEtab "
+                "v2 problems and will be ignored.",
+                stacklevel=2,
+            )
         petab_importer = self._create_amici_importer()
 
         return AmiciPetabV2Objective(
