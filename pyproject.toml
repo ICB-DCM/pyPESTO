@@ -214,6 +214,13 @@ all = [
   "pypesto[roadrunner]",
 ]
 
+[tool.uv.pip]
+# Never auto-select pre-release versions of *transitive* dependencies (e.g.
+# numba betas) just because they happen to satisfy some other package's
+# unusually loose upper bound - this caused a broken numba/numpy combination
+# to be picked for the `doc`/`example` extras.
+prerelease = "disallow"
+
 [tool.setuptools]
 include-package-data = true
 
