@@ -49,6 +49,10 @@ Tox
 Secondly, this installs the virtual testing tool
 `tox <https://tox.readthedocs.io/en/latest/>`_, which we use for all tests,
 format and quality checks. Its configuration is specified in ``tox.ini``.
+Environments are created and dependencies installed via
+`uv <https://docs.astral.sh/uv/>`_ (through the
+`tox-uv <https://github.com/tox-dev/tox-uv>`_ plugin) instead of
+virtualenv/pip, which is installed automatically on the first ``tox`` run.
 To run it locally, simply execute::
 
     tox [-e flake8,doc]

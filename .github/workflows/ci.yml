@@ -41,6 +41,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -80,6 +81,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -116,13 +118,14 @@ jobs:
       with:
         path: |
           ~\AppData\Local\pip\Cache
+          ~\AppData\Local\uv\cache
           .tox
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: |
         pip install --upgrade pip
-        pip install tox
+        pip install tox tox-uv
 
     - name: Run tests
       shell: bash
@@ -149,6 +152,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -193,6 +197,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -239,6 +244,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -275,6 +281,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -311,6 +318,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -347,11 +355,12 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
-      run: pip install tox pre-commit
+      run: pip install tox tox-uv pre-commit
 
     - name: Check repository size
       run: tox -e size
@@ -379,6 +388,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -412,6 +422,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
@@ -442,6 +453,7 @@ jobs:
       with:
         path: |
           ~/.cache/pip
+          ~/.cache/uv
           .tox/
         key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
