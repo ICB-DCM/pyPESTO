@@ -582,7 +582,7 @@ class SemiquantInnerSolver(InnerSolver):
         inner_options = {
             "x0": x0,
             "method": "L-BFGS-B",
-            "options": {"disp": None},
+            "options": {},
             "bounds": Bounds(lb=constraint_min_diff),
         }
 

@@ -1647,7 +1647,6 @@ def test_visualize_estimated_observable_mapping():
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",
         options={
-            "disp": None,
             "ftol": 2.220446049250313e-09,
             "gtol": 1e-5,
             "maxiter": 1,
