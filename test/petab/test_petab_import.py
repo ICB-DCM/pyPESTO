@@ -519,7 +519,7 @@ def test_petab_v2_prior_indexing():
     from pypesto.petab.importer import PetabImporter
 
     # p0: estimated, no prior; p1: estimated with prior; p2: not estimated;
-    #  p3: estimated with prior; p4: estimated with a uniform prior (skipped)
+    #  p3: estimated with prior
     parameters = [
         SimpleNamespace(
             id="p0",
@@ -542,58 +542,20 @@ def test_petab_v2_prior_indexing():
         SimpleNamespace(
             id="p3",
             estimate=True,
-            prior_distribution="laplace",
-            prior_parameters=[0.0, 1.0],
-        ),
-        SimpleNamespace(
-            id="p4",
-            estimate=True,
             prior_distribution="uniform",
             prior_parameters=[0.0, 10.0],
         ),
     ]
     fake_problem = SimpleNamespace(
-        parameters=parameters, x_ids=["p0", "p1", "p2", "p3", "p4"]
+        parameters=parameters, x_ids=["p0", "p1", "p2", "p3"]
     )
     importer = PetabImporter.__new__(PetabImporter)
     importer.petab_problem = fake_problem
 
     prior = importer._create_prior_v2()
     # priors only for the estimated parameters p1 and p3, at their positions
-    #  in x_ids (1 and 3) -- not at the running prior count (0 and 1).
-    #  p4 is uniform and contributes only a constant, so it is skipped -- as
-    #  the v1 path does for `parameterScaleUniform`.
+    #  in x_ids (1 and 3) -- not at the running prior count (0 and 1)
     assert [entry["index"] for entry in prior.prior_list] == [1, 3]
-
-
-def test_petab_v2_uniform_priors_skipped():
-    """Uniform priors must not contribute to the objective.
-
-    Upgraded PEtab v1 problems can carry a uniform prior for every parameter.
-    Those only add ``sum(log(ub - lb))`` inside the bounds, which the pyPESTO
-    problem enforces anyway, and would otherwise offset the objective against
-    the v1 path.
-    """
-    from types import SimpleNamespace
-
-    from pypesto.petab.importer import PetabImporter
-
-    parameters = [
-        SimpleNamespace(
-            id=f"p{i}",
-            estimate=True,
-            prior_distribution="uniform",
-            prior_parameters=[0.0, 10.0],
-        )
-        for i in range(3)
-    ]
-    importer = PetabImporter.__new__(PetabImporter)
-    importer.petab_problem = SimpleNamespace(
-        parameters=parameters, x_ids=["p0", "p1", "p2"]
-    )
-
-    # only uniform priors -> no prior objective at all
-    assert importer._create_prior_v2() is None
 
 
 def test_petab_v2_startpoint_sampling():

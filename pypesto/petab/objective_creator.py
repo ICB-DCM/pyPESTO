@@ -654,26 +654,55 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         Parameters
         ----------
         kwargs:
-            Extra arguments passed to :meth:`amici.sbml_import.SbmlImporter.sbml2amici`
-            or :func:`amici.pysb_import.pysb2amici`.
+            Extra arguments passed to
+            :class:`amici.importers.petab.PetabImporter`, e.g. ``verbose`` or
+            ``non_estimated_parameters_as_constants``. Unlike for PEtab v1,
+            arguments for the underlying model importer (e.g.
+            ``generate_sensitivity_code``) are not supported; a warning is
+            issued for any argument that is not accepted.
         """
         # delete output directory
         if os.path.exists(self.output_folder):
             shutil.rmtree(self.output_folder)
 
-        petab_importer = self._create_amici_importer()
+        petab_importer = self._create_amici_importer(**kwargs)
         petab_importer.import_module(force_import=True)
 
     def _create_amici_importer(
-        self,
+        self, **kwargs
     ) -> amici.importers.petab.PetabImporter:
-        """Create an AMICI PEtab importer."""
+        """Create an AMICI PEtab importer.
+
+        Parameters
+        ----------
+        kwargs:
+            Extra arguments passed to
+            :class:`amici.importers.petab.PetabImporter`. Arguments that it
+            does not accept are dropped with a warning.
+        """
+        import inspect
+
         from amici.importers.petab import PetabImporter
+
+        kwargs.setdefault("validate", self.validate_petab)
+        # `PetabImporter` does not forward arguments to the model importer, so
+        #  anything it does not accept cannot be honoured -- say so instead of
+        #  dropping it silently
+        supported = inspect.signature(PetabImporter.__init__).parameters
+        if unsupported := {
+            k: kwargs.pop(k) for k in set(kwargs) - set(supported)
+        }:
+            warnings.warn(
+                f"Ignoring unsupported model import options for the PEtab v2 "
+                f"path: {sorted(unsupported)}.",
+                stacklevel=2,
+            )
 
         petab_importer = PetabImporter(
             self.petab_problem,
             output_dir=self.output_folder,
             module_name=self.model_name,
+            **kwargs,
         )
         return petab_importer
 

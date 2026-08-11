@@ -145,15 +145,12 @@ class PetabStartpoints(CheckedStartpoints):
                 )
             )
         else:
-            # PEtab v2: keep the prior distribution object (None -> uniform
-            #  over the bounds); sampled directly in `sample`, since the v1
-            #  `sample_from_prior` uses different distribution names
+            # PEtab v2: keep the prior distribution object (``None`` -> sample
+            #  uniformly over the current bounds); sampled directly in
+            #  `sample`, since the v1 `sample_from_prior` uses different
+            #  distribution names
             id_to_prior = {
-                parameter.id: (
-                    parameter.prior_dist,
-                    parameter.lb,
-                    parameter.ub,
-                )
+                parameter.id: parameter.prior_dist
                 for parameter in self._petab_problem.parameters
                 if parameter.estimate
             }
@@ -188,12 +185,16 @@ class PetabStartpoints(CheckedStartpoints):
             startpoints = list(map(sampler, self._priors))
         else:
             # PEtab v2 -- sample from the parameter prior distributions,
-            #  falling back to a uniform distribution over the bounds
+            #  falling back to a uniform distribution over the bounds of the
+            #  `pypesto.Problem`, which may be tighter than the PEtab bounds
+            #  (e.g. during profiling)
             startpoints = [
                 prior_dist.sample(n_starts)
                 if prior_dist is not None
-                else np.random.uniform(par_lb, par_ub, n_starts)
-                for prior_dist, par_lb, par_ub in self._priors
+                else np.random.uniform(cur_lb, cur_ub, n_starts)
+                for prior_dist, cur_lb, cur_ub in zip(
+                    self._priors, lb, ub, strict=True
+                )
             ]
 
         return np.array(startpoints).T

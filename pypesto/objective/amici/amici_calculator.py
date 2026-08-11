@@ -300,40 +300,6 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
                 amici_model, edatas, rdatas, sensi_orders, mode, dim
             )
 
-        # `result.sllh`, `result.s2llh` and `result.sres` refer to the
-        #  parameters estimated in the *PEtab* problem. Parameters that are
-        #  fixed in the pyPESTO problem are still estimated in the PEtab
-        #  problem; parameters that are not estimated in the PEtab problem have
-        #  no sensitivities and keep their zero entries here (they are always
-        #  fixed in the pyPESTO problem, and are dropped downstream).
-        # TODO: sensitivities are computed for all parameters estimated in the
-        #  PEtab problem, also for those fixed in the pyPESTO problem. Unlike
-        #  for PEtab v1, `plist` cannot be narrowed down from here, since it is
-        #  set by `ExperimentManager.apply_parameters`.
-        petab_free_ids = self.petab_simulator.exp_man.petab_problem.x_free_ids
-        petab_ix = {x_id: ix for ix, x_id in enumerate(petab_free_ids)}
-        # positions in the pyPESTO parameter vector and the corresponding
-        #  positions in the PEtab sensitivity arrays
-        opt_ix_sel = [ix for ix, x_id in enumerate(x_ids) if x_id in petab_ix]
-        sim_ix_sel = [petab_ix[x_ids[ix]] for ix in opt_ix_sel]
-
-        if (
-            self.free_parameter_ids is not None
-            and sensi_orders
-            and max(sensi_orders) > 0
-        ):
-            # a parameter that is free in the pyPESTO problem, but not
-            #  estimated in the PEtab problem, is a constant in the AMICI model
-            #  (non_estimated_parameters_as_constants=True) -- there are no
-            #  sensitivities for it, and only sensi_order 0 is supported
-            if missing := self.free_parameter_ids - set(petab_ix):
-                raise ValueError(
-                    f"Cannot compute gradient, missing entry for {missing}. "
-                    "Those parameters are not estimated in the PEtab problem "
-                    "-- fix them in the pyPESTO problem, or request "
-                    "`sensi_orders=(0,)` only."
-                )
-
         if mode == MODE_FUN:
             if 1 in sensi_orders:
                 if missing := {x_ids[ix] for ix in opt_ix_sel} - set(

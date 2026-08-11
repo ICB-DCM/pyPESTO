@@ -3,6 +3,7 @@
 import logging
 
 import petab.v1 as petab
+import petab.v2 as petab_v2
 import petabtests
 import pytest
 
@@ -71,15 +72,27 @@ def _execute_case(case, model_type, version):
 
     # import and create objective function
     if case.startswith("0006"):
+        # timepoint-specific overrides are not supported by AMICI -- flatten
+        #  the problem, i.e. replicate the affected observables
         if version == "v2.0.0":
-            pytest.skip("TODO")
-        petab_problem = petab.Problem.from_yaml(yaml_file)
-        petab.flatten_timepoint_specific_output_overrides(petab_problem)
+            from amici.importers.petab._petab_importer import (
+                flatten_timepoint_specific_output_overrides,
+            )
+
+            petab_problem = petab_v2.Problem.from_yaml(yaml_file)
+            flatten_timepoint_specific_output_overrides(petab_problem)
+        else:
+            petab_problem = petab.Problem.from_yaml(yaml_file)
+            petab.flatten_timepoint_specific_output_overrides(petab_problem)
         importer = pypesto.petab.PetabImporter(
             petab_problem=petab_problem,
             model_name=model_name,
         )
-        petab_problem = petab.Problem.from_yaml(yaml_file)
+        petab_problem = (
+            petab_v2.Problem.from_yaml(yaml_file)
+            if version == "v2.0.0"
+            else petab.Problem.from_yaml(yaml_file)
+        )
     else:
         importer = pypesto.petab.PetabImporter.from_yaml(
             yaml_file, model_name=model_name
@@ -87,13 +100,17 @@ def _execute_case(case, model_type, version):
         petab_problem = importer.petab_problem
 
     factory = importer.create_objective_creator()
-    model = factory.create_model(generate_sensitivity_code=False)
-    obj = factory.create_objective(model=model)
-
     if version == "v1.0.0":
+        model = factory.create_model(generate_sensitivity_code=False)
+        obj = factory.create_objective(model=model)
         # the scaled parameters
         problem_parameters = factory.petab_problem.x_nominal_scaled
     else:
+        # for PEtab v2, the objective creates model and solver itself, via the
+        #  AMICI PEtab importer -- which does not expose the model import
+        #  options either
+        model = None
+        obj = factory.create_objective()
         problem_parameters = importer.petab_problem.x_nominal
 
     # simulate
@@ -121,6 +138,15 @@ def _execute_case(case, model_type, version):
         simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
     else:
         simulation_df = obj.rdatas_to_simulation_df(rdatas)
+        if case.startswith("0006"):
+            # map the replicated observables back to the original ones
+            from amici.importers.petab._petab_importer import (
+                unflatten_simulation_df,
+            )
+
+            simulation_df = unflatten_simulation_df(
+                simulation_df, petab_problem
+            )
 
     # check if matches
     chi2s_match = petabtests.evaluate_chi2(chi2, gt_chi2, tol_chi2)

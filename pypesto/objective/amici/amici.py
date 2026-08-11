@@ -725,7 +725,33 @@ class AmiciObjective(ObjectiveBase):
 
 
 class AmiciPetabV2Objective(AmiciObjective):
-    """An AMICI objective constructed from a PEtab v2 problem."""
+    """An AMICI objective constructed from a PEtab v2 problem.
+
+    The objective value is the negative log-likelihood, or the unnormalized
+    negative log-posterior if the PEtab problem defines parameter priors (see
+    :meth:`PetabImporter.create_problem`, which adds the prior terms).
+
+    .. warning::
+
+        PEtab v2 support is still under development, and this interface may
+        change while the following limitations are addressed:
+
+        * Sensitivities are computed for every parameter that is estimated in
+          the PEtab problem, including those fixed in the
+          :class:`pypesto.Problem`. Unlike for PEtab v1, ``plist`` cannot be
+          narrowed down from pyPESTO, since it is set by
+          :meth:`amici.sim.sundials.petab.ExperimentManager.apply_parameters`.
+          This costs performance, in particular for profile likelihoods.
+        * Steady-state guessing (``guess_steadystate``) is not available: the
+          PEtab simulator creates its own :class:`amici.ExpData` objects for
+          every simulation, so guesses cannot be passed on to it.
+        * Hierarchical optimization and non-quantitative data types (ordinal,
+          censored, semiquantitative) are not supported.
+        * Predictors (:class:`pypesto.predict.AmiciPredictor`) and the
+          conversion of predictions to PEtab dataframes are not supported.
+        * Custom timepoints (:meth:`AmiciObjective.set_custom_timepoints`)
+          have no effect, for the same reason as steady-state guessing.
+    """
 
     def __init__(
         self,
