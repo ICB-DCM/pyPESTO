@@ -154,6 +154,213 @@ class AmiciCalculator:
         )
 
 
+class AmiciCalculatorPetabV2(AmiciCalculator):
+    """Perform the AMICI call for a PEtab v2 problem.
+
+    For PEtab v2, the mapping between PEtab problem parameters and AMICI model
+    parameters lives entirely inside
+    :class:`amici.sim.sundials.petab.PetabSimulator`; there is no PEtab v1
+    style ``ParameterMapping`` that :class:`AmiciCalculator` could use. This
+    calculator therefore delegates simulation *and* the aggregation of the
+    results across experiments to the simulator and only translates the
+    outcome into pyPESTO's return dict.
+
+    The simulator is expected to operate on the same model and solver
+    instances as the objective (see :class:`AmiciPetabV2Objective`), so that
+    the sensitivity order and the return-data reporting mode set by the
+    objective take effect in the simulation.
+    """
+
+    def __init__(
+        self,
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.petab_simulator = petab_simulator
+        #: IDs of the parameters that are free in the pyPESTO problem, i.e.,
+        #: those for which sensitivities are required. Set by
+        #: :class:`AmiciPetabV2Objective` as soon as the objective is part of
+        #: a :class:`pypesto.Problem`; ``None`` disables the check for
+        #: missing sensitivities.
+        self.free_parameter_ids: set[str] | None = None
+
+    def __call__(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[amici.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ):
+        """Perform the actual AMICI call.
+
+        Called within the :func:`AmiciObjective.__call__` method.
+
+        Parameters
+        ----------
+        x_dct:
+            Parameters for which to compute function value and derivatives.
+        sensi_orders:
+            Tuple of requested sensitivity orders.
+        mode:
+            Call mode (function value or residual based).
+        amici_model:
+            The AMICI model.
+        amici_solver:
+            The AMICI solver.
+        edatas:
+            The experimental data.
+        n_threads:
+            Number of threads for AMICI call.
+        x_ids:
+            Ids of optimization parameters.
+        parameter_mapping:
+            Mapping of optimization to simulation parameters.
+        fim_for_hess:
+            Whether to use the FIM (if available) instead of the Hessian (if
+            requested).
+        """
+        # set order in solver
+        sensi_order = 0
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
+
+        if sensi_order == 2 and fim_for_hess:
+            # we use the FIM
+            amici_solver.set_sensitivity_order(sensi_order - 1)
+        else:
+            amici_solver.set_sensitivity_order(sensi_order)
+
+        # full optimization problem dimension (including fixed parameters)
+        dim = len(x_ids)
+
+        # `result.sllh`, `result.s2llh` and `result.sres` refer to the
+        #  parameters estimated in the *PEtab* problem. Parameters that are
+        #  fixed in the pyPESTO problem are still estimated in the PEtab
+        #  problem; parameters that are not estimated in the PEtab problem have
+        #  no sensitivities and keep their zero entries below (they can only be
+        #  fixed in the pyPESTO problem, see the check further down).
+        # TODO: sensitivities are computed for all parameters estimated in the
+        #  PEtab problem, also for those fixed in the pyPESTO problem. Unlike
+        #  for PEtab v1, `plist` cannot be narrowed down from here, since it is
+        #  set by `ExperimentManager.apply_parameters`.
+        petab_ix = {
+            x_id: ix
+            for ix, x_id in enumerate(
+                self.petab_simulator.exp_man.petab_problem.x_free_ids
+            )
+        }
+        # positions in the pyPESTO parameter vector and the corresponding
+        #  positions in the PEtab sensitivity arrays
+        opt_ix_sel = [ix for ix, x_id in enumerate(x_ids) if x_id in petab_ix]
+        sim_ix_sel = [petab_ix[x_ids[ix]] for ix in opt_ix_sel]
+
+        if self.free_parameter_ids is not None and sensi_order > 0:
+            # a parameter that is free in the pyPESTO problem, but not
+            #  estimated in the PEtab problem, is a constant in the AMICI model
+            #  (non_estimated_parameters_as_constants=True) -- there are no
+            #  sensitivities for it, and only sensi_order 0 is supported
+            if missing := self.free_parameter_ids - set(petab_ix):
+                raise ValueError(
+                    f"Cannot compute gradient, missing entry for {missing}. "
+                    "Those parameters are not estimated in the PEtab problem "
+                    "-- fix them in the pyPESTO problem, or request "
+                    "`sensi_orders=(0,)` only."
+                )
+
+        # run amici simulation; parameter mapping and the aggregation of the
+        #  results across experiments are handled by the PEtab simulator
+        result = self.petab_simulator.simulate(x_dct)
+        rdatas = result.rdatas
+        # the simulator creates its own ExpData objects
+        edatas = result.edatas
+
+        for data_ix, rdata in enumerate(rdatas):
+            log_simulation(data_ix, rdata)
+
+        # check if the simulation failed
+        if any(rdata["status"] < 0.0 for rdata in rdatas):
+            return get_error_output(
+                amici_model, edatas, rdatas, sensi_orders, mode, dim
+            )
+
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        nllh = -result.llh
+
+        if mode == MODE_FUN and not np.isfinite(nllh):
+            return get_error_output(
+                amici_model, edatas, rdatas, sensi_orders, mode, dim
+            )
+
+        if mode == MODE_FUN:
+            if 1 in sensi_orders:
+                if missing := {x_ids[ix] for ix in opt_ix_sel} - set(
+                    result.sllh or {}
+                ):
+                    raise ValueError(
+                        f"Cannot compute gradient, missing entry for {missing}."
+                    )
+                # llh to nllh, dict to array
+                snllh[opt_ix_sel] = [
+                    -result.sllh[x_ids[ix]] for ix in opt_ix_sel
+                ]
+            if 2 in sensi_orders:
+                if result.s2llh is None:
+                    raise ValueError("The Hessian (FIM) was not computed.")
+                # `result.s2llh` is the FIM, i.e. an approximation of the
+                #  Hessian of the *negative* log-likelihood -- no sign flip
+                s2nllh[np.ix_(opt_ix_sel, opt_ix_sel)] = result.s2llh[
+                    np.ix_(sim_ix_sel, sim_ix_sel)
+                ]
+        elif mode == MODE_RES:
+            if 1 in sensi_orders and not self._known_least_squares_safe:
+                # the least-squares residuals only match the likelihood for
+                #  parameter-independent sigma, unless sigma residuals are
+                #  added to the model
+                if not amici_model.get_add_sigma_residuals() and any(
+                    (
+                        (r["ssigmay"] is not None and np.any(r["ssigmay"]))
+                        or (r["ssigmaz"] is not None and np.any(r["ssigmaz"]))
+                    )
+                    for r in rdatas
+                ):
+                    raise RuntimeError(
+                        "Cannot use the least-squares solver with parameter-"
+                        "dependent sigma. Enable sigma residuals on the model "
+                        "via `set_add_sigma_residuals(True)`."
+                    )
+                self._known_least_squares_safe = True  # don't check this again
+            if 0 in sensi_orders:
+                if (res := result.res) is None:
+                    raise ValueError("The residuals were not computed.")
+            if 1 in sensi_orders:
+                if result.sres is None:
+                    raise ValueError(
+                        "The residual sensitivities were not computed."
+                    )
+                sres = np.zeros((result.sres.shape[0], dim))
+                sres[:, opt_ix_sel] = result.sres[:, sim_ix_sel]
+
+        ret = {
+            FVAL: nllh,
+            GRAD: snllh,
+            HESS: s2nllh,
+            RES: res,
+            SRES: sres,
+            RDATAS: rdatas,
+        }
+
+        return filter_return_dict(ret)
+
+
 def calculate_function_values(
     rdatas,
     sensi_orders: tuple[int, ...],

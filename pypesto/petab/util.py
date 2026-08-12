@@ -4,6 +4,7 @@ import numpy as np
 
 try:
     import petab.v1 as petab
+    from petab import v2
     from petab.v1.C import (
         ESTIMATE,
         NOISE_PARAMETERS,
@@ -100,12 +101,12 @@ class PetabStartpoints(CheckedStartpoints):
     """Startpoint method for PEtab problems.
 
     Samples optimization startpoints from the distributions defined in the
-    provided PEtab problem. The PEtab-problem is copied.
+    provided PEtab problem.
     """
 
-    def __init__(self, petab_problem: petab.Problem, **kwargs):
+    def __init__(self, petab_problem: petab.Problem | v2.Problem, **kwargs):
         super().__init__(**kwargs)
-        self._parameter_df = petab_problem.parameter_df.copy()
+        self._petab_problem = petab_problem
         self._priors: list[tuple] | None = None
         self._free_ids: list[str] | None = None
 
@@ -132,16 +133,27 @@ class PetabStartpoints(CheckedStartpoints):
 
         # update priors
         self._free_ids = current_free_ids
-        id_to_prior = dict(
-            zip(
-                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
-                petab.parameters.get_priors_from_df(
-                    self._parameter_df, mode=petab.INITIALIZATION
-                ),
-                strict=True,
+        if isinstance(self._petab_problem, petab.Problem):
+            parameter_df = self._petab_problem.parameter_df
+            id_to_prior = dict(
+                zip(
+                    parameter_df.index[parameter_df[ESTIMATE] == 1],
+                    petab.parameters.get_priors_from_df(
+                        parameter_df, mode=petab.INITIALIZATION
+                    ),
+                    strict=True,
+                )
             )
-        )
-
+        else:
+            # PEtab v2: keep the prior distribution object (``None`` -> sample
+            #  uniformly over the current bounds); sampled directly in
+            #  `sample`, since the v1 `sample_from_prior` uses different
+            #  distribution names
+            id_to_prior = {
+                parameter.id: parameter.prior_dist
+                for parameter in self._petab_problem.parameters
+                if parameter.estimate
+            }
         self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
 
     def __call__(
@@ -167,7 +179,22 @@ class PetabStartpoints(CheckedStartpoints):
         Must only be called through `self.__call__` to ensure that the list of priors
         matches the currently free parameters in the :class:`pypesto.Problem`.
         """
-        sampler = partial(petab.sample_from_prior, n_starts=n_starts)
-        startpoints = list(map(sampler, self._priors))
+        if isinstance(self._petab_problem, petab.Problem):
+            # PEtab v1
+            sampler = partial(petab.sample_from_prior, n_starts=n_starts)
+            startpoints = list(map(sampler, self._priors))
+        else:
+            # PEtab v2 -- sample from the parameter prior distributions,
+            #  falling back to a uniform distribution over the bounds of the
+            #  `pypesto.Problem`, which may be tighter than the PEtab bounds
+            #  (e.g. during profiling)
+            startpoints = [
+                prior_dist.sample(n_starts)
+                if prior_dist is not None
+                else np.random.uniform(cur_lb, cur_ub, n_starts)
+                for prior_dist, cur_lb, cur_ub in zip(
+                    self._priors, lb, ub, strict=True
+                )
+            ]
 
         return np.array(startpoints).T

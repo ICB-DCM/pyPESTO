@@ -10,7 +10,7 @@ from itertools import chain
 import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
-import petab.v1 as petab
+import petab
 import petabtests
 import pytest
 
@@ -266,6 +266,7 @@ def test_max_sensi_order():
 
 
 def test_petab_pysb_optimization():
+    """Test optimization for a PySB-based PEtab 2.0 problem."""
     test_case = "0001"
     test_case_dir = petabtests.get_case_dir(
         test_case, version="v2.0.0", format_="pysb"
@@ -276,7 +277,7 @@ def test_petab_pysb_optimization():
         test_case, format="pysb", version="v2.0.0"
     )
 
-    petab_problem = petab.Problem.from_yaml(petab_yaml)
+    petab_problem = petab.v2.Problem.from_yaml(petab_yaml)
     importer = PetabImporter(petab_problem)
     problem = importer.create_problem()
 
@@ -296,6 +297,318 @@ def test_petab_pysb_optimization():
 
     # ensure objective after optimization is not worse than for true parameters
     assert np.all(fvals <= -solution[petabtests.LLH])
+
+
+def test_petab_v2_boehm():
+    import copy
+    import pickle
+
+    from pypesto.optimize.optimizer import ScipyOptimizer
+
+    # load test problem
+    problem_id = "Boehm_JProteomeRes2014"
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    expected_fval_nominal = 138.22199693517703
+
+    # create model
+    importer = PetabImporter(petab_problem)
+    problem = importer.create_problem()
+    assert problem.x_names == petab_problem.x_ids
+    assert problem.dim == petab_problem.n_estimated == 9
+    assert problem.dim_full == len(petab_problem.parameters) == 11
+    # petab-non-estimated parameters are fixed in the pypesto problem
+    assert problem.x_fixed_indices == [
+        i for i, p in enumerate(petab_problem.parameters) if not p.estimate
+    ]
+    assert isinstance(
+        problem.objective, pypesto.objective.amici.amici.AmiciPetabV2Objective
+    )
+
+    # evaluate objective at nominal parameters
+    fval = problem.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # deepcopy works?
+    problem_deepcopy = copy.deepcopy(problem)
+    fval = problem_deepcopy.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # pickling works?
+    problem_pickled = pickle.loads(pickle.dumps(problem))  # noqa: S301
+    fval = problem_pickled.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # gradient works?
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+
+    # fixing parameters, ...
+    problem.unfix_parameters(petab_problem.x_fixed_indices)
+    assert problem.dim == len(petab_problem.parameters)
+    with pytest.raises(ValueError, match="Cannot compute gradient"):
+        # cannot compute sensitivities for fixed parameters
+        problem.objective(
+            np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
+        )
+    fval = problem.objective(np.asarray(petab_problem.x_nominal))
+    assert np.isclose(fval, expected_fval_nominal)
+    # re-fixing parameters
+    problem.fix_parameters(
+        petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
+    )
+    assert problem.dim == petab_problem.n_estimated
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+
+    # Hessian (FIM-based) works and has the correct sign and shape?
+    hess = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(2,)
+    )
+    assert hess.shape == (
+        petab_problem.n_estimated,
+        petab_problem.n_estimated,
+    )
+    # the FIM is a positive semi-definite approximation of the Hessian of the
+    #  negative log-likelihood
+    eigvals = np.linalg.eigvalsh(hess)
+    assert np.min(eigvals) >= -1e-6 * np.max(np.abs(eigvals))
+    # combined value/gradient/Hessian call
+    fval, grad, hess = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1, 2)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+    assert hess.shape == (
+        petab_problem.n_estimated,
+        petab_problem.n_estimated,
+    )
+
+    # a parameter fixed to a NON-nominal value must be simulated at that value
+    #  (regression: previously the PEtab nominal value was used instead), and
+    #  the Hessian must shrink accordingly
+    x_nominal_free = np.asarray(petab_problem.x_nominal_free)
+    perturbed = x_nominal_free.copy()
+    perturbed[0] += 0.5
+    ref_fval = problem.objective(perturbed)
+    assert not np.isclose(ref_fval, expected_fval_nominal)
+    full_idx = problem.x_free_indices[0]
+    problem.fix_parameters(full_idx, perturbed[0])
+    fval_fixed, _, hess_fixed = problem.objective(
+        x_nominal_free[1:], sensi_orders=(0, 1, 2)
+    )
+    assert np.isclose(fval_fixed, ref_fval)
+    assert hess_fixed.shape == (
+        petab_problem.n_estimated - 1,
+        petab_problem.n_estimated - 1,
+    )
+    problem.unfix_parameters(full_idx)
+    assert problem.dim == petab_problem.n_estimated
+
+    # single optimization works?
+    optimizer = ScipyOptimizer()
+    result = optimizer.minimize(
+        id="1",
+        problem=problem,
+        x0=np.asarray(petab_problem.x_nominal_free) + 0.1,
+    )
+    print(result)
+    assert result.fval0 is not None, result.message
+    assert result.fval < result.fval0
+
+    # multi-processing optimization works?
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=4,
+        engine=pypesto.engine.MultiProcessEngine(),
+        progress_bar=False,
+    )
+    assert len(result.optimize_result.list) == 4
+    for local_result in result.optimize_result.list:
+        assert local_result.fval0 is not None, local_result.message
+        assert local_result.fval < local_result.fval0
+
+
+def test_petab_v2_residuals():
+    """Residual mode (MODE_RES) for a PEtab v2 problem: residuals and their
+    sensitivities, plus the least-squares-safe guard for parameter-dependent
+    sigma."""
+    from pypesto.C import MODE_RES
+
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path("Boehm_JProteomeRes2014")
+    )
+    problem = PetabImporter(petab_problem).create_problem()
+    objective = problem.objective
+    x = np.asarray(petab_problem.x_nominal_free)
+
+    # residual values
+    res = objective(x, sensi_orders=(0,), mode=MODE_RES, return_dict=True)[
+        "res"
+    ]
+    assert res.ndim == 1 and np.all(np.isfinite(res))
+
+    # Boehm has estimated (parameter-dependent) sigma, so residual
+    #  sensitivities are only valid once sigma residuals are added
+    with pytest.raises(RuntimeError, match="parameter-dependent sigma"):
+        objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
+
+    objective.amici_model.set_add_sigma_residuals(True)
+    ret = objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
+    res, sres = np.asarray(ret["res"]), np.asarray(ret["sres"])
+    assert sres.shape == (len(res), petab_problem.n_estimated)
+
+    # residual sensitivities match finite differences of the residuals
+    def res_of(x_):
+        return np.asarray(
+            objective(x_, sensi_orders=(0,), mode=MODE_RES, return_dict=True)[
+                "res"
+            ]
+        )
+
+    eps = 1e-6
+    fd = np.column_stack(
+        [
+            (res_of(x + d) - res_of(x - d)) / (2 * eps)
+            for d in np.eye(len(x)) * eps
+        ]
+    )
+    assert np.max(np.abs(fd - sres)) < 1e-3 * np.max(np.abs(sres)) + 1e-6
+
+
+@pytest.mark.filterwarnings(
+    "ignore:.*distribution.*is not supported in PEtab v2.*:UserWarning"
+)
+def test_petab_v2_schwen():
+    problem_id = "Schwen_PONE2014"
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    assert petab_problem.n_priors
+    importer = PetabImporter(petab_problem)
+    problem = importer.create_problem()
+    assert problem.x_names == petab_problem.x_ids
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+    fval = problem.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isfinite(fval)
+
+    # startpoint sampling must work with the problem's priors (which include
+    #  log-normal distributions)
+    startpoints = problem.startpoint_method(n_starts=5, problem=problem)
+    assert startpoints.shape == (5, problem.dim)
+    assert np.all(np.isfinite(startpoints))
+
+
+def test_petab_v2_prior_indexing():
+    """Priors must be assigned to the correct parameter index in ``x_full``.
+
+    Regression test: a prior defined on a non-leading estimated parameter has
+    to use that parameter's position in ``x_ids`` as its index, not the running
+    count of priors created so far.
+    """
+    from types import SimpleNamespace
+
+    from pypesto.petab.importer import PetabImporter
+
+    # p0: estimated, no prior; p1: estimated with prior; p2: not estimated;
+    #  p3: estimated with prior
+    parameters = [
+        SimpleNamespace(
+            id="p0",
+            estimate=True,
+            prior_distribution=None,
+            prior_parameters=[],
+        ),
+        SimpleNamespace(
+            id="p1",
+            estimate=True,
+            prior_distribution="normal",
+            prior_parameters=[0.0, 1.0],
+        ),
+        SimpleNamespace(
+            id="p2",
+            estimate=False,
+            prior_distribution="normal",
+            prior_parameters=[0.0, 1.0],
+        ),
+        SimpleNamespace(
+            id="p3",
+            estimate=True,
+            prior_distribution="uniform",
+            prior_parameters=[0.0, 10.0],
+        ),
+    ]
+    fake_problem = SimpleNamespace(
+        parameters=parameters, x_ids=["p0", "p1", "p2", "p3"]
+    )
+    importer = PetabImporter.__new__(PetabImporter)
+    importer.petab_problem = fake_problem
+
+    prior = importer._create_prior_v2()
+    # priors only for the estimated parameters p1 and p3, at their positions
+    #  in x_ids (1 and 3) -- not at the running prior count (0 and 1)
+    assert [entry["index"] for entry in prior.prior_list] == [1, 3]
+
+
+def test_petab_v2_startpoint_sampling():
+    """Startpoint sampling must handle v2 prior distributions, incl. log-*.
+
+    Regression: PEtab v2 uses distribution names (e.g. ``log-normal``) that the
+    v1 ``petab.sample_from_prior`` does not understand, so sampling has to go
+    through the parameter's own prior distribution object instead.
+    """
+    from types import SimpleNamespace
+
+    from petab.v2 import Parameter
+
+    from pypesto.petab.util import PetabStartpoints
+
+    parameters = [
+        Parameter(
+            id="p_lognormal",
+            lb=1e-3,
+            ub=1e3,
+            estimate=True,
+            nominal_value=1.0,
+            prior_distribution="log-normal",
+            prior_parameters=[0.0, 1.0],
+        ),
+        # no explicit prior -> uniform over the bounds
+        Parameter(
+            id="p_uniform",
+            lb=0.0,
+            ub=10.0,
+            estimate=True,
+            nominal_value=1.0,
+        ),
+    ]
+    petab_problem = SimpleNamespace(parameters=parameters)
+    startpoint_method = PetabStartpoints(petab_problem=petab_problem)
+    pypesto_problem = SimpleNamespace(
+        x_names=["p_lognormal", "p_uniform"], x_free_indices=[0, 1]
+    )
+    startpoint_method._setup(pypesto_problem)
+
+    startpoints = startpoint_method.sample(
+        n_starts=20,
+        lb=np.array([1e-3, 0.0]),
+        ub=np.array([1e3, 10.0]),
+    )
+    assert startpoints.shape == (20, 2)
+    assert np.all(np.isfinite(startpoints))
+    # sampled startpoints respect the parameter bounds
+    assert np.all(startpoints[:, 0] >= 1e-3)
+    assert np.all(startpoints[:, 0] <= 1e3)
+    assert np.all(startpoints[:, 1] >= 0.0)
+    assert np.all(startpoints[:, 1] <= 10.0)
 
 
 if __name__ == "__main__":
