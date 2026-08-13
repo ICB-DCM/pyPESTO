@@ -27,6 +27,37 @@ This policy ensures users have at least one full Meso release cycle to adapt the
 before breaking changes take effect.
 
 
+0.7 series
+..........
+
+
+0.7.0 (2026-08-13)
+------------------
+
+- General
+    - Support for PEtab v2 import via AMICI (#1730)
+- Installation / Packaging
+    - Update to adhere to NEP29 (#1703)
+- Optimization
+    - Clarify use of Hessian and FIM in Fides optimizer (#1706)
+    - Support pyswarm 1.0 return format (#1717)
+- Profiling
+    - Improve step-size defaults and step-size robustness (#1711)
+- Visualize
+    - Harmonize visualization API for axes and returns (#1709)
+    - Add 2D profile visualization functions (#1652)
+- Sampling
+    - Improve PyMC sampler with shared objective cache (#1724)
+    - Fix PyMC posterior extraction for newer ArviZ (#1714)
+- Bugfixes
+    - Fix scipy OptimizeWarning for L-BFGS-B/disp (#1734)
+    - Remove deprecated matplotlib.cm.get_cmap (#1728)
+    - Fix remaining AMICI 1.0 calls and extend tests (#1708)
+- Deprecations
+    - Rename profile step-size options to be explicit (#1711)
+    - Rename visualization alpha parameter to confidence_levels (#1709)
+
+
 0.6 series
 ..........
 
