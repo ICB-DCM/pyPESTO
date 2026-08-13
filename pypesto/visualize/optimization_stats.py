@@ -8,6 +8,7 @@ from pypesto.util import delete_nan_inf
 
 from ..C import COLOR
 from ..result import Result
+from ._style import resolve_style
 from .clust_color import assign_colors, assign_colors_for_list
 from .misc import (
     get_ax,
@@ -28,6 +29,7 @@ def optimization_run_properties_one_plot(
     legends: str | list[str] | None = None,
     plot_type: str = "line",
     ax: matplotlib.axes.Axes | None = None,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot stats for allproperties specified in properties_to_plot on one plot.
@@ -54,6 +56,16 @@ def optimization_run_properties_one_plot(
         Labels, one label per optimization property
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete`` — the categorical palette from which
+          per-property line colours are sampled. Only consulted when
+          ``colors`` is ``None``; an explicit ``colors`` short-circuits
+          palette selection.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
@@ -76,6 +88,8 @@ def optimization_run_properties_one_plot(
             colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
         )
     """
+    style = resolve_style(style_kwargs)
+
     if properties_to_plot is None:
         properties_to_plot = [
             "time",
@@ -87,7 +101,7 @@ def optimization_run_properties_one_plot(
         ]
 
     if colors is None:
-        colors = assign_colors_for_list(len(properties_to_plot))
+        colors = assign_colors_for_list(len(properties_to_plot), style=style)
     elif is_color_like(colors):
         colors = [colors]
 
@@ -136,6 +150,7 @@ def optimization_run_properties_per_multistart(
     legends: str | list[str] | None = None,
     plot_type: str = "line",
     axes: np.ndarray | None = None,
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
     One plot per optimization property in properties_to_plot.
@@ -160,6 +175,19 @@ def optimization_run_properties_per_multistart(
         Labels for line plots, one label per result object
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
+    style_kwargs:
+        Style overrides forwarded to
+        :func:`optimization_run_property_per_multistart`. Keys used by
+        this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start scatter when clustering is applied (best
+          cluster, secondary clusters, isolated starts respectively).
+          Only consulted when ``colors`` is ``None``; an explicit
+          ``colors`` short-circuits clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
@@ -223,6 +251,7 @@ def optimization_run_properties_per_multistart(
             colors=colors,
             legends=legends,
             plot_type=plot_type,
+            style_kwargs=style_kwargs,
         )
     return axes
 
@@ -236,6 +265,7 @@ def optimization_run_property_per_multistart(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
     plot_type: str = "line",
+    style_kwargs: dict | None = None,
 ) -> np.ndarray:
     """
     Plot stats for an optimization run property specified by opt_run_property.
@@ -268,12 +298,25 @@ def optimization_run_property_per_multistart(
         Labels for line plots, one label per result object
     plot_type:
         Specifies plot type. Possible values: 'line', 'hist', 'both'
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start scatter when clustering is applied
+          (single-result default; best cluster, secondary clusters,
+          isolated starts respectively). Only consulted when
+          ``colors`` is ``None``; an explicit ``colors`` short-circuits
+          clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     axes:
         2-D NumPy array containing one matplotlib Axes per panel.
     """
+    style = resolve_style(style_kwargs)
     supported_properties = {
         "time": "Wall-clock time (seconds)",
         "n_fval": "Number of function evaluations",
@@ -291,7 +334,9 @@ def optimization_run_property_per_multistart(
         )
 
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     ncols = 2 if plot_type == "both" else 1
     axes = get_axes_array(axes=axes, nrows=1, ncols=ncols, size=size)
@@ -320,6 +365,7 @@ def optimization_run_property_per_multistart(
                 start_indices,
                 colors[j],
                 legends[j],
+                style=style,
             )
 
             stats_lowlevel(
@@ -331,6 +377,7 @@ def optimization_run_property_per_multistart(
                 colors[j],
                 legends[j],
                 plot_type="hist",
+                style=style,
             )
         else:
             stats_lowlevel(
@@ -342,6 +389,7 @@ def optimization_run_property_per_multistart(
                 colors[j],
                 legends[j],
                 plot_type,
+                style=style,
             )
 
     if sum(legend is not None for legend in legends) > 0:
@@ -363,6 +411,7 @@ def stats_lowlevel(
     color: COLOR | list[COLOR] | np.ndarray | None = "C0",
     legend: str | None = None,
     plot_type: str = "line",
+    style: dict | None = None,
 ):
     """
     Plot values of the optimization run property across different multistarts.
@@ -389,6 +438,10 @@ def stats_lowlevel(
         Label describing the result
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
@@ -407,7 +460,9 @@ def stats_lowlevel(
     n_starts = len(values)
 
     # assign colors
-    colors = assign_colors(vals=fvals, colors=color, balance_alpha=False)
+    colors = assign_colors(
+        vals=fvals, colors=color, balance_alpha=False, style=style
+    )
 
     sorted_indices = sorted(range(n_starts), key=lambda j: fvals[j])
     values = values[sorted_indices]
