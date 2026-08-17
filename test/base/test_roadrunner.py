@@ -30,9 +30,7 @@ def test_petab_case(case, model_type, version):
     try:
         _execute_case_rr(case, model_type, version)
     except Exception as e:
-        if isinstance(
-            e, NotImplementedError
-        ) or "Timepoint-specific parameter overrides" in str(e):
+        if isinstance(e, NotImplementedError):
             logger.info(
                 f"Case {case} expectedly failed. Required functionality is "
                 f"not implemented: {e}"
@@ -47,6 +45,10 @@ def _execute_case_rr(case, model_type, version):
     case = petabtests.test_id_str(case)
     if case == "0018" and model_type == "sbml" and version == "v1.0.0":
         pytest.skip("https://github.com/ICB-DCM/pyPESTO/issues/1597")
+    if case == "0006" and model_type == "sbml" and version == "v1.0.0":
+        pytest.skip(
+            "Case 0006: Timepoint-specific observable parameters not yet supported for roadrunner"
+        )
     logger.info(f"Case {case}")
 
     # case folder

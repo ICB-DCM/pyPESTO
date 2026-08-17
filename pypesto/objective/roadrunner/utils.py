@@ -20,6 +20,7 @@ try:
         MEASUREMENT,
         NOISE_DISTRIBUTION,
         NOISE_FORMULA,
+        NOISE_PARAMETERS,
         NORMAL,
         OBSERVABLE_ID,
         OBSERVABLE_TRANSFORMATION,
@@ -99,6 +100,42 @@ class ExpData:
         """
         return self.observable_ids
 
+    def _validate_array_shape(
+        self,
+        array: np.ndarray,
+        name: str,
+        n_observables: int,
+        n_timepoints: int,
+    ):
+        """Validate that array has correct shape (1D or 2D).
+
+        Parameters
+        ----------
+        array:
+            Array to validate
+        name:
+            Name of the array for error messages
+        n_observables:
+            Expected number of observables (for 1D: array length, for 2D: second dimension)
+        n_timepoints:
+            Expected number of timepoints (for 2D: first dimension)
+        """
+        if array.ndim == 1:
+            if len(array) != n_observables:
+                raise ValueError(
+                    f"{name} length ({len(array)}) doesn't match "
+                    f"number of observable ids ({n_observables})."
+                )
+        elif array.ndim == 2:
+            expected_shape = (n_timepoints, n_observables)
+            if array.shape != expected_shape:
+                raise ValueError(
+                    f"{name} shape {array.shape} doesn't match "
+                    f"expected (n_timepoints, n_observables) = {expected_shape}."
+                )
+        else:
+            raise ValueError(f"{name} must be 1D or 2D, got {array.ndim}D")
+
     def sanity_check(self):
         """Perform a sanity check of the data."""
         if self.measurements.shape[1] != len(self.observable_ids) + 1:
@@ -107,17 +144,20 @@ class ExpData:
                 "observable ids + time."
             )
         # check that the noise distributions and noise formulae have the
-        # same length as the number of observables
-        if len(self.noise_distributions) != len(self.observable_ids):
-            raise ValueError(
-                "Number of noise distributions does not match number of "
-                "observable ids."
-            )
-        if len(self.noise_formulae) != len(self.observable_ids):
-            raise ValueError(
-                "Number of noise formulae does not match number of "
-                "observable ids."
-            )
+        # correct shape: either (n_observables,) or (n_timepoints, n_observables)
+        n_timepoints = self.measurements.shape[0]
+        n_observables = len(self.observable_ids)
+
+        # Validate both arrays using helper method
+        self._validate_array_shape(
+            self.noise_distributions,
+            "noise_distributions",
+            n_observables,
+            n_timepoints,
+        )
+        self._validate_array_shape(
+            self.noise_formulae, "noise_formulae", n_observables, n_timepoints
+        )
 
     @staticmethod
     def from_petab_problem(petab_problem: petab.Problem) -> list[ExpData]:
@@ -165,6 +205,14 @@ class ExpData:
         # construct noise distributions and noise formulae
         noise_distributions, noise_formulae = construct_noise_matrices(
             petab_problem, observale_ids
+        )
+        # inject timepoint-specific noise parameter overrides if present
+        noise_distributions, noise_formulae = inject_timepoint_specific_noise(
+            noise_distributions,
+            noise_formulae,
+            measurement_df,
+            observale_ids,
+            measurements,
         )
         return ExpData(
             condition_id=condition_id,
@@ -399,6 +447,106 @@ def construct_noise_matrices(
 
     noise_distributions, noise_formulae = zip(*noise, strict=True)
     return np.array(noise_distributions), np.array(noise_formulae)
+
+
+def inject_timepoint_specific_noise(
+    noise_distributions: np.ndarray,
+    noise_formulae: np.ndarray,
+    measurement_df: pd.DataFrame,
+    observable_ids: Sequence[str],
+    measurements: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Inject timepoint-specific noise parameter overrides from measurement table.
+
+    Takes the default noise distributions and formulae (one per observable) and
+    expands them to timepoint-specific arrays if the measurement table contains
+    timepoint-specific noise parameter overrides.
+
+    Parameters
+    ----------
+    noise_distributions:
+        Default noise distributions from observable table. Shape: (n_observables,)
+    noise_formulae:
+        Default noise formulae from observable table. Shape: (n_observables,)
+    measurement_df:
+        PEtab measurement DataFrame filtered for a single condition.
+    observable_ids:
+        Observable IDs in the order they appear in the measurement matrix.
+    measurements:
+        Measurement matrix with shape (n_timepoints, n_observables + 1).
+        First column is time.
+
+    Returns
+    -------
+    noise_distributions:
+        Noise distributions array. Shape: (n_timepoints, n_observables)
+    noise_formulae:
+        Noise formulae array with timepoint-specific overrides applied.
+        Shape: (n_timepoints, n_observables)
+    """
+    # Get timepoints from measurements
+    timepoints = measurements[:, 0]
+    n_timepoints = len(timepoints)
+
+    # Initialize arrays with default values repeated for each timepoint
+    noise_distributions_expanded = np.tile(
+        noise_distributions, (n_timepoints, 1)
+    )
+    noise_formulae_expanded = np.tile(noise_formulae, (n_timepoints, 1))
+
+    # If no noise parameters column, return the 1D defaults
+    if NOISE_PARAMETERS not in measurement_df.columns:
+        return noise_distributions, noise_formulae
+
+    # Check if there are actually timepoint-specific numeric overrides
+    # Build a lookup dictionary: (time, observable_id) -> noise_parameter_value
+    noise_override_map = {}
+    has_timepoint_specific = False
+
+    for _, row in measurement_df.iterrows():
+        time = row[TIME]
+        obs_id = row[OBSERVABLE_ID]
+        noise_param = row[NOISE_PARAMETERS]
+        # Only process non-NaN values
+        if pd.notna(noise_param):
+            noise_param_str = str(noise_param)
+            # Check if it's a simple numeric value (not a formula like "0.5;2")
+            try:
+                float(noise_param_str)
+                # It's numeric - add to map
+                noise_override_map[(time, obs_id)] = noise_param_str
+            except ValueError:
+                # Not a simple number (could be "0.5;2", "noise", etc.)
+                # Don't treat as timepoint-specific override
+                pass
+
+    # Check if noise values actually vary by timepoint for any observable
+    if noise_override_map:
+        for obs_id in observable_ids:
+            obs_noise_values = [
+                v for (t, o), v in noise_override_map.items() if o == obs_id
+            ]
+            if len(set(obs_noise_values)) > 1:
+                # This observable has different noise values at different timepoints
+                has_timepoint_specific = True
+                break
+
+    # If no timepoint-specific overrides, return 1D defaults
+    if not has_timepoint_specific:
+        return noise_distributions, noise_formulae
+
+    # Apply timepoint-specific overrides
+    for i_time, time in enumerate(timepoints):
+        for i_obs, obs_id in enumerate(observable_ids):
+            key = (time, obs_id)
+            if key in noise_override_map:
+                # Override the noise formula with the value from measurement table
+                noise_formulae_expanded[i_time, i_obs] = noise_override_map[
+                    key
+                ]
+
+    return noise_distributions_expanded, noise_formulae_expanded
 
 
 def simulation_to_measurement_df(
