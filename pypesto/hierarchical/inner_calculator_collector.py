@@ -9,9 +9,13 @@ from __future__ import annotations
 import copy
 import warnings
 from collections.abc import Sequence
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import amici.sim.sundials.petab
+    from petab import v2
 
 from ..C import (
     AMICI_SIGMAY,
@@ -538,6 +542,442 @@ class InnerCalculatorCollector(AmiciCalculator):
         ret[SPLINE_KNOTS] = spline_knots
 
         return filter_return_dict(ret)
+
+
+class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
+    """Class to collect inner calculators for PEtab v2 problems.
+
+    PEtab v2 counterpart of :class:`InnerCalculatorCollector`, for use with
+    :class:`pypesto.objective.amici.amici.AmiciPetabV2Objective`. Instead of
+    filling PEtab v1 style parameter mappings into the ``ExpData`` objects,
+    simulations are delegated to the
+    :class:`amici.sim.sundials.petab.PetabSimulator`, which handles the
+    mapping of PEtab problem parameters to model parameters.
+
+    Currently, only relative (and quantitative) data are supported. Ordinal,
+    censored and semiquantitative data are not yet supported for PEtab v2.
+
+    Parameters
+    ----------
+    data_types:
+        List of non-quantitative data types in the problem.
+    petab_simulator:
+        The PEtab simulator that is used to simulate the (preprocessed) PEtab
+        problem. Shared with the :class:`AmiciPetabV2Objective` that this
+        calculator belongs to.
+    inner_options:
+        Options for the inner problems and solvers.
+    """
+
+    def __init__(
+        self,
+        data_types: set[str],
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator,
+        inner_options: dict,
+    ):
+        from ..objective.amici.amici_calculator import AmiciCalculatorPetabV2
+
+        self.petab_simulator = petab_simulator
+        # performs plain (non-hierarchical) evaluations of the PEtab v2
+        #  problem; used whenever AMICI itself computes the objective value
+        #  and derivatives, with the inner parameters fixed at their optima
+        self._petab_v2_calculator = AmiciCalculatorPetabV2(petab_simulator)
+
+        edatas = petab_simulator.exp_man.create_edatas()
+        super().__init__(
+            data_types=data_types,
+            petab_problem=petab_simulator.exp_man.petab_problem,
+            model=petab_simulator.model,
+            edatas=edatas,
+            inner_options=inner_options,
+        )
+        self._parameter_mapping = self._create_parameter_mapping(edatas)
+
+    @property
+    def free_parameter_ids(self) -> set[str] | None:
+        """IDs of the parameters that are free in the pyPESTO problem.
+
+        See :class:`AmiciCalculatorPetabV2`.
+        """
+        return self._petab_v2_calculator.free_parameter_ids
+
+    @free_parameter_ids.setter
+    def free_parameter_ids(self, value: set[str] | None) -> None:
+        self._petab_v2_calculator.free_parameter_ids = value
+
+    def construct_inner_calculators(
+        self,
+        petab_problem: v2.Problem,
+        model: AmiciModel,
+        edatas: list[asd.ExpData],
+        inner_options: dict,
+    ):
+        """Construct inner calculators for each data type."""
+        self.necessary_par_dummy_values = {}
+
+        if unsupported_data_types := self.data_types - {RELATIVE}:
+            raise NotImplementedError(
+                f"Data types {unsupported_data_types} are not yet supported "
+                "for PEtab v2 problems."
+            )
+
+        if RELATIVE in self.data_types:
+            relative_inner_problem = RelativeInnerProblem.from_petab_v2_amici(
+                petab_problem, model, edatas
+            )
+            self.necessary_par_dummy_values.update(
+                relative_inner_problem.get_dummy_values(scaled=True)
+            )
+            relative_inner_solver = RelativeAmiciCalculator(
+                inner_problem=relative_inner_problem
+            )
+            self.inner_calculators.append(relative_inner_solver)
+            self.relative_observable_ids = (
+                relative_inner_problem.get_relative_observable_ids()
+            )
+
+    def _create_parameter_mapping(
+        self, edatas: list[asd.ExpData]
+    ) -> ParameterMapping:
+        """Create a PEtab v1 style parameter mapping for gradient computation.
+
+        The inner calculators map simulation gradients -- one entry per
+        parameter for which sensitivities were computed (``ExpData.plist``) --
+        to the optimization parameters via
+        :func:`pypesto.objective.amici.amici_util.add_sim_grad_to_opt_grad`,
+        which requires a PEtab v1 style per-condition parameter mapping. For
+        PEtab v2, model parameters carry the IDs of the respective PEtab
+        problem parameters, except for observable/noise placeholders, which
+        are mapped per experiment.
+
+        The mapping constructed here assigns to each model parameter the ID of
+        the PEtab problem parameter it takes its value from, if sensitivities
+        are computed for it (i.e., it is in ``ExpData.plist``), and a dummy
+        numeric value otherwise (numeric entries indicate to
+        ``add_sim_grad_to_opt_grad`` that there are no sensitivities).
+        """
+        from amici.sim._parameter_mapping import (
+            ParameterMapping,
+            ParameterMappingForCondition,
+        )
+
+        petab_problem = self.petab_simulator.exp_man.petab_problem
+        model_par_ids = self.petab_simulator.model.get_free_parameter_ids()
+
+        parameter_mapping = ParameterMapping()
+        for edata, experiment in zip(
+            edatas, petab_problem.experiments, strict=True
+        ):
+            if edata.id != experiment.id:
+                raise AssertionError(
+                    "The order of the ExpData objects does not match the "
+                    "order of the PEtab experiments."
+                )
+            placeholder_mapping = _get_experiment_placeholder_mapping(
+                petab_problem, experiment
+            )
+            plist = set(edata.plist)
+            map_sim_var = {
+                model_par_id: (
+                    placeholder_mapping.get(model_par_id, model_par_id)
+                    if model_par_ix in plist
+                    else 0.0
+                )
+                for model_par_ix, model_par_id in enumerate(model_par_ids)
+            }
+            parameter_mapping.append(
+                ParameterMappingForCondition(map_sim_var=map_sim_var)
+            )
+        return parameter_mapping
+
+    def __call__(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ):
+        """Perform the actual AMICI call, with hierarchical optimization.
+
+        Called within the :func:`AmiciObjective.__call__` method. Calls all
+        the inner calculators and combines the results.
+
+        See :meth:`InnerCalculatorCollector.__call__` for the parameters.
+        ``edatas`` and ``parameter_mapping`` are ignored: the PEtab simulator
+        creates its own ``ExpData`` objects, and the parameter mapping was
+        constructed upon initialization.
+        """
+        # get dimension of outer problem
+        dim = len(x_ids)
+
+        # set order in solver
+        sensi_order = 0
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
+
+        # a parameter that is free in the pyPESTO problem, but not estimated
+        #  in the PEtab problem, has no sensitivities
+        #  (see :class:`AmiciCalculatorPetabV2`)
+        if self.free_parameter_ids is not None and sensi_order > 0:
+            if missing := self.free_parameter_ids - set(
+                self.petab_simulator.exp_man.petab_problem.x_free_ids
+            ):
+                raise ValueError(
+                    f"Cannot compute gradient, missing entry for {missing}. "
+                    "Those parameters are not estimated in the PEtab problem "
+                    "-- fix them in the pyPESTO problem, or request "
+                    "`sensi_orders=(0,)` only."
+                )
+
+        x_dct = copy.deepcopy(x_dct)
+        x_dct.update(self.necessary_par_dummy_values)
+
+        # If we are using adjoint sensitivity analysis, need second-order
+        #  sensitivities, or are in residual mode, the objective function and
+        #  its derivatives are computed by AMICI directly, with the inner
+        #  parameters fixed at their optimal values.
+        if (
+            amici_solver.get_sensitivity_method()
+            == asd.SensitivityMethod.adjoint
+            or 2 in sensi_orders
+            or mode == MODE_RES
+        ):
+            return self._call_amici_twice(
+                x_dct=x_dct,
+                sensi_orders=sensi_orders,
+                mode=mode,
+                amici_model=amici_model,
+                amici_solver=amici_solver,
+                edatas=edatas,
+                n_threads=n_threads,
+                x_ids=x_ids,
+                parameter_mapping=parameter_mapping,
+                fim_for_hess=fim_for_hess,
+            )
+
+        # initialize return values
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        interpretable_inner_pars = []
+
+        amici_solver.set_sensitivity_order(sensi_order)
+
+        # run amici simulation; the mapping of the (dummy-augmented) PEtab
+        #  problem parameters to model parameters is handled by the PEtab
+        #  simulator
+        result = self.petab_simulator.simulate(x_dct)
+        rdatas = result.rdatas
+        # the simulator creates its own ExpData objects
+        edatas = result.edatas
+
+        # if any amici simulation failed, it's unlikely we can compute
+        # meaningful inner parameters, so we better just fail early.
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+            ret = {
+                FVAL: np.inf,
+                GRAD: snllh,
+                HESS: s2nllh,
+                RES: res,
+                SRES: sres,
+                RDATAS: rdatas,
+                SPLINE_KNOTS: None,
+                INNER_PARAMETERS: None,
+            }
+            # if the gradient was requested,
+            # we need to provide some value for it
+            if 1 in sensi_orders:
+                ret[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
+            return filter_return_dict(ret)
+
+        # call inner calculators and collect results
+        for calculator in self.inner_calculators:
+            inner_result = calculator(
+                x_dct=x_dct,
+                sensi_orders=sensi_orders,
+                mode=mode,
+                amici_model=amici_model,
+                amici_solver=amici_solver,
+                edatas=edatas,
+                n_threads=n_threads,
+                x_ids=x_ids,
+                parameter_mapping=self._parameter_mapping,
+                fim_for_hess=fim_for_hess,
+                rdatas=rdatas,
+            )
+            nllh += inner_result[FVAL]
+            if 1 in sensi_orders:
+                snllh += inner_result[GRAD]
+
+            inner_pars = inner_result.get(INNER_PARAMETERS)
+            if inner_pars is not None:
+                interpretable_inner_pars.extend(inner_pars)
+
+        # add the quantitative data contribution
+        if self.quantitative_data_mask is not None:
+            quantitative_result = calculate_quantitative_result(
+                rdatas=rdatas,
+                sensi_orders=sensi_orders,
+                edatas=edatas,
+                mode=mode,
+                quantitative_data_mask=self.quantitative_data_mask,
+                dim=dim,
+                parameter_mapping=self._parameter_mapping,
+                par_opt_ids=x_ids,
+                par_sim_ids=amici_model.get_free_parameter_ids(),
+            )
+            nllh += quantitative_result[FVAL]
+            if 1 in sensi_orders:
+                snllh += quantitative_result[GRAD]
+
+        ret = {
+            FVAL: nllh,
+            GRAD: snllh,
+            HESS: s2nllh,
+            RES: res,
+            SRES: sres,
+            RDATAS: rdatas,
+        }
+
+        ret[INNER_PARAMETERS] = (
+            interpretable_inner_pars
+            if len(interpretable_inner_pars) > 0
+            else None
+        )
+        ret[SPLINE_KNOTS] = None
+
+        return filter_return_dict(ret)
+
+    def _call_amici_twice(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ):
+        """Calculate by calling AMICI twice.
+
+        This is necessary if the adjoint method is used, or if the Hessian or
+        residuals are requested. In these cases, AMICI is called first to
+        obtain simulations for the calculation of the optimal inner
+        parameters, and then again to obtain the requested quantities, with
+        the inner parameters fixed at their optimal values.
+
+        ``x_dct`` is expected to already contain dummy values for the inner
+        parameters.
+        """
+        dim = len(x_ids)
+        relative_calculator = self.inner_calculators[0]
+        inner_problem = relative_calculator.inner_problem
+
+        # simulate without sensitivities to compute the optimal inner
+        #  parameters
+        inner_result = self._petab_v2_calculator(
+            x_dct=x_dct,
+            sensi_orders=(0,),
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
+        rdatas = inner_result[RDATAS]
+
+        # if any amici simulation failed, it's unlikely we can compute
+        # meaningful inner parameters, so we better just fail early.
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+            # if the gradient was requested, we need to provide some value
+            # for it
+            if 1 in sensi_orders:
+                inner_result[GRAD] = np.full(shape=dim, fill_value=np.nan)
+            if 2 in sensi_orders:
+                inner_result[HESS] = np.full(
+                    shape=(dim, dim), fill_value=np.nan
+                )
+            return filter_return_dict(inner_result)
+
+        inner_parameters = relative_calculator.inner_solver.solve(
+            problem=inner_problem,
+            sim=[rdata[AMICI_Y] for rdata in rdatas],
+            sigma=[rdata[AMICI_SIGMAY] for rdata in rdatas],
+            scaled=True,
+        )
+
+        # compute the requested quantities with the inner parameters fixed
+        #  at their optimal values
+        x_dct = copy.deepcopy(x_dct)
+        x_dct.update(inner_parameters)
+
+        ret = self._petab_v2_calculator(
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
+        ret[INNER_PARAMETERS] = np.array(
+            [inner_parameters[x_id] for x_id in inner_problem.get_x_ids()]
+        )
+        return filter_return_dict(ret)
+
+
+def _get_experiment_placeholder_mapping(
+    petab_problem: v2.Problem,
+    experiment: v2.Experiment,
+) -> dict[str, str]:
+    """Get the placeholder mapping for the given experiment.
+
+    Maps model parameter IDs (= PEtab observable/noise placeholder IDs) to
+    the IDs of the PEtab problem parameters that override them in the given
+    experiment. Numeric overrides are omitted.
+
+    Because AMICI does not support timepoint-specific overrides, this mapping
+    is unique (see
+    :meth:`amici.sim.sundials.petab.ExperimentManager.apply_parameters`).
+    """
+    observables = {
+        observable.id: observable for observable in petab_problem.observables
+    }
+    mapping = {}
+    for measurement in petab_problem.get_measurements_for_experiment(
+        experiment
+    ):
+        observable = observables[measurement.observable_id]
+        for placeholder, override in zip(
+            observable.observable_placeholders,
+            measurement.observable_parameters,
+            strict=True,
+        ):
+            if override.is_Symbol:
+                mapping[str(placeholder)] = str(override)
+        for placeholder, override in zip(
+            observable.noise_placeholders,
+            measurement.noise_parameters,
+            strict=True,
+        ):
+            if override.is_Symbol:
+                mapping[str(placeholder)] = str(override)
+    return mapping
 
 
 def calculate_quantitative_result(

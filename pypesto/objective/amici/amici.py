@@ -745,8 +745,9 @@ class AmiciPetabV2Objective(AmiciObjective):
         * Steady-state guessing (``guess_steadystate``) is not available: the
           PEtab simulator creates its own :class:`amici.ExpData` objects for
           every simulation, so guesses cannot be passed on to it.
-        * Hierarchical optimization and non-quantitative data types (ordinal,
-          censored, semiquantitative) are not supported.
+        * Of the non-quantitative data types, only relative data
+          (hierarchically optimized scaling/offset/sigma parameters) are
+          supported; ordinal, censored and semiquantitative data are not.
         * Predictors (:class:`pypesto.predict.AmiciPredictor`) and the
           conversion of predictions to PEtab dataframes are not supported.
         * Custom timepoints (:meth:`AmiciObjective.set_custom_timepoints`)
@@ -757,6 +758,8 @@ class AmiciPetabV2Objective(AmiciObjective):
         self,
         petab_importer: amici.importers.petab.PetabImporter,
         force_compile: bool = False,
+        non_quantitative_data_types: set[str] | None = None,
+        inner_options: dict | None = None,
         **kwargs,
     ) -> None:
         """Initialize the objective.
@@ -768,6 +771,15 @@ class AmiciPetabV2Objective(AmiciObjective):
         force_compile:
             If ``True``, force (re-)import/compilation of the AMICI model even
             if a compiled model already exists.
+        non_quantitative_data_types:
+            The non-quantitative data types in the problem, to be handled by
+            hierarchical optimization
+            (see :class:`pypesto.hierarchical.InnerCalculatorCollectorPetabV2`).
+            If given, the parameters estimated in the inner problems are
+            removed from the objective's ``x_ids``.
+        inner_options:
+            Options for the inner problems and solvers of hierarchical
+            optimization.
         kwargs:
             Additional arguments passed on to :class:`AmiciObjective`.
         """
@@ -782,11 +794,36 @@ class AmiciPetabV2Objective(AmiciObjective):
         #  so steady-state guesses cannot be passed on to it
         kwargs.setdefault("guess_steadystate", False)
 
+        if non_quantitative_data_types:
+            from ...hierarchical.inner_calculator_collector import (
+                InnerCalculatorCollectorPetabV2,
+            )
+
+            calculator = InnerCalculatorCollectorPetabV2(
+                data_types=non_quantitative_data_types,
+                petab_simulator=self._petab_simulator,
+                inner_options=inner_options or {},
+            )
+            # the inner calculators need observables and sigmas, and their
+            #  sensitivities, from the simulations
+            kwargs.setdefault("amici_reporting", asd.RDataReporting.full)
+            # parameters estimated in the inner subproblems are removed from
+            #  the objective parameters
+            x_ids = kwargs.get("x_ids")
+            if x_ids is None:
+                x_ids = self.petab_problem.x_ids
+            inner_parameter_ids = set(calculator.get_inner_par_ids())
+            kwargs["x_ids"] = [
+                x_id for x_id in x_ids if x_id not in inner_parameter_ids
+            ]
+        else:
+            calculator = AmiciCalculatorPetabV2(self._petab_simulator)
+
         super().__init__(
             amici_model=self._petab_simulator.model,
             amici_solver=self._petab_simulator.solver,
             edatas=self._petab_simulator.exp_man.create_edatas(),
-            calculator=AmiciCalculatorPetabV2(self._petab_simulator),
+            calculator=calculator,
             **kwargs,
         )
         # `AmiciObjective` works on clones of the model and the solver, but the

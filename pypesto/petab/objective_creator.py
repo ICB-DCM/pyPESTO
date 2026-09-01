@@ -628,15 +628,9 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         """
         Initialize the creator.
 
-        See :class:`AmiciObjectiveCreator`. Hierarchical optimization and
-        non-quantitative data types are not supported for PEtab v2 yet.
+        See :class:`AmiciObjectiveCreator`. Of the non-quantitative data
+        types, only relative data are supported for PEtab v2 so far.
         """
-        if hierarchical or non_quantitative_data_types or inner_options:
-            raise NotImplementedError(
-                "Hierarchical optimization and non-quantitative data types "
-                "are not supported for PEtab v2 problems yet."
-            )
-
         super().__init__(
             petab_problem=petab_problem,
             hierarchical=hierarchical,
@@ -752,7 +746,10 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             Passed to AMICI's model compilation. If True, the compilation
             progress is printed.
         **kwargs:
-            Additional arguments passed on to the objective.
+            Additional arguments passed on to the objective. In case of
+            relative measurements, ``inner_options`` can optionally
+            be passed here. If none are given, ``inner_options`` given to the
+            importer constructor (or inner defaults) will be chosen.
 
         Returns
         -------
@@ -769,6 +766,20 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
                 stacklevel=2,
             )
         petab_importer = self._create_amici_importer()
+
+        if (
+            self._non_quantitative_data_types is not None
+            and self._hierarchical
+        ):
+            inner_options = kwargs.pop("inner_options", None)
+            kwargs["inner_options"] = (
+                inner_options
+                if inner_options is not None
+                else self.inner_options
+            )
+            kwargs["non_quantitative_data_types"] = (
+                self._non_quantitative_data_types
+            )
 
         return AmiciPetabV2Objective(
             petab_importer=petab_importer,
