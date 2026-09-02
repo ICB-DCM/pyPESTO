@@ -552,12 +552,12 @@ class ObjectiveBase(ABC):
             # forward (plus) point
             x_p = copy.deepcopy(x)
             x_p[ix] += eps
-            fval_p = self(x_p, (0,), mode)
+            fval_p = self(x_p, (0 + order,), mode)
 
             # backward (minus) point
             x_m = copy.deepcopy(x)
             x_m[ix] -= eps
-            fval_m = self(x_m, (0,), mode)
+            fval_m = self(x_m, (0 + order,), mode)
 
             # finite differences
             fd_f_ix = (fval_p - fval) / eps
@@ -690,7 +690,9 @@ class ObjectiveBase(ABC):
         dfs = []
 
         if mode is None:
-            modes = [MODE_FUN, MODE_RES]
+            # second order derivatives (order == 1) are only defined for
+            # MODE_FUN (there are no second order residual sensitivities)
+            modes = [MODE_FUN] if order == 1 else [MODE_FUN, MODE_RES]
         else:
             modes = [mode]
 
@@ -705,6 +707,7 @@ class ObjectiveBase(ABC):
                         *args,
                         **kwargs,
                         mode=mode,
+                        order=order,
                         multi_eps=multi_eps,
                     )
                 )
