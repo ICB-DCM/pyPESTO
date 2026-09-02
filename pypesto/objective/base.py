@@ -668,9 +668,11 @@ class ObjectiveBase(ABC):
 
         Parameters
         ----------
-        rtol: relative error tolerance
-        x: The parameters for which to evaluate the gradient
-        x_free: Indices for which to compute gradients
+        x: The parameters for which to evaluate the gradient. Has to be given
+            in this objective's parameter space, i.e. without the parameters
+            that are fixed in the :class:`pypesto.Problem`.
+        x_free: Indices of ``x`` for which to compute gradients.
+            Default: all.
         rtol: relative error tolerance
         atol: absolute error tolerance
         mode: function values or residuals
@@ -683,10 +685,10 @@ class ObjectiveBase(ABC):
             Indicates whether gradients match (True) FDs or not (False)
         """
         par = np.asarray(x)
-        if x_free is None:
-            free_indices = par
-        else:
-            free_indices = par[x_free]
+        if x_free is not None:
+            # the objective is evaluated at the full vector `x`; finite
+            #  differences are only computed for the `x_free` indices
+            kwargs["x_indices"] = x_free
         dfs = []
 
         if mode is None:
@@ -701,7 +703,7 @@ class ObjectiveBase(ABC):
             try:
                 dfs.append(
                     self.check_grad_multi_eps(
-                        free_indices,
+                        par,
                         *args,
                         **kwargs,
                         mode=mode,

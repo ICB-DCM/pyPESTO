@@ -667,9 +667,23 @@ class AmiciObjective(ObjectiveBase):
             Indicates whether gradients match (True) FDs or not (False)
         """
         if x is None and "petab_problem" in dir(self.amici_object_builder):
-            x = self.amici_object_builder.petab_problem.x_nominal_scaled
-            kwargs["x_free"] = (
-                self.amici_object_builder.petab_problem.x_free_indices
+            petab_problem = self.amici_object_builder.petab_problem
+            # parameters fixed in the `Problem` are not part of this
+            #  objective's parameter vector, so drop them from the nominal
+            #  values and map the free-parameter indices accordingly
+            x_full = np.asarray(petab_problem.x_nominal_scaled)
+            x = self.pre_post_processor.reduce(x_full)
+            input_to_full = self.pre_post_processor.reduce(
+                np.arange(len(x_full))
+            )
+            free = set(petab_problem.x_free_indices)
+            kwargs.setdefault(
+                "x_free",
+                [
+                    ix
+                    for ix, ix_full in enumerate(input_to_full)
+                    if ix_full in free
+                ],
             )
         return super().check_gradients_match_finite_differences(
             *args, x=x, **kwargs
@@ -846,14 +860,22 @@ class AmiciPetabV2Objective(AmiciObjective):
         if x is None:
             # PEtab v2 does not have parameter scales
             x_nominal = self.petab_problem.get_x_nominal_dict()
-            x = np.array([x_nominal[x_id] for x_id in self.x_ids])
+            x_full = np.array([x_nominal[x_id] for x_id in self.x_ids])
             x_free_ids = set(self.petab_problem.x_free_ids)
+            free = {
+                ix for ix, x_id in enumerate(self.x_ids) if x_id in x_free_ids
+            }
+            # see `AmiciObjective.check_gradients_match_finite_differences`
+            x = self.pre_post_processor.reduce(x_full)
+            input_to_full = self.pre_post_processor.reduce(
+                np.arange(len(x_full))
+            )
             kwargs.setdefault(
                 "x_free",
                 [
                     ix
-                    for ix, x_id in enumerate(self.x_ids)
-                    if x_id in x_free_ids
+                    for ix, ix_full in enumerate(input_to_full)
+                    if ix_full in free
                 ],
             )
         return ObjectiveBase.check_gradients_match_finite_differences(
