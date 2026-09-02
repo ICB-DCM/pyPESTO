@@ -106,10 +106,16 @@ mpi = [
 ]
 
 pymc = [
-  # TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0.
+  # ArviZ 1.x is a rewrite that, among others, dropped `arviz.concat`. Only
+  #  pymc>=6 supports it; pymc<6 declares no upper bound on ArviZ, so without
+  #  the bounds below a resolver pairs pymc 5.x with ArviZ 1.x, which fails on
+  #  `import pymc`.
+  # TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0 and
+  #  pymc >=6.
   "arviz>=0.12.1,<1.0; python_version < '3.12'",
   "arviz>=1.1.0; python_version >= '3.12'",
-  "pymc>=4.2.1",
+  "pymc>=4.2.1,<6; python_version < '3.12'",
+  "pymc>=6; python_version >= '3.12'",
 ]
 
 jax = [
