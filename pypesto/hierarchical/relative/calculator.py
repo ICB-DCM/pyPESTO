@@ -33,7 +33,6 @@ from ...objective.amici.amici_calculator import (
 )
 from ...objective.amici.amici_util import (
     filter_return_dict,
-    index_slices_from_mapping,
     init_return_values,
 )
 from .problem import AmiciInnerProblem
@@ -66,10 +65,8 @@ class RelativeAmiciCalculator(AmiciCalculator):
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
 
-        #: Optional pre-computed ``(par_sim_slice, par_opt_slice)`` index pairs
-        #: per condition, used instead of ``parameter_mapping`` to map
-        #: simulation gradients onto the optimization parameters. Set by the
-        #: PEtab v2 collector; ``None`` uses the PEtab v1 parameter mapping.
+        #: Per-condition ``(par_sim_slice, par_opt_slice)`` index pairs, set by
+        #: the PEtab v2 collector; ``None`` derives them from the mapping.
         self.index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None
 
     def initialize(self):
@@ -360,19 +357,11 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 sigma=[rdata[AMICI_SIGMAY] for rdata in rdatas],
                 ssigma=[rdata[AMICI_SSIGMAY] for rdata in rdatas],
                 inner_parameters=inner_parameters,
-                index_slices=(
-                    self.index_slices
-                    if self.index_slices is not None
-                    # PEtab v1: derive from the parameter mapping, which must
-                    #  line up with the simulated conditions one-to-one
-                    else index_slices_from_mapping(
-                        parameter_mapping,
-                        x_ids,
-                        amici_model.get_free_parameter_ids(),
-                        len(rdatas),
-                    )
-                ),
+                parameter_mapping=parameter_mapping,
+                par_opt_ids=x_ids,
+                par_sim_ids=amici_model.get_free_parameter_ids(),
                 snllh=snllh,
+                index_slices=self.index_slices,
             )
         # apply the computed inner parameters to the ReturnData
         rdatas = self.inner_solver.apply_inner_parameters_to_rdatas(

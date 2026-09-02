@@ -213,46 +213,6 @@ def par_index_slices(
     return par_sim_slice, par_opt_slice
 
 
-def index_slices_from_mapping(
-    parameter_mapping: ParameterMapping,
-    par_opt_ids: Sequence[str],
-    par_sim_ids: Sequence[str],
-    n_conditions: int | None = None,
-) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Derive per-condition index slices from a PEtab v1 parameter mapping.
-
-    Parameters
-    ----------
-    parameter_mapping:
-        Mapping of optimization to simulation parameters, one entry per
-        simulation condition.
-    par_opt_ids:
-        The optimization parameter ids. Needed for order.
-    par_sim_ids:
-        The simulation parameter ids. Needed for order.
-    n_conditions:
-        The number of simulated conditions, if known. ``parameter_mapping``
-        must have exactly this many entries -- the slices are paired with the
-        conditions by position, so a mapping of a different length cannot be
-        matched up and is rejected rather than truncated.
-
-    Returns
-    -------
-    One ``(par_sim_slice, par_opt_slice)`` pair per entry of
-    ``parameter_mapping``, as consumed by
-    :func:`add_sim_grad_to_opt_grad_slices`.
-    """
-    if n_conditions is not None and len(parameter_mapping) != n_conditions:
-        raise ValueError(
-            f"Got a parameter mapping for {len(parameter_mapping)} conditions, "
-            f"but {n_conditions} were simulated."
-        )
-    return [
-        par_index_slices(par_opt_ids, par_sim_ids, cond_par_map.map_sim_var)
-        for cond_par_map in parameter_mapping
-    ]
-
-
 def add_sim_grad_to_opt_grad(
     par_opt_ids: Sequence[str],
     par_sim_ids: Sequence[str],
@@ -285,46 +245,20 @@ def add_sim_grad_to_opt_grad(
     par_sim_slice, par_opt_slice = par_index_slices(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
-    add_sim_grad_to_opt_grad_slices(
-        par_sim_slice, par_opt_slice, sim_grad, opt_grad, coefficient
+
+    par_opt_slice_unique, unique_index = np.unique(
+        par_opt_slice, return_index=True
+    )
+    opt_grad[par_opt_slice_unique] += (
+        coefficient * sim_grad[par_sim_slice[unique_index]]
     )
 
-
-def add_sim_grad_to_opt_grad_slices(
-    par_sim_slice: np.ndarray,
-    par_opt_slice: np.ndarray,
-    sim_grad: np.ndarray,
-    opt_grad: np.ndarray,
-    coefficient: float = 1.0,
-) -> None:
-    """
-    Sum simulation gradients to objective gradient, given index slices.
-
-    Same as :func:`add_sim_grad_to_opt_grad`, but for pre-computed index
-    slices. This allows callers that know the simulation-to-optimization
-    parameter correspondence directly -- e.g. the PEtab v2 path, where it
-    follows from ``ExpData.plist`` -- to skip building a PEtab v1 style
-    parameter mapping just to have :func:`par_index_slices` derive the same
-    indices from it.
-
-    Parameters
-    ----------
-    par_sim_slice:
-        Indices into ``sim_grad``, i.e. positions in the simulation
-        sensitivities.
-    par_opt_slice:
-        The corresponding indices into ``opt_grad``.
-    sim_grad:
-        Simulation gradient.
-    opt_grad:
-        The optimization gradient, to which ``sim_grad`` is added.
-        Changed in-place.
-    coefficient:
-        Coefficient for ``sim_grad`` when adding to ``opt_grad``.
-    """
-    # `np.add.at` accumulates repeated indices, which happens whenever several
-    #  simulation parameters map to the same optimization parameter
-    np.add.at(opt_grad, par_opt_slice, coefficient * sim_grad[par_sim_slice])
+    if par_opt_slice_unique.size < par_opt_slice.size:
+        for idx in range(len(par_opt_slice)):
+            if idx not in unique_index:
+                opt_grad[par_opt_slice[idx]] += (
+                    coefficient * sim_grad[par_sim_slice[idx]]
+                )
 
 
 def add_sim_hess_to_opt_hess(

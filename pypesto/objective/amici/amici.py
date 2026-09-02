@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import abc
 import copy
-import logging
 import os
 import tempfile
 from collections import OrderedDict
@@ -48,8 +47,6 @@ try:
     from amici.sim._parameter_mapping import ParameterMapping
 except ImportError:
     pass
-
-logger = logging.getLogger(__name__)
 
 AmiciModel = Union["asd.Model", "asd.ModelPtr"]
 AmiciSolver = Union["asd.Solver", "asd.SolverPtr"]
@@ -802,47 +799,21 @@ class AmiciPetabV2Objective(AmiciObjective):
                 InnerCalculatorCollectorPetabV2,
             )
 
-            x_ids = kwargs.get("x_ids")
-            if x_ids is None:
-                x_ids = self.petab_problem.x_ids
-
             calculator = InnerCalculatorCollectorPetabV2(
                 data_types=non_quantitative_data_types,
                 petab_simulator=self._petab_simulator,
                 inner_options=inner_options or {},
-                x_ids=x_ids,
             )
-            # the inner calculators need observables and sigmas, and their
-            #  sensitivities, from the simulations -- this is not negotiable,
-            #  so it is set rather than defaulted
-            if (
-                requested_reporting := kwargs.get("amici_reporting")
-            ) is not None and requested_reporting != asd.RDataReporting.full:
-                # logged rather than `warnings.warn`ed -- see the note in
-                #  `inner_parameters_from_petab_v2_problem`
-                logger.warning(
-                    "Ignoring `amici_reporting=%s`: hierarchical optimization "
-                    "requires `RDataReporting.full`, since the inner problems "
-                    "are solved from the observables, sigmas and their "
-                    "sensitivities.",
-                    requested_reporting,
-                )
+            # the inner problems are solved from the observables, sigmas and
+            #  their sensitivities
             kwargs["amici_reporting"] = asd.RDataReporting.full
             # parameters estimated in the inner subproblems are removed from
             #  the objective parameters
             inner_parameter_ids = set(calculator.get_inner_par_ids())
+            x_ids = kwargs.get("x_ids") or self.petab_problem.x_ids
             kwargs["x_ids"] = [
                 x_id for x_id in x_ids if x_id not in inner_parameter_ids
             ]
-            # `x_names` defaults to `x_ids`, but an explicitly passed one has
-            #  to be filtered too -- `ObjectiveBase` takes its dimension from
-            #  it. Names need not equal IDs, so filter by position.
-            if (x_names := kwargs.get("x_names")) is not None:
-                kwargs["x_names"] = [
-                    x_name
-                    for x_id, x_name in zip(x_ids, x_names, strict=True)
-                    if x_id not in inner_parameter_ids
-                ]
         else:
             calculator = AmiciCalculatorPetabV2(self._petab_simulator)
 

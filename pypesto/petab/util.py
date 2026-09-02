@@ -1,7 +1,6 @@
 from functools import partial
 
 import numpy as np
-import pandas as pd
 
 try:
     import petab.v1 as petab
@@ -32,37 +31,11 @@ def get_petab_v2_extra_field(element, field: str):
     """Get a pyPESTO-specific extra field from a PEtab v2 table element.
 
     pyPESTO's hierarchical optimization annotations (e.g. ``parameterType``)
-    are not part of the PEtab format. In PEtab v2, such extra columns are
-    preserved as extra fields on the respective table elements.
-
-    Parameters
-    ----------
-    element:
-        A PEtab v2 table element, e.g. a
-        :class:`petab.v2.Parameter` or :class:`petab.v2.Measurement`.
-    field:
-        The name of the extra field.
-
-    Returns
-    -------
-    The value of the extra field, or ``None`` if it is absent or empty.
+    are preserved as extra fields of the PEtab v2 table elements. Returns
+    ``None`` if the field is absent or empty.
     """
     value = (element.model_extra or {}).get(field)
-    if value is None:
-        return None
-    if isinstance(value, (list, tuple, set, dict, np.ndarray)):
-        # `pd.isnull` would return an elementwise array for these, which is
-        #  not usable as a condition -- and none of the fields pyPESTO reads
-        #  is meaningfully non-scalar, so reject rather than pass it on
-        raise ValueError(
-            f"Expected a scalar value for the `{field}` field, got "
-            f"{value!r} of type {type(value).__name__}."
-        )
-    # mirror `petab.is_empty`: any null (float/numpy nan, `pd.NA`, `pd.NaT`)
-    #  and the empty string count as "not set"
-    if pd.isnull(value) or (isinstance(value, str) and not value.strip()):
-        return None
-    return value
+    return None if value is None or petab.is_empty(value) else value
 
 
 def get_petab_non_quantitative_data_types(

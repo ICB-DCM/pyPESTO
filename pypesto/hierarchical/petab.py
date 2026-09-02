@@ -674,22 +674,14 @@ def validate_hierarchical_petab_problem_v2(petab_problem: v2.Problem) -> None:
     petab_problem:
         The PEtab v2 problem.
     """
-    from ..petab.util import get_petab_v2_extra_field
+    from ..petab.util import get_petab_non_quantitative_data_types
 
-    if unsupported := {
-        data_type
-        for measurement in petab_problem.measurements
-        if (
-            data_type := get_petab_v2_extra_field(
-                measurement, MEASUREMENT_TYPE
-            )
-        )
-        not in (None, RELATIVE)
-    }:
+    if unsupported := (
+        get_petab_non_quantitative_data_types(petab_problem) or set()
+    ) - {RELATIVE}:
         raise NotImplementedError(
-            f"Measurement type(s) {sorted(unsupported)} (`measurementType` "
-            "column) are not yet supported for PEtab v2 problems. Only "
-            f"`{RELATIVE}` data are supported."
+            f"Data types {sorted(unsupported)} are not yet supported for "
+            "PEtab v2 problems."
         )
 
     inner_parameters = get_inner_parameters_v2(petab_problem)

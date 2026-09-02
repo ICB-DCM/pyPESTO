@@ -767,15 +767,9 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             )
         petab_importer = self._create_amici_importer()
 
-        if (
-            self._non_quantitative_data_types is not None
-            and self._hierarchical
-        ):
-            inner_options = kwargs.pop("inner_options", None)
+        if self._hierarchical and self._non_quantitative_data_types:
             kwargs["inner_options"] = (
-                inner_options
-                if inner_options is not None
-                else self.inner_options
+                kwargs.get("inner_options") or self.inner_options
             )
             kwargs["non_quantitative_data_types"] = (
                 self._non_quantitative_data_types

@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 import copy
-import warnings
 from typing import Any
 
 import numpy as np
 
 from ...C import InnerParameterType
 from ...objective import Objective
-from ...objective.amici.amici_util import (
-    add_sim_grad_to_opt_grad_slices,
-    index_slices_from_mapping,
-)
+from ...objective.amici.amici_util import par_index_slices
 from ...optimize import minimize
 from ...problem import Problem
 from ..base_parameter import InnerParameter
@@ -104,10 +100,10 @@ class RelativeInnerSolver(InnerSolver):
         sigma: list[np.ndarray],
         ssigma: list[np.ndarray],
         inner_parameters: dict[str, float],
-        parameter_mapping: ParameterMapping = None,
-        par_opt_ids: list[str] = None,
-        par_sim_ids: list[str] = None,
-        snllh: np.ndarray = None,
+        parameter_mapping: ParameterMapping,
+        par_opt_ids: list[str],
+        par_sim_ids: list[str],
+        snllh: np.ndarray,
         index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
     ) -> np.ndarray:
         """Calculate the gradients with respect to the outer parameters.
@@ -135,22 +131,18 @@ class RelativeInnerSolver(InnerSolver):
         inner_parameters:
             The computed inner parameters.
         parameter_mapping:
-            Deprecated. Mapping of optimization to simulation parameters,
-            used to derive ``index_slices`` if it is not given.
+            Mapping of optimization to simulation parameters.
         par_opt_ids:
-            Deprecated. Ids of outer optimization parameters.
+            Ids of outer otimization parameters.
         par_sim_ids:
-            Deprecated. Ids of outer simulation parameters, includes fixed
-            parameters.
+            Ids of outer simulation parameters, includes fixed parameters.
         snllh:
-            A zero-initialized vector of the same length as the optimization
-            parameters to store the gradients in. Will be modified in-place.
+            A zero-initialized vector of the same length as ``par_opt_ids`` to store the
+            gradients in. Will be modified in-place.
         index_slices:
-            ``(par_sim_slice, par_opt_slice)`` index pairs, one per condition,
-            mapping simulation sensitivities onto optimization parameters. See
-            :func:`pypesto.objective.amici.amici_util.index_slices_from_mapping`,
-            which derives them from a PEtab v1 parameter mapping; for PEtab v2
-            they follow directly from ``ExpData.plist``.
+            ``(par_sim_slice, par_opt_slice)`` index pairs per condition, mapping
+            simulation sensitivities onto optimization parameters. Derived from
+            ``parameter_mapping`` if not given (PEtab v2 passes them directly).
 
         Returns
         -------
@@ -210,42 +202,28 @@ class RelativeInnerSolver(InnerSolver):
             )
 
         if index_slices is None:
-            # deprecated call style: derive the slices from the mapping
-            warnings.warn(
-                "Passing `parameter_mapping`, `par_opt_ids` and `par_sim_ids` "
-                "to `calculate_gradients` is deprecated and will be removed "
-                "in a future release; pass `index_slices` instead (see "
-                "`pypesto.objective.amici.amici_util."
-                "index_slices_from_mapping`).",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            index_slices = index_slices_from_mapping(
-                parameter_mapping, par_opt_ids, par_sim_ids, len(sim)
-            )
-
-        if len(index_slices) != len(sim):
-            raise ValueError(
-                f"Got {len(index_slices)} index slices for {len(sim)} "
-                "simulation conditions."
-            )
+            index_slices = [
+                par_index_slices(par_opt_ids, par_sim_ids, m.map_sim_var)
+                for m in parameter_mapping
+            ]
 
         # compute gradients
-        for cond_idx in range(len(sim)):
+        for data_i, sim_i, ssim_i, sigma_i, ssigma_i, (
+            par_sim_slice,
+            par_opt_slice,
+        ) in zip(
+            relevant_data, sim, ssim, sigma, ssigma, index_slices, strict=True
+        ):
             gradient_for_cond = compute_nllh_gradient_for_condition(
-                data=relevant_data[cond_idx],
-                sim=sim[cond_idx],
-                ssim=ssim[cond_idx],
-                sigma=sigma[cond_idx],
-                ssigma=ssigma[cond_idx],
+                data=data_i,
+                sim=sim_i,
+                ssim=ssim_i,
+                sigma=sigma_i,
+                ssigma=ssigma_i,
             )
-            par_sim_slice, par_opt_slice = index_slices[cond_idx]
-            add_sim_grad_to_opt_grad_slices(
-                par_sim_slice=par_sim_slice,
-                par_opt_slice=par_opt_slice,
-                sim_grad=gradient_for_cond,
-                opt_grad=snllh,
-            )
+            # `np.add.at` accumulates over simulation parameters that map to
+            #  the same optimization parameter
+            np.add.at(snllh, par_opt_slice, gradient_for_cond[par_sim_slice])
 
         return snllh
 

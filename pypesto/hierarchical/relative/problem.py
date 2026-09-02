@@ -1,8 +1,6 @@
 """Inner optimization problem in hierarchical optimization."""
 
 import logging
-from collections import Counter
-from typing import NamedTuple
 
 import pandas as pd
 
@@ -38,17 +36,11 @@ try:
         TIME,
         UPPER_BOUND,
     )
+    from petab.v2.C import EXPERIMENT_ID
 except ImportError:
     pass
 
 logger = logging.getLogger(__name__)
-
-
-class _Annotation(NamedTuple):
-    """A parameter's scaling/offset annotation and whether it is estimated."""
-
-    type: "InnerParameterType"
-    estimated: bool
 
 
 class RelativeInnerProblem(AmiciInnerProblem):
@@ -304,54 +296,67 @@ def ixs_for_measurement_specific_parameters(
         df_for_condition = petab.get_rows_for_condition(
             measurement_df=petab_problem.measurement_df, condition=condition
         )
-
-        # unique sorted list of timepoints
-        timepoints = sorted(df_for_condition[TIME].unique().astype(float))
-        # non-unique sorted list of timepoints
-        timepoints_w_reps = _get_timepoints_with_replicates(
-            measurement_df=df_for_condition
+        _ixs_for_condition(
+            df_for_condition, condition_ix, observable_ids, x_ids, ixs_for_par
         )
-
-        for time in timepoints:
-            # subselect measurements for time `time`
-            df_for_time = df_for_condition[df_for_condition[TIME] == time]
-            time_ix_0 = timepoints_w_reps.index(time)
-
-            # remember used time indices for each observable
-            time_ix_for_obs_ix = {}
-
-            # iterate over measurements
-            for _, measurement in df_for_time.iterrows():
-                # extract observable index
-                observable_ix = observable_ids.index(
-                    measurement[OBSERVABLE_ID]
-                )
-
-                # as the time indices have to account for replicates, we need
-                #  to track which time indices have already been assigned for
-                #  the current observable
-                if observable_ix in time_ix_for_obs_ix:
-                    # a replicate
-                    time_ix_for_obs_ix[observable_ix] += 1
-                else:
-                    # the first measurement for this `(observable, timepoint)`
-                    time_ix_for_obs_ix[observable_ix] = time_ix_0
-                time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
-
-                observable_overrides = petab.split_parameter_replacement_list(
-                    measurement.get(OBSERVABLE_PARAMETERS, None)
-                )
-                noise_overrides = petab.split_parameter_replacement_list(
-                    measurement.get(NOISE_PARAMETERS, None)
-                )
-
-                # try to insert if hierarchical parameter
-                for override in observable_overrides + noise_overrides:
-                    if override in x_ids:
-                        ixs_for_par.setdefault(override, []).append(
-                            (condition_ix, time_w_reps_ix, observable_ix)
-                        )
     return ixs_for_par
+
+
+def _ixs_for_condition(
+    df_for_condition: pd.DataFrame,
+    condition_ix: int,
+    observable_ids: list[str],
+    x_ids: list[str],
+    ixs_for_par: dict[str, list[tuple[int, int, int]]],
+) -> None:
+    """Add the measurement indices of one condition to ``ixs_for_par``.
+
+    See :func:`ixs_for_measurement_specific_parameters`.
+    """
+    # unique sorted list of timepoints
+    timepoints = sorted(df_for_condition[TIME].unique().astype(float))
+    # non-unique sorted list of timepoints
+    timepoints_w_reps = _get_timepoints_with_replicates(
+        measurement_df=df_for_condition
+    )
+
+    for time in timepoints:
+        # subselect measurements for time `time`
+        df_for_time = df_for_condition[df_for_condition[TIME] == time]
+        time_ix_0 = timepoints_w_reps.index(time)
+
+        # remember used time indices for each observable
+        time_ix_for_obs_ix = {}
+
+        # iterate over measurements
+        for _, measurement in df_for_time.iterrows():
+            # extract observable index
+            observable_ix = observable_ids.index(measurement[OBSERVABLE_ID])
+
+            # as the time indices have to account for replicates, we need
+            #  to track which time indices have already been assigned for
+            #  the current observable
+            if observable_ix in time_ix_for_obs_ix:
+                # a replicate
+                time_ix_for_obs_ix[observable_ix] += 1
+            else:
+                # the first measurement for this `(observable, timepoint)`
+                time_ix_for_obs_ix[observable_ix] = time_ix_0
+            time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
+
+            observable_overrides = petab.split_parameter_replacement_list(
+                measurement.get(OBSERVABLE_PARAMETERS, None)
+            )
+            noise_overrides = petab.split_parameter_replacement_list(
+                measurement.get(NOISE_PARAMETERS, None)
+            )
+
+            # try to insert if hierarchical parameter
+            for override in observable_overrides + noise_overrides:
+                if override in x_ids:
+                    ixs_for_par.setdefault(override, []).append(
+                        (condition_ix, time_w_reps_ix, observable_ix)
+                    )
 
 
 def inner_problem_from_petab_v2_problem(
@@ -362,12 +367,9 @@ def inner_problem_from_petab_v2_problem(
     """
     Create inner problem from a PEtab v2 problem.
 
-    Hierarchical optimization is a pypesto-specific PEtab extension.
-
-    See :meth:`RelativeInnerProblem.from_petab_v2_amici` for the expected
-    arguments.
+    See :meth:`RelativeInnerProblem.from_petab_v2_amici`.
     """
-    from ...petab.util import get_petab_v2_extra_field
+    from ..petab import get_inner_parameters_v2
 
     # inner parameters
     inner_parameters = inner_parameters_from_petab_v2_problem(petab_problem)
@@ -385,19 +387,6 @@ def inner_problem_from_petab_v2_problem(
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
 
-    # inner parameters are located via the measurement-specific overrides; one
-    #  that only occurs directly in a formula cannot be assigned to
-    #  measurements (see `ixs_for_measurement_specific_parameters_v2`)
-    if missing := [x for x in x_ids if x not in ixs]:
-        raise NotImplementedError(
-            "The following inner parameters are not used by any measurement: "
-            f"{sorted(missing)}. Either they override no observable/noise "
-            "placeholder -- inner parameters referenced directly in a formula "
-            "are not supported, use a placeholder overridden per measurement "
-            "instead -- or the observable they belong to has no measurements "
-            "in any experiment."
-        )
-
     # assign matrices, observable indices and ids to inner parameters
     for par in inner_parameters:
         par.ixs = ix_matrices[par.inner_parameter_id]
@@ -411,57 +400,19 @@ def inner_problem_from_petab_v2_problem(
 
     # detect coupled scaling and offset parameters, i.e., pairs of scaling
     #  and offset parameters that override the placeholders of the same
-    #  measurement
-    # scaling/offset annotations of *all* parameters, with a flag for whether
-    #  they are estimated. Non-estimated ones are not inner parameters, but a
-    #  scaling whose offset partner is not estimated cannot be solved for
-    #  analytically and must be rejected rather than silently left uncoupled.
-    annotated_types: dict[str, _Annotation] = {}
-    for parameter in petab_problem.parameters:
-        parameter_type = get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
-        if parameter_type in (
-            InnerParameterType.SCALING,
-            InnerParameterType.OFFSET,
-        ):
-            annotated_types[parameter.id] = _Annotation(
-                type=InnerParameterType(parameter_type),
-                estimated=bool(parameter.estimate),
-            )
-
+    #  measurement (numeric and unrelated overrides do not count)
+    annotated = get_inner_parameters_v2(petab_problem)
     coupled_pars = set()
     for measurement in petab_problem.measurements:
-        # only scaling/offset overrides can form a coupled pair; numeric and
-        #  unrelated overrides must not count towards the group
         group = tuple(
             override
             for override in map(str, measurement.observable_parameters)
-            if override in annotated_types
+            if override in annotated
         )
-        # prefilter for at least 2 observable parameters
-        if len(group) < 2:
-            continue
-        types = [annotated_types[override].type for override in group]
-        if (InnerParameterType.SCALING in types) and (
-            InnerParameterType.OFFSET in types
-        ):
-            not_estimated = [
-                override
-                for override in group
-                if not annotated_types[override].estimated
-            ]
-            if len(not_estimated) == len(group):
-                # none of them is an inner parameter: this observable is not
-                #  hierarchically optimized, so there is nothing to couple
-                continue
-            if not_estimated:
-                # a partially estimated pair cannot be solved for
-                #  analytically, and must not be silently left uncoupled
-                raise NotImplementedError(
-                    f"Observable parameters {list(group)} form a coupled "
-                    f"scaling/offset pair, but {sorted(not_estimated)} are not "
-                    "estimated. Coupled scaling/offset parameters must either "
-                    "all be estimated or all be non-estimated."
-                )
+        if len(group) >= 2 and {
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        } <= {annotated[override] for override in group}:
             coupled_pars.add(group)
 
     # Check each group is of length 2
@@ -486,6 +437,13 @@ def inner_problem_from_petab_v2_problem(
                 coupled_parameter_id = group[
                     group.index(par.inner_parameter_id) - 1
                 ]
+                if coupled_parameter_id not in id_to_par:
+                    # only a fully estimated pair can be solved analytically
+                    raise NotImplementedError(
+                        "Coupled scaling/offset parameters must all be "
+                        f"estimated, but `{coupled_parameter_id}` (coupled to "
+                        f"`{par.inner_parameter_id}`) is not estimated."
+                    )
                 par.coupled = id_to_par[coupled_parameter_id]
                 break
 
@@ -501,42 +459,25 @@ def inner_parameters_from_petab_v2_problem(
     Inner parameters are those that have a non-empty `parameterType` extra
     field (column) in the PEtab parameter table.
     """
-    from ...petab.util import get_petab_v2_extra_field
+    from ..petab import get_inner_parameters_v2
+
+    inner_parameter_types = get_inner_parameters_v2(petab_problem)
 
     parameters = []
-    # collected so that a single warning is emitted rather than one per
-    #  parameter (whose differing messages the `warnings` filter cannot fold)
-    overridden_bounds = []
-
     for parameter in petab_problem.parameters:
-        if not parameter.estimate:
+        if not parameter.estimate or parameter.id not in inner_parameter_types:
             continue
-        parameter_type = get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
-        if parameter_type is None:
-            continue
-        # Note: sigma parameters of semiquantitative observables are not
-        #  relative inner parameters -- irrelevant here, as non-quantitative
-        #  data types other than relative are not yet supported for PEtab v2
-        #  (see `validate_hierarchical_petab_problem_v2`).
+        inner_parameter_type = inner_parameter_types[parameter.id]
 
-        inner_parameter_type = InnerParameterType(parameter_type)
-        # Scaling and offset parameters can be bounded arbitrarily; all other
-        #  inner parameter types (in particular sigma) require the fixed
-        #  bounds of `INNER_PARAMETER_BOUNDS`. This is the PEtab v2 equivalent
-        #  of `correct_parameter_df_bounds`, which only works on DataFrames.
+        # all inner parameter types but scaling and offset require fixed
+        #  bounds (cf. `correct_parameter_df_bounds`)
         lb, ub = parameter.lb, parameter.ub
         if inner_parameter_type not in (
             InnerParameterType.SCALING,
             InnerParameterType.OFFSET,
         ):
             bounds = INNER_PARAMETER_BOUNDS[inner_parameter_type]
-            lb = bounds[PYPESTO_LOWER_BOUND]
-            ub = bounds[PYPESTO_UPPER_BOUND]
-            if (parameter.lb, parameter.ub) != (lb, ub):
-                overridden_bounds.append(
-                    f"`{parameter.id}` ({inner_parameter_type}): "
-                    f"[{parameter.lb}, {parameter.ub}] -> [{lb}, {ub}]"
-                )
+            lb, ub = bounds[PYPESTO_LOWER_BOUND], bounds[PYPESTO_UPPER_BOUND]
 
         parameters.append(
             RelativeInnerParameter(
@@ -551,17 +492,6 @@ def inner_parameters_from_petab_v2_problem(
             )
         )
 
-    if overridden_bounds:
-        # logged rather than `warnings.warn`ed: the number of frames up to the
-        #  public entry point is not fixed, so no `stacklevel` would point at
-        #  the user's own call
-        logger.warning(
-            "Hierarchical optimization requires fixed bounds for all inner "
-            "parameter types except scaling and offset. Replacing the "
-            "declared bounds of: %s.",
-            "; ".join(overridden_bounds),
-        )
-
     return parameters
 
 
@@ -573,79 +503,21 @@ def ixs_for_measurement_specific_parameters_v2(
     """
     Create mapping of parameters to measurements for a PEtab v2 problem.
 
-    The layout of the returned indices matches the ``ExpData`` objects
-    created by :class:`amici.sim.sundials.petab.ExperimentManager` for the
-    given problem: the condition index refers to the position of the
-    experiment in ``petab_problem.experiments``, and the time index refers to
-    a sorted list of non-unique time points for which there are measurements
-    in the respective experiment.
-
-    Returns
-    -------
-    A dictionary mapping parameter ID to a list of
-    `(condition index, time index, observable index)` tuples in which this
-    output parameter is used.
+    See :func:`ixs_for_measurement_specific_parameters`. The condition index
+    is the position of the experiment in ``petab_problem.experiments``, which
+    is the order of the ``ExpData`` objects created by
+    :class:`amici.sim.sundials.petab.ExperimentManager`.
     """
     ixs_for_par = {}
     observable_ids = amici_model.get_observable_ids()
+    measurement_df = petab_problem.measurement_df
 
     for condition_ix, experiment in enumerate(petab_problem.experiments):
-        measurements = petab_problem.get_measurements_for_experiment(
-            experiment
+        _ixs_for_condition(
+            measurement_df[measurement_df[EXPERIMENT_ID] == experiment.id],
+            condition_ix,
+            observable_ids,
+            x_ids,
+            ixs_for_par,
         )
-
-        # non-unique sorted list of timepoints: the superset of the
-        #  timepoints of the measurements of all observables, including
-        #  replicates (see `ExperimentManager._set_timepoints_and_measurements`)
-        t_counters: dict[str, Counter] = {}
-        for measurement in measurements:
-            t_counters.setdefault(measurement.observable_id, Counter()).update(
-                [measurement.time]
-            )
-        max_counter = Counter()
-        for counter in t_counters.values():
-            for time, count in counter.items():
-                max_counter[time] = max(max_counter[time], count)
-        timepoints_w_reps = sorted(max_counter.elements())
-
-        time_to_meas = {}
-        for measurement in measurements:
-            time_to_meas.setdefault(measurement.time, []).append(measurement)
-
-        for time in sorted(time_to_meas):
-            time_ix_0 = timepoints_w_reps.index(time)
-
-            # remember used time indices for each observable
-            time_ix_for_obs_ix = {}
-
-            # iterate over measurements
-            for measurement in time_to_meas[time]:
-                # extract observable index
-                observable_ix = observable_ids.index(measurement.observable_id)
-
-                # as the time indices have to account for replicates, we need
-                #  to track which time indices have already been assigned for
-                #  the current observable
-                if observable_ix in time_ix_for_obs_ix:
-                    # a replicate
-                    time_ix_for_obs_ix[observable_ix] += 1
-                else:
-                    # the first measurement for this `(observable, timepoint)`
-                    time_ix_for_obs_ix[observable_ix] = time_ix_0
-                time_w_reps_ix = time_ix_for_obs_ix[observable_ix]
-
-                overrides = [
-                    str(override)
-                    for override in (
-                        list(measurement.observable_parameters)
-                        + list(measurement.noise_parameters)
-                    )
-                ]
-
-                # try to insert if hierarchical parameter
-                for override in overrides:
-                    if override in x_ids:
-                        ixs_for_par.setdefault(override, []).append(
-                            (condition_ix, time_w_reps_ix, observable_ix)
-                        )
     return ixs_for_par

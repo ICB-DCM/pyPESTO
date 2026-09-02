@@ -464,24 +464,3 @@ def test_hierarchical_petab_v2_coupled_pair_rejections(
         inner_problem.xs["scaling_pSTAT5A_rel"].coupled.inner_parameter_id
         == "offset_pSTAT5A_rel"
     )
-
-
-def test_hierarchical_petab_v2_x_names_are_filtered_positionally(importer_v2):
-    """Inner parameters must be dropped from an explicitly passed `x_names` by
-    position: names need not coincide with the parameter IDs."""
-    creator = importer_v2.create_objective_creator()
-    # the creator supplies `x_ids` itself; only `x_names` comes from the caller
-    x_ids = list(creator.petab_problem.x_ids)
-    # display names that share no string with the IDs
-    x_names = [f"name_{ix}" for ix in range(len(x_ids))]
-
-    objective = creator.create_objective(x_names=x_names)
-
-    inner_ids = set(objective.calculator.get_inner_par_ids())
-    assert inner_ids
-    assert len(objective.x_names) == len(objective.x_ids)
-    assert objective.x_names == [
-        name
-        for x_id, name in zip(x_ids, x_names, strict=True)
-        if x_id not in inner_ids
-    ]
