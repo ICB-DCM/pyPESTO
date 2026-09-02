@@ -7,7 +7,7 @@ import numpy as np
 
 from ...C import InnerParameterType
 from ...objective import Objective
-from ...objective.amici.amici_util import add_sim_grad_to_opt_grad
+from ...objective.amici.amici_util import par_index_slices
 from ...optimize import minimize
 from ...problem import Problem
 from ..base_parameter import InnerParameter
@@ -104,6 +104,7 @@ class RelativeInnerSolver(InnerSolver):
         par_opt_ids: list[str],
         par_sim_ids: list[str],
         snllh: np.ndarray,
+        index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
     ) -> np.ndarray:
         """Calculate the gradients with respect to the outer parameters.
 
@@ -138,6 +139,10 @@ class RelativeInnerSolver(InnerSolver):
         snllh:
             A zero-initialized vector of the same length as ``par_opt_ids`` to store the
             gradients in. Will be modified in-place.
+        index_slices:
+            ``(par_sim_slice, par_opt_slice)`` index pairs per condition, mapping
+            simulation sensitivities onto optimization parameters. Derived from
+            ``parameter_mapping`` if not given (PEtab v2 passes them directly).
 
         Returns
         -------
@@ -196,22 +201,29 @@ class RelativeInnerSolver(InnerSolver):
                 mask=x.ixs,
             )
 
+        if index_slices is None:
+            index_slices = [
+                par_index_slices(par_opt_ids, par_sim_ids, m.map_sim_var)
+                for m in parameter_mapping
+            ]
+
         # compute gradients
-        for cond_idx, cond_par_map in enumerate(parameter_mapping):
+        for data_i, sim_i, ssim_i, sigma_i, ssigma_i, (
+            par_sim_slice,
+            par_opt_slice,
+        ) in zip(
+            relevant_data, sim, ssim, sigma, ssigma, index_slices, strict=True
+        ):
             gradient_for_cond = compute_nllh_gradient_for_condition(
-                data=relevant_data[cond_idx],
-                sim=sim[cond_idx],
-                ssim=ssim[cond_idx],
-                sigma=sigma[cond_idx],
-                ssigma=ssigma[cond_idx],
+                data=data_i,
+                sim=sim_i,
+                ssim=ssim_i,
+                sigma=sigma_i,
+                ssigma=ssigma_i,
             )
-            add_sim_grad_to_opt_grad(
-                par_opt_ids=par_opt_ids,
-                par_sim_ids=par_sim_ids,
-                condition_map_sim_var=cond_par_map.map_sim_var,
-                sim_grad=gradient_for_cond,
-                opt_grad=snllh,
-            )
+            # `np.add.at` accumulates over simulation parameters that map to
+            #  the same optimization parameter
+            np.add.at(snllh, par_opt_slice, gradient_for_cond[par_sim_slice])
 
         return snllh
 

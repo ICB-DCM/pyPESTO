@@ -27,8 +27,19 @@ from ..problem import Problem
 from ..startpoint import CheckedStartpoints
 
 
+def get_petab_v2_extra_field(element, field: str):
+    """Get a pyPESTO-specific extra field from a PEtab v2 table element.
+
+    pyPESTO's hierarchical optimization annotations (e.g. ``parameterType``)
+    are preserved as extra fields of the PEtab v2 table elements. Returns
+    ``None`` if the field is absent or empty.
+    """
+    value = (element.model_extra or {}).get(field)
+    return None if value is None or petab.is_empty(value) else value
+
+
 def get_petab_non_quantitative_data_types(
-    petab_problem: petab.Problem,
+    petab_problem: petab.Problem | v2.Problem,
 ) -> set[str]:
     """
     Get the data types from the PEtab problem.
@@ -43,6 +54,9 @@ def get_petab_non_quantitative_data_types(
     data_types:
         A list of the data types.
     """
+    if isinstance(petab_problem, v2.Problem):
+        return _get_petab_v2_non_quantitative_data_types(petab_problem)
+
     non_quantitative_data_types = set()
     caught_observables = set()
     # For ordinal, censored and semiquantitative data, search
@@ -95,6 +109,45 @@ def get_petab_non_quantitative_data_types(
     if len(non_quantitative_data_types) == 0:
         return None
     return non_quantitative_data_types
+
+
+def _get_petab_v2_non_quantitative_data_types(
+    petab_problem: "v2.Problem",
+) -> set[str] | None:
+    """Get the non-quantitative data types from a PEtab v2 problem.
+
+    See :func:`get_petab_non_quantitative_data_types`.
+    """
+    non_quantitative_data_types = set()
+
+    # Ordinal, censored and semiquantitative data are not supported for PEtab
+    # v2 yet, but they still have to be detected here so that they are
+    # rejected with a clear message rather than silently treated as
+    # quantitative data.
+    for measurement in petab_problem.measurements:
+        data_type = get_petab_v2_extra_field(measurement, MEASUREMENT_TYPE)
+        if data_type in [ORDINAL, SEMIQUANTITATIVE] + CENSORING_TYPES:
+            non_quantitative_data_types.add(
+                CENSORED if data_type in CENSORING_TYPES else data_type
+            )
+
+    # For relative data, search for parameters to estimate with a
+    # scaling/offset/sigma parameter type. Unlike for PEtab v1, sigma
+    # parameters need no special case here: they can only belong to a relative
+    # observable, since semiquantitative data are not supported.
+    if any(
+        get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
+        in (
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+            InnerParameterType.SIGMA,
+        )
+        for parameter in petab_problem.parameters
+        if parameter.estimate
+    ):
+        non_quantitative_data_types.add(RELATIVE)
+
+    return non_quantitative_data_types or None
 
 
 class PetabStartpoints(CheckedStartpoints):
