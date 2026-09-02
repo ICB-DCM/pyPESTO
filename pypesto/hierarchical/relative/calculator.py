@@ -34,6 +34,7 @@ from ...objective.amici.amici_calculator import (
 from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
+    par_index_slices,
 )
 from .problem import AmiciInnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
@@ -359,11 +360,22 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 sigma=[rdata[AMICI_SIGMAY] for rdata in rdatas],
                 ssigma=[rdata[AMICI_SSIGMAY] for rdata in rdatas],
                 inner_parameters=inner_parameters,
-                parameter_mapping=parameter_mapping,
-                par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_free_parameter_ids(),
+                index_slices=(
+                    self.index_slices
+                    if self.index_slices is not None
+                    # PEtab v1: derive from the parameter mapping. The slices
+                    #  do not depend on the parameter values, but only the
+                    #  conditions that are actually simulated are needed.
+                    else [
+                        par_index_slices(
+                            x_ids,
+                            amici_model.get_free_parameter_ids(),
+                            cond_par_map.map_sim_var,
+                        )
+                        for cond_par_map in parameter_mapping[: len(rdatas)]
+                    ]
+                ),
                 snllh=snllh,
-                index_slices=self.index_slices,
             )
         # apply the computed inner parameters to the ReturnData
         rdatas = self.inner_solver.apply_inner_parameters_to_rdatas(

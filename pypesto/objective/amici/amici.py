@@ -822,7 +822,8 @@ class AmiciPetabV2Objective(AmiciObjective):
                     "`RDataReporting.full`, since the inner problems are "
                     "solved from the observables, sigmas and their "
                     "sensitivities.",
-                    stacklevel=2,
+                    # see the note in `inner_parameters_from_petab_v2_problem`
+                    stacklevel=1,
                 )
             kwargs["amici_reporting"] = asd.RDataReporting.full
             # parameters estimated in the inner subproblems are removed from

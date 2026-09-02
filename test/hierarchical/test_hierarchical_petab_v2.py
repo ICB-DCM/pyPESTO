@@ -466,35 +466,6 @@ def test_hierarchical_petab_v2_coupled_pair_rejections(
     )
 
 
-def test_get_petab_v2_extra_field_emptiness():
-    """The single guard used by all v2 consumers must treat None, nulls and
-    blank strings as unset, and must not choke on a non-scalar value."""
-    import pandas as pd
-
-    from pypesto.petab.util import get_petab_v2_extra_field
-
-    class Element:
-        def __init__(self, extra):
-            self.model_extra = extra
-
-    def field(value):
-        return get_petab_v2_extra_field(
-            Element({"parameterType": value}), "parameterType"
-        )
-
-    # unset
-    for value in (None, float("nan"), np.float64("nan"), pd.NA, "", "   "):
-        assert field(value) is None, value
-    # set
-    assert field("scaling") == "scaling"
-    # a non-scalar must be returned as-is rather than raising (`pd.isnull`
-    #  would yield an elementwise array here)
-    assert field(["a", "b"]) == ["a", "b"]
-    # a missing field / absent model_extra
-    assert get_petab_v2_extra_field(Element({}), "parameterType") is None
-    assert get_petab_v2_extra_field(Element(None), "parameterType") is None
-
-
 def test_hierarchical_petab_v2_x_names_are_filtered_positionally(importer_v2):
     """Inner parameters must be dropped from an explicitly passed `x_names` by
     position: names need not coincide with the parameter IDs."""

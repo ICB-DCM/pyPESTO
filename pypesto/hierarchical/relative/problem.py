@@ -405,14 +405,10 @@ def inner_problem_from_petab_v2_problem(
     # detect coupled scaling and offset parameters, i.e., pairs of scaling
     #  and offset parameters that override the placeholders of the same
     #  measurement
-    inner_parameter_types = {
-        par.inner_parameter_id: par.inner_parameter_type
-        for par in inner_parameters
-    }
-    # scaling/offset annotations of *all* parameters, including non-estimated
-    #  ones: those are not inner parameters, but a scaling whose offset partner
-    #  is not estimated cannot be solved for analytically and must be rejected
-    #  rather than silently treated as uncoupled
+    # scaling/offset annotations of *all* parameters, with a flag for whether
+    #  they are estimated. Non-estimated ones are not inner parameters, but a
+    #  scaling whose offset partner is not estimated cannot be solved for
+    #  analytically and must be rejected rather than silently left uncoupled.
     annotated_types = {}
     for parameter in petab_problem.parameters:
         parameter_type = get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
@@ -420,7 +416,10 @@ def inner_problem_from_petab_v2_problem(
             InnerParameterType.SCALING,
             InnerParameterType.OFFSET,
         ):
-            annotated_types[parameter.id] = InnerParameterType(parameter_type)
+            annotated_types[parameter.id] = (
+                InnerParameterType(parameter_type),
+                bool(parameter.estimate),
+            )
 
     coupled_pars = set()
     for measurement in petab_problem.measurements:
@@ -434,14 +433,14 @@ def inner_problem_from_petab_v2_problem(
         # prefilter for at least 2 observable parameters
         if len(group) < 2:
             continue
-        types = [annotated_types[override] for override in group]
+        types = [annotated_types[override][0] for override in group]
         if (InnerParameterType.SCALING in types) and (
             InnerParameterType.OFFSET in types
         ):
             not_estimated = [
                 override
                 for override in group
-                if override not in inner_parameter_types
+                if not annotated_types[override][1]
             ]
             if len(not_estimated) == len(group):
                 # none of them is an inner parameter: this observable is not
@@ -498,6 +497,9 @@ def inner_parameters_from_petab_v2_problem(
     from ...petab.util import get_petab_v2_extra_field
 
     parameters = []
+    # collected so that a single warning is emitted rather than one per
+    #  parameter (whose differing messages the `warnings` filter cannot fold)
+    overridden_bounds = []
 
     for parameter in petab_problem.parameters:
         if not parameter.estimate:
@@ -524,13 +526,8 @@ def inner_parameters_from_petab_v2_problem(
             lb = bounds[PYPESTO_LOWER_BOUND]
             ub = bounds[PYPESTO_UPPER_BOUND]
             if (parameter.lb, parameter.ub) != (lb, ub):
-                warnings.warn(
-                    f"Ignoring the bounds "
-                    f"[{parameter.lb}, {parameter.ub}] declared for the "
-                    f"{inner_parameter_type} inner parameter "
-                    f"`{parameter.id}`; hierarchical optimization requires "
-                    f"[{lb}, {ub}].",
-                    stacklevel=2,
+                overridden_bounds.append(
+                    f"`{parameter.id}` [{parameter.lb}, {parameter.ub}]"
                 )
 
         parameters.append(
@@ -544,6 +541,20 @@ def inner_parameters_from_petab_v2_problem(
                 observable_ids=None,
                 observable_indices=None,
             )
+        )
+
+    if overridden_bounds:
+        # `stacklevel` is deliberately left at the `warn` call: the number of
+        #  frames up to the public entry point is not fixed, so any other
+        #  value would point at an arbitrary internal frame. The message names
+        #  the affected parameters instead.
+        warnings.warn(
+            "Ignoring the bounds declared for the following inner "
+            f"parameters: {', '.join(overridden_bounds)}. Hierarchical "
+            "optimization requires the fixed bounds of "
+            "`INNER_PARAMETER_BOUNDS` for all inner parameter types except "
+            "scaling and offset.",
+            stacklevel=1,
         )
 
     return parameters

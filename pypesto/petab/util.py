@@ -48,16 +48,19 @@ def get_petab_v2_extra_field(element, field: str):
     The value of the extra field, or ``None`` if it is absent or empty.
     """
     value = (element.model_extra or {}).get(field)
-    # mirror `petab.is_empty`: `None`, a null (float nan or `pd.NA`) and the
-    #  empty string all count as "not set". The tests are deliberately
-    #  scalar-by-construction -- `pd.isnull` would return an elementwise array
-    #  for a list-valued field, which is not usable as a condition.
-    if (
-        value is None
-        or value is pd.NA
-        or (isinstance(value, float) and np.isnan(value))
-        or (isinstance(value, str) and not value.strip())
-    ):
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple, set, dict, np.ndarray)):
+        # `pd.isnull` would return an elementwise array for these, which is
+        #  not usable as a condition -- and none of the fields pyPESTO reads
+        #  is meaningfully non-scalar, so reject rather than pass it on
+        raise ValueError(
+            f"Expected a scalar value for the `{field}` field, got "
+            f"{value!r} of type {type(value).__name__}."
+        )
+    # mirror `petab.is_empty`: any null (float/numpy nan, `pd.NA`, `pd.NaT`)
+    #  and the empty string count as "not set"
+    if pd.isnull(value) or (isinstance(value, str) and not value.strip()):
         return None
     return value
 

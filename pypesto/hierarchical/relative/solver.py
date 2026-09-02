@@ -7,10 +7,7 @@ import numpy as np
 
 from ...C import InnerParameterType
 from ...objective import Objective
-from ...objective.amici.amici_util import (
-    add_sim_grad_to_opt_grad_slices,
-    par_index_slices,
-)
+from ...objective.amici.amici_util import add_sim_grad_to_opt_grad_slices
 from ...optimize import minimize
 from ...problem import Problem
 from ..base_parameter import InnerParameter
@@ -36,7 +33,6 @@ from .util import (
 
 try:
     import amici
-    from amici.sim._parameter_mapping import ParameterMapping
 except ImportError:
     pass
 
@@ -103,11 +99,8 @@ class RelativeInnerSolver(InnerSolver):
         sigma: list[np.ndarray],
         ssigma: list[np.ndarray],
         inner_parameters: dict[str, float],
-        parameter_mapping: ParameterMapping,
-        par_opt_ids: list[str],
-        par_sim_ids: list[str],
+        index_slices: list[tuple[np.ndarray, np.ndarray]],
         snllh: np.ndarray,
-        index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
     ) -> np.ndarray:
         """Calculate the gradients with respect to the outer parameters.
 
@@ -133,21 +126,15 @@ class RelativeInnerSolver(InnerSolver):
             PEtab problem.
         inner_parameters:
             The computed inner parameters.
-        parameter_mapping:
-            Mapping of optimization to simulation parameters.
-        par_opt_ids:
-            Ids of outer otimization parameters.
-        par_sim_ids:
-            Ids of outer simulation parameters, includes fixed parameters.
-        snllh:
-            A zero-initialized vector of the same length as ``par_opt_ids`` to store the
-            gradients in. Will be modified in-place.
         index_slices:
-            Pre-computed ``(par_sim_slice, par_opt_slice)`` index pairs, one
-            per condition, mapping simulation sensitivities to optimization
-            parameters. If given, ``parameter_mapping`` is not used. Used by
-            the PEtab v2 path, where the correspondence follows directly from
-            ``ExpData.plist``.
+            ``(par_sim_slice, par_opt_slice)`` index pairs, one per condition,
+            mapping simulation sensitivities onto optimization parameters. See
+            :func:`pypesto.objective.amici.amici_util.par_index_slices`, which
+            derives them from a PEtab v1 parameter mapping; for PEtab v2 they
+            follow directly from ``ExpData.plist``.
+        snllh:
+            A zero-initialized vector of the same length as the optimization
+            parameters to store the gradients in. Will be modified in-place.
 
         Returns
         -------
@@ -206,15 +193,11 @@ class RelativeInnerSolver(InnerSolver):
                 mask=x.ixs,
             )
 
-        # without pre-computed slices, derive them from the PEtab v1 style
-        #  parameter mapping; they do not depend on the parameter values
-        if index_slices is None:
-            index_slices = [
-                par_index_slices(
-                    par_opt_ids, par_sim_ids, cond_par_map.map_sim_var
-                )
-                for cond_par_map in parameter_mapping
-            ]
+        if len(index_slices) != len(sim):
+            raise ValueError(
+                f"Got {len(index_slices)} index slices for {len(sim)} "
+                "simulation conditions."
+            )
 
         # compute gradients
         for cond_idx in range(len(sim)):

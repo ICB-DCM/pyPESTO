@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import warnings
 from collections.abc import Sequence
+from itertools import zip_longest
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
@@ -520,9 +521,16 @@ class InnerCalculatorCollector(AmiciCalculator):
                 mode=mode,
                 quantitative_data_mask=self.quantitative_data_mask,
                 dim=dim,
-                parameter_mapping=parameter_mapping,
-                par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_free_parameter_ids(),
+                # PEtab v1: derive from the parameter mapping, for the
+                #  conditions that are actually simulated
+                index_slices=[
+                    par_index_slices(
+                        x_ids,
+                        amici_model.get_free_parameter_ids(),
+                        cond_par_map.map_sim_var,
+                    )
+                    for cond_par_map in parameter_mapping[: len(rdatas)]
+                ],
             )
             nllh += quantitative_result[FVAL]
             if 1 in sensi_orders:
@@ -736,12 +744,19 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         dim = len(x_ids)
 
         # `self._index_slices` indexes into `self._x_ids`, so the objective's
-        #  parameters must be the ones this calculator was built for
-        if list(x_ids) != self._x_ids:
+        #  parameters must be the ones this calculator was built for. The
+        #  length check short-circuits the common case cheaply.
+        if len(x_ids) != len(self._x_ids) or list(x_ids) != self._x_ids:
+            differing = [
+                (expected, got)
+                for expected, got in zip_longest(self._x_ids, x_ids)
+                if expected != got
+            ]
             raise ValueError(
                 "The optimization parameters of the objective do not match "
-                "those this calculator was constructed with. Expected "
-                f"{self._x_ids}, got {list(x_ids)}."
+                "those this calculator was constructed with "
+                f"({len(self._x_ids)} vs {len(x_ids)} parameters). First "
+                f"differing (expected, got): {differing[:5]}."
             )
 
         # set order in solver
@@ -859,9 +874,6 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
                 mode=mode,
                 quantitative_data_mask=self.quantitative_data_mask,
                 dim=dim,
-                parameter_mapping=parameter_mapping,
-                par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_free_parameter_ids(),
                 index_slices=self._index_slices,
             )
             nllh += quantitative_result[FVAL]
@@ -1033,16 +1045,13 @@ def calculate_quantitative_result(
     mode: ModeType,
     quantitative_data_mask: list[np.ndarray],
     dim: int,
-    parameter_mapping: ParameterMapping,
-    par_opt_ids: list[str],
-    par_sim_ids: list[str],
-    index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
+    index_slices: list[tuple[np.ndarray, np.ndarray]],
 ):
     """Calculate the function values from rdatas and return as dict.
 
-    ``index_slices`` optionally provides pre-computed
-    ``(par_sim_slice, par_opt_slice)`` pairs per condition, in which case
-    ``parameter_mapping`` is not used (see
+    ``index_slices`` holds the ``(par_sim_slice, par_opt_slice)`` pairs, one
+    per condition, that map simulation sensitivities onto the optimization
+    parameters (see
     :func:`pypesto.objective.amici.amici_util.add_sim_grad_to_opt_grad_slices`).
     """
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
@@ -1066,15 +1075,11 @@ def calculate_quantitative_result(
 
     # calculate the gradient if requested
     if 1 in sensi_orders:
-        # without pre-computed slices, derive them from the PEtab v1 style
-        #  parameter mapping; they do not depend on the parameter values
-        if index_slices is None:
-            index_slices = [
-                par_index_slices(
-                    par_opt_ids, par_sim_ids, cond_par_map.map_sim_var
-                )
-                for cond_par_map in parameter_mapping
-            ]
+        if len(index_slices) != len(rdatas):
+            raise ValueError(
+                f"Got {len(index_slices)} index slices for {len(rdatas)} "
+                "simulation conditions."
+            )
         # iterate over simulation conditions
         for cond_idx, (rdata, edata, mask) in enumerate(
             zip(
