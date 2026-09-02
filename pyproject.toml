@@ -127,6 +127,11 @@ dynesty = [
 
 mltools = [
   "umap-learn[plot]>=0.5.3",
+  # `umap-learn[plot]` requires an unpinned bokeh; without a lower bound here,
+  #  resolvers satisfy `holoviews` with an ancient release whose `panel`
+  #  version is incompatible with recent bokeh, which makes `umap.plot`
+  #  unimportable.
+  "holoviews>=1.18",
   "scikit-learn>=0.24.1",
 ]
 
