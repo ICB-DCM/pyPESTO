@@ -347,7 +347,9 @@ def test_hierarchical_petab_v2_validation(petab_problem_v2):
         f"observableParameter1_{observable.id}"
         f" * observableParameter2_{observable.id}"
     )
-    with pytest.raises(ValueError, match="offset"):
+    with pytest.raises(
+        ValueError, match="An offset is in the observable formula"
+    ):
         validate_hierarchical_petab_problem(petab_problem)
 
     # a sigma parameter must constitute the full noise formula
@@ -362,3 +364,88 @@ def test_hierarchical_petab_v2_validation(petab_problem_v2):
     petab_problem.observables[0].noise_distribution = "laplace"
     with pytest.raises(NotImplementedError, match="oise distribution"):
         validate_hierarchical_petab_problem(petab_problem)
+
+
+def test_hierarchical_petab_v2_sigma_bounds_are_corrected(petab_problem_v2):
+    """Sigma inner parameters get the canonical bounds, whatever the PEtab
+    problem declares (PEtab v2 requires bounds, so they cannot be omitted)."""
+    from pypesto.C import INNER_PARAMETER_BOUNDS, LOWER_BOUND, UPPER_BOUND
+    from pypesto.hierarchical.relative.problem import (
+        inner_parameters_from_petab_v2_problem,
+    )
+
+    petab_problem = copy.deepcopy(petab_problem_v2)
+    for parameter in petab_problem.parameters:
+        if parameter.id.startswith("sd_"):
+            parameter.lb, parameter.ub = 1e-5, 1e5
+
+    expected = INNER_PARAMETER_BOUNDS[InnerParameterType.SIGMA]
+    sigmas = [
+        par
+        for par in inner_parameters_from_petab_v2_problem(petab_problem)
+        if par.inner_parameter_type == InnerParameterType.SIGMA
+    ]
+    assert sigmas
+    for par in sigmas:
+        assert par.lb == expected[LOWER_BOUND]
+        assert par.ub == expected[UPPER_BOUND]
+
+
+def test_hierarchical_petab_v2_coupled_pair_rejections(
+    petab_problem_v2, importer_v2
+):
+    """A scaling/offset pair whose partner is not estimated must be rejected
+    rather than silently treated as uncoupled, and a numeric override must not
+    be counted as a member of the coupled pair."""
+    from pypesto.hierarchical.relative.problem import (
+        inner_problem_from_petab_v2_problem,
+    )
+
+    # the model/edatas of the (already compiled) fixture problem
+    creator = importer_v2.create_objective_creator()
+    amici_importer = creator._create_amici_importer()
+    simulator = amici_importer.create_simulator(force_import=False)
+    model = simulator.model
+    edatas = simulator.exp_man.create_edatas()
+    converted = simulator.exp_man.petab_problem
+
+    # baseline: the unmodified problem couples each scaling with its offset
+    inner_problem = inner_problem_from_petab_v2_problem(
+        copy.deepcopy(converted), model, edatas
+    )
+    assert all(
+        inner_problem.xs[x_id].coupled is not None
+        for x_id in inner_problem.xs
+        if inner_problem.xs[x_id].inner_parameter_type
+        in (InnerParameterType.SCALING, InnerParameterType.OFFSET)
+    )
+
+    # a non-estimated offset partner must raise, not silently uncouple
+    petab_problem = copy.deepcopy(converted)
+    for parameter in petab_problem.parameters:
+        if parameter.id == "offset_pSTAT5A_rel":
+            parameter.estimate = False
+    with pytest.raises(NotImplementedError, match="not.*estimated"):
+        inner_problem_from_petab_v2_problem(petab_problem, model, edatas)
+
+    # a numeric override alongside the pair must not inflate the group
+    petab_problem = copy.deepcopy(converted)
+    for measurement in petab_problem.measurements:
+        if measurement.observable_id == "pSTAT5A_rel":
+            measurement.observable_parameters = [
+                *measurement.observable_parameters,
+                1.0,
+            ]
+    for observable in petab_problem.observables:
+        if observable.id == "pSTAT5A_rel":
+            observable.observable_placeholders = [
+                *map(str, observable.observable_placeholders),
+                "observableParameter3_pSTAT5A_rel",
+            ]
+    inner_problem = inner_problem_from_petab_v2_problem(
+        petab_problem, model, edatas
+    )
+    assert (
+        inner_problem.xs["scaling_pSTAT5A_rel"].coupled.inner_parameter_id
+        == "offset_pSTAT5A_rel"
+    )

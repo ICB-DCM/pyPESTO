@@ -1,6 +1,7 @@
 from functools import partial
 
 import numpy as np
+import pandas as pd
 
 try:
     import petab.v1 as petab
@@ -47,7 +48,13 @@ def get_petab_v2_extra_field(element, field: str):
     The value of the extra field, or ``None`` if it is absent or empty.
     """
     value = (element.model_extra or {}).get(field)
-    if value is None or (isinstance(value, float) and np.isnan(value)):
+    # mirror `petab.is_empty`: `None`, any pandas/numpy null (float nan,
+    #  `pd.NA`, ...) and the empty string all count as "not set"
+    if (
+        value is None
+        or pd.isnull(value)
+        or (isinstance(value, str) and not value.strip())
+    ):
         return None
     return value
 
@@ -133,43 +140,35 @@ def _get_petab_v2_non_quantitative_data_types(
     See :func:`get_petab_non_quantitative_data_types`.
     """
     non_quantitative_data_types = set()
-    caught_observables = set()
 
-    # For ordinal, censored and semiquantitative data, search
-    # for the corresponding data types in the measurement table
+    # Ordinal, censored and semiquantitative data are not supported for PEtab
+    # v2 yet, but they still have to be detected here so that they are
+    # rejected with a clear message rather than silently treated as
+    # quantitative data.
     for measurement in petab_problem.measurements:
         data_type = get_petab_v2_extra_field(measurement, MEASUREMENT_TYPE)
         if data_type in [ORDINAL, SEMIQUANTITATIVE] + CENSORING_TYPES:
             non_quantitative_data_types.add(
                 CENSORED if data_type in CENSORING_TYPES else data_type
             )
-            caught_observables.add(measurement.observable_id)
 
-    # For relative data, search for parameters to estimate with
-    # a scaling/offset/sigma parameter type
-    for parameter in petab_problem.parameters:
-        if not parameter.estimate:
-            continue
-        parameter_type = get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
-        if parameter_type in [
+    # For relative data, search for parameters to estimate with a
+    # scaling/offset/sigma parameter type. Unlike for PEtab v1, sigma
+    # parameters need no special case here: they can only belong to a relative
+    # observable, since semiquantitative data are not supported.
+    if any(
+        get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
+        in (
             InnerParameterType.SCALING,
             InnerParameterType.OFFSET,
-        ]:
-            non_quantitative_data_types.add(RELATIVE)
-        # For sigma parameters, we need to check if they belong
-        # to an observable with a non-quantitative data type
-        elif parameter_type == InnerParameterType.SIGMA:
-            corresponding_observables = {
-                measurement.observable_id
-                for measurement in petab_problem.measurements
-                if parameter.id in map(str, measurement.noise_parameters)
-            }
-            if not (corresponding_observables & caught_observables):
-                non_quantitative_data_types.add(RELATIVE)
+            InnerParameterType.SIGMA,
+        )
+        for parameter in petab_problem.parameters
+        if parameter.estimate
+    ):
+        non_quantitative_data_types.add(RELATIVE)
 
-    if len(non_quantitative_data_types) == 0:
-        return None
-    return non_quantitative_data_types
+    return non_quantitative_data_types or None
 
 
 class PetabStartpoints(CheckedStartpoints):

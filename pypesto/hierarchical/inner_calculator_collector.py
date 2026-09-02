@@ -45,6 +45,7 @@ from ..C import (
 from ..objective.amici.amici_calculator import AmiciCalculator
 from ..objective.amici.amici_util import (
     add_sim_grad_to_opt_grad,
+    add_sim_grad_to_opt_grad_slices,
     filter_return_dict,
     init_return_values,
 )
@@ -89,6 +90,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         The experimental data.
     inner_options:
         Options for the inner problems and solvers.
+    x_ids:
+        IDs of the PEtab problem parameters. Those estimated in the inner
+        problems are removed, yielding the objective's optimization
+        parameters.
     """
 
     def __init__(
@@ -250,8 +255,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         ):
             condition_mask[np.isnan(edata)] = False
 
-        # If there is no quantitative data, return None
-        if not all(mask.any() for mask in quantitative_data_mask):
+        # If there is no quantitative data at all, return None. Individual
+        #  conditions without quantitative data are fine -- their (all-False)
+        #  mask simply contributes nothing.
+        if not any(mask.any() for mask in quantitative_data_mask):
             return None
 
         return quantitative_data_mask
@@ -574,6 +581,7 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         data_types: set[str],
         petab_simulator: amici.sim.sundials.petab.PetabSimulator,
         inner_options: dict,
+        x_ids: Sequence[str],
     ):
         from ..objective.amici.amici_calculator import AmiciCalculatorPetabV2
 
@@ -591,7 +599,16 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
             edatas=edatas,
             inner_options=inner_options,
         )
-        self._parameter_mapping = self._create_parameter_mapping(edatas)
+        #: IDs of the objective's optimization parameters: the given parameter
+        #: IDs without those estimated in the inner problems (which the
+        #: objective removes the same way)
+        inner_parameter_ids = set(self.get_inner_par_ids())
+        self._x_ids = [
+            x_id for x_id in x_ids if x_id not in inner_parameter_ids
+        ]
+        self._index_slices = self._create_index_slices(edatas)
+        for calculator in self.inner_calculators:
+            calculator.index_slices = self._index_slices
 
     @property
     def free_parameter_ids(self) -> set[str] | None:
@@ -636,35 +653,32 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
                 relative_inner_problem.get_relative_observable_ids()
             )
 
-    def _create_parameter_mapping(
+    def _create_index_slices(
         self, edatas: list[asd.ExpData]
-    ) -> ParameterMapping:
-        """Create a PEtab v1 style parameter mapping for gradient computation.
+    ) -> list[tuple[np.ndarray, np.ndarray]]:
+        """Map simulation sensitivities to the optimization parameters.
 
         The inner calculators map simulation gradients -- one entry per
-        parameter for which sensitivities were computed (``ExpData.plist``) --
-        to the optimization parameters via
-        :func:`pypesto.objective.amici.amici_util.add_sim_grad_to_opt_grad`,
-        which requires a PEtab v1 style per-condition parameter mapping. For
-        PEtab v2, model parameters carry the IDs of the respective PEtab
-        problem parameters, except for observable/noise placeholders, which
-        are mapped per experiment.
+        parameter for which sensitivities were computed, i.e. per entry of
+        ``ExpData.plist`` -- onto the optimization parameters. For PEtab v2
+        this correspondence is available directly: model parameters carry the
+        IDs of the respective PEtab problem parameters, except for
+        observable/noise placeholders, which are mapped per experiment.
 
-        The mapping constructed here assigns to each model parameter the ID of
-        the PEtab problem parameter it takes its value from, if sensitivities
-        are computed for it (i.e., it is in ``ExpData.plist``), and a dummy
-        numeric value otherwise (numeric entries indicate to
-        ``add_sim_grad_to_opt_grad`` that there are no sensitivities).
+        Returns
+        -------
+        One ``(par_sim_slice, par_opt_slice)`` pair per experiment, as consumed
+        by
+        :func:`pypesto.objective.amici.amici_util.add_sim_grad_to_opt_grad_slices`.
+        Parameters that are not optimization parameters of the objective -- in
+        particular the inner parameters, which the inner calculators handle
+        analytically -- are omitted.
         """
-        from amici.sim._parameter_mapping import (
-            ParameterMapping,
-            ParameterMappingForCondition,
-        )
-
         petab_problem = self.petab_simulator.exp_man.petab_problem
         model_par_ids = self.petab_simulator.model.get_free_parameter_ids()
+        opt_id_to_ix = {x_id: ix for ix, x_id in enumerate(self._x_ids)}
 
-        parameter_mapping = ParameterMapping()
+        index_slices = []
         for edata, experiment in zip(
             edatas, petab_problem.experiments, strict=True
         ):
@@ -676,19 +690,24 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
             placeholder_mapping = _get_experiment_placeholder_mapping(
                 petab_problem, experiment
             )
-            plist = set(edata.plist)
-            map_sim_var = {
-                model_par_id: (
-                    placeholder_mapping.get(model_par_id, model_par_id)
-                    if model_par_ix in plist
-                    else 0.0
+            par_sim_slice = []
+            par_opt_slice = []
+            # sensitivities are returned in `plist` order
+            for sens_ix, model_par_ix in enumerate(edata.plist):
+                model_par_id = model_par_ids[model_par_ix]
+                problem_par_id = placeholder_mapping.get(
+                    model_par_id, model_par_id
                 )
-                for model_par_ix, model_par_id in enumerate(model_par_ids)
-            }
-            parameter_mapping.append(
-                ParameterMappingForCondition(map_sim_var=map_sim_var)
+                if (opt_ix := opt_id_to_ix.get(problem_par_id)) is not None:
+                    par_sim_slice.append(sens_ix)
+                    par_opt_slice.append(opt_ix)
+            index_slices.append(
+                (
+                    np.asarray(par_sim_slice, dtype=int),
+                    np.asarray(par_opt_slice, dtype=int),
+                )
             )
-        return parameter_mapping
+        return index_slices
 
     def __call__(
         self,
@@ -735,16 +754,19 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
                     "`sensi_orders=(0,)` only."
                 )
 
-        x_dct = copy.deepcopy(x_dct)
-        x_dct.update(self.necessary_par_dummy_values)
+        # values are immutable scalars, so a shallow merge suffices
+        x_dct = x_dct | self.necessary_par_dummy_values
 
         # If we are using adjoint sensitivity analysis, need second-order
         #  sensitivities, or are in residual mode, the objective function and
         #  its derivatives are computed by AMICI directly, with the inner
         #  parameters fixed at their optimal values.
         if (
-            amici_solver.get_sensitivity_method()
-            == asd.SensitivityMethod.adjoint
+            (
+                1 in sensi_orders
+                and amici_solver.get_sensitivity_method()
+                == asd.SensitivityMethod.adjoint
+            )
             or 2 in sensi_orders
             or mode == MODE_RES
         ):
@@ -807,7 +829,7 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
                 edatas=edatas,
                 n_threads=n_threads,
                 x_ids=x_ids,
-                parameter_mapping=self._parameter_mapping,
+                parameter_mapping=parameter_mapping,
                 fim_for_hess=fim_for_hess,
                 rdatas=rdatas,
             )
@@ -828,9 +850,10 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
                 mode=mode,
                 quantitative_data_mask=self.quantitative_data_mask,
                 dim=dim,
-                parameter_mapping=self._parameter_mapping,
+                parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
                 par_sim_ids=amici_model.get_free_parameter_ids(),
+                index_slices=self._index_slices,
             )
             nllh += quantitative_result[FVAL]
             if 1 in sensi_orders:
@@ -919,9 +942,8 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         )
 
         # compute the requested quantities with the inner parameters fixed
-        #  at their optimal values
-        x_dct = copy.deepcopy(x_dct)
-        x_dct.update(inner_parameters)
+        #  at their optimal values (`x_dct` is already a private copy)
+        x_dct = x_dct | inner_parameters
 
         ret = self._petab_v2_calculator(
             x_dct=x_dct,
@@ -963,20 +985,35 @@ def _get_experiment_placeholder_mapping(
         experiment
     ):
         observable = observables[measurement.observable_id]
-        for placeholder, override in zip(
-            observable.observable_placeholders,
-            measurement.observable_parameters,
-            strict=True,
+        for placeholders, overrides in (
+            (
+                observable.observable_placeholders,
+                measurement.observable_parameters,
+            ),
+            (observable.noise_placeholders, measurement.noise_parameters),
         ):
-            if override.is_Symbol:
-                mapping[str(placeholder)] = str(override)
-        for placeholder, override in zip(
-            observable.noise_placeholders,
-            measurement.noise_parameters,
-            strict=True,
-        ):
-            if override.is_Symbol:
-                mapping[str(placeholder)] = str(override)
+            for placeholder, override in zip(
+                placeholders, overrides, strict=True
+            ):
+                if not override.is_Symbol:
+                    continue
+                placeholder, override = str(placeholder), str(override)
+                # AMICI applies a single value per placeholder and experiment,
+                #  so conflicting overrides would be silently mis-simulated
+                #  and their gradients misattributed. Its own guard against
+                #  this never fires, so check here.
+                if (previous := mapping.get(placeholder)) not in (
+                    None,
+                    override,
+                ):
+                    raise NotImplementedError(
+                        f"Placeholder {placeholder} of observable "
+                        f"{observable.id} is overridden by both {previous} and "
+                        f"{override} within experiment {experiment.id}. "
+                        "Measurement-specific placeholder overrides that "
+                        "differ within one experiment are not supported."
+                    )
+                mapping[placeholder] = override
     return mapping
 
 
@@ -990,8 +1027,15 @@ def calculate_quantitative_result(
     parameter_mapping: ParameterMapping,
     par_opt_ids: list[str],
     par_sim_ids: list[str],
+    index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
 ):
-    """Calculate the function values from rdatas and return as dict."""
+    """Calculate the function values from rdatas and return as dict.
+
+    ``index_slices`` optionally provides pre-computed
+    ``(par_sim_slice, par_opt_slice)`` pairs per condition, in which case
+    ``parameter_mapping`` is not used (see
+    :func:`pypesto.objective.amici.amici_util.add_sim_grad_to_opt_grad_slices`).
+    """
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
         sensi_orders, mode, dim
     )
@@ -1013,21 +1057,27 @@ def calculate_quantitative_result(
 
     # calculate the gradient if requested
     if 1 in sensi_orders:
-        parameter_map_sim_var = [
-            cond_par_map.map_sim_var for cond_par_map in parameter_mapping
-        ]
+        parameter_map_sim_var = (
+            [None] * len(rdatas)
+            if index_slices is not None
+            else [
+                cond_par_map.map_sim_var for cond_par_map in parameter_mapping
+            ]
+        )
         # iterate over simulation conditions
-        for (
+        for cond_idx, (
             rdata,
             edata,
             mask,
             condition_map_sim_var,
-        ) in zip(
-            rdatas,
-            edatas,
-            quantitative_data_mask,
-            parameter_map_sim_var,
-            strict=True,
+        ) in enumerate(
+            zip(
+                rdatas,
+                edatas,
+                quantitative_data_mask,
+                parameter_map_sim_var,
+                strict=True,
+            )
         ):
             data_i = edata[mask]
             sim_i = rdata[AMICI_Y][mask]
@@ -1065,13 +1115,22 @@ def calculate_quantitative_result(
                 np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)),
                 axis=1,
             )
-            add_sim_grad_to_opt_grad(
-                par_opt_ids=par_opt_ids,
-                par_sim_ids=par_sim_ids,
-                condition_map_sim_var=condition_map_sim_var,
-                sim_grad=gradient_for_condition,
-                opt_grad=snllh,
-            )
+            if index_slices is not None:
+                par_sim_slice, par_opt_slice = index_slices[cond_idx]
+                add_sim_grad_to_opt_grad_slices(
+                    par_sim_slice=par_sim_slice,
+                    par_opt_slice=par_opt_slice,
+                    sim_grad=gradient_for_condition,
+                    opt_grad=snllh,
+                )
+            else:
+                add_sim_grad_to_opt_grad(
+                    par_opt_ids=par_opt_ids,
+                    par_sim_ids=par_sim_ids,
+                    condition_map_sim_var=condition_map_sim_var,
+                    sim_grad=gradient_for_condition,
+                    opt_grad=snllh,
+                )
 
     ret = {
         FVAL: nllh,

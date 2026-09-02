@@ -6,12 +6,15 @@ from collections import Counter
 import pandas as pd
 
 from ...C import (
+    INNER_PARAMETER_BOUNDS,
     LIN,
     MEASUREMENT_TYPE,
     PARAMETER_TYPE,
     SEMIQUANTITATIVE,
     InnerParameterType,
 )
+from ...C import LOWER_BOUND as PYPESTO_LOWER_BOUND
+from ...C import UPPER_BOUND as PYPESTO_UPPER_BOUND
 from ..base_problem import (
     AmiciInnerProblem,
     _get_timepoints_with_replicates,
@@ -356,6 +359,8 @@ def inner_problem_from_petab_v2_problem(
     See :meth:`RelativeInnerProblem.from_petab_v2_amici` for the expected
     arguments.
     """
+    from ...petab.util import get_petab_v2_extra_field
+
     # inner parameters
     inner_parameters = inner_parameters_from_petab_v2_problem(petab_problem)
 
@@ -371,6 +376,18 @@ def inner_problem_from_petab_v2_problem(
 
     # matrixify
     ix_matrices = ix_matrices_from_arrays(ixs, data)
+
+    # inner parameters are located via the measurement-specific overrides; one
+    #  that only occurs directly in a formula cannot be assigned to
+    #  measurements (see `ixs_for_measurement_specific_parameters_v2`)
+    if missing := [x for x in x_ids if x not in ixs]:
+        raise NotImplementedError(
+            "The following inner parameters do not occur in the "
+            "`observableParameters` or `noiseParameters` of any measurement: "
+            f"{sorted(missing)}. Inner parameters that are referenced directly "
+            "in an observable or noise formula are not supported; use an "
+            "observable/noise placeholder overridden per measurement instead."
+        )
 
     # assign matrices, observable indices and ids to inner parameters
     for par in inner_parameters:
@@ -390,18 +407,46 @@ def inner_problem_from_petab_v2_problem(
         par.inner_parameter_id: par.inner_parameter_type
         for par in inner_parameters
     }
+    # scaling/offset annotations of *all* parameters, including non-estimated
+    #  ones: those are not inner parameters, but a scaling whose offset partner
+    #  is not estimated cannot be solved for analytically and must be rejected
+    #  rather than silently treated as uncoupled
+    annotated_types = {}
+    for parameter in petab_problem.parameters:
+        parameter_type = get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
+        if parameter_type in (
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        ):
+            annotated_types[parameter.id] = InnerParameterType(parameter_type)
+
     coupled_pars = set()
     for measurement in petab_problem.measurements:
+        # only scaling/offset overrides can form a coupled pair; numeric and
+        #  unrelated overrides must not count towards the group
         group = tuple(
-            str(override) for override in measurement.observable_parameters
+            override
+            for override in map(str, measurement.observable_parameters)
+            if override in annotated_types
         )
         # prefilter for at least 2 observable parameters
         if len(group) < 2:
             continue
-        types = [inner_parameter_types.get(override) for override in group]
+        types = [annotated_types[override] for override in group]
         if (InnerParameterType.SCALING in types) and (
             InnerParameterType.OFFSET in types
         ):
+            if not_estimated := [
+                override
+                for override in group
+                if override not in inner_parameter_types
+            ]:
+                raise NotImplementedError(
+                    f"Observable parameters {list(group)} form a coupled "
+                    f"scaling/offset pair, but {sorted(not_estimated)} are not "
+                    "estimated. Coupled scaling/offset parameters must either "
+                    "both be estimated or both be non-inner parameters."
+                )
             coupled_pars.add(group)
 
     # Check each group is of length 2
@@ -456,14 +501,28 @@ def inner_parameters_from_petab_v2_problem(
         #  data types other than relative are not yet supported for PEtab v2
         #  (see `validate_hierarchical_petab_problem_v2`).
 
+        inner_parameter_type = InnerParameterType(parameter_type)
+        # Scaling and offset parameters can be bounded arbitrarily; all other
+        #  inner parameter types (in particular sigma) require the fixed
+        #  bounds of `INNER_PARAMETER_BOUNDS`. This is the PEtab v2 equivalent
+        #  of `correct_parameter_df_bounds`, which only works on DataFrames.
+        lb, ub = parameter.lb, parameter.ub
+        if inner_parameter_type not in (
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        ):
+            bounds = INNER_PARAMETER_BOUNDS[inner_parameter_type]
+            lb = bounds[PYPESTO_LOWER_BOUND]
+            ub = bounds[PYPESTO_UPPER_BOUND]
+
         parameters.append(
             RelativeInnerParameter(
                 inner_parameter_id=parameter.id,
-                inner_parameter_type=InnerParameterType(parameter_type),
+                inner_parameter_type=inner_parameter_type,
                 # PEtab v2 does not support parameter scales
                 scale=LIN,
-                lb=parameter.lb,
-                ub=parameter.ub,
+                lb=lb,
+                ub=ub,
                 observable_ids=None,
                 observable_indices=None,
             )

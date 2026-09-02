@@ -676,13 +676,20 @@ def validate_hierarchical_petab_problem_v2(petab_problem: v2.Problem) -> None:
     """
     from ..petab.util import get_petab_v2_extra_field
 
-    if any(
-        get_petab_v2_extra_field(measurement, MEASUREMENT_TYPE) is not None
+    if unsupported := {
+        data_type
         for measurement in petab_problem.measurements
-    ):
+        if (
+            data_type := get_petab_v2_extra_field(
+                measurement, MEASUREMENT_TYPE
+            )
+        )
+        not in (None, RELATIVE)
+    }:
         raise NotImplementedError(
-            "Ordinal, censored and semiquantitative data (`measurementType` "
-            "column) are not yet supported for PEtab v2 problems."
+            f"Measurement type(s) {sorted(unsupported)} (`measurementType` "
+            "column) are not yet supported for PEtab v2 problems. Only "
+            f"`{RELATIVE}` data are supported."
         )
 
     inner_parameters = get_inner_parameters_v2(petab_problem)
@@ -824,6 +831,11 @@ def validate_measurement_formulae_v2(
             InnerParameterType.SCALING,
             InnerParameterType.SIGMA,
         ],
+        # `dtype=object` keeps the `None` sentinels as `None`; pandas would
+        #  otherwise coerce a mixed str/None column to a string dtype whose
+        #  missing value is NaN, and `validate_inner_parameter_pairings`
+        #  compares against `None` (and `nan != nan`).
+        dtype=object,
     )
 
 

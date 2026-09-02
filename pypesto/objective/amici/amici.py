@@ -799,23 +799,34 @@ class AmiciPetabV2Objective(AmiciObjective):
                 InnerCalculatorCollectorPetabV2,
             )
 
+            x_ids = kwargs.get("x_ids")
+            if x_ids is None:
+                x_ids = self.petab_problem.x_ids
+
             calculator = InnerCalculatorCollectorPetabV2(
                 data_types=non_quantitative_data_types,
                 petab_simulator=self._petab_simulator,
                 inner_options=inner_options or {},
+                x_ids=x_ids,
             )
             # the inner calculators need observables and sigmas, and their
-            #  sensitivities, from the simulations
-            kwargs.setdefault("amici_reporting", asd.RDataReporting.full)
+            #  sensitivities, from the simulations -- this is not negotiable,
+            #  so it is set rather than defaulted
+            kwargs["amici_reporting"] = asd.RDataReporting.full
             # parameters estimated in the inner subproblems are removed from
             #  the objective parameters
-            x_ids = kwargs.get("x_ids")
-            if x_ids is None:
-                x_ids = self.petab_problem.x_ids
             inner_parameter_ids = set(calculator.get_inner_par_ids())
             kwargs["x_ids"] = [
                 x_id for x_id in x_ids if x_id not in inner_parameter_ids
             ]
+            # `x_names` defaults to `x_ids`, but an explicitly passed one has
+            #  to be filtered too -- `ObjectiveBase` takes its dimension from it
+            if (x_names := kwargs.get("x_names")) is not None:
+                kwargs["x_names"] = [
+                    x_name
+                    for x_name in x_names
+                    if x_name not in inner_parameter_ids
+                ]
         else:
             calculator = AmiciCalculatorPetabV2(self._petab_simulator)
 

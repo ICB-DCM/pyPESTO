@@ -7,7 +7,10 @@ import numpy as np
 
 from ...C import InnerParameterType
 from ...objective import Objective
-from ...objective.amici.amici_util import add_sim_grad_to_opt_grad
+from ...objective.amici.amici_util import (
+    add_sim_grad_to_opt_grad,
+    add_sim_grad_to_opt_grad_slices,
+)
 from ...optimize import minimize
 from ...problem import Problem
 from ..base_parameter import InnerParameter
@@ -104,6 +107,7 @@ class RelativeInnerSolver(InnerSolver):
         par_opt_ids: list[str],
         par_sim_ids: list[str],
         snllh: np.ndarray,
+        index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
     ) -> np.ndarray:
         """Calculate the gradients with respect to the outer parameters.
 
@@ -138,6 +142,12 @@ class RelativeInnerSolver(InnerSolver):
         snllh:
             A zero-initialized vector of the same length as ``par_opt_ids`` to store the
             gradients in. Will be modified in-place.
+        index_slices:
+            Pre-computed ``(par_sim_slice, par_opt_slice)`` index pairs, one
+            per condition, mapping simulation sensitivities to optimization
+            parameters. If given, ``parameter_mapping`` is not used. Used by
+            the PEtab v2 path, where the correspondence follows directly from
+            ``ExpData.plist``.
 
         Returns
         -------
@@ -197,7 +207,7 @@ class RelativeInnerSolver(InnerSolver):
             )
 
         # compute gradients
-        for cond_idx, cond_par_map in enumerate(parameter_mapping):
+        for cond_idx in range(len(sim)):
             gradient_for_cond = compute_nllh_gradient_for_condition(
                 data=relevant_data[cond_idx],
                 sim=sim[cond_idx],
@@ -205,13 +215,24 @@ class RelativeInnerSolver(InnerSolver):
                 sigma=sigma[cond_idx],
                 ssigma=ssigma[cond_idx],
             )
-            add_sim_grad_to_opt_grad(
-                par_opt_ids=par_opt_ids,
-                par_sim_ids=par_sim_ids,
-                condition_map_sim_var=cond_par_map.map_sim_var,
-                sim_grad=gradient_for_cond,
-                opt_grad=snllh,
-            )
+            if index_slices is not None:
+                par_sim_slice, par_opt_slice = index_slices[cond_idx]
+                add_sim_grad_to_opt_grad_slices(
+                    par_sim_slice=par_sim_slice,
+                    par_opt_slice=par_opt_slice,
+                    sim_grad=gradient_for_cond,
+                    opt_grad=snllh,
+                )
+            else:
+                add_sim_grad_to_opt_grad(
+                    par_opt_ids=par_opt_ids,
+                    par_sim_ids=par_sim_ids,
+                    condition_map_sim_var=parameter_mapping[
+                        cond_idx
+                    ].map_sim_var,
+                    sim_grad=gradient_for_cond,
+                    opt_grad=snllh,
+                )
 
         return snllh
 

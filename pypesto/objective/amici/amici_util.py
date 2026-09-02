@@ -245,7 +245,43 @@ def add_sim_grad_to_opt_grad(
     par_sim_slice, par_opt_slice = par_index_slices(
         par_opt_ids, par_sim_ids, condition_map_sim_var
     )
+    add_sim_grad_to_opt_grad_slices(
+        par_sim_slice, par_opt_slice, sim_grad, opt_grad, coefficient
+    )
 
+
+def add_sim_grad_to_opt_grad_slices(
+    par_sim_slice: np.ndarray,
+    par_opt_slice: np.ndarray,
+    sim_grad: np.ndarray,
+    opt_grad: np.ndarray,
+    coefficient: float = 1.0,
+) -> None:
+    """
+    Sum simulation gradients to objective gradient, given index slices.
+
+    Same as :func:`add_sim_grad_to_opt_grad`, but for pre-computed index
+    slices. This allows callers that know the simulation-to-optimization
+    parameter correspondence directly -- e.g. the PEtab v2 path, where it
+    follows from ``ExpData.plist`` -- to skip building a PEtab v1 style
+    parameter mapping just to have :func:`par_index_slices` derive the same
+    indices from it.
+
+    Parameters
+    ----------
+    par_sim_slice:
+        Indices into ``sim_grad``, i.e. positions in the simulation
+        sensitivities.
+    par_opt_slice:
+        The corresponding indices into ``opt_grad``.
+    sim_grad:
+        Simulation gradient.
+    opt_grad:
+        The optimization gradient, to which ``sim_grad`` is added.
+        Changed in-place.
+    coefficient:
+        Coefficient for ``sim_grad`` when adding to ``opt_grad``.
+    """
     par_opt_slice_unique, unique_index = np.unique(
         par_opt_slice, return_index=True
     )
