@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import abc
 import copy
+import logging
 import os
 import tempfile
-import warnings
 from collections import OrderedDict
 from collections.abc import Sequence
 from pathlib import Path
@@ -48,6 +48,8 @@ try:
     from amici.sim._parameter_mapping import ParameterMapping
 except ImportError:
     pass
+
+logger = logging.getLogger(__name__)
 
 AmiciModel = Union["asd.Model", "asd.ModelPtr"]
 AmiciSolver = Union["asd.Solver", "asd.SolverPtr"]
@@ -816,14 +818,14 @@ class AmiciPetabV2Objective(AmiciObjective):
             if (
                 requested_reporting := kwargs.get("amici_reporting")
             ) is not None and requested_reporting != asd.RDataReporting.full:
-                warnings.warn(
-                    f"Ignoring `amici_reporting={requested_reporting}`: "
-                    "hierarchical optimization requires "
-                    "`RDataReporting.full`, since the inner problems are "
-                    "solved from the observables, sigmas and their "
+                # logged rather than `warnings.warn`ed -- see the note in
+                #  `inner_parameters_from_petab_v2_problem`
+                logger.warning(
+                    "Ignoring `amici_reporting=%s`: hierarchical optimization "
+                    "requires `RDataReporting.full`, since the inner problems "
+                    "are solved from the observables, sigmas and their "
                     "sensitivities.",
-                    # see the note in `inner_parameters_from_petab_v2_problem`
-                    stacklevel=1,
+                    requested_reporting,
                 )
             kwargs["amici_reporting"] = asd.RDataReporting.full
             # parameters estimated in the inner subproblems are removed from

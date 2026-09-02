@@ -213,6 +213,46 @@ def par_index_slices(
     return par_sim_slice, par_opt_slice
 
 
+def index_slices_from_mapping(
+    parameter_mapping: ParameterMapping,
+    par_opt_ids: Sequence[str],
+    par_sim_ids: Sequence[str],
+    n_conditions: int | None = None,
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Derive per-condition index slices from a PEtab v1 parameter mapping.
+
+    Parameters
+    ----------
+    parameter_mapping:
+        Mapping of optimization to simulation parameters, one entry per
+        simulation condition.
+    par_opt_ids:
+        The optimization parameter ids. Needed for order.
+    par_sim_ids:
+        The simulation parameter ids. Needed for order.
+    n_conditions:
+        The number of simulated conditions, if known. ``parameter_mapping``
+        must have exactly this many entries -- the slices are paired with the
+        conditions by position, so a mapping of a different length cannot be
+        matched up and is rejected rather than truncated.
+
+    Returns
+    -------
+    One ``(par_sim_slice, par_opt_slice)`` pair per entry of
+    ``parameter_mapping``, as consumed by
+    :func:`add_sim_grad_to_opt_grad_slices`.
+    """
+    if n_conditions is not None and len(parameter_mapping) != n_conditions:
+        raise ValueError(
+            f"Got a parameter mapping for {len(parameter_mapping)} conditions, "
+            f"but {n_conditions} were simulated."
+        )
+    return [
+        par_index_slices(par_opt_ids, par_sim_ids, cond_par_map.map_sim_var)
+        for cond_par_map in parameter_mapping
+    ]
+
+
 def add_sim_grad_to_opt_grad(
     par_opt_ids: Sequence[str],
     par_sim_ids: Sequence[str],

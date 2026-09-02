@@ -1,8 +1,8 @@
 """Inner optimization problem in hierarchical optimization."""
 
 import logging
-import warnings
 from collections import Counter
+from typing import NamedTuple
 
 import pandas as pd
 
@@ -42,6 +42,13 @@ except ImportError:
     pass
 
 logger = logging.getLogger(__name__)
+
+
+class _Annotation(NamedTuple):
+    """A parameter's scaling/offset annotation and whether it is estimated."""
+
+    type: "InnerParameterType"
+    estimated: bool
 
 
 class RelativeInnerProblem(AmiciInnerProblem):
@@ -409,16 +416,16 @@ def inner_problem_from_petab_v2_problem(
     #  they are estimated. Non-estimated ones are not inner parameters, but a
     #  scaling whose offset partner is not estimated cannot be solved for
     #  analytically and must be rejected rather than silently left uncoupled.
-    annotated_types = {}
+    annotated_types: dict[str, _Annotation] = {}
     for parameter in petab_problem.parameters:
         parameter_type = get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
         if parameter_type in (
             InnerParameterType.SCALING,
             InnerParameterType.OFFSET,
         ):
-            annotated_types[parameter.id] = (
-                InnerParameterType(parameter_type),
-                bool(parameter.estimate),
+            annotated_types[parameter.id] = _Annotation(
+                type=InnerParameterType(parameter_type),
+                estimated=bool(parameter.estimate),
             )
 
     coupled_pars = set()
@@ -433,14 +440,14 @@ def inner_problem_from_petab_v2_problem(
         # prefilter for at least 2 observable parameters
         if len(group) < 2:
             continue
-        types = [annotated_types[override][0] for override in group]
+        types = [annotated_types[override].type for override in group]
         if (InnerParameterType.SCALING in types) and (
             InnerParameterType.OFFSET in types
         ):
             not_estimated = [
                 override
                 for override in group
-                if not annotated_types[override][1]
+                if not annotated_types[override].estimated
             ]
             if len(not_estimated) == len(group):
                 # none of them is an inner parameter: this observable is not
@@ -527,7 +534,8 @@ def inner_parameters_from_petab_v2_problem(
             ub = bounds[PYPESTO_UPPER_BOUND]
             if (parameter.lb, parameter.ub) != (lb, ub):
                 overridden_bounds.append(
-                    f"`{parameter.id}` [{parameter.lb}, {parameter.ub}]"
+                    f"`{parameter.id}` ({inner_parameter_type}): "
+                    f"[{parameter.lb}, {parameter.ub}] -> [{lb}, {ub}]"
                 )
 
         parameters.append(
@@ -544,17 +552,14 @@ def inner_parameters_from_petab_v2_problem(
         )
 
     if overridden_bounds:
-        # `stacklevel` is deliberately left at the `warn` call: the number of
-        #  frames up to the public entry point is not fixed, so any other
-        #  value would point at an arbitrary internal frame. The message names
-        #  the affected parameters instead.
-        warnings.warn(
-            "Ignoring the bounds declared for the following inner "
-            f"parameters: {', '.join(overridden_bounds)}. Hierarchical "
-            "optimization requires the fixed bounds of "
-            "`INNER_PARAMETER_BOUNDS` for all inner parameter types except "
-            "scaling and offset.",
-            stacklevel=1,
+        # logged rather than `warnings.warn`ed: the number of frames up to the
+        #  public entry point is not fixed, so no `stacklevel` would point at
+        #  the user's own call
+        logger.warning(
+            "Hierarchical optimization requires fixed bounds for all inner "
+            "parameter types except scaling and offset. Replacing the "
+            "declared bounds of: %s.",
+            "; ".join(overridden_bounds),
         )
 
     return parameters

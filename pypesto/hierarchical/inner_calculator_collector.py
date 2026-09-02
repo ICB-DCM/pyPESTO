@@ -47,8 +47,8 @@ from ..objective.amici.amici_calculator import AmiciCalculator
 from ..objective.amici.amici_util import (
     add_sim_grad_to_opt_grad_slices,
     filter_return_dict,
+    index_slices_from_mapping,
     init_return_values,
-    par_index_slices,
 )
 
 try:
@@ -521,16 +521,19 @@ class InnerCalculatorCollector(AmiciCalculator):
                 mode=mode,
                 quantitative_data_mask=self.quantitative_data_mask,
                 dim=dim,
-                # PEtab v1: derive from the parameter mapping, for the
-                #  conditions that are actually simulated
-                index_slices=[
-                    par_index_slices(
+                # PEtab v1: derive from the parameter mapping, which must line
+                #  up with the simulated conditions one-to-one. Only needed for
+                #  the gradient, so do not pay for it on fval-only calls.
+                index_slices=(
+                    index_slices_from_mapping(
+                        parameter_mapping,
                         x_ids,
                         amici_model.get_free_parameter_ids(),
-                        cond_par_map.map_sim_var,
+                        len(rdatas),
                     )
-                    for cond_par_map in parameter_mapping[: len(rdatas)]
-                ],
+                    if 1 in sensi_orders
+                    else None
+                ),
             )
             nllh += quantitative_result[FVAL]
             if 1 in sensi_orders:
@@ -614,6 +617,8 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         self._x_ids = [
             x_id for x_id in x_ids if x_id not in inner_parameter_ids
         ]
+        #: the `x_ids` object most recently checked against `_x_ids`
+        self._validated_x_ids = None
         self._index_slices = self._create_index_slices(edatas)
         for calculator in self.inner_calculators:
             calculator.index_slices = self._index_slices
@@ -745,19 +750,23 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
 
         # `self._index_slices` indexes into `self._x_ids`, so the objective's
         #  parameters must be the ones this calculator was built for. The
-        #  length check short-circuits the common case cheaply.
-        if len(x_ids) != len(self._x_ids) or list(x_ids) != self._x_ids:
-            differing = [
-                (expected, got)
-                for expected, got in zip_longest(self._x_ids, x_ids)
-                if expected != got
-            ]
-            raise ValueError(
-                "The optimization parameters of the objective do not match "
-                "those this calculator was constructed with "
-                f"({len(self._x_ids)} vs {len(x_ids)} parameters). First "
-                f"differing (expected, got): {differing[:5]}."
-            )
+        #  objective passes the same list object every call, so validate once
+        #  per object rather than comparing element-wise on the hot path (the
+        #  reference is kept, so the identity cannot be recycled).
+        if x_ids is not self._validated_x_ids:
+            if list(x_ids) != self._x_ids:
+                differing = [
+                    (expected, got)
+                    for expected, got in zip_longest(self._x_ids, x_ids)
+                    if expected != got
+                ]
+                raise ValueError(
+                    "The optimization parameters of the objective do not "
+                    "match those this calculator was constructed with "
+                    f"({len(self._x_ids)} vs {len(x_ids)} parameters). First "
+                    f"differing (expected, got): {differing[:5]}."
+                )
+            self._validated_x_ids = x_ids
 
         # set order in solver
         sensi_order = 0
@@ -1045,7 +1054,10 @@ def calculate_quantitative_result(
     mode: ModeType,
     quantitative_data_mask: list[np.ndarray],
     dim: int,
-    index_slices: list[tuple[np.ndarray, np.ndarray]],
+    parameter_mapping: ParameterMapping = None,
+    par_opt_ids: list[str] = None,
+    par_sim_ids: list[str] = None,
+    index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
 ):
     """Calculate the function values from rdatas and return as dict.
 
@@ -1053,7 +1065,35 @@ def calculate_quantitative_result(
     per condition, that map simulation sensitivities onto the optimization
     parameters (see
     :func:`pypesto.objective.amici.amici_util.add_sim_grad_to_opt_grad_slices`).
+    It is only needed when the gradient is requested. Passing
+    ``parameter_mapping``, ``par_opt_ids`` and ``par_sim_ids`` instead is
+    deprecated; they are used to derive the slices.
     """
+    if index_slices is None and 1 in sensi_orders:
+        if parameter_mapping is None:
+            raise ValueError(
+                "Either `index_slices` or `parameter_mapping` (with "
+                "`par_opt_ids` and `par_sim_ids`) is required to compute the "
+                "gradient."
+            )
+        warnings.warn(
+            "Passing `parameter_mapping`, `par_opt_ids` and `par_sim_ids` to "
+            "`calculate_quantitative_result` is deprecated and will be "
+            "removed in a future release; pass `index_slices` instead (see "
+            "`pypesto.objective.amici.amici_util.index_slices_from_mapping`).",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        index_slices = index_slices_from_mapping(
+            parameter_mapping, par_opt_ids, par_sim_ids, len(rdatas)
+        )
+
+    # finding: keep the arity contract uniform with `calculate_gradients`
+    if index_slices is not None and len(index_slices) != len(rdatas):
+        raise ValueError(
+            f"Got {len(index_slices)} index slices for {len(rdatas)} "
+            "simulation conditions."
+        )
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
         sensi_orders, mode, dim
     )
@@ -1075,11 +1115,6 @@ def calculate_quantitative_result(
 
     # calculate the gradient if requested
     if 1 in sensi_orders:
-        if len(index_slices) != len(rdatas):
-            raise ValueError(
-                f"Got {len(index_slices)} index slices for {len(rdatas)} "
-                "simulation conditions."
-            )
         # iterate over simulation conditions
         for cond_idx, (rdata, edata, mask) in enumerate(
             zip(

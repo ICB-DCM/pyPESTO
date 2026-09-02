@@ -33,8 +33,8 @@ from ...objective.amici.amici_calculator import (
 )
 from ...objective.amici.amici_util import (
     filter_return_dict,
+    index_slices_from_mapping,
     init_return_values,
-    par_index_slices,
 )
 from .problem import AmiciInnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
@@ -363,17 +363,14 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 index_slices=(
                     self.index_slices
                     if self.index_slices is not None
-                    # PEtab v1: derive from the parameter mapping. The slices
-                    #  do not depend on the parameter values, but only the
-                    #  conditions that are actually simulated are needed.
-                    else [
-                        par_index_slices(
-                            x_ids,
-                            amici_model.get_free_parameter_ids(),
-                            cond_par_map.map_sim_var,
-                        )
-                        for cond_par_map in parameter_mapping[: len(rdatas)]
-                    ]
+                    # PEtab v1: derive from the parameter mapping, which must
+                    #  line up with the simulated conditions one-to-one
+                    else index_slices_from_mapping(
+                        parameter_mapping,
+                        x_ids,
+                        amici_model.get_free_parameter_ids(),
+                        len(rdatas),
+                    )
                 ),
                 snllh=snllh,
             )
