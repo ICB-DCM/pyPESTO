@@ -1,6 +1,7 @@
 """Inner optimization problem in hierarchical optimization."""
 
 import logging
+import warnings
 from collections import Counter
 
 import pandas as pd
@@ -382,11 +383,12 @@ def inner_problem_from_petab_v2_problem(
     #  measurements (see `ixs_for_measurement_specific_parameters_v2`)
     if missing := [x for x in x_ids if x not in ixs]:
         raise NotImplementedError(
-            "The following inner parameters do not occur in the "
-            "`observableParameters` or `noiseParameters` of any measurement: "
-            f"{sorted(missing)}. Inner parameters that are referenced directly "
-            "in an observable or noise formula are not supported; use an "
-            "observable/noise placeholder overridden per measurement instead."
+            "The following inner parameters are not used by any measurement: "
+            f"{sorted(missing)}. Either they override no observable/noise "
+            "placeholder -- inner parameters referenced directly in a formula "
+            "are not supported, use a placeholder overridden per measurement "
+            "instead -- or the observable they belong to has no measurements "
+            "in any experiment."
         )
 
     # assign matrices, observable indices and ids to inner parameters
@@ -436,16 +438,23 @@ def inner_problem_from_petab_v2_problem(
         if (InnerParameterType.SCALING in types) and (
             InnerParameterType.OFFSET in types
         ):
-            if not_estimated := [
+            not_estimated = [
                 override
                 for override in group
                 if override not in inner_parameter_types
-            ]:
+            ]
+            if len(not_estimated) == len(group):
+                # none of them is an inner parameter: this observable is not
+                #  hierarchically optimized, so there is nothing to couple
+                continue
+            if not_estimated:
+                # a partially estimated pair cannot be solved for
+                #  analytically, and must not be silently left uncoupled
                 raise NotImplementedError(
                     f"Observable parameters {list(group)} form a coupled "
                     f"scaling/offset pair, but {sorted(not_estimated)} are not "
                     "estimated. Coupled scaling/offset parameters must either "
-                    "both be estimated or both be non-inner parameters."
+                    "all be estimated or all be non-estimated."
                 )
             coupled_pars.add(group)
 
@@ -514,6 +523,15 @@ def inner_parameters_from_petab_v2_problem(
             bounds = INNER_PARAMETER_BOUNDS[inner_parameter_type]
             lb = bounds[PYPESTO_LOWER_BOUND]
             ub = bounds[PYPESTO_UPPER_BOUND]
+            if (parameter.lb, parameter.ub) != (lb, ub):
+                warnings.warn(
+                    f"Ignoring the bounds "
+                    f"[{parameter.lb}, {parameter.ub}] declared for the "
+                    f"{inner_parameter_type} inner parameter "
+                    f"`{parameter.id}`; hierarchical optimization requires "
+                    f"[{lb}, {ub}].",
+                    stacklevel=2,
+                )
 
         parameters.append(
             RelativeInnerParameter(

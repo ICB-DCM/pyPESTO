@@ -4,6 +4,7 @@ import abc
 import copy
 import os
 import tempfile
+import warnings
 from collections import OrderedDict
 from collections.abc import Sequence
 from pathlib import Path
@@ -812,6 +813,17 @@ class AmiciPetabV2Objective(AmiciObjective):
             # the inner calculators need observables and sigmas, and their
             #  sensitivities, from the simulations -- this is not negotiable,
             #  so it is set rather than defaulted
+            if (
+                requested_reporting := kwargs.get("amici_reporting")
+            ) is not None and requested_reporting != asd.RDataReporting.full:
+                warnings.warn(
+                    f"Ignoring `amici_reporting={requested_reporting}`: "
+                    "hierarchical optimization requires "
+                    "`RDataReporting.full`, since the inner problems are "
+                    "solved from the observables, sigmas and their "
+                    "sensitivities.",
+                    stacklevel=2,
+                )
             kwargs["amici_reporting"] = asd.RDataReporting.full
             # parameters estimated in the inner subproblems are removed from
             #  the objective parameters
@@ -820,12 +832,13 @@ class AmiciPetabV2Objective(AmiciObjective):
                 x_id for x_id in x_ids if x_id not in inner_parameter_ids
             ]
             # `x_names` defaults to `x_ids`, but an explicitly passed one has
-            #  to be filtered too -- `ObjectiveBase` takes its dimension from it
+            #  to be filtered too -- `ObjectiveBase` takes its dimension from
+            #  it. Names need not equal IDs, so filter by position.
             if (x_names := kwargs.get("x_names")) is not None:
                 kwargs["x_names"] = [
                     x_name
-                    for x_name in x_names
-                    if x_name not in inner_parameter_ids
+                    for x_id, x_name in zip(x_ids, x_names, strict=True)
+                    if x_id not in inner_parameter_ids
                 ]
         else:
             calculator = AmiciCalculatorPetabV2(self._petab_simulator)

@@ -428,6 +428,21 @@ def test_hierarchical_petab_v2_coupled_pair_rejections(
     with pytest.raises(NotImplementedError, match="not.*estimated"):
         inner_problem_from_petab_v2_problem(petab_problem, model, edatas)
 
+    # ... but if NEITHER is estimated, that observable is simply not
+    # hierarchically optimized and the pair must be accepted, not rejected
+    petab_problem = copy.deepcopy(converted)
+    for parameter in petab_problem.parameters:
+        if parameter.id in ("scaling_pSTAT5A_rel", "offset_pSTAT5A_rel"):
+            parameter.estimate = False
+    inner_problem = inner_problem_from_petab_v2_problem(
+        petab_problem, model, edatas
+    )
+    assert "scaling_pSTAT5A_rel" not in inner_problem.xs
+    assert (
+        inner_problem.xs["scaling_pSTAT5B_rel"].coupled.inner_parameter_id
+        == "offset_pSTAT5B_rel"
+    )
+
     # a numeric override alongside the pair must not inflate the group
     petab_problem = copy.deepcopy(converted)
     for measurement in petab_problem.measurements:
@@ -449,3 +464,53 @@ def test_hierarchical_petab_v2_coupled_pair_rejections(
         inner_problem.xs["scaling_pSTAT5A_rel"].coupled.inner_parameter_id
         == "offset_pSTAT5A_rel"
     )
+
+
+def test_get_petab_v2_extra_field_emptiness():
+    """The single guard used by all v2 consumers must treat None, nulls and
+    blank strings as unset, and must not choke on a non-scalar value."""
+    import pandas as pd
+
+    from pypesto.petab.util import get_petab_v2_extra_field
+
+    class Element:
+        def __init__(self, extra):
+            self.model_extra = extra
+
+    def field(value):
+        return get_petab_v2_extra_field(
+            Element({"parameterType": value}), "parameterType"
+        )
+
+    # unset
+    for value in (None, float("nan"), np.float64("nan"), pd.NA, "", "   "):
+        assert field(value) is None, value
+    # set
+    assert field("scaling") == "scaling"
+    # a non-scalar must be returned as-is rather than raising (`pd.isnull`
+    #  would yield an elementwise array here)
+    assert field(["a", "b"]) == ["a", "b"]
+    # a missing field / absent model_extra
+    assert get_petab_v2_extra_field(Element({}), "parameterType") is None
+    assert get_petab_v2_extra_field(Element(None), "parameterType") is None
+
+
+def test_hierarchical_petab_v2_x_names_are_filtered_positionally(importer_v2):
+    """Inner parameters must be dropped from an explicitly passed `x_names` by
+    position: names need not coincide with the parameter IDs."""
+    creator = importer_v2.create_objective_creator()
+    # the creator supplies `x_ids` itself; only `x_names` comes from the caller
+    x_ids = list(creator.petab_problem.x_ids)
+    # display names that share no string with the IDs
+    x_names = [f"name_{ix}" for ix in range(len(x_ids))]
+
+    objective = creator.create_objective(x_names=x_names)
+
+    inner_ids = set(objective.calculator.get_inner_par_ids())
+    assert inner_ids
+    assert len(objective.x_names) == len(objective.x_ids)
+    assert objective.x_names == [
+        name
+        for x_id, name in zip(x_ids, x_names, strict=True)
+        if x_id not in inner_ids
+    ]

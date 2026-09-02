@@ -48,11 +48,14 @@ def get_petab_v2_extra_field(element, field: str):
     The value of the extra field, or ``None`` if it is absent or empty.
     """
     value = (element.model_extra or {}).get(field)
-    # mirror `petab.is_empty`: `None`, any pandas/numpy null (float nan,
-    #  `pd.NA`, ...) and the empty string all count as "not set"
+    # mirror `petab.is_empty`: `None`, a null (float nan or `pd.NA`) and the
+    #  empty string all count as "not set". The tests are deliberately
+    #  scalar-by-construction -- `pd.isnull` would return an elementwise array
+    #  for a list-valued field, which is not usable as a condition.
     if (
         value is None
-        or pd.isnull(value)
+        or value is pd.NA
+        or (isinstance(value, float) and np.isnan(value))
         or (isinstance(value, str) and not value.strip())
     ):
         return None

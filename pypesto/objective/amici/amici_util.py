@@ -282,19 +282,9 @@ def add_sim_grad_to_opt_grad_slices(
     coefficient:
         Coefficient for ``sim_grad`` when adding to ``opt_grad``.
     """
-    par_opt_slice_unique, unique_index = np.unique(
-        par_opt_slice, return_index=True
-    )
-    opt_grad[par_opt_slice_unique] += (
-        coefficient * sim_grad[par_sim_slice[unique_index]]
-    )
-
-    if par_opt_slice_unique.size < par_opt_slice.size:
-        for idx in range(len(par_opt_slice)):
-            if idx not in unique_index:
-                opt_grad[par_opt_slice[idx]] += (
-                    coefficient * sim_grad[par_sim_slice[idx]]
-                )
+    # `np.add.at` accumulates repeated indices, which happens whenever several
+    #  simulation parameters map to the same optimization parameter
+    np.add.at(opt_grad, par_opt_slice, coefficient * sim_grad[par_sim_slice])
 
 
 def add_sim_hess_to_opt_hess(

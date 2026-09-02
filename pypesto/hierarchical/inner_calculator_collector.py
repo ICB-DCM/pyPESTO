@@ -44,10 +44,10 @@ from ..C import (
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
 from ..objective.amici.amici_util import (
-    add_sim_grad_to_opt_grad,
     add_sim_grad_to_opt_grad_slices,
     filter_return_dict,
     init_return_values,
+    par_index_slices,
 )
 
 try:
@@ -90,10 +90,6 @@ class InnerCalculatorCollector(AmiciCalculator):
         The experimental data.
     inner_options:
         Options for the inner problems and solvers.
-    x_ids:
-        IDs of the PEtab problem parameters. Those estimated in the inner
-        problems are removed, yielding the objective's optimization
-        parameters.
     """
 
     def __init__(
@@ -574,6 +570,10 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         calculator belongs to.
     inner_options:
         Options for the inner problems and solvers.
+    x_ids:
+        IDs of the PEtab problem parameters. Those estimated in the inner
+        problems are removed, yielding the objective's optimization
+        parameters.
     """
 
     def __init__(
@@ -734,6 +734,15 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         """
         # get dimension of outer problem
         dim = len(x_ids)
+
+        # `self._index_slices` indexes into `self._x_ids`, so the objective's
+        #  parameters must be the ones this calculator was built for
+        if list(x_ids) != self._x_ids:
+            raise ValueError(
+                "The optimization parameters of the objective do not match "
+                "those this calculator was constructed with. Expected "
+                f"{self._x_ids}, got {list(x_ids)}."
+            )
 
         # set order in solver
         sensi_order = 0
@@ -1057,25 +1066,21 @@ def calculate_quantitative_result(
 
     # calculate the gradient if requested
     if 1 in sensi_orders:
-        parameter_map_sim_var = (
-            [None] * len(rdatas)
-            if index_slices is not None
-            else [
-                cond_par_map.map_sim_var for cond_par_map in parameter_mapping
+        # without pre-computed slices, derive them from the PEtab v1 style
+        #  parameter mapping; they do not depend on the parameter values
+        if index_slices is None:
+            index_slices = [
+                par_index_slices(
+                    par_opt_ids, par_sim_ids, cond_par_map.map_sim_var
+                )
+                for cond_par_map in parameter_mapping
             ]
-        )
         # iterate over simulation conditions
-        for cond_idx, (
-            rdata,
-            edata,
-            mask,
-            condition_map_sim_var,
-        ) in enumerate(
+        for cond_idx, (rdata, edata, mask) in enumerate(
             zip(
                 rdatas,
                 edatas,
                 quantitative_data_mask,
-                parameter_map_sim_var,
                 strict=True,
             )
         ):
@@ -1115,22 +1120,13 @@ def calculate_quantitative_result(
                 np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)),
                 axis=1,
             )
-            if index_slices is not None:
-                par_sim_slice, par_opt_slice = index_slices[cond_idx]
-                add_sim_grad_to_opt_grad_slices(
-                    par_sim_slice=par_sim_slice,
-                    par_opt_slice=par_opt_slice,
-                    sim_grad=gradient_for_condition,
-                    opt_grad=snllh,
-                )
-            else:
-                add_sim_grad_to_opt_grad(
-                    par_opt_ids=par_opt_ids,
-                    par_sim_ids=par_sim_ids,
-                    condition_map_sim_var=condition_map_sim_var,
-                    sim_grad=gradient_for_condition,
-                    opt_grad=snllh,
-                )
+            par_sim_slice, par_opt_slice = index_slices[cond_idx]
+            add_sim_grad_to_opt_grad_slices(
+                par_sim_slice=par_sim_slice,
+                par_opt_slice=par_opt_slice,
+                sim_grad=gradient_for_condition,
+                opt_grad=snllh,
+            )
 
     ret = {
         FVAL: nllh,
