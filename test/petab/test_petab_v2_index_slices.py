@@ -160,3 +160,29 @@ def test_petab_v2_placeholder_mapping_ignores_numeric_overrides(
     #  placeholders, so only assert about the one under test
     mapping = petab_v2_placeholder_mapping(petab_problem, experiment)
     assert f"observableParameter1_{observable_id}" not in mapping
+
+
+def test_petab_v2_index_slices_rejects_misordered_edatas(boehm_v2_objective):
+    """`edatas` out of experiment order is rejected, not silently mispaired.
+
+    The slices are paired with conditions by position. `create_edatas` builds
+    them in experiment order, but that is an AMICI implementation detail, and
+    a permutation would otherwise misattribute every gradient it touches
+    without raising.
+    """
+    import amici.sim.sundials as asd
+
+    _, objective = boehm_v2_objective
+    simulator = objective.calculator.petab_simulator
+
+    # an ExpData belonging to some other experiment, in place of the first
+    misordered = [asd.ExpData(edata) for edata in objective.edatas]
+    misordered[0].id = "some_other_experiment"
+
+    with pytest.raises(ValueError, match="must be given in the order"):
+        petab_v2_index_slices(
+            petab_problem=simulator.exp_man.petab_problem,
+            par_sim_ids=simulator.model.get_free_parameter_ids(),
+            edatas=misordered,
+            par_opt_ids=objective.x_ids,
+        )

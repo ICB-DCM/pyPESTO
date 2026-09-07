@@ -276,7 +276,7 @@ def petab_v2_index_slices(
         The simulation (model) parameter ids. Needed for order.
     edatas:
         The experimental data, one per PEtab experiment, in the order of
-        ``petab_problem.experiments``.
+        ``petab_problem.experiments``. Checked against the experiment ids.
     par_opt_ids:
         The optimization parameter ids. Needed for order. Sensitivities of
         parameters that are not among them -- e.g. the parameters solved for
@@ -290,9 +290,21 @@ def petab_v2_index_slices(
     par_opt_ix = {par_id: ix for ix, par_id in enumerate(par_opt_ids)}
 
     index_slices = []
-    for edata, experiment in zip(
-        edatas, petab_problem.experiments, strict=True
+    for ix, (edata, experiment) in enumerate(
+        zip(edatas, petab_problem.experiments, strict=True)
     ):
+        # the slices are paired with the conditions by position, so the
+        #  `edatas` must be in experiment order. That is how
+        #  `ExperimentManager.create_edatas` builds them, but it is an
+        #  implementation detail and a mismatch would misattribute gradients
+        #  silently, so check rather than assume.
+        if edata.id != experiment.id:
+            raise ValueError(
+                f"`edatas[{ix}]` is for experiment {edata.id!r}, but "
+                f"experiment {ix} of the problem is {experiment.id!r}. The "
+                "`edatas` must be given in the order of "
+                "`petab_problem.experiments`."
+            )
         placeholder_mapping = petab_v2_placeholder_mapping(
             petab_problem, experiment
         )
