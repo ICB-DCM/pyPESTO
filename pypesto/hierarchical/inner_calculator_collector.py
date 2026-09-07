@@ -246,8 +246,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         ):
             condition_mask[np.isnan(edata)] = False
 
-        # If there is no quantitative data, return None
-        if not all(mask.any() for mask in quantitative_data_mask):
+        # If there is no quantitative data at all, return None. Individual
+        #  conditions without quantitative data are fine -- their (all-False)
+        #  mask simply contributes nothing.
+        if not any(mask.any() for mask in quantitative_data_mask):
             return None
 
         return quantitative_data_mask
