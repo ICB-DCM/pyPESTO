@@ -124,3 +124,30 @@ def get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds() -> (
         parameter_df=petab_problem.parameter_df
     )
     return petab_problem
+
+
+def get_Boehm_JProteomeRes2014_hierarchical_petab_v2() -> (
+    "petab.v2.Problem"  # noqa: F821
+):
+    """
+    Get the PEtab v2 version of the hierarchical Boehm_JProteomeRes2014 problem.
+
+    The PEtab v1 problem from
+    `get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds` upgraded
+    to PEtab v2. The pyPESTO-specific hierarchical optimization annotations
+    (`parameterType` column) are preserved as extra fields of the PEtab v2
+    parameter table.
+    """
+    import tempfile
+    from pathlib import Path
+
+    from petab import v2
+
+    petab_problem_v1 = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    with tempfile.TemporaryDirectory() as temp_dir:
+        petab_problem_v1.to_files_generic(prefix_path=temp_dir)
+        # `from_yaml` upgrades PEtab v1 problems to v2 on the fly;
+        #  the returned problem is fully loaded into memory
+        return v2.Problem.from_yaml(Path(temp_dir) / "problem.yaml")
