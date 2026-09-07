@@ -223,10 +223,11 @@ def petab_v2_placeholder_mapping(
     For PEtab v2, the observable and noise placeholders are model parameters,
     overridden per measurement. Numeric overrides are omitted.
 
-    Because AMICI does not support timepoint-specific overrides, one
-    placeholder takes a single value per experiment (see
-    :meth:`amici.sim.sundials.petab.ExperimentManager.apply_parameters`);
-    conflicting overrides are rejected here rather than silently simulated.
+    Expects the problem as preprocessed by the AMICI PEtab importer, whose
+    ``ExperimentsToSbmlConverter`` rejects overrides that differ between the
+    measurements of one experiment ("timepoint-specific mappings"). Within an
+    experiment a placeholder therefore has a single value, which is what makes
+    this mapping well defined.
     """
     observables = {
         observable.id: observable for observable in petab_problem.observables
@@ -248,19 +249,7 @@ def petab_v2_placeholder_mapping(
             ):
                 if not override.is_Symbol:
                     continue
-                placeholder, override = str(placeholder), str(override)
-                if (previous := mapping.get(placeholder)) not in (
-                    None,
-                    override,
-                ):
-                    raise NotImplementedError(
-                        f"Placeholder {placeholder} of observable "
-                        f"{observable.id} is overridden by both {previous} and "
-                        f"{override} within experiment {experiment.id}. "
-                        "Measurement-specific placeholder overrides that "
-                        "differ within one experiment are not supported."
-                    )
-                mapping[placeholder] = override
+                mapping[str(placeholder)] = str(override)
     return mapping
 
 

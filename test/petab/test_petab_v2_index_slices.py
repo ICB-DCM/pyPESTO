@@ -144,24 +144,6 @@ def test_petab_v2_placeholder_mapping_resolves_overrides(boehm_v2_objective):
     assert mapping[f"observableParameter1_{observable_id}"] == "some_parameter"
 
 
-def test_petab_v2_placeholder_mapping_rejects_conflicts(boehm_v2_objective):
-    """Two different overrides for one placeholder in one experiment raise.
-
-    AMICI applies a single value per placeholder and experiment, so a
-    conflict would otherwise be silently mis-simulated and its gradient
-    misattributed.
-    """
-    _, objective = boehm_v2_objective
-    petab_problem, experiment, siblings = _problem_with_one_placeholder(
-        objective
-    )
-    siblings[0].observable_parameters = ["one_parameter"]
-    siblings[1].observable_parameters = ["another_parameter"]
-
-    with pytest.raises(NotImplementedError, match="overridden by both"):
-        petab_v2_placeholder_mapping(petab_problem, experiment)
-
-
 def test_petab_v2_placeholder_mapping_ignores_numeric_overrides(
     boehm_v2_objective,
 ):
