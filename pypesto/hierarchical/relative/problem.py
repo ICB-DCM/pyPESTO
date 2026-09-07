@@ -5,6 +5,7 @@ import logging
 import pandas as pd
 
 from ...C import (
+    LIN,
     MEASUREMENT_TYPE,
     PARAMETER_TYPE,
     SEMIQUANTITATIVE,
@@ -20,8 +21,10 @@ from .parameter import RelativeInnerParameter
 try:
     import amici.sim.sundials as asd
     import petab.v1 as petab
+    from petab import v2
     from petab.v1.C import (
         ESTIMATE,
+        LIN,
         LOWER_BOUND,
         NOISE_PARAMETERS,
         OBSERVABLE_ID,
@@ -31,6 +34,7 @@ try:
         TIME,
         UPPER_BOUND,
     )
+    from petab.v2.C import EXPERIMENT_ID
 except ImportError:
     pass
 
@@ -62,6 +66,31 @@ class RelativeInnerProblem(AmiciInnerProblem):
     ) -> "RelativeInnerProblem":
         """Create an InnerProblem from a PEtab problem and AMICI objects."""
         return inner_problem_from_petab_problem(
+            petab_problem, amici_model, edatas
+        )
+
+    @staticmethod
+    def from_petab_v2_amici(
+        petab_problem: "v2.Problem",
+        amici_model: "asd.Model",
+        edatas: list["asd.ExpData"],
+    ) -> "RelativeInnerProblem":
+        """Create an InnerProblem from a PEtab v2 problem and AMICI objects.
+
+        Parameters
+        ----------
+        petab_problem:
+            The PEtab v2 problem, as used by the
+            :class:`amici.sim.sundials.petab.ExperimentManager` that created
+            ``edatas`` (i.e., the problem preprocessed by the AMICI PEtab
+            importer).
+        amici_model:
+            The AMICI model.
+        edatas:
+            The experimental data, one per PEtab experiment, in the order of
+            ``petab_problem.experiments``.
+        """
+        return inner_problem_from_petab_v2_problem(
             petab_problem, amici_model, edatas
         )
 
@@ -158,7 +187,30 @@ def inner_problem_from_petab_problem(
         )
     }
 
-    # Check each group is of length 2
+    assign_coupled_pairs(inner_parameters, coupled_pars)
+
+    return RelativeInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
+
+
+def assign_coupled_pairs(
+    inner_parameters: list[RelativeInnerParameter],
+    coupled_pars: set[tuple[str, ...]],
+    strict: bool = False,
+) -> None:
+    """Link each scaling to the offset it shares a measurement with.
+
+    Parameters
+    ----------
+    inner_parameters:
+        The inner parameters, modified in place.
+    coupled_pars:
+        Groups of observable-parameter overrides that contain both a scaling
+        and an offset.
+    strict:
+        Raise if a group's partner is not among ``inner_parameters``. For
+        PEtab v1 the partner is always present; for PEtab v2 a pair may be
+        only partially estimated, which cannot be solved for analytically.
+    """
     for group in coupled_pars:
         if len(group) != 2:
             raise ValueError(
@@ -168,7 +220,6 @@ def inner_problem_from_petab_problem(
 
     id_to_par = {par.inner_parameter_id: par for par in inner_parameters}
 
-    # assign coupling
     for par in inner_parameters:
         if par.inner_parameter_type not in [
             InnerParameterType.SCALING,
@@ -180,10 +231,14 @@ def inner_problem_from_petab_problem(
                 coupled_parameter_id = group[
                     group.index(par.inner_parameter_id) - 1
                 ]
+                if strict and coupled_parameter_id not in id_to_par:
+                    raise NotImplementedError(
+                        "Coupled scaling/offset parameters must all be "
+                        f"estimated, but `{coupled_parameter_id}` (coupled to "
+                        f"`{par.inner_parameter_id}`) is not estimated."
+                    )
                 par.coupled = id_to_par[coupled_parameter_id]
                 break
-
-    return RelativeInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
 
 
 def inner_parameters_from_parameter_df(
@@ -326,3 +381,121 @@ def _ixs_for_condition(
                     ixs_for_par.setdefault(override, []).append(
                         (condition_ix, time_w_reps_ix, observable_ix)
                     )
+
+
+def inner_problem_from_petab_v2_problem(
+    petab_problem: "v2.Problem",
+    amici_model: "asd.Model",
+    edatas: list["asd.ExpData"],
+) -> RelativeInnerProblem:
+    """
+    Create inner problem from a PEtab v2 problem.
+
+    See :meth:`RelativeInnerProblem.from_petab_v2_amici`.
+    """
+    from ..petab import get_inner_parameters_v2
+
+    # inner parameters
+    inner_parameters = inner_parameters_from_petab_v2_problem(petab_problem)
+
+    x_ids = [x.inner_parameter_id for x in inner_parameters]
+
+    # used indices for all measurement specific parameters
+    ixs = ixs_for_measurement_specific_parameters_v2(
+        petab_problem, amici_model, x_ids
+    )
+
+    # transform experimental data
+    data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
+
+    # matrixify
+    ix_matrices = ix_matrices_from_arrays(ixs, data)
+
+    # assign matrices, observable indices and ids to inner parameters
+    for par in inner_parameters:
+        par.ixs = ix_matrices[par.inner_parameter_id]
+        par.observable_indices = [
+            meas_indices[2] for meas_indices in ixs[par.inner_parameter_id]
+        ]
+        par.observable_ids = [
+            amici_model.get_observable_ids()[obs_idx]
+            for obs_idx in par.observable_indices
+        ]
+
+    # detect coupled scaling and offset parameters, i.e., pairs of scaling
+    #  and offset parameters that override the placeholders of the same
+    #  measurement (numeric and unrelated overrides do not count)
+    annotated = get_inner_parameters_v2(petab_problem)
+    coupled_pars = set()
+    for measurement in petab_problem.measurements:
+        group = tuple(
+            override
+            for override in map(str, measurement.observable_parameters)
+            if override in annotated
+        )
+        if len(group) >= 2 and {
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+        } <= {annotated[override] for override in group}:
+            coupled_pars.add(group)
+
+    assign_coupled_pairs(inner_parameters, coupled_pars, strict=True)
+
+    return RelativeInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
+
+
+def inner_parameters_from_petab_v2_problem(
+    petab_problem: "v2.Problem",
+) -> list[RelativeInnerParameter]:
+    """
+    Create list of inner free parameters from a PEtab v2 problem.
+
+    Inner parameters are those that have a non-empty `parameterType` extra
+    field (column) in the PEtab parameter table.
+
+    A PEtab v2 problem exposes v1-shaped tables, so this only adapts them and
+    reuses the v1 reader: v2 has no parameter scales (everything is linear),
+    and the bounds of all inner parameter types except scaling and offset are
+    replaced by the fixed ones hierarchical optimization requires.
+    """
+    from ..petab import correct_parameter_df_bounds
+
+    parameter_df = petab_problem.parameter_df.copy()
+    parameter_df[PARAMETER_SCALE] = LIN
+    # the v2 table stores `estimate` as the string "true"/"false", which is
+    #  always truthy; take it from the parameters themselves instead
+    parameter_df[ESTIMATE] = parameter_df.index.map(
+        {par.id: bool(par.estimate) for par in petab_problem.parameters}
+    )
+    return inner_parameters_from_parameter_df(
+        correct_parameter_df_bounds(parameter_df),
+        petab_problem.measurement_df,
+    )
+
+
+def ixs_for_measurement_specific_parameters_v2(
+    petab_problem: "v2.Problem",
+    amici_model: "asd.Model",
+    x_ids: list[str],
+) -> dict[str, list[tuple[int, int, int]]]:
+    """
+    Create mapping of parameters to measurements for a PEtab v2 problem.
+
+    See :func:`ixs_for_measurement_specific_parameters`. The condition index
+    is the position of the experiment in ``petab_problem.experiments``, which
+    is the order of the ``ExpData`` objects created by
+    :class:`amici.sim.sundials.petab.ExperimentManager`.
+    """
+    ixs_for_par = {}
+    observable_ids = amici_model.get_observable_ids()
+    measurement_df = petab_problem.measurement_df
+
+    for condition_ix, experiment in enumerate(petab_problem.experiments):
+        _ixs_for_condition(
+            measurement_df[measurement_df[EXPERIMENT_ID] == experiment.id],
+            condition_ix,
+            observable_ids,
+            x_ids,
+            ixs_for_par,
+        )
+    return ixs_for_par
