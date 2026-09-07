@@ -6,6 +6,7 @@ import time
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
+import pytest
 from amici.sim.sundials import SensitivityMethod
 
 import pypesto
@@ -14,6 +15,10 @@ from pypesto.C import (
     LIN,
     LOWER_BOUND,
     MODE_FUN,
+    MODE_RES,
+    PARAMETER_TYPE,
+    RES,
+    SRES,
     UPPER_BOUND,
     InnerParameterType,
 )
@@ -234,6 +239,115 @@ def test_hierarchical_calculator_and_objective():
     # the nominal values are very good already, so the test might pass
     # accidentally if the nominal values are used accidentally.
     assert np.isclose(fval_true, fval_false, atol=1e-12, rtol=1e-14)
+
+
+def _boehm_hierarchical_scaling_offset_only():
+    """Boehm with the scalings and offsets inner, and the sigmas fixed.
+
+    Residual mode is only meaningful when the sigmas are not solved
+    analytically, see `test_hierarchical_residuals_with_inner_sigma`.
+    """
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    sd_ids = [
+        par_id
+        for par_id in petab_problem.parameter_df.index
+        if par_id.startswith("sd_")
+    ]
+    petab_problem.parameter_df.loc[sd_ids, PARAMETER_TYPE] = np.nan
+    petab_problem.parameter_df.loc[sd_ids, petab.ESTIMATE] = 0
+    return petab_problem
+
+
+def test_hierarchical_residuals():
+    """Test residual mode with hierarchical scalings and offsets.
+
+    `calculate_directly` fills in only `FVAL` and `GRAD`, so routing residual
+    mode there returned an empty residual array without raising. Residual
+    mode goes through the two-call scheme instead, where AMICI computes the
+    residuals itself, with the inner parameters fixed at their optimum.
+    """
+    petab_problem = _boehm_hierarchical_scaling_offset_only()
+    importer = PetabImporter(petab_problem, hierarchical=True)
+    objective = importer.create_problem(importer.create_objective()).objective
+    objective.amici_solver.set_absolute_tolerance(1e-12)
+    objective.amici_solver.set_relative_tolerance(1e-12)
+
+    x_nominal = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
+    x = np.asarray([x_nominal[x_id] for x_id in objective.x_names])
+
+    n_measurements = len(petab_problem.measurement_df)
+    ret = objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
+    res, sres = ret[RES], ret[SRES]
+
+    assert res.shape == (n_measurements,)
+    assert sres.shape == (n_measurements, len(x))
+    assert np.isfinite(res).all()
+    assert np.isfinite(sres).all()
+
+    # the Gauss-Newton gradient of these residuals is the gradient of the
+    # objective, which is what a least-squares optimizer needs of them
+    _, grad = objective(x, sensi_orders=(0, 1), mode=MODE_FUN)
+    assert np.allclose(
+        sres.T @ res, grad, rtol=1e-6, atol=1e-6 * np.max(np.abs(grad))
+    )
+
+    # ... and the least-squares objective they define has to track the
+    # negative log-likelihood, differing from it only by the sigma term,
+    # which is constant here because the sigmas are
+    offsets = []
+    for delta in [0.0, 0.05, -0.1]:
+        x_perturbed = x.copy()
+        x_perturbed[0] += delta
+        fval = objective(x_perturbed, sensi_orders=(0,), mode=MODE_FUN)
+        res_perturbed = objective(
+            x_perturbed, sensi_orders=(0,), mode=MODE_RES, return_dict=True
+        )[RES]
+        offsets.append(fval - 0.5 * res_perturbed @ res_perturbed)
+    assert np.allclose(offsets, offsets[0], rtol=1e-8)
+
+
+def test_hierarchical_residuals_with_inner_sigma():
+    """Test residual mode when the sigmas are solved analytically.
+
+    The residuals themselves are well defined, but at the optimal sigma
+    their sum of squares equals the number of measurements whatever the
+    outer parameters are, so the least-squares objective they define is
+    constant. The residual sensitivities are refused for that reason, as
+    they are for a parameter-dependent sigma in `AmiciCalculator.__call__`.
+    """
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    importer = PetabImporter(petab_problem, hierarchical=True)
+    objective = importer.create_problem(importer.create_objective()).objective
+    objective.amici_solver.set_absolute_tolerance(1e-12)
+    objective.amici_solver.set_relative_tolerance(1e-12)
+
+    x_nominal = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
+    x = np.asarray([x_nominal[x_id] for x_id in objective.x_names])
+    n_measurements = len(petab_problem.measurement_df)
+
+    # the residuals are available, and are the standardized residuals at the
+    # optimal sigma, so their sum of squares is the measurement count
+    for delta in [0.0, 0.05, -0.1]:
+        x_perturbed = x.copy()
+        x_perturbed[0] += delta
+        res = objective(
+            x_perturbed, sensi_orders=(0,), mode=MODE_RES, return_dict=True
+        )[RES]
+        assert res.shape == (n_measurements,)
+        assert np.isfinite(res).all()
+        assert np.isclose(res @ res, n_measurements, rtol=1e-8)
+
+    # which is why they must not be handed to a least-squares solver
+    with pytest.raises(RuntimeError, match="hierarchically estimated sigma"):
+        objective(x, sensi_orders=(1,), mode=MODE_RES)
 
 
 def test_analytical_computations():
