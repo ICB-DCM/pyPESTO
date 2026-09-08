@@ -50,6 +50,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         self,
         inner_problem: AmiciInnerProblem,
         inner_solver: InnerSolver | None = None,
+        evaluator: AmiciCalculator | None = None,
     ):
         """Initialize the calculator from the given problem.
 
@@ -60,10 +61,19 @@ class RelativeAmiciCalculator(AmiciCalculator):
         inner_solver:
             A solver to solve ``inner_problem``.
             Defaults to ``pypesto.hierarchical.solver.AnalyticalInnerSolver``.
+        evaluator:
+            Performs a plain, non-hierarchical evaluation of the problem;
+            used to obtain simulations at given parameters. Defaults to this
+            calculator's own PEtab v1 machinery. PEtab v2 problems are
+            simulated through :class:`AmiciCalculatorPetabV2` instead, since
+            their parameter mapping lives in the PEtab simulator rather than
+            in a v1 ``ParameterMapping``.
         """
         super().__init__()
 
         self.inner_problem = inner_problem
+        #: See the ``evaluator`` argument.
+        self.evaluator = evaluator
 
         if inner_solver is None:
             inner_solver = AnalyticalInnerSolver()
@@ -81,6 +91,16 @@ class RelativeAmiciCalculator(AmiciCalculator):
         """Initialize."""
         super().initialize()
         self.inner_solver.initialize()
+
+    def _evaluate(self, **kwargs):
+        """Evaluate the problem without hierarchical optimization.
+
+        Routes through the injected evaluator if there is one, and otherwise
+        through this calculator's own PEtab v1 simulation.
+        """
+        if self.evaluator is not None:
+            return self.evaluator(**kwargs)
+        return super().__call__(**kwargs)
 
     def __call__(
         self,
@@ -240,7 +260,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
 
-        inner_result = super().__call__(
+        inner_result = self._evaluate(
             x_dct=x_dct,
             sensi_orders=(0,),
             mode=mode,
@@ -301,7 +321,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # TODO use plist to compute only required derivatives, in
         #  `super.__call__`, `amici.parameter_mapping.fill_in_parameters`
-        inner_result = super().__call__(
+        inner_result = self._evaluate(
             x_dct=x_dct,
             sensi_orders=sensi_orders,
             mode=mode,
@@ -362,6 +382,14 @@ class RelativeAmiciCalculator(AmiciCalculator):
             sensi_order = max(sensi_orders)
 
         # if AMICI ReturnData is not provided, we need to simulate the model
+        if rdatas is None and self.evaluator is not None:
+            # this path fills the `ExpData` from a PEtab v1 parameter mapping,
+            #  which for PEtab v2 resolves no placeholders and would silently
+            #  produce a wrong objective
+            raise NotImplementedError(
+                "Cannot simulate from within the relative calculator when an "
+                "evaluator is set; pass the simulation results as `rdatas`."
+            )
         if rdatas is None:
             amici_solver.set_sensitivity_order(sensi_order)
             x_dct.update(self.inner_problem.get_dummy_values(scaled=True))
