@@ -4,7 +4,7 @@ import copy
 
 import pytest
 
-from pypesto.C import MEASUREMENT_TYPE, ORDINAL
+from pypesto.C import MEASUREMENT_TYPE, ORDINAL, PARAMETER_TYPE
 from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
 from pypesto.testing.examples import (
     get_Boehm_JProteomeRes2014_hierarchical_petab_v2,
@@ -23,7 +23,7 @@ def test_hierarchical_petab_v2_validation(petab_problem_v2):
 
     # unknown parameter type
     petab_problem = copy.deepcopy(petab_problem_v2)
-    petab_problem.parameters[-1].model_extra["parameterType"] = "pink"
+    petab_problem.parameters[-1].model_extra[PARAMETER_TYPE] = "pink"
     with pytest.raises(ValueError, match="Unknown inner parameter type"):
         validate_hierarchical_petab_problem(petab_problem)
 
