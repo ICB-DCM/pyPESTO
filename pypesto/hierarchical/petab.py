@@ -1,7 +1,6 @@
 """Helper methods for hierarchical optimization with PEtab."""
 
 import warnings
-from typing import Literal
 
 import pandas as pd
 import petab.v1 as petab
@@ -329,7 +328,32 @@ def _validate_measurement_specific_observable_formula(
         petab_problem=petab_problem,
         inner_parameters=inner_parameters,
     )
+    return _validate_observable_formula_form(
+        formula=formula, formula_inner_parameters=formula_inner_parameters
+    )
 
+
+def _validate_observable_formula_form(
+    formula: sp.Expr,
+    formula_inner_parameters: dict[sp.Symbol, InnerParameterType],
+) -> tuple[sp.Symbol, sp.Symbol]:
+    """Check that inner parameters enter an observable formula as expected.
+
+    The observable formula should take the form
+    ``y = scaling * (...) + offset``.
+
+    Parameters
+    ----------
+    formula:
+        The symbolic observable formula, with any placeholders replaced by
+        the measurement-specific overrides.
+    formula_inner_parameters:
+        The inner parameters appearing in the formula, and their types.
+
+    Returns
+    -------
+    The offset and scaling parameters.
+    """
     offset = None
     scaling = None
 
@@ -414,7 +438,31 @@ def _validate_measurement_specific_noise_formula(
         petab_problem=petab_problem,
         inner_parameters=inner_parameters,
     )
+    return _validate_noise_formula_form(
+        formula=formula, formula_inner_parameters=formula_inner_parameters
+    )
 
+
+def _validate_noise_formula_form(
+    formula: sp.Expr,
+    formula_inner_parameters: dict[sp.Symbol, InnerParameterType],
+) -> sp.Symbol:
+    """Check that inner parameters enter a noise formula as expected.
+
+    A sigma inner parameter must constitute the full noise formula.
+
+    Parameters
+    ----------
+    formula:
+        The symbolic noise formula, with any placeholders replaced by the
+        measurement-specific overrides.
+    formula_inner_parameters:
+        The inner parameters appearing in the formula, and their types.
+
+    Returns
+    -------
+    The sigma parameter.
+    """
     sigma = None
 
     for (
@@ -441,7 +489,7 @@ def _validate_measurement_specific_noise_formula(
 
 def _get_symbolic_formula_from_measurement(
     measurement: pd.Series,
-    formula_type: Literal["observable", "noise"],
+    formula_type: str,
     petab_problem: petab.Problem,
     inner_parameters: dict[str, InnerParameterType],
 ) -> tuple[sp.Expr, dict[sp.Symbol, InnerParameterType]]:
@@ -517,10 +565,62 @@ def _get_symbolic_formula_from_measurement(
         )
         symbolic_formula = symbolic_formula.subs(disallowed_subs)
 
+    symbolic_formula_inner_parameters = _get_formula_inner_parameters(
+        symbolic_formula=symbolic_formula,
+        formula_type=formula_type,
+        inner_parameters=inner_parameters,
+    )
+
+    if symbolic_formula_inner_parameters:
+        observable_transformation = petab_problem.observable_df.loc[
+            observable_id
+        ].get(OBSERVABLE_TRANSFORMATION)
+        if (
+            observable_transformation is not None
+            and observable_transformation != LIN
+        ):
+            raise ValueError(
+                "Non-linear observable transformations are not supported if "
+                "the observable is associated with hierarchically-optimized "
+                f"inner parameters. "
+                f"Observable transformation: `{observable_transformation}`. "
+                f"Measurement:\n{measurement}"
+            )
+
+    return symbolic_formula, symbolic_formula_inner_parameters
+
+
+def _get_formula_inner_parameters(
+    symbolic_formula: sp.Expr,
+    formula_type: str,
+    inner_parameters: dict[str, InnerParameterType],
+) -> dict[sp.Symbol, InnerParameterType]:
+    """Get the inner parameters appearing in a formula.
+
+    Also checks that only valid numbers and types of inner parameters are in
+    the formula.
+
+    Parameters
+    ----------
+    symbolic_formula:
+        The symbolic formula, with any placeholders replaced by the
+        measurement-specific overrides.
+    formula_type:
+        The type of the formula.
+    inner_parameters:
+        See `get_inner_parameters`.
+
+    Returns
+    -------
+    The inner parameters appearing in the formula, and their types.
+    """
+    # match by symbol name -- the symbols in PEtab v2 formulae carry
+    #  assumptions (e.g. `real=True`) and thus do not compare equal to plain
+    #  `sp.Symbol` instances
     symbolic_formula_inner_parameters = {
-        sp.Symbol(inner_parameter_id): inner_parameter_type
-        for inner_parameter_id, inner_parameter_type in inner_parameters.items()
-        if sp.Symbol(inner_parameter_id) in symbolic_formula.free_symbols
+        symbol: inner_parameters[symbol.name]
+        for symbol in symbolic_formula.free_symbols
+        if symbol.name in inner_parameters
     }
 
     if formula_type == "noise":
@@ -551,27 +651,12 @@ def _get_symbolic_formula_from_measurement(
             )
     if len(inner_parameter_types) != len(symbolic_formula_inner_parameters):
         raise ValueError(
-            "There are multiple inner parameters of the same type."
-            f"Inner parameters: `{symbolic_formula_inner_parameters.values}`."
+            "There are multiple inner parameters of the same type. "
+            "Inner parameters: "
+            f"`{list(symbolic_formula_inner_parameters)}`."
         )
 
-    if symbolic_formula_inner_parameters:
-        observable_transformation = petab_problem.observable_df.loc[
-            observable_id
-        ].get(OBSERVABLE_TRANSFORMATION)
-        if (
-            observable_transformation is not None
-            and observable_transformation != LIN
-        ):
-            raise ValueError(
-                "Non-linear observable transformations are not supported if "
-                "the observable is associated with hierarchically-optimized "
-                f"inner parameters. "
-                f"Observable transformation: `{observable_transformation}`. "
-                f"Measurement:\n{measurement}"
-            )
-
-    return symbolic_formula, symbolic_formula_inner_parameters
+    return symbolic_formula_inner_parameters
 
 
 def validate_observable_data_types(petab_problem: petab.Problem) -> None:

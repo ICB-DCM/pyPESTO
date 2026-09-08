@@ -40,9 +40,9 @@ from ..C import (
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
 from ..objective.amici.amici_util import (
-    add_sim_grad_to_opt_grad,
     filter_return_dict,
     init_return_values,
+    par_index_slices,
 )
 
 try:
@@ -557,8 +557,13 @@ def calculate_quantitative_result(
     parameter_mapping: ParameterMapping,
     par_opt_ids: list[str],
     par_sim_ids: list[str],
+    index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
 ):
-    """Calculate the function values from rdatas and return as dict."""
+    """Calculate the function values from rdatas and return as dict.
+
+    ``index_slices`` maps the simulation sensitivities onto the optimization
+    parameters per condition; derived from ``parameter_mapping`` if not given.
+    """
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
         sensi_orders, mode, dim
     )
@@ -580,21 +585,14 @@ def calculate_quantitative_result(
 
     # calculate the gradient if requested
     if 1 in sensi_orders:
-        parameter_map_sim_var = [
-            cond_par_map.map_sim_var for cond_par_map in parameter_mapping
-        ]
+        if index_slices is None:
+            index_slices = [
+                par_index_slices(par_opt_ids, par_sim_ids, m.map_sim_var)
+                for m in parameter_mapping
+            ]
         # iterate over simulation conditions
-        for (
-            rdata,
-            edata,
-            mask,
-            condition_map_sim_var,
-        ) in zip(
-            rdatas,
-            edatas,
-            quantitative_data_mask,
-            parameter_map_sim_var,
-            strict=True,
+        for rdata, edata, mask, (par_sim_slice, par_opt_slice) in zip(
+            rdatas, edatas, quantitative_data_mask, index_slices, strict=True
         ):
             data_i = edata[mask]
             sim_i = rdata[AMICI_Y][mask]
@@ -632,12 +630,8 @@ def calculate_quantitative_result(
                 np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)),
                 axis=1,
             )
-            add_sim_grad_to_opt_grad(
-                par_opt_ids=par_opt_ids,
-                par_sim_ids=par_sim_ids,
-                condition_map_sim_var=condition_map_sim_var,
-                sim_grad=gradient_for_condition,
-                opt_grad=snllh,
+            np.add.at(
+                snllh, par_opt_slice, gradient_for_condition[par_sim_slice]
             )
 
     ret = {
