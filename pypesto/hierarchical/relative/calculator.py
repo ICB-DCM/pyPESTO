@@ -21,9 +21,12 @@ from ...C import (
     GRAD,
     HESS,
     INNER_PARAMETERS,
+    LIN,
+    MODE_RES,
     RDATAS,
     RES,
     SRES,
+    InnerParameterType,
     ModeType,
 )
 from ...objective.amici.amici_calculator import (
@@ -35,6 +38,7 @@ from ...objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
 )
+from ..base_problem import scale_back_value_dict
 from .problem import AmiciInnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
 
@@ -130,11 +134,19 @@ class RelativeAmiciCalculator(AmiciCalculator):
                 "optimizer."
             )
 
+        # residual mode needs AMICI's own residuals, which only the
+        #  second simulation of the two-call scheme can provide:
+        #  `calculate_directly` computes the objective and its gradient from
+        #  the inner solver and leaves `res`/`sres` at their empty defaults.
         if (
-            1 in sensi_orders
-            and amici_solver.get_sensitivity_method()
-            == asd.SensitivityMethod.adjoint
-        ) or 2 in sensi_orders:
+            (
+                1 in sensi_orders
+                and amici_solver.get_sensitivity_method()
+                == asd.SensitivityMethod.adjoint
+            )
+            or 2 in sensi_orders
+            or mode == MODE_RES
+        ):
             inner_result, inner_parameters = self.call_amici_twice(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
@@ -195,6 +207,26 @@ class RelativeAmiciCalculator(AmiciCalculator):
         for the calculation of the inner parameters, and then again to obtain
         the requested objective function and gradient through AMICI.
         """
+        # Same restriction as the parameter-dependent-sigma check in
+        #  `AmiciCalculator.__call__`, and blocking the same thing: the
+        #  residual sensitivities a least-squares solver needs. The residuals
+        #  themselves stay available. Checked here rather than in `__call__`
+        #  so that the PEtab v2 collector, which calls this directly, is
+        #  covered too.
+        if (
+            mode == MODE_RES
+            and 1 in sensi_orders
+            and self.inner_problem.get_xs_for_type(InnerParameterType.SIGMA)
+        ):
+            raise RuntimeError(
+                "Cannot use least squares solver with hierarchically "
+                "estimated sigma! At the analytically optimal sigma the sum "
+                "of squared residuals equals the number of measurements "
+                "whatever the outer parameters are, so the least-squares "
+                "objective the residuals define is constant. Estimate the "
+                "sigmas as ordinary parameters to optimize in residual mode."
+            )
+
         dim = len(x_ids)
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
@@ -234,11 +266,30 @@ class RelativeAmiciCalculator(AmiciCalculator):
             scaled=True,
         )
 
-        # fill in optimal values
-        # directly writing to parameter mapping ensures that plists do not
-        # include hierarchically computed parameters
-        x_dct = copy.deepcopy(x_dct)
-        x_dct.update(inner_parameters)
+        # Fill the optimal values into the parameter mapping rather than
+        #  into `x_dct`. Mapping a simulation parameter to a value instead of
+        #  to an id keeps it out of AMICI's plist, so the second simulation
+        #  differentiates with respect to the outer parameters only. Without
+        #  this, sigmas solved for hierarchically look parameter-dependent to
+        #  the least-squares check in `AmiciCalculator.__call__`.
+        inner_values = scale_back_value_dict(
+            inner_parameters, self.inner_problem
+        )
+        parameter_mapping = copy.deepcopy(parameter_mapping)
+        for condition_mapping in parameter_mapping:
+            for sim_par, mapped in list(condition_mapping.map_sim_var.items()):
+                if isinstance(mapped, str) and mapped in inner_values:
+                    condition_mapping.map_sim_var[sim_par] = inner_values[
+                        mapped
+                    ]
+                    condition_mapping.scale_map_sim_var[sim_par] = LIN
+        # the inner parameters are no longer referenced by the mapping, so
+        #  leaving them in `x_dct` would make them unused problem parameters
+        x_dct = {
+            par_id: value
+            for par_id, value in x_dct.items()
+            if par_id not in inner_values
+        }
 
         # TODO use plist to compute only required derivatives, in
         #  `super.__call__`, `amici.parameter_mapping.fill_in_parameters`
@@ -272,10 +323,22 @@ class RelativeAmiciCalculator(AmiciCalculator):
     ):
         """Calculate directly via solver calculate methods.
 
-        This is possible if the forward method is used, and the Hessian is not
-        requested. In this case, the objective function and gradient are computed
-        directly using the solver methods.
+        This is possible if the forward method is used, and neither the
+        Hessian nor residuals are requested. In this case, the objective
+        function and gradient are computed directly using the solver methods.
+
+        Only ``FVAL`` and ``GRAD`` are filled in; ``RES`` and ``SRES`` would
+        keep the empty arrays from :func:`init_return_values`, so residual
+        mode raises rather than returning residuals that are silently empty.
         """
+        if mode == MODE_RES:
+            raise ValueError(
+                "`calculate_directly` computes the objective and its "
+                "gradient from the inner solver and produces no residuals. "
+                "Residual mode goes through `call_amici_twice`, where AMICI "
+                "computes them itself."
+            )
+
         dim = len(x_ids)
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)
