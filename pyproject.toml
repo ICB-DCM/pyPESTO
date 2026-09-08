@@ -106,10 +106,7 @@ mpi = [
 ]
 
 pymc = [
-  # TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0.
-  "arviz>=0.12.1,<1.0; python_version < '3.12'",
-  "arviz>=1.1.0; python_version >= '3.12'",
-  "pymc>=4.2.1",
+  "pymc>=6",
 ]
 
 jax = [
@@ -127,6 +124,7 @@ dynesty = [
 
 mltools = [
   "umap-learn[plot]>=0.5.3",
+  "holoviews>=1.18",
   "scikit-learn>=0.24.1",
 ]
 
