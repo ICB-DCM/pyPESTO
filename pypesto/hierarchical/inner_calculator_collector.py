@@ -222,7 +222,12 @@ class InnerCalculatorCollector(AmiciCalculator):
     def _get_quantitative_data_mask(
         self,
         edatas: list[asd.ExpData],
-    ) -> list[np.ndarray]:
+    ) -> list[np.ndarray] | None:
+        """Get the mask of quantitative measurements, one entry per condition.
+
+        Returns ``None`` if the problem has no quantitative data at all, which
+        the callers take to mean "no quantitative contribution to add".
+        """
         # transform experimental data
         edatas = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
@@ -246,8 +251,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         ):
             condition_mask[np.isnan(edata)] = False
 
-        # If there is no quantitative data, return None
-        if not all(mask.any() for mask in quantitative_data_mask):
+        # If there is no quantitative data at all, return None. Individual
+        #  conditions without quantitative data are fine -- their (all-False)
+        #  mask simply contributes nothing.
+        if not any(mask.any() for mask in quantitative_data_mask):
             return None
 
         return quantitative_data_mask

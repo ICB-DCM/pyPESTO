@@ -339,7 +339,10 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
                     )
                 self._known_least_squares_safe = True  # don't check this again
             if 0 in sensi_orders:
-                if (res := result.res) is None:
+                # `PetabSimulationResult.res` is a method in amici <= 1.0.1,
+                #  and a property in later versions
+                res = result.res() if callable(result.res) else result.res
+                if res is None:
                     raise ValueError("The residuals were not computed.")
             if 1 in sensi_orders:
                 if result.sres is None:
