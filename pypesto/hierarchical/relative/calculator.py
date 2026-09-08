@@ -65,8 +65,12 @@ class RelativeAmiciCalculator(AmiciCalculator):
             inner_solver = AnalyticalInnerSolver()
         self.inner_solver = inner_solver
 
-        #: Per-condition ``(par_sim_slice, par_opt_slice)`` index pairs, set by
-        #: the PEtab v2 collector; ``None`` derives them from the mapping.
+        #: ``(par_sim_slice, par_opt_slice)`` index pairs per condition,
+        #: mapping the simulation sensitivities onto the optimization
+        #: parameters. Passed on to
+        #: :meth:`InnerSolver.calculate_gradients`, which derives them from
+        #: ``parameter_mapping`` when they are ``None``. PEtab v2 has no such
+        #: mapping to derive them from, so its collector sets them here.
         self.index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None
 
     def initialize(self):

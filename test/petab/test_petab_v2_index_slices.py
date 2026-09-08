@@ -64,8 +64,12 @@ def test_petab_v2_index_slices_match_amici_gradient(boehm_v2_objective):
     assert np.allclose(assembled, ret["grad"], rtol=1e-8, atol=1e-8), (
         f"assembled={assembled}\nexpected={ret['grad']}"
     )
-    # the test is only meaningful if the slices actually select something
+    # the comparison is only meaningful if the slices select something and
+    #  the gradient is not near zero to begin with. A few components of this
+    #  problem's gradient legitimately are, so require a majority rather than
+    #  all of them.
     assert sum(len(s) for s, _ in index_slices) > 0
+    assert np.sum(np.abs(ret["grad"]) > 1e-8) >= len(objective.x_ids) // 2
 
 
 def test_petab_v2_index_slices_omit_unknown_parameters(boehm_v2_objective):
@@ -100,8 +104,8 @@ def test_petab_v2_index_slices_omit_unknown_parameters(boehm_v2_objective):
 def _problem_with_one_placeholder(objective):
     """Deep copy of the problem, with one observable given a placeholder.
 
-    Returns the copied problem, its first experiment, and two measurements of
-    the same observable within that experiment. Only used for
+    Returns the copied problem, its first experiment, and the measurements
+    of one observable within that experiment. Only used for
     `petab_v2_placeholder_mapping`, which reads the tables and never
     simulates, so the problem need not stay consistent with the model.
     """
@@ -118,7 +122,7 @@ def _problem_with_one_placeholder(objective):
         by_observable.setdefault(measurement.observable_id, []).append(
             measurement
         )
-    observable_id, siblings = next(
+    observable_id, observable_measurements = next(
         (obs_id, ms) for obs_id, ms in by_observable.items() if len(ms) >= 2
     )
     observable = next(
@@ -127,17 +131,17 @@ def _problem_with_one_placeholder(objective):
     observable.observable_placeholders = [
         f"observableParameter1_{observable_id}"
     ]
-    return petab_problem, experiment, siblings
+    return petab_problem, experiment, observable_measurements
 
 
 def test_petab_v2_placeholder_mapping_resolves_overrides(boehm_v2_objective):
     """A placeholder overridden consistently maps to the overriding id."""
     _, objective = boehm_v2_objective
-    petab_problem, experiment, siblings = _problem_with_one_placeholder(
-        objective
+    petab_problem, experiment, observable_measurements = (
+        _problem_with_one_placeholder(objective)
     )
-    observable_id = siblings[0].observable_id
-    for measurement in siblings:
+    observable_id = observable_measurements[0].observable_id
+    for measurement in observable_measurements:
         measurement.observable_parameters = ["some_parameter"]
 
     mapping = petab_v2_placeholder_mapping(petab_problem, experiment)
@@ -149,11 +153,11 @@ def test_petab_v2_placeholder_mapping_ignores_numeric_overrides(
 ):
     """A numeric override is not a parameter and is left out of the mapping."""
     _, objective = boehm_v2_objective
-    petab_problem, experiment, siblings = _problem_with_one_placeholder(
-        objective
+    petab_problem, experiment, observable_measurements = (
+        _problem_with_one_placeholder(objective)
     )
-    observable_id = siblings[0].observable_id
-    for measurement in siblings:
+    observable_id = observable_measurements[0].observable_id
+    for measurement in observable_measurements:
         measurement.observable_parameters = [1.0]
 
     # other observables of the experiment may contribute their own

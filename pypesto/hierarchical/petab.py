@@ -1,7 +1,6 @@
 """Helper methods for hierarchical optimization with PEtab."""
 
 import warnings
-from typing import Literal
 
 import pandas as pd
 import petab.v1 as petab
@@ -490,7 +489,7 @@ def _validate_noise_formula_form(
 
 def _get_symbolic_formula_from_measurement(
     measurement: pd.Series,
-    formula_type: Literal["observable", "noise"],
+    formula_type: str,
     petab_problem: petab.Problem,
     inner_parameters: dict[str, InnerParameterType],
 ) -> tuple[sp.Expr, dict[sp.Symbol, InnerParameterType]]:
@@ -593,7 +592,7 @@ def _get_symbolic_formula_from_measurement(
 
 def _get_formula_inner_parameters(
     symbolic_formula: sp.Expr,
-    formula_type: Literal["observable", "noise"],
+    formula_type: str,
     inner_parameters: dict[str, InnerParameterType],
 ) -> dict[sp.Symbol, InnerParameterType]:
     """Get the inner parameters appearing in a formula.
@@ -652,8 +651,9 @@ def _get_formula_inner_parameters(
             )
     if len(inner_parameter_types) != len(symbolic_formula_inner_parameters):
         raise ValueError(
-            "There are multiple inner parameters of the same type."
-            f"Inner parameters: `{symbolic_formula_inner_parameters.values}`."
+            "There are multiple inner parameters of the same type. "
+            "Inner parameters: "
+            f"`{list(symbolic_formula_inner_parameters)}`."
         )
 
     return symbolic_formula_inner_parameters

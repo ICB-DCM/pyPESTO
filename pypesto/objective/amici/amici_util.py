@@ -247,6 +247,11 @@ def petab_v2_placeholder_mapping(
             for placeholder, override in zip(
                 placeholders, overrides, strict=True
             ):
+                # PEtab v2 parses every override into a sympy expression.
+                #  Anything that is not a plain symbol -- a numeric override
+                #  such as `1.0`, or a composite one such as `2 * p` -- does
+                #  not name a single problem parameter, so there is nothing
+                #  to map the placeholder onto.
                 if not override.is_Symbol:
                     continue
                 mapping[str(placeholder)] = str(override)
