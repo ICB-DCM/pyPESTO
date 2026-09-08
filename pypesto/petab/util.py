@@ -4,7 +4,7 @@ import numpy as np
 
 try:
     import petab.v1 as petab
-    from petab import v2
+    from petab import v1, v2
     from petab.v1.C import (
         ESTIMATE,
         NOISE_PARAMETERS,
@@ -39,7 +39,7 @@ def get_petab_v2_extra_field(element, field: str):
 
 
 def get_petab_non_quantitative_data_types(
-    petab_problem: petab.Problem | v2.Problem,
+    petab_problem: v1.Problem | v2.Problem,
 ) -> set[str]:
     """
     Get the data types from the PEtab problem.
@@ -106,14 +106,12 @@ def get_petab_non_quantitative_data_types(
     # are also specified in the measurement table, but that would require
     # changing the PEtab format of a lot of benchmark models.
 
-    if len(non_quantitative_data_types) == 0:
-        return None
     return non_quantitative_data_types
 
 
 def _get_petab_v2_non_quantitative_data_types(
     petab_problem: "v2.Problem",
-) -> set[str] | None:
+) -> set[str]:
     """Get the non-quantitative data types from a PEtab v2 problem.
 
     See :func:`get_petab_non_quantitative_data_types`.
@@ -126,10 +124,10 @@ def _get_petab_v2_non_quantitative_data_types(
     # quantitative data.
     for measurement in petab_problem.measurements:
         data_type = get_petab_v2_extra_field(measurement, MEASUREMENT_TYPE)
-        if data_type in [ORDINAL, SEMIQUANTITATIVE] + CENSORING_TYPES:
-            non_quantitative_data_types.add(
-                CENSORED if data_type in CENSORING_TYPES else data_type
-            )
+        if data_type in CENSORING_TYPES:
+            non_quantitative_data_types.add(CENSORED)
+        elif data_type in (ORDINAL, SEMIQUANTITATIVE):
+            non_quantitative_data_types.add(data_type)
 
     # For relative data, search for parameters to estimate with a
     # scaling/offset/sigma parameter type. Unlike for PEtab v1, sigma
@@ -147,7 +145,7 @@ def _get_petab_v2_non_quantitative_data_types(
     ):
         non_quantitative_data_types.add(RELATIVE)
 
-    return non_quantitative_data_types or None
+    return non_quantitative_data_types
 
 
 class PetabStartpoints(CheckedStartpoints):

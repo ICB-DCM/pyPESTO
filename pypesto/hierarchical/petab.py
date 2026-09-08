@@ -6,7 +6,7 @@ import pandas as pd
 import petab.v1 as petab
 import sympy as sp
 from more_itertools import one
-from petab import v2
+from petab import v1, v2
 from petab.v1.C import (
     ESTIMATE,
     LIN,
@@ -69,7 +69,7 @@ def correct_parameter_df_bounds(parameter_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def validate_hierarchical_petab_problem(
-    petab_problem: petab.Problem | v2.Problem,
+    petab_problem: v1.Problem | v2.Problem,
 ) -> None:
     """Validate a PEtab problem for hierarchical optimization.
 
@@ -222,7 +222,7 @@ def validate_inner_parameter_pairings(
 
 
 def get_inner_parameters(
-    petab_problem: petab.Problem,
+    petab_problem: v1.Problem,
 ) -> dict[str, InnerParameterType]:
     """Get information about the inner parameters.
 
@@ -261,7 +261,7 @@ def get_inner_parameters(
 
 
 def validate_measurement_formulae(
-    petab_problem: petab.Problem,
+    petab_problem: v1.Problem,
 ) -> pd.DataFrame:
     """Check whether formulae associated with a measurement are valid.
 
@@ -311,7 +311,7 @@ def validate_measurement_formulae(
 
 def _validate_measurement_specific_observable_formula(
     measurement: pd.Series,
-    petab_problem: petab.Problem,
+    petab_problem: v1.Problem,
     inner_parameters: dict[str, InnerParameterType],
 ) -> tuple[InnerParameterType, InnerParameterType]:
     """Check whether a measurement observable formula is valid.
@@ -421,7 +421,7 @@ def _validate_observable_formula_form(
 
 def _validate_measurement_specific_noise_formula(
     measurement: pd.Series,
-    petab_problem: petab.Problem,
+    petab_problem: v1.Problem,
     inner_parameters: dict[str, InnerParameterType],
 ) -> tuple[InnerParameterType, InnerParameterType]:
     """Check whether a measurement noise formula is valid.
@@ -497,7 +497,7 @@ def _validate_noise_formula_form(
 def _get_symbolic_formula_from_measurement(
     measurement: pd.Series,
     formula_type: str,
-    petab_problem: petab.Problem,
+    petab_problem: v1.Problem,
     inner_parameters: dict[str, InnerParameterType],
 ) -> tuple[sp.Expr, dict[sp.Symbol, InnerParameterType]]:
     """Get a symbolic representation of a formula, with overrides overridden.
@@ -676,9 +676,9 @@ def validate_hierarchical_petab_problem_v2(petab_problem: v2.Problem) -> None:
     """
     from ..petab.util import get_petab_non_quantitative_data_types
 
-    if unsupported := (
-        get_petab_non_quantitative_data_types(petab_problem) or set()
-    ) - {RELATIVE}:
+    if unsupported := get_petab_non_quantitative_data_types(petab_problem) - {
+        RELATIVE
+    }:
         raise NotImplementedError(
             f"Data types {sorted(unsupported)} are not yet supported for "
             "PEtab v2 problems."
@@ -771,10 +771,9 @@ def validate_measurement_formulae_v2(
             )
         )
 
-        observable_formula = sp.sympify(observable.formula).subs(substitutions)
-        noise_formula = sp.sympify(observable.noise_formula).subs(
-            substitutions
-        )
+        # PEtab v2 parses the formulas into sympy expressions already
+        observable_formula = observable.formula.subs(substitutions)
+        noise_formula = observable.noise_formula.subs(substitutions)
 
         offset, scaling = _validate_observable_formula_form(
             formula=observable_formula,
@@ -831,7 +830,7 @@ def validate_measurement_formulae_v2(
     )
 
 
-def validate_observable_data_types(petab_problem: petab.Problem) -> None:
+def validate_observable_data_types(petab_problem: v1.Problem) -> None:
     """Check whether the data types of observables are valid."""
 
     supported_data_types = [
