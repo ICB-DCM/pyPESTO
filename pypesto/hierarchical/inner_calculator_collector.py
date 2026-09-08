@@ -301,6 +301,98 @@ class InnerCalculatorCollector(AmiciCalculator):
             for scale in inner_calculator.inner_problem.get_interpretable_x_scales()
         ]
 
+    def _combine_inner_results(
+        self,
+        rdatas: list[asd.ReturnDataView],
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+        index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
+    ) -> dict:
+        """Run the inner calculators on ``rdatas`` and assemble the result.
+
+        Shared by the PEtab v1 and v2 collectors: how the simulations are
+        produced differs between the versions, what is done with them does
+        not.
+
+        Parameters
+        ----------
+        rdatas:
+            The simulation results. The remaining arguments are those of
+            :meth:`__call__`, and are forwarded to the inner calculators
+            alongside them.
+        index_slices:
+            Passed on to :func:`calculate_quantitative_result`. ``None``
+            derives them from the PEtab v1 parameter mapping.
+        """
+        dim = len(x_ids)
+
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        interpretable_inner_pars = []
+        spline_knots = None
+
+        for calculator in self.inner_calculators:
+            inner_result = calculator(
+                rdatas=rdatas,
+                x_dct=x_dct,
+                sensi_orders=sensi_orders,
+                mode=mode,
+                amici_model=amici_model,
+                amici_solver=amici_solver,
+                edatas=edatas,
+                n_threads=n_threads,
+                x_ids=x_ids,
+                parameter_mapping=parameter_mapping,
+                fim_for_hess=fim_for_hess,
+            )
+            nllh += inner_result[FVAL]
+            if 1 in sensi_orders:
+                snllh += inner_result[GRAD]
+            if (inner_pars := inner_result.get(INNER_PARAMETERS)) is not None:
+                interpretable_inner_pars.extend(inner_pars)
+            if SPLINE_KNOTS in inner_result:
+                spline_knots = inner_result[SPLINE_KNOTS]
+
+        # add the quantitative data contribution
+        if self.quantitative_data_mask is not None:
+            quantitative_result = calculate_quantitative_result(
+                rdatas=rdatas,
+                sensi_orders=sensi_orders,
+                edatas=edatas,
+                mode=mode,
+                quantitative_data_mask=self.quantitative_data_mask,
+                dim=dim,
+                parameter_mapping=parameter_mapping,
+                par_opt_ids=x_ids,
+                par_sim_ids=amici_model.get_free_parameter_ids(),
+                index_slices=index_slices,
+            )
+            nllh += quantitative_result[FVAL]
+            if 1 in sensi_orders:
+                snllh += quantitative_result[GRAD]
+
+        return filter_return_dict(
+            {
+                FVAL: nllh,
+                GRAD: snllh,
+                HESS: s2nllh,
+                RES: res,
+                SRES: sres,
+                RDATAS: rdatas,
+                INNER_PARAMETERS: interpretable_inner_pars or None,
+                SPLINE_KNOTS: spline_knots,
+            }
+        )
+
     def __call__(
         self,
         x_dct: dict,
@@ -408,9 +500,6 @@ class InnerCalculatorCollector(AmiciCalculator):
         nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
             sensi_orders, mode, dim
         )
-        spline_knots = None
-        interpretable_inner_pars = []
-
         # set order in solver
         sensi_order = 0
         if sensi_orders:
@@ -486,65 +575,19 @@ class InnerCalculatorCollector(AmiciCalculator):
                 )
             self._known_least_squares_safe = True  # don't check this again
 
-        # call inner calculators and collect results
-        for calculator in self.inner_calculators:
-            inner_result = calculator(
-                x_dct=x_dct,
-                sensi_orders=sensi_orders,
-                mode=mode,
-                amici_model=amici_model,
-                amici_solver=amici_solver,
-                edatas=edatas,
-                n_threads=n_threads,
-                x_ids=x_ids,
-                parameter_mapping=parameter_mapping,
-                fim_for_hess=fim_for_hess,
-                rdatas=rdatas,
-            )
-            nllh += inner_result[FVAL]
-            if 1 in sensi_orders:
-                snllh += inner_result[GRAD]
-
-            inner_pars = inner_result.get(INNER_PARAMETERS)
-            if inner_pars is not None:
-                interpretable_inner_pars.extend(inner_pars)
-            if SPLINE_KNOTS in inner_result:
-                spline_knots = inner_result[SPLINE_KNOTS]
-
-        # add the quantitative data contribution
-        if self.quantitative_data_mask is not None:
-            quantitative_result = calculate_quantitative_result(
-                rdatas=rdatas,
-                sensi_orders=sensi_orders,
-                edatas=edatas,
-                mode=mode,
-                quantitative_data_mask=self.quantitative_data_mask,
-                dim=dim,
-                parameter_mapping=parameter_mapping,
-                par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_free_parameter_ids(),
-            )
-            nllh += quantitative_result[FVAL]
-            if 1 in sensi_orders:
-                snllh += quantitative_result[GRAD]
-
-        ret = {
-            FVAL: nllh,
-            GRAD: snllh,
-            HESS: s2nllh,
-            RES: res,
-            SRES: sres,
-            RDATAS: rdatas,
-        }
-
-        ret[INNER_PARAMETERS] = (
-            interpretable_inner_pars
-            if len(interpretable_inner_pars) > 0
-            else None
+        return self._combine_inner_results(
+            rdatas=rdatas,
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
         )
-        ret[SPLINE_KNOTS] = spline_knots
-
-        return filter_return_dict(ret)
 
 
 def calculate_quantitative_result(
