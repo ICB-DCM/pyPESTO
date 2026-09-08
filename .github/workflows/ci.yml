@@ -18,6 +18,7 @@ env:
   AMICI_PARALLEL_COMPILE: ""
   # non-interactive backend for matplotlib
   MPLBACKEND: "agg"
+  COLUMNS: '200'
 
 # jobs
 jobs:
