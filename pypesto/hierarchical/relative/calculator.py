@@ -327,10 +327,18 @@ class RelativeAmiciCalculator(AmiciCalculator):
         Hessian nor residuals are requested. In this case, the objective
         function and gradient are computed directly using the solver methods.
 
-        Only ``FVAL`` and ``GRAD`` are filled in; ``RES`` and ``SRES`` keep
-        the empty arrays from :func:`init_return_values`, so this must not be
-        called in :obj:`MODE_RES`.
+        Only ``FVAL`` and ``GRAD`` are filled in; ``RES`` and ``SRES`` would
+        keep the empty arrays from :func:`init_return_values`, so residual
+        mode raises rather than returning residuals that are silently empty.
         """
+        if mode == MODE_RES:
+            raise ValueError(
+                "`calculate_directly` computes the objective and its "
+                "gradient from the inner solver and produces no residuals. "
+                "Residual mode goes through `call_amici_twice`, where AMICI "
+                "computes them itself."
+            )
+
         dim = len(x_ids)
         # compute optimal inner parameters
         x_dct = copy.deepcopy(x_dct)

@@ -309,6 +309,23 @@ def test_hierarchical_residuals():
         offsets.append(fval - 0.5 * res_perturbed @ res_perturbed)
     assert np.allclose(offsets, offsets[0], rtol=1e-8)
 
+    # routing residual mode to `calculate_directly` is what produced the
+    # empty residuals in the first place; it now refuses instead
+    relative_calculator = objective.calculator.inner_calculators[0]
+    with pytest.raises(ValueError, match="no residuals"):
+        relative_calculator.calculate_directly(
+            x_dct=dict(zip(objective.x_names, x, strict=True)),
+            sensi_orders=(0,),
+            mode=MODE_RES,
+            amici_model=objective.amici_model,
+            amici_solver=objective.amici_solver,
+            edatas=objective.edatas,
+            n_threads=1,
+            x_ids=objective.x_names,
+            parameter_mapping=objective.parameter_mapping,
+            fim_for_hess=False,
+        )
+
 
 def test_hierarchical_residuals_with_inner_sigma():
     """Test residual mode when the sigmas are solved analytically.
