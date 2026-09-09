@@ -18,6 +18,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
+from petab import v2
 from petab.v1.C import (
     OBSERVABLE_FORMULA,
     PREEQUILIBRATION_CONDITION_ID,
@@ -589,6 +590,272 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
             model = predictor.amici_objective.amici_model
 
         return self.rdatas_to_measurement_df(rdatas, model)
+
+    def prediction_to_petab_simulation_df(
+        self,
+        prediction: PredictionResult,
+        predictor: AmiciPredictor = None,
+    ) -> pd.DataFrame:
+        """
+        See :meth:`prediction_to_petab_measurement_df`.
+
+        Except a PEtab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        return self.prediction_to_petab_measurement_df(
+            prediction, predictor
+        ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+
+
+class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
+    """ObjectiveCreator for creating an amici objective from a PEtab v2 problem.
+
+    Model import and compilation are the same as for PEtab v1, except that they
+    go through :class:`amici.importers.petab.PetabImporter`. Everything that
+    depends on the PEtab version -- creating the ``ExpData`` objects, the
+    objective, and the conversion of AMICI results to PEtab dataframes -- is
+    overridden here.
+    """
+
+    def __init__(
+        self,
+        petab_problem: v2.Problem,
+        hierarchical: bool = False,
+        non_quantitative_data_types: Iterable[str] | None = None,
+        inner_options: dict[str, Any] | None = None,
+        **kwargs,
+    ):
+        """
+        Initialize the creator.
+
+        See :class:`AmiciObjectiveCreator`. Hierarchical optimization and
+        non-quantitative data types are not supported for PEtab v2 yet.
+        """
+        if hierarchical or non_quantitative_data_types or inner_options:
+            raise NotImplementedError(
+                "Hierarchical optimization and non-quantitative data types "
+                "are not supported for PEtab v2 problems yet."
+            )
+
+        super().__init__(
+            petab_problem=petab_problem,
+            hierarchical=hierarchical,
+            non_quantitative_data_types=non_quantitative_data_types,
+            inner_options=inner_options,
+            **kwargs,
+        )
+
+    def compile_model(self, **kwargs):
+        """
+        Compile the model.
+
+        If the output folder exists already, it is first deleted.
+
+        Parameters
+        ----------
+        kwargs:
+            Extra arguments passed to
+            :class:`amici.importers.petab.PetabImporter`, e.g. ``verbose`` or
+            ``non_estimated_parameters_as_constants``. Unlike for PEtab v1,
+            arguments for the underlying model importer (e.g.
+            ``generate_sensitivity_code``) are not supported; a warning is
+            issued for any argument that is not accepted.
+        """
+        # delete output directory
+        if os.path.exists(self.output_folder):
+            shutil.rmtree(self.output_folder)
+
+        petab_importer = self._create_amici_importer(**kwargs)
+        petab_importer.import_module(force_import=True)
+
+    def _create_amici_importer(
+        self, **kwargs
+    ) -> amici.importers.petab.PetabImporter:
+        """Create an AMICI PEtab importer.
+
+        Parameters
+        ----------
+        kwargs:
+            Extra arguments passed to
+            :class:`amici.importers.petab.PetabImporter`. Arguments that it
+            does not accept are dropped with a warning.
+        """
+        import inspect
+
+        from amici.importers.petab import PetabImporter
+
+        kwargs.setdefault("validate", self.validate_petab)
+        # `PetabImporter` does not forward arguments to the model importer, so
+        #  anything it does not accept cannot be honoured -- say so instead of
+        #  dropping it silently
+        supported = inspect.signature(PetabImporter.__init__).parameters
+        if unsupported := {
+            k: kwargs.pop(k) for k in set(kwargs) - set(supported)
+        }:
+            warnings.warn(
+                f"Ignoring unsupported model import options for the PEtab v2 "
+                f"path: {sorted(unsupported)}.",
+                stacklevel=2,
+            )
+
+        petab_importer = PetabImporter(
+            self.petab_problem,
+            output_dir=self.output_folder,
+            module_name=self.model_name,
+            **kwargs,
+        )
+        return petab_importer
+
+    def create_edatas(
+        self,
+        model: asd.Model = None,
+        simulation_conditions=None,
+        verbose: bool = True,
+    ) -> list[asd.ExpData]:
+        """Create list of :class:`amici.amici.ExpData` objects."""
+        from amici.sim.sundials.petab import ExperimentManager
+
+        # create model
+        if model is None:
+            model = self.create_model(verbose=verbose)
+
+        return ExperimentManager(
+            model=model,
+            # the AMICI importer preprocesses the PEtab problem (e.g., the
+            #  experiment table is converted to the model), and only that
+            #  version matches the compiled model
+            petab_problem=self._create_amici_importer().petab_problem,
+        ).create_edatas()
+
+    def create_objective(
+        self,
+        model: asd.Model = None,
+        solver: asd.Solver = None,
+        edatas: Sequence[asd.ExpData] = None,
+        force_compile: bool = False,
+        verbose: bool = True,
+        **kwargs,
+    ) -> AmiciObjective:
+        """Create a :class:`pypesto.objective.AmiciObjective`.
+
+        Parameters
+        ----------
+        model:
+            The AMICI model.
+        solver:
+            The AMICI solver.
+        edatas:
+            The experimental data in AMICI format.
+        force_compile:
+            Whether to force-compile the model if not passed.
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
+        **kwargs:
+            Additional arguments passed on to the objective.
+
+        Returns
+        -------
+        A :class:`pypesto.objective.AmiciObjective` for the model and the data.
+        """
+        from ..objective.amici.amici import AmiciPetabV2Objective
+
+        # the objective creates its own simulator from the PEtab importer,
+        #  which in turn owns the model, the solver and the ExpData objects
+        if model is not None or solver is not None or edatas is not None:
+            warnings.warn(
+                "`model`, `solver` and `edatas` are not supported for PEtab "
+                "v2 problems and will be ignored.",
+                stacklevel=2,
+            )
+        petab_importer = self._create_amici_importer()
+
+        return AmiciPetabV2Objective(
+            petab_importer=petab_importer,
+            amici_object_builder=self,
+            x_ids=self.petab_problem.x_ids,
+            force_compile=force_compile,
+            **kwargs,
+        )
+
+    def create_predictor(
+        self,
+        objective: AmiciObjective = None,
+        amici_output_fields: Sequence[str] = None,
+        post_processor: Callable | None = None,
+        post_processor_sensi: Callable | None = None,
+        post_processor_time: Callable | None = None,
+        max_chunk_size: int | None = None,
+        output_ids: Sequence[str] = None,
+        condition_ids: Sequence[str] = None,
+    ) -> AmiciPredictor:
+        """Create a :class:`pypesto.predict.AmiciPredictor`."""
+        raise NotImplementedError(
+            "Creating a predictor is not yet supported for PEtab v2 problems."
+        )
+
+    def rdatas_to_measurement_df(
+        self,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
+        verbose: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Create a measurement dataframe in the petab format.
+
+        Parameters
+        ----------
+        rdatas:
+            A list of rdatas as produced by
+            ``pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas']``.
+        model:
+            The amici model.
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
+
+        Returns
+        -------
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
+        """
+        from amici.importers.petab import rdatas_to_measurement_df
+
+        # create model
+        if model is None:
+            model = self.create_model(verbose=verbose)
+
+        return rdatas_to_measurement_df(rdatas, model, self.petab_problem)
+
+    def rdatas_to_simulation_df(
+        self,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
+    ) -> pd.DataFrame:
+        """
+        See :meth:`rdatas_to_measurement_df`.
+
+        Except a petab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        from amici.importers.petab import rdatas_to_simulation_df
+
+        # create model
+        if model is None:
+            model = self.create_model()
+
+        return rdatas_to_simulation_df(rdatas, model, self.petab_problem)
+
+    def prediction_to_petab_measurement_df(
+        self,
+        prediction: PredictionResult,
+        predictor: AmiciPredictor = None,
+    ) -> pd.DataFrame:
+        """Not implemented yet."""
+        raise NotImplementedError(
+            "Converting predictions to PEtab dataframes is not yet supported "
+            "for PEtab v2 problems."
+        )
 
     def prediction_to_petab_simulation_df(
         self,

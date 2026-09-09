@@ -874,7 +874,8 @@ def _plot_observable_fit_for_multiple_conditions(
                 colors.append(line.get_color())
     # Get as many colors as there are conditions
     else:
-        colors = plt.cm.rainbow(np.linspace(0, 1, len(simulation_all)))
+        cmap = plt.colormaps["rainbow"]
+        colors = cmap(np.linspace(0, 1, len(simulation_all)))
 
     if measurement_type == CENSORED:
         quantitative_data_flattened = inner_problem.groups[group][

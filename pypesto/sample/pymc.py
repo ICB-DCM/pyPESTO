@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+from typing import Any
 
 import numpy as np
 
@@ -15,10 +16,9 @@ from .sampler import Sampler, SamplerImportError
 
 logger = logging.getLogger(__name__)
 
-# Lazy import of pymc, arviz, and pytensor
+# Lazy import of pymc and pytensor
 # Check availability once at module load time
 _HAS_PYMC = importlib.util.find_spec("pymc") is not None
-_HAS_ARVIZ = importlib.util.find_spec("arviz") is not None
 
 if _HAS_PYMC:
     import pymc
@@ -30,13 +30,59 @@ else:
     pt = None
     _PT_OP_BASE = object
 
-if _HAS_ARVIZ:
-    import arviz as az
-else:
-    az = None
-
 # implementation based on:
 # https://www.pymc.io/projects/examples/en/latest/case_studies/blackbox_external_likelihood_numpy.html
+
+
+def _eval_last_evaluation(
+    objective: ObjectiveBase,
+    beta: float,
+    theta: np.ndarray,
+    last_evaluation: dict,
+) -> dict:
+    """Evaluate log-posterior value and gradient, caching the last result.
+
+    For gradient-based samplers (e.g. NUTS) pymc evaluates the log-posterior
+    and its gradient at the same ``theta`` within a single function call. As
+    the function value is computed anyway during a sensitivity run, both are
+    obtained via a single ``sensi_orders=(0, 1)`` call and cached, so the
+    objective (and hence the simulator) is evaluated only once per ``theta``
+    instead of once for the value and once for the gradient.
+
+    Parameters
+    ----------
+    objective:
+        Objective function (negative log-likelihood or -posterior).
+    beta:
+        Inverse temperature (e.g. in parallel tempering).
+    theta:
+        Parameter vector.
+    last_evaluation:
+        Mutable dict shared between the value and gradient Op, holding the
+        last evaluated parameter vector and the corresponding (scaled) value
+        and gradient.
+
+    Returns
+    -------
+    The (updated) last_evaluation, with keys ``"key"``, ``"fval"`` and ``"grad"``.
+    """
+    key = theta.tobytes()
+    if last_evaluation.get("key") != key:
+        fval, grad = objective(theta, sensi_orders=(0, 1))
+        last_evaluation["key"] = key
+        last_evaluation["fval"] = -beta * np.asarray(fval)
+        last_evaluation["grad"] = -beta * np.asarray(grad)
+    return last_evaluation
+
+
+# TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0
+#  and simplify this helper to `data.posterior.to_dataset()`.
+def _get_posterior_dataset(data: Any) -> Any:
+    """Return posterior as an xarray Dataset across ArviZ versions."""
+    posterior = data.posterior
+    if hasattr(posterior, "to_array"):
+        return posterior
+    return posterior.to_dataset()
 
 
 class PymcObjectiveOp(_PT_OP_BASE):
@@ -88,7 +134,20 @@ class PymcObjectiveWithGradientOp(PymcObjectiveOp):
     def __init__(self, objective: ObjectiveBase, beta: float = 1.0):
         super().__init__(objective, beta)
 
-        self._log_prob_grad = PymcGradientOp(objective, beta)
+        # cache shared with the gradient Op, so value and gradient at the same
+        # theta require only a single objective (simulator) evaluation
+        self._last_evaluation: dict = {}
+        self._log_prob_grad = PymcGradientOp(
+            objective, beta, self._last_evaluation
+        )
+
+    def perform(self, node, inputs, outputs, params=None):
+        """Calculate the objective function value (reusing the shared cache)."""
+        (theta,) = inputs
+        last_evaluation = _eval_last_evaluation(
+            self._objective, self._beta, theta, self._last_evaluation
+        )
+        outputs[0][0] = np.array(last_evaluation["fval"])
 
     def grad(self, inputs, g):  # noqa
         """Calculate the vector-Jacobian product."""
@@ -107,19 +166,29 @@ class PymcGradientOp(_PT_OP_BASE):
     # outputs a single scalar value (the log prob)
     otypes = [pt.dvector] if pt is not None else None
 
-    def __init__(self, objective: ObjectiveBase, beta: float):
+    def __init__(
+        self,
+        objective: ObjectiveBase,
+        beta: float,
+        last_evaluation: dict | None = None,
+    ):
         # Check dependencies
         if not _HAS_PYMC:
             raise SamplerImportError("pymc")
         self._objective: ObjectiveBase = objective
         self._beta: float = beta
+        # shared with the value Op so that value and gradient at the same theta
+        # require only a single objective (simulator) evaluation
+        self._last_evaluation: dict = last_evaluation or {}
 
     def perform(self, node, inputs, outputs, params=None):
         """Calculate the gradients of the objective function."""
         (theta,) = inputs
-        # calculate gradients
-        log_prob_grad = -self._beta * self._objective(theta, sensi_orders=(1,))
-        outputs[0][0] = log_prob_grad
+        # calculate gradients (reusing the shared cache)
+        last_evaluation = _eval_last_evaluation(
+            self._objective, self._beta, theta, self._last_evaluation
+        )
+        outputs[0][0] = last_evaluation["grad"]
 
 
 class PymcSampler(Sampler):
@@ -151,7 +220,7 @@ class PymcSampler(Sampler):
         self.problem: Problem | None = None
         self.x0: np.ndarray | None = None
         self.trace: pymc.backends.Text | None = None
-        self.data: az.InferenceData | None = None
+        self.data: Any | None = None
 
     @classmethod
     def translate_options(cls, options):
@@ -163,8 +232,8 @@ class PymcSampler(Sampler):
         options:
             Options configuring the sampler.
         """
-        if not options:
-            options = {"chains": 1}
+        options = dict(options or {})
+        options.setdefault("chains", 1)
         return options
 
     def initialize(self, problem: Problem, x0: np.ndarray):
@@ -227,11 +296,14 @@ class PymcSampler(Sampler):
             # convert parameters to PyTensor tensor variable
             theta = pt.as_tensor_variable(_k)
 
+            # evaluate the log-posterior once and reuse the same node
+            log_post_theta = log_post(theta)
+
             # define distribution with log-posterior as density
-            pymc.Potential("potential", log_post(theta))
+            pymc.Potential("potential", log_post_theta)
 
             # record function values
-            pymc.Deterministic("loggyposty", log_post(theta))
+            pymc.Deterministic("loggyposty", log_post_theta)
 
             # step, by default automatically determined by pymc
             step = None
@@ -251,10 +323,10 @@ class PymcSampler(Sampler):
 
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
+        posterior = _get_posterior_dataset(self.data)
+
         # dimensions
-        n_par, n_chain, n_iter = np.asarray(
-            self.data.posterior.to_array()
-        ).shape
+        n_par, n_chain, n_iter = np.asarray(posterior.to_array()).shape
         n_par -= 1  # remove log-posterior
 
         # parameters
@@ -263,10 +335,10 @@ class PymcSampler(Sampler):
         if len(par_ids) != n_par:
             raise AssertionError("Mismatch of parameter dimension")
         for i_par, par_id in enumerate(par_ids):
-            trace_x[:, :, i_par] = np.asarray(self.data.posterior[par_id])
+            trace_x[:, :, i_par] = np.asarray(posterior[par_id])
 
         # function values
-        trace_neglogpost = -np.asarray(self.data.posterior["loggyposty"])
+        trace_neglogpost = -np.asarray(posterior["loggyposty"])
 
         if (
             trace_x.shape[0] != trace_neglogpost.shape[0]

@@ -7,7 +7,7 @@ pip install --upgrade pip
 pip install wheel setuptools
 
 # Used to create local test environments
-pip install tox
+pip install tox tox-uv
 
 # Update package lists
 if [ "$(uname)" = "Darwin" ]; then

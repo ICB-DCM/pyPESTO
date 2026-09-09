@@ -1,7 +1,7 @@
 # see https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
 # default owners = active maintainers
-* @Doresic @PaulJonasJost @vwiela
+* @Doresic @PaulJonasJost @MoR1chter
 
 # Examples
 /doc/example/censored_data.ipynb @Doresic
@@ -35,22 +35,22 @@
 /pypesto/optimize/ @PaulJonasJost
 /pypesto/petab/ @dweindl @FFroehlich
 /pypesto/predict/ @dilpath
-/pypesto/problem/ @PaulJonasJost @vwiela
+/pypesto/problem/ @PaulJonasJost @MoR1chter
 /pypesto/profile/ @PaulJonasJost @Doresic
 /pypesto/result/ @PaulJonasJost
-/pypesto/sample/ @dilpath @arrjon
+/pypesto/sample/ @dilpath @arrjon @vwiela
 /pypesto/select/ @dilpath
 /pypesto/startpoint/ @PaulJonasJost
 /pypesto/store/ @PaulJonasJost
-/pypesto/visualize/ @stephanmg
+/pypesto/visualize/ @Doresic
 
 # Tests
-/test/base/ @PaulJonasJost @vwiela
+/test/base/ @PaulJonasJost @MoR1chter
 /test/doc/ @PaulJonasJost
 /test/hierarchical/ @dweindl @Doresic
 /test/julia/ @PaulJonasJost @vwiela
 /test/optimize/ @PaulJonasJost
 /test/petab/ @dweindl @FFroehlich
 /test/profile/ @PaulJonasJost @Doresic
-/test/sample/ @dilpath @arrjon
+/test/sample/ @dilpath @arrjon @vwiela
 /test/select/ @dilpath

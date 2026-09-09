@@ -3,9 +3,9 @@
 import logging
 
 import petab.v1 as petab
+import petab.v2 as petab_v2
 import petabtests
 import pytest
-from amici.sim.sundials.petab.v1 import rdatas_to_measurement_df
 
 import pypesto
 import pypesto.petab
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
         (case, model_type, version)
         for (model_type, version) in (
             ("sbml", "v1.0.0"),
-            # FIXME: disabled until there is proper PEtab v2 support https://github.com/ICB-DCM/pyPESTO/pull/1634
-            # ("pysb", "v2.0.0")
+            ("sbml", "v2.0.0"),
+            ("pysb", "v2.0.0"),
         )
         for case in petabtests.get_cases(format_=model_type, version=version)
     ],
@@ -69,29 +69,49 @@ def _execute_case(case, model_type, version):
     model_name = (
         f"petab_test_case_{case}_{model_type}_{version.replace('.', '_')}"
     )
-    output_folder = f"amici_models/{model_name}"
 
     # import and create objective function
     if case.startswith("0006"):
-        petab_problem = petab.Problem.from_yaml(yaml_file)
-        petab.flatten_timepoint_specific_output_overrides(petab_problem)
+        # timepoint-specific overrides are not supported by AMICI -- flatten
+        #  the problem, i.e. replicate the affected observables
+        if version == "v2.0.0":
+            from amici.importers.petab._petab_importer import (
+                flatten_timepoint_specific_output_overrides,
+            )
+
+            petab_problem = petab_v2.Problem.from_yaml(yaml_file)
+            flatten_timepoint_specific_output_overrides(petab_problem)
+        else:
+            petab_problem = petab.Problem.from_yaml(yaml_file)
+            petab.flatten_timepoint_specific_output_overrides(petab_problem)
         importer = pypesto.petab.PetabImporter(
             petab_problem=petab_problem,
-            output_folder=output_folder,
             model_name=model_name,
         )
-        petab_problem = petab.Problem.from_yaml(yaml_file)
+        petab_problem = (
+            petab_v2.Problem.from_yaml(yaml_file)
+            if version == "v2.0.0"
+            else petab.Problem.from_yaml(yaml_file)
+        )
     else:
         importer = pypesto.petab.PetabImporter.from_yaml(
-            yaml_file, output_folder=output_folder
+            yaml_file, model_name=model_name
         )
         petab_problem = importer.petab_problem
-    factory = importer.create_objective_creator()
-    model = factory.create_model(generate_sensitivity_code=False)
-    obj = factory.create_objective(model=model)
 
-    # the scaled parameters
-    problem_parameters = factory.petab_problem.x_nominal_scaled
+    factory = importer.create_objective_creator()
+    if version == "v1.0.0":
+        model = factory.create_model(generate_sensitivity_code=False)
+        obj = factory.create_objective(model=model)
+        # the scaled parameters
+        problem_parameters = factory.petab_problem.x_nominal_scaled
+    else:
+        # for PEtab v2, the objective creates model and solver itself, via the
+        #  AMICI PEtab importer -- which does not expose the model import
+        #  options either
+        model = None
+        obj = factory.create_objective()
+        problem_parameters = importer.petab_problem.x_nominal
 
     # simulate
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
@@ -100,20 +120,33 @@ def _execute_case(case, model_type, version):
     rdatas = ret["rdatas"]
     chi2 = sum(rdata["chi2"] for rdata in rdatas)
     llh = -ret["fval"]
-    simulation_df = rdatas_to_measurement_df(
-        rdatas, model, importer.petab_problem.measurement_df
-    )
+    if version == "v1.0.0":
+        from amici.sim.sundials.petab.v1 import rdatas_to_measurement_df
 
-    if case.startswith("0006"):
-        simulation_df = petab.unflatten_simulation_df(
-            simulation_df, petab_problem
+        simulation_df = rdatas_to_measurement_df(
+            rdatas, model, importer.petab_problem.measurement_df
         )
+        if case.startswith("0006"):
+            simulation_df = petab.unflatten_simulation_df(
+                simulation_df, petab_problem
+            )
 
-    petab.check_measurement_df(simulation_df, petab_problem.observable_df)
-    simulation_df = simulation_df.rename(
-        columns={petab.MEASUREMENT: petab.SIMULATION}
-    )
-    simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
+        petab.check_measurement_df(simulation_df, petab_problem.observable_df)
+        simulation_df = simulation_df.rename(
+            columns={petab.MEASUREMENT: petab.SIMULATION}
+        )
+        simulation_df[petab.TIME] = simulation_df[petab.TIME].astype(int)
+    else:
+        simulation_df = obj.rdatas_to_simulation_df(rdatas)
+        if case.startswith("0006"):
+            # map the replicated observables back to the original ones
+            from amici.importers.petab._petab_importer import (
+                unflatten_simulation_df,
+            )
+
+            simulation_df = unflatten_simulation_df(
+                simulation_df, petab_problem
+            )
 
     # check if matches
     chi2s_match = petabtests.evaluate_chi2(chi2, gt_chi2, tol_chi2)

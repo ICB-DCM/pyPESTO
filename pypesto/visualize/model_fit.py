@@ -301,7 +301,7 @@ def _get_simulation_rdatas(
     """
     # add timepoints as needed
     if simulation_timepoints is None:
-        end_time = max(problem.objective.edatas[0].getTimepoints())
+        end_time = max(problem.objective.edatas[0].get_timepoints())
         simulation_timepoints = np.linspace(start=0, stop=end_time, num=1000)
 
     # get optimization result
@@ -338,10 +338,10 @@ def _get_simulation_rdatas(
 
         # disable sensitivities to improve computation time
         amici_solver = copy.deepcopy(problem.objective.amici_solver)
-        amici_solver.setSensitivityOrder(asd.SensitivityOrder.none)
+        amici_solver.set_sensitivity_order(asd.SensitivityOrder.none)
 
         for j in range(len(edatas)):
-            edatas[j].setTimepoints(simulation_timepoints)
+            edatas[j].set_timepoints(simulation_timepoints)
 
         fill_in_parameters(
             edatas=edatas,
@@ -413,7 +413,7 @@ def _time_trajectory_model_with_states(
         ]
     if state_names is not None:
         state_indices_by_name = [
-            model.getStateNames().index(state_name)
+            model.get_state_names().index(state_name)
             for state_name in state_names
         ]
     state_indices = list(set(state_indices_by_id + state_indices_by_name))

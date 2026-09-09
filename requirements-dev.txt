@@ -1,2 +1,3 @@
 tox >= 4
+tox-uv >= 1.11
 pre-commit >= 2.10.1

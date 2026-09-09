@@ -20,7 +20,7 @@ authors = [
 maintainers = [
   { name = "Paul Jonas Jost", email = "paul.jost@uni-bonn.de" },
   { name = "Domagoj Dorešić", email = "domagoj.doresic@uni-bonn.de" },
-  { name = "Vincent Wieland", email = "vwieland@uni-bonn.de" },
+  { name = "Moritz Richter", email = "moritz.richter@uni-bonn.de" },
   { name = "Fabian Fröhlich", email = "fabian.frohlich@crick.ac.uk" },
 ]
 license-files = ["LICENSE"]
@@ -106,8 +106,7 @@ mpi = [
 ]
 
 pymc = [
-  "arviz>=0.12.1",
-  "pymc>=4.2.1",
+  "pymc>=6",
 ]
 
 jax = [
@@ -125,6 +124,7 @@ dynesty = [
 
 mltools = [
   "umap-learn[plot]>=0.5.3",
+  "holoviews>=1.18",
   "scikit-learn>=0.24.1",
 ]
 
@@ -211,6 +211,13 @@ all = [
   "pypesto[test]",
   "pypesto[roadrunner]",
 ]
+
+[tool.uv.pip]
+# Never auto-select pre-release versions of *transitive* dependencies (e.g.
+# numba betas) just because they happen to satisfy some other package's
+# unusually loose upper bound - this caused a broken numba/numpy combination
+# to be picked for the `doc`/`example` extras.
+prerelease = "disallow"
 
 [tool.setuptools]
 include-package-data = true

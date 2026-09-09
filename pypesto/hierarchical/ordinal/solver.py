@@ -236,7 +236,7 @@ class OrdinalInnerSolver(InnerSolver):
         par_sim_ids:
             Ids of outer simulation parameters, includes fixed parameters.
         par_edata_indices:
-            Indices of parameters from `amici_model.getParameterIds()` that are needed for
+            Indices of parameters from `amici_model.get_free_parameter_ids()` that are needed for
             sensitivity calculation. Comes from `edata.plist` for each condition.
         snllh:
             A zero-initialized vector of the same length as ``par_opt_ids`` to store the
@@ -666,7 +666,7 @@ def get_inner_optimization_options(
         inner_options = {
             "x0": x0,
             "method": "SLSQP",
-            "options": {"maxiter": 2000, "ftol": 1e-10, "disp": None},
+            "options": {"maxiter": 2000, "ftol": 1e-10},
             "constraints": constraints,
         }
     return inner_options

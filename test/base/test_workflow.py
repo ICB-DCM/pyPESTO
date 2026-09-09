@@ -3,29 +3,14 @@
 These tests are not for correctness, but for basic functionality.
 """
 
-from functools import wraps
-
-import matplotlib.pyplot as plt
-
 import pypesto
 import pypesto.optimize as optimize
 import pypesto.profile as profile
 import pypesto.sample as sample
 import pypesto.visualize as visualize
 
+from ..conftest import close_fig
 from ..util import CRProblem
-
-
-def close_fig(fun):
-    """Close figure."""
-
-    @wraps(fun)
-    def wrapped_fun(*args, **kwargs):
-        ret = fun(*args, **kwargs)
-        plt.close("all")
-        return ret
-
-    return wrapped_fun
 
 
 def test_objective():

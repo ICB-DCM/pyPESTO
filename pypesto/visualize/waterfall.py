@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.axes_grid1 import inset_locator
@@ -9,8 +9,10 @@ from pypesto.util import delete_nan_inf
 
 from ..C import ALL, COLOR, WATERFALL_MAX_VALUE
 from ..result import Result
+from ._style import resolve_style
 from .clust_color import assign_colors
 from .misc import (
+    get_ax,
     process_offset_y,
     process_result_list,
     process_start_indices,
@@ -21,7 +23,7 @@ from .reference_points import ReferencePoint, create_references
 
 def waterfall(
     results: Result | Sequence[Result],
-    ax: plt.Axes | None = None,
+    ax: matplotlib.axes.Axes | None = None,
     size: tuple[float, float] | None = (18.5, 10.5),
     y_limits: tuple[float] | None = None,
     scale_y: str | None = "log10",
@@ -32,7 +34,8 @@ def waterfall(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: Sequence[str] | str | None = None,
     order_by_id: bool = False,
-):
+    style_kwargs: dict | None = None,
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot.
 
@@ -70,17 +73,25 @@ def waterfall(
         the same x-axis position. Only applicable when a list of result
         objects are provided. Default behavior is to sort the function values
         of each result independently of other results.
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start scatter dots when clustering is used (best
+          cluster, secondary clusters, isolated starts respectively).
+          Only consulted when ``colors`` is ``None``; an explicit
+          ``colors`` short-circuits clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
+    style = resolve_style(style_kwargs)
 
     if n_starts_to_zoom:
         # create zoom in
@@ -92,7 +103,9 @@ def waterfall(
         inset_axes = None
 
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     # handle `order_by_id`
     if order_by_id:
@@ -156,7 +169,7 @@ def waterfall(
             fvals.sort()
 
         # assign colors
-        coloring = assign_colors(fvals, colors=colors[j])
+        coloring = assign_colors(fvals, colors=colors[j], style=style)
 
         # call lowlevel plot routine
         ax = waterfall_lowlevel(
@@ -167,6 +180,7 @@ def waterfall(
             size=size,
             colors=coloring,
             legend_text=legends[j],
+            style=style,
         )
 
         if inset_axes is not None:
@@ -175,6 +189,7 @@ def waterfall(
                 scale_y=scale_y,
                 ax=inset_axes,
                 colors=coloring[:n_starts_to_zoom],
+                style=style,
             )
             # remove the title and axes labels for the zoom in subplot
             inset_axes.set(title=None, xlabel=None, ylabel=None)
@@ -200,13 +215,14 @@ def waterfall(
 
 def waterfall_lowlevel(
     fvals,
-    ax: plt.Axes | None = None,
-    size: tuple[float] | None = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (18.5, 10.5),
     scale_y: str = "log10",
     offset_y: float = 0.0,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legend_text: str | None = None,
-):
+    style: dict | None = None,
+) -> matplotlib.axes.Axes:
     """
     Plot waterfall plot using list of function values.
 
@@ -229,17 +245,17 @@ def waterfall_lowlevel(
         and colors are assigned automatically
     legend_text:
         Label for line plots
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
     ax: matplotlib.Axes
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     start_indices = [i for i, fval in enumerate(fvals) if fval is not None]
     fvals = [fvals[i] for i in start_indices]
@@ -247,7 +263,7 @@ def waterfall_lowlevel(
         colors = [colors[i] for i in start_indices]
 
     # assign colors
-    colors = assign_colors(fvals, colors=colors)
+    colors = assign_colors(fvals, colors=colors, style=style)
 
     # plot
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))

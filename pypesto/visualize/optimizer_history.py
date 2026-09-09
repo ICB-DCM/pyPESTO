@@ -2,7 +2,7 @@ import logging
 import warnings
 from collections.abc import Iterable
 
-import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 from matplotlib.ticker import MaxNLocator
 
@@ -15,8 +15,14 @@ from ..C import (
 )
 from ..history import HistoryBase
 from ..result import Result
+from ._style import resolve_style
 from .clust_color import assign_colors
-from .misc import process_offset_y, process_result_list, process_y_limits
+from .misc import (
+    get_ax,
+    process_offset_y,
+    process_result_list,
+    process_y_limits,
+)
 from .reference_points import ReferencePoint, create_references
 
 logger = logging.getLogger(__name__)
@@ -24,8 +30,8 @@ logger = logging.getLogger(__name__)
 
 def optimizer_history(
     results: Result | list[Result],
-    ax: plt.Axes | None = None,
-    size: tuple = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] = (18.5, 10.5),
     trace_x: str = TRACE_X_STEPS,
     trace_y: str = TRACE_Y_FVAL,
     scale_y: str = "log10",
@@ -39,7 +45,8 @@ def optimizer_history(
     | list[dict]
     | None = None,
     legends: str | list[str] | None = None,
-) -> plt.Axes:
+    style_kwargs: dict | None = None,
+) -> matplotlib.axes.Axes:
     """
     Plot history of optimizer.
 
@@ -81,17 +88,32 @@ def optimizer_history(
         least a function value fval
     legends:
         Labels for line plots, one label per result object
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start history traces when clustering is applied
+          (best cluster, secondary clusters, isolated starts respectively).
+          Only consulted when ``colors`` is ``None``; an explicit
+          ``colors`` short-circuits clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
+
     if isinstance(start_indices, int):
         start_indices = list(range(start_indices))
 
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     for j, result in enumerate(results):
         # extract cost function values from result
@@ -114,6 +136,7 @@ def optimizer_history(
             x_label=x_label,
             y_label=y_label,
             legend_text=legends[j],
+            style=style,
         )
 
     # parse and apply plotting options
@@ -129,12 +152,13 @@ def optimizer_history_lowlevel(
     vals: list[np.ndarray],
     scale_y: str = "log10",
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
-    ax: plt.Axes | None = None,
-    size: tuple = (18.5, 10.5),
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] = (18.5, 10.5),
     x_label: str = "Optimizer steps",
     y_label: str = "Objective value",
     legend_text: str | None = None,
-) -> plt.Axes:
+    style: dict | None = None,
+) -> matplotlib.axes.Axes:
     """
     Plot optimizer history using list of numpy arrays.
 
@@ -157,17 +181,17 @@ def optimizer_history_lowlevel(
         label for y-axis
     legend_text:
         Label for line plots
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
     ax:
         The plot axes.
     """
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     # parse input
     fvals = []
@@ -193,7 +217,7 @@ def optimizer_history_lowlevel(
     # assign colors
     # note: this has to happen before sorting
     # to get the same colors in different plots
-    colors = assign_colors(fvals, colors)
+    colors = assign_colors(fvals, colors, style=style)
 
     # sort
     indices = sorted(range(n_fvals), key=lambda j: fvals[j])
@@ -411,13 +435,13 @@ def get_labels(trace_x: str, trace_y: str, offset_y: float) -> tuple[str, str]:
 
 
 def handle_options(
-    ax: plt.Axes,
+    ax: matplotlib.axes.Axes,
     vals: list[np.ndarray],
     trace_y: str,
     ref: list[ReferencePoint],
     y_limits: float | np.ndarray | None,
     offset_y: float,
-) -> plt.Axes:
+) -> matplotlib.axes.Axes:
     """
     Apply post-plotting transformations to the axis object.
 
@@ -540,8 +564,8 @@ def monotonic_history(
 
 def sacess_history(
     histories: list[HistoryBase],
-    ax: plt.Axes | None = None,
-) -> plt.Axes:
+    ax: matplotlib.axes.Axes | None = None,
+) -> matplotlib.axes.Axes:
     """Plot `SacessOptimizer` history.
 
     Plot the history of the best objective values for each
@@ -560,7 +584,7 @@ def sacess_history(
     -------
     The plot axes. `ax` or a new axes if `ax` was `None`.
     """
-    ax = ax or plt.subplot()
+    ax = get_ax(ax)
     if len(histories) == 0:
         warnings.warn("No histories to plot.", stacklevel=2)
 

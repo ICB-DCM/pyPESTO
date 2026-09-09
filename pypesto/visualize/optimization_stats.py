@@ -1,7 +1,6 @@
 from collections.abc import Iterable, Sequence
 
 import matplotlib.axes
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import is_color_like
 
@@ -9,8 +8,16 @@ from pypesto.util import delete_nan_inf
 
 from ..C import COLOR
 from ..result import Result
+from ._style import resolve_style
 from .clust_color import assign_colors, assign_colors_for_list
-from .misc import process_result_list, process_start_indices
+from .misc import (
+    get_ax,
+    get_axes_array,
+    hide_unused_axes,
+    make_grid_shape,
+    process_result_list,
+    process_start_indices,
+)
 
 
 def optimization_run_properties_one_plot(
@@ -21,6 +28,8 @@ def optimization_run_properties_one_plot(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
     plot_type: str = "line",
+    ax: matplotlib.axes.Axes | None = None,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot stats for allproperties specified in properties_to_plot on one plot.
@@ -29,6 +38,8 @@ def optimization_run_properties_one_plot(
     ----------
     results:
         Optimization result obtained by 'optimize.py' or list of those
+    ax:
+        Axes object to use.
     properties_to_plot:
         Optimization run properties that should be plotted
     size:
@@ -45,6 +56,16 @@ def optimization_run_properties_one_plot(
         Labels, one label per optimization property
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete`` — the categorical palette from which
+          per-property line colours are sampled. Only consulted when
+          ``colors`` is ``None``; an explicit ``colors`` short-circuits
+          palette selection.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
@@ -67,6 +88,8 @@ def optimization_run_properties_one_plot(
             colors=[[.5, .9, .9, .3], [.2, .1, .9, .5]]
         )
     """
+    style = resolve_style(style_kwargs)
+
     if properties_to_plot is None:
         properties_to_plot = [
             "time",
@@ -78,7 +101,7 @@ def optimization_run_properties_one_plot(
         ]
 
     if colors is None:
-        colors = assign_colors_for_list(len(properties_to_plot))
+        colors = assign_colors_for_list(len(properties_to_plot), style=style)
     elif is_color_like(colors):
         colors = [colors]
 
@@ -99,9 +122,7 @@ def optimization_run_properties_one_plot(
             "optimization properties to plot"
         )
 
-    ax = plt.subplots()[1]
-    fig = plt.gcf()
-    fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     for idx, prop_name in enumerate(properties_to_plot):
         optimization_run_property_per_multistart(
@@ -128,7 +149,9 @@ def optimization_run_properties_per_multistart(
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
     plot_type: str = "line",
-) -> dict[str, plt.Subplot]:
+    axes: np.ndarray | None = None,
+    style_kwargs: dict | None = None,
+) -> np.ndarray:
     """
     One plot per optimization property in properties_to_plot.
 
@@ -152,11 +175,24 @@ def optimization_run_properties_per_multistart(
         Labels for line plots, one label per result object
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
+    style_kwargs:
+        Style overrides forwarded to
+        :func:`optimization_run_property_per_multistart`. Keys used by
+        this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start scatter when clustering is applied (best
+          cluster, secondary clusters, isolated starts respectively).
+          Only consulted when ``colors`` is ``None``; an explicit
+          ``colors`` short-circuits clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
-    ax:
-    The plot axes.
+    axes:
+        2-D NumPy array containing one matplotlib Axes per panel.
 
     Examples
     --------
@@ -195,27 +231,27 @@ def optimization_run_properties_per_multistart(
             "n_sres",
         ]
 
-    num_subplot = len(properties_to_plot)
-    # compute, how many rows and columns we need for the subplots
-    num_row = int(np.round(np.sqrt(num_subplot)))
-    num_col = int(np.ceil(num_subplot / num_row))
-    fig, axes = plt.subplots(num_row, num_col, squeeze=False)
-    fig.set_size_inches(*size)
+    if plot_type not in {"line", "hist"}:
+        raise ValueError(
+            "`optimization_run_properties_per_multistart` supports only "
+            "`plot_type='line'` or `plot_type='hist'`."
+        )
 
-    for ax in axes.flat[num_subplot:]:
-        ax.remove()
-    axes = dict(zip(range(num_subplot), axes.flat, strict=True))
+    num_subplot = len(properties_to_plot)
+    num_row, num_col = make_grid_shape(num_subplot)
+    axes = get_axes_array(axes=axes, nrows=num_row, ncols=num_col, size=size)
+    axes = hide_unused_axes(axes=axes, n_used=num_subplot, clear=True)
     for idx, prop_name in enumerate(properties_to_plot):
-        ax = axes[idx]
         optimization_run_property_per_multistart(
             results,
             prop_name,
-            ax,
-            size,
-            start_indices,
-            colors,
-            legends,
-            plot_type,
+            axes=axes.flat[idx],
+            size=size,
+            start_indices=start_indices,
+            colors=colors,
+            legends=legends,
+            plot_type=plot_type,
+            style_kwargs=style_kwargs,
         )
     return axes
 
@@ -223,13 +259,14 @@ def optimization_run_properties_per_multistart(
 def optimization_run_property_per_multistart(
     results: Result | Sequence[Result],
     opt_run_property: str,
-    axes: matplotlib.axes.Axes | None = None,
+    axes: matplotlib.axes.Axes | np.ndarray | None = None,
     size: tuple[float, float] = (18.5, 10.5),
     start_indices: int | Iterable[int] | None = None,
     colors: COLOR | list[COLOR] | np.ndarray | None = None,
     legends: str | list[str] | None = None,
     plot_type: str = "line",
-) -> matplotlib.axes.Axes:
+    style_kwargs: dict | None = None,
+) -> np.ndarray:
     """
     Plot stats for an optimization run property specified by opt_run_property.
 
@@ -261,12 +298,25 @@ def optimization_run_property_per_multistart(
         Labels for line plots, one label per result object
     plot_type:
         Specifies plot type. Possible values: 'line', 'hist', 'both'
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start scatter when clustering is applied
+          (single-result default; best cluster, secondary clusters,
+          isolated starts respectively). Only consulted when
+          ``colors`` is ``None``; an explicit ``colors`` short-circuits
+          clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     axes:
-        The plot axes.
+        2-D NumPy array containing one matplotlib Axes per panel.
     """
+    style = resolve_style(style_kwargs)
     supported_properties = {
         "time": "Wall-clock time (seconds)",
         "n_fval": "Number of function evaluations",
@@ -284,62 +334,70 @@ def optimization_run_property_per_multistart(
         )
 
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
-    # axes
-    if axes is None:
-        ncols = 2 if plot_type == "both" else 1
-        fig, axes = plt.subplots(1, ncols)
-        fig.set_size_inches(*size)
+    ncols = 2 if plot_type == "both" else 1
+    axes = get_axes_array(axes=axes, nrows=1, ncols=ncols, size=size)
+    fig = axes.flat[0].figure
+    for ax in axes.flat:
+        ax.clear()
+        ax.set_visible(True)
+
+    if plot_type == "both":
         fig.suptitle(
             f"{supported_properties[opt_run_property]} per optimizer run"
         )
     else:
-        axes.set_title(
+        axes[0, 0].set_title(
             f"{supported_properties[opt_run_property]} per optimizer run"
         )
 
     # loop over results
     for j, result in enumerate(results):
         if plot_type == "both":
-            axes[0] = stats_lowlevel(
+            stats_lowlevel(
                 result,
                 opt_run_property,
                 supported_properties[opt_run_property],
-                axes[0],
+                axes[0, 0],
                 start_indices,
                 colors[j],
                 legends[j],
+                style=style,
             )
 
-            axes[1] = stats_lowlevel(
+            stats_lowlevel(
                 result,
                 opt_run_property,
                 supported_properties[opt_run_property],
-                axes[1],
+                axes[0, 1],
                 start_indices,
                 colors[j],
                 legends[j],
                 plot_type="hist",
+                style=style,
             )
         else:
-            axes = stats_lowlevel(
+            stats_lowlevel(
                 result,
                 opt_run_property,
                 supported_properties[opt_run_property],
-                axes,
+                axes[0, 0],
                 start_indices,
                 colors[j],
                 legends[j],
                 plot_type,
+                style=style,
             )
 
     if sum(legend is not None for legend in legends) > 0:
         if plot_type == "both":
-            for ax in axes:
+            for ax in axes.flat:
                 ax.legend()
         else:
-            axes.legend()
+            axes[0, 0].legend()
 
     return axes
 
@@ -353,6 +411,7 @@ def stats_lowlevel(
     color: COLOR | list[COLOR] | np.ndarray | None = "C0",
     legend: str | None = None,
     plot_type: str = "line",
+    style: dict | None = None,
 ):
     """
     Plot values of the optimization run property across different multistarts.
@@ -379,6 +438,10 @@ def stats_lowlevel(
         Label describing the result
     plot_type:
         Specifies plot type. Possible values: 'line' and 'hist'
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
@@ -397,7 +460,9 @@ def stats_lowlevel(
     n_starts = len(values)
 
     # assign colors
-    colors = assign_colors(vals=fvals, colors=color, balance_alpha=False)
+    colors = assign_colors(
+        vals=fvals, colors=color, balance_alpha=False, style=style
+    )
 
     sorted_indices = sorted(range(n_starts), key=lambda j: fvals[j])
     values = values[sorted_indices]

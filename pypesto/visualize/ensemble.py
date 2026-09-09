@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import matplotlib.axes
 import numpy as np
 import pandas as pd
 from matplotlib.collections import PatchCollection
@@ -6,13 +6,14 @@ from matplotlib.patches import Rectangle
 
 from ..C import COLOR_HIT_BOTH_BOUNDS, COLOR_HIT_NO_BOUNDS, COLOR_HIT_ONE_BOUND
 from ..ensemble import Ensemble
+from .misc import get_ax
 
 
 def ensemble_identifiability(
     ensemble: Ensemble,
-    ax: plt.Axes | None = None,
-    size: tuple[float] | None = (12, 6),
-):
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (12, 6),
+) -> matplotlib.axes.Axes:
     """
     Visualize identifiablity of parameter ensemble.
 
@@ -33,7 +34,7 @@ def ensemble_identifiability(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
     # first get the data to check identifiability
@@ -55,9 +56,9 @@ def ensemble_identifiability_lowlevel(
     lb_hit: np.ndarray,
     ub_hit: np.ndarray,
     both_hit: np.ndarray,
-    ax: plt.Axes | None = None,
-    size: tuple[float] | None = (16, 10),
-):
+    ax: matplotlib.axes.Axes | None = None,
+    size: tuple[float, float] | None = (16, 10),
+) -> matplotlib.axes.Axes:
     """
     Low-level identifiablity routine.
 
@@ -89,7 +90,7 @@ def ensemble_identifiability_lowlevel(
 
     Returns
     -------
-    ax: matplotlib.Axes
+    ax: matplotlib.axes.Axes
         The plot axes.
     """
     # define some short hands for later plotting
@@ -113,11 +114,7 @@ def ensemble_identifiability_lowlevel(
         patches_none_hit,
     ) = _create_patches(none_hit, lb_hit, ub_hit, both_hit)
 
-    # axes
-    if ax is None:
-        ax = plt.subplots()[1]
-        fig = plt.gcf()
-        fig.set_size_inches(*size)
+    ax = get_ax(ax, size)
 
     # create axes object and add patch collections
     if patches_both_hit:
@@ -193,16 +190,16 @@ def ensemble_identifiability_lowlevel(
     ax.text(-0.03, 0.0, "lower\nbound", ha="right", va="center")
     ax.plot([-0.02, 1.03], [0, 0], "k:", linewidth=1.5)
     ax.plot([-0.02, 1.03], [1, 1], "k:", linewidth=1.5)
-    plt.xticks([])
-    plt.yticks([])
+    ax.set_xticks([])
+    ax.set_yticks([])
 
     # plot frame
     ax.plot([0, 0], vert, "k-", linewidth=1.5)
     ax.plot([1, 1], vert, "k-", linewidth=1.5)
 
     # beautify axes
-    plt.xlim((-0.15, 1.1))
-    plt.ylim((-0.78, 1.15))
+    ax.set_xlim((-0.15, 1.1))
+    ax.set_ylim((-0.78, 1.15))
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
