@@ -34,13 +34,14 @@ before breaking changes take effect.
 0.7.0 (2026-08-13)
 ------------------
 
-This release requires Python>=3.12.
 - General
+    - This release requires Python>=3.12.
     - Support for PEtab v2 import via AMICI (#1730) (experimental)
     - Require pymc>=6 for ArviZ 1.x compatibility (#1746)
 - Optimization
     - Clarify use of Hessian and FIM in Fides optimizer (#1706)
     - Support pyswarm 1.0 return format (#1717)
+    - Add hierarchical optimization support for PEtab v2 (#1743, #1748, #1749)
 - Profiling
     - Improve step-size defaults and step-size robustness (#1711)
 - Visualize
@@ -51,12 +52,16 @@ This release requires Python>=3.12.
     - Improve PyMC sampler with shared objective cache (#1724)
     - Fix PyMC posterior extraction for newer ArviZ (#1714)
 - Documentation
-    - Update references (#1725)
+    - Update references (#1725, #1741)
 - Bugfixes
     - Fix scipy OptimizeWarning for L-BFGS-B/disp (#1734)
     - Remove deprecated matplotlib.cm.get_cmap (#1728)
     - Fix remaining AMICI 1.0 calls and extend tests (#1708)
     - Fix UMAP plotting import failure by adding holoviews lower bound to mltools extra (#1746)
+    - Fix `x_free` handling in `check_gradients_match_finite_differences` (#1739)
+    - Fix Hessian check in `check_gradients_match_finite_differences` (#1737)
+    - Fix silently empty residuals from hierarchical optimization (#1753)
+    - Fix quantitative data silently dropped when only some conditions have quantitative data in hierarchical optimization (#1742)
 - Deprecations
     - Rename profile step-size options to be explicit (#1711)
     - Rename visualization alpha parameter to confidence_levels (#1709)
