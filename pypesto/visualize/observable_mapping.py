@@ -27,7 +27,10 @@ try:
     import amici.sim.sundials as asd
     from amici.sim.sundials.petab.v1 import fill_in_parameters
 
-    from ..hierarchical import InnerCalculatorCollector
+    from ..hierarchical import (
+        InnerCalculatorCollector,
+        InnerCalculatorCollectorPetabV2,
+    )
     from ..hierarchical.base_problem import scale_back_value_dict
     from ..hierarchical.relative.calculator import RelativeAmiciCalculator
     from ..hierarchical.relative.problem import RelativeInnerProblem
@@ -92,6 +95,25 @@ def _finalize_observable_mapping_axes(
     ax.legend(frameon=False, loc="best")
 
 
+def _require_v1_inner_calculator(calculator) -> None:
+    """Check that ``calculator`` is a PEtab v1 hierarchical calculator.
+
+    The observable-mapping plots simulate outside the calculator, using the
+    PEtab v1 style ``objective.parameter_mapping``. For PEtab v2 that mapping
+    is an identity mapping in which the observable/noise placeholders are not
+    resolved to the inner parameters, so the plot would be silently wrong.
+    """
+    if not isinstance(calculator, InnerCalculatorCollector):
+        raise ValueError(
+            "The calculator must be an instance of the InnerCalculatorCollector."
+        )
+    if isinstance(calculator, InnerCalculatorCollectorPetabV2):
+        raise NotImplementedError(
+            "Visualizing the observable mapping is not yet supported for "
+            "PEtab v2 problems."
+        )
+
+
 def visualize_estimated_observable_mapping(
     pypesto_result: Result,
     pypesto_problem: HierarchicalProblem,
@@ -137,13 +159,7 @@ def visualize_estimated_observable_mapping(
             "The problem must contain the corresponding objective that was used for estimation."
         )
 
-    # Check the calculator is the InnerCalculatorCollector.
-    if not isinstance(
-        pypesto_problem.objective.calculator, InnerCalculatorCollector
-    ):
-        raise ValueError(
-            "The calculator must be an instance of the InnerCalculatorCollector."
-        )
+    _require_v1_inner_calculator(pypesto_problem.objective.calculator)
 
     amici_model = pypesto_problem.objective.amici_model
 
@@ -231,13 +247,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
     axes:
         A 2-D NumPy array of matplotlib Axes.
     """
-    # Check the calculator is the InnerCalculatorCollector.
-    if not isinstance(
-        pypesto_problem.objective.calculator, InnerCalculatorCollector
-    ):
-        raise ValueError(
-            "The calculator must be an instance of the InnerCalculatorCollector."
-        )
+    _require_v1_inner_calculator(pypesto_problem.objective.calculator)
 
     # Get the needed objects from the pypesto problem.
     edatas = pypesto_problem.objective.edatas
@@ -466,13 +476,7 @@ def plot_splines_from_pypesto_result(
             "The problem must contain the corresponding objective that was used for estimation."
         )
 
-    # Check the calculator is the InnerCalculatorCollector.
-    if not isinstance(
-        pypesto_result.problem.objective.calculator, InnerCalculatorCollector
-    ):
-        raise ValueError(
-            "The calculator must be an instance of the InnerCalculatorCollector."
-        )
+    _require_v1_inner_calculator(pypesto_result.problem.objective.calculator)
 
     # Check the result for start index contains the spline knots.
     if SPLINE_KNOTS not in pypesto_result.optimize_result.list[start_index]:

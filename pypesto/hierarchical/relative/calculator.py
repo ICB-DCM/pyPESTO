@@ -294,30 +294,40 @@ class RelativeAmiciCalculator(AmiciCalculator):
             scaled=True,
         )
 
-        # Fill the optimal values into the parameter mapping rather than
-        #  into `x_dct`. Mapping a simulation parameter to a value instead of
-        #  to an id keeps it out of AMICI's plist, so the second simulation
-        #  differentiates with respect to the outer parameters only. Without
-        #  this, sigmas solved for hierarchically look parameter-dependent to
-        #  the least-squares check in `AmiciCalculator.__call__`.
-        inner_values = scale_back_value_dict(
-            inner_parameters, self.inner_problem
-        )
-        parameter_mapping = copy.deepcopy(parameter_mapping)
-        for condition_mapping in parameter_mapping:
-            for sim_par, mapped in list(condition_mapping.map_sim_var.items()):
-                if isinstance(mapped, str) and mapped in inner_values:
-                    condition_mapping.map_sim_var[sim_par] = inner_values[
-                        mapped
-                    ]
-                    condition_mapping.scale_map_sim_var[sim_par] = LIN
-        # the inner parameters are no longer referenced by the mapping, so
-        #  leaving them in `x_dct` would make them unused problem parameters
-        x_dct = {
-            par_id: value
-            for par_id, value in x_dct.items()
-            if par_id not in inner_values
-        }
+        if self.evaluator is not None:
+            # The evaluator simulates from `x_dct` and ignores the PEtab v1
+            #  parameter mapping, so the optimal values have to go there. Its
+            #  plist comes from the problem's free parameters, which exclude
+            #  the inner ones, so the mapping rewrite below is unnecessary.
+            x_dct = copy.deepcopy(x_dct)
+            x_dct.update(inner_parameters)
+        else:
+            # Fill the optimal values into the parameter mapping rather than
+            #  into `x_dct`. Mapping a simulation parameter to a value instead of
+            #  to an id keeps it out of AMICI's plist, so the second simulation
+            #  differentiates with respect to the outer parameters only. Without
+            #  this, sigmas solved for hierarchically look parameter-dependent to
+            #  the least-squares check in `AmiciCalculator.__call__`.
+            inner_values = scale_back_value_dict(
+                inner_parameters, self.inner_problem
+            )
+            parameter_mapping = copy.deepcopy(parameter_mapping)
+            for condition_mapping in parameter_mapping:
+                for sim_par, mapped in list(
+                    condition_mapping.map_sim_var.items()
+                ):
+                    if isinstance(mapped, str) and mapped in inner_values:
+                        condition_mapping.map_sim_var[sim_par] = inner_values[
+                            mapped
+                        ]
+                        condition_mapping.scale_map_sim_var[sim_par] = LIN
+            # the inner parameters are no longer referenced by the mapping, so
+            #  leaving them in `x_dct` would make them unused problem parameters
+            x_dct = {
+                par_id: value
+                for par_id, value in x_dct.items()
+                if par_id not in inner_values
+            }
 
         # TODO use plist to compute only required derivatives, in
         #  `super.__call__`, `amici.parameter_mapping.fill_in_parameters`
