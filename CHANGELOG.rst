@@ -34,10 +34,9 @@ before breaking changes take effect.
 0.7.0 (2026-08-13)
 ------------------
 
+This release requires Python>=3.12.
 - General
-    - Support for PEtab v2 import via AMICI (#1730)
-- Installation / Packaging
-    - Update to adhere to NEP29 (#1703)
+    - Support for PEtab v2 import via AMICI (#1730) (experimental)
     - Require pymc>=6 for ArviZ 1.x compatibility (#1746)
 - Optimization
     - Clarify use of Hessian and FIM in Fides optimizer (#1706)
