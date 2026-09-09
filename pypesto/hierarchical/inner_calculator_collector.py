@@ -114,6 +114,11 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         self._known_least_squares_safe = False
 
+        #: per condition, the ``(par_sim_slice, par_opt_slice)`` pairs
+        #: mapping the sensitivities onto the optimization parameters.
+        #: ``None`` means they are derived from the parameter mapping.
+        self._index_slices = None
+
     def initialize(self):
         """Initialize."""
         for calculator in self.inner_calculators:
@@ -393,6 +398,149 @@ class InnerCalculatorCollector(AmiciCalculator):
             }
         )
 
+    def _inner_only_result(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ) -> dict | None:
+        """Return the inner calculator's own result, where that suffices.
+
+        With adjoint sensitivities, for second-order sensitivities, or in
+        residual mode, the relative calculator computes the objective and
+        its derivatives itself, with the inner parameters fixed at their
+        optimal values, so the collector does not simulate at all. Returns
+        ``None`` when it has to.
+        """
+        if not (
+            amici_solver.get_sensitivity_method()
+            == asd.SensitivityMethod.adjoint
+            or 2 in sensi_orders
+            or mode == MODE_RES
+        ):
+            return None
+        return self.inner_calculators[0](
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
+
+    def _simulate(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ) -> tuple[list[asd.ReturnDataView], dict | None]:
+        """Simulate with the inner parameters at their dummy values.
+
+        Returns the simulation results, together with a result dict to
+        return unchanged when the simulations failed.
+        """
+        from amici.sim.sundials.petab.v1 import fill_in_parameters
+
+        # get dimension of outer problem
+        dim = len(x_ids)
+
+        # initialize return values
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        # set order in solver
+        sensi_order = 0
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
+
+        amici_solver.set_sensitivity_order(sensi_order)
+
+        # fill in parameters, we expect here a RunTimeWarning to occur
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The following problem parameters were not used:.*",
+                category=RuntimeWarning,
+            )
+            fill_in_parameters(
+                edatas=edatas,
+                problem_parameters=x_dct,
+                scaled_parameters=True,
+                parameter_mapping=parameter_mapping,
+                amici_model=amici_model,
+            )
+
+        # run amici simulation
+        rdatas = asd.run_simulations(
+            amici_model,
+            amici_solver,
+            edatas,
+            num_threads=min(n_threads, len(edatas)),
+        )
+
+        # if any amici simulation failed, it's unlikely we can compute
+        # meaningful inner parameters, so we better just fail early.
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+            ret = {
+                FVAL: nllh,
+                GRAD: snllh,
+                HESS: s2nllh,
+                RES: res,
+                SRES: sres,
+                RDATAS: rdatas,
+                SPLINE_KNOTS: None,
+                INNER_PARAMETERS: None,
+            }
+            ret[FVAL] = np.inf
+            # if the gradient was requested,
+            # we need to provide some value for it
+            if 1 in sensi_orders:
+                ret[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
+            return rdatas, ret
+
+        if (
+            not self._known_least_squares_safe
+            and mode == MODE_RES
+            and 1 in sensi_orders
+        ):
+            if not amici_model.get_add_sigma_residuals() and any(
+                (
+                    (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
+                    or (
+                        r[AMICI_SSIGMAZ] is not None
+                        and np.any(r[AMICI_SSIGMAZ])
+                    )
+                )
+                for r in rdatas
+            ):
+                raise RuntimeError(
+                    "Cannot use least squares solver with"
+                    "parameter dependent sigma! Support can be "
+                    "enabled via "
+                    "amici_model.set_add_sigma_residuals()."
+                )
+            self._known_least_squares_safe = True  # don't check this again
+
+        return rdatas, None
+
     def __call__(
         self,
         x_dct: dict,
@@ -435,7 +583,6 @@ class InnerCalculatorCollector(AmiciCalculator):
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        from amici.sim.sundials.petab.v1 import fill_in_parameters
 
         if mode == MODE_RES and any(
             data_type in self.data_types
@@ -468,18 +615,8 @@ class InnerCalculatorCollector(AmiciCalculator):
                 "However, it can be used if the only non-quantitative data type is relative data."
             )
 
-        # if we're using adjoint sensitivity analysis or need second order
-        # sensitivities or are in residual mode, we can do so if the only
-        # non-quantitative data type is relative data. In this case, we
-        # use the relative calculator directly.
         if (
-            amici_solver.get_sensitivity_method()
-            == asd.SensitivityMethod.adjoint
-            or 2 in sensi_orders
-            or mode == MODE_RES
-        ):
-            relative_calculator = self.inner_calculators[0]
-            ret = relative_calculator(
+            ret := self._inner_only_result(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
                 mode=mode,
@@ -491,89 +628,27 @@ class InnerCalculatorCollector(AmiciCalculator):
                 parameter_mapping=parameter_mapping,
                 fim_for_hess=fim_for_hess,
             )
+        ) is not None:
             return filter_return_dict(ret)
 
-        # get dimension of outer problem
-        dim = len(x_ids)
-
-        # initialize return values
-        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
-            sensi_orders, mode, dim
-        )
-        # set order in solver
-        sensi_order = 0
-        if sensi_orders:
-            sensi_order = max(sensi_orders)
-
-        amici_solver.set_sensitivity_order(sensi_order)
-
+        # the inner parameters are not known yet, so simulate with dummies
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.necessary_par_dummy_values)
-        # fill in parameters, we expect here a RunTimeWarning to occur
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The following problem parameters were not used:.*",
-                category=RuntimeWarning,
-            )
-            fill_in_parameters(
-                edatas=edatas,
-                problem_parameters=x_dct,
-                scaled_parameters=True,
-                parameter_mapping=parameter_mapping,
-                amici_model=amici_model,
-            )
 
-        # run amici simulation
-        rdatas = asd.run_simulations(
-            amici_model,
-            amici_solver,
-            edatas,
-            num_threads=min(n_threads, len(edatas)),
+        rdatas, failure = self._simulate(
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
         )
-
-        # if any amici simulation failed, it's unlikely we can compute
-        # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
-            ret = {
-                FVAL: nllh,
-                GRAD: snllh,
-                HESS: s2nllh,
-                RES: res,
-                SRES: sres,
-                RDATAS: rdatas,
-                SPLINE_KNOTS: None,
-                INNER_PARAMETERS: None,
-            }
-            ret[FVAL] = np.inf
-            # if the gradient was requested,
-            # we need to provide some value for it
-            if 1 in sensi_orders:
-                ret[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
-            return filter_return_dict(ret)
-
-        if (
-            not self._known_least_squares_safe
-            and mode == MODE_RES
-            and 1 in sensi_orders
-        ):
-            if not amici_model.get_add_sigma_residuals() and any(
-                (
-                    (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
-                    or (
-                        r[AMICI_SSIGMAZ] is not None
-                        and np.any(r[AMICI_SSIGMAZ])
-                    )
-                )
-                for r in rdatas
-            ):
-                raise RuntimeError(
-                    "Cannot use least squares solver with"
-                    "parameter dependent sigma! Support can be "
-                    "enabled via "
-                    "amici_model.set_add_sigma_residuals()."
-                )
-            self._known_least_squares_safe = True  # don't check this again
+        if failure is not None:
+            return filter_return_dict(failure)
 
         return self._combine_inner_results(
             rdatas=rdatas,
@@ -587,6 +662,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             x_ids=x_ids,
             parameter_mapping=parameter_mapping,
             fim_for_hess=fim_for_hess,
+            index_slices=self._index_slices,
         )
 
 
