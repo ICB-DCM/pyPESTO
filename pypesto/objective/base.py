@@ -493,17 +493,20 @@ class ObjectiveBase(ABC):
         detailed: bool = False,
     ) -> pd.DataFrame:
         """
-        Compare gradient evaluation.
+        Compare an analytic derivative against finite differences.
 
-        Firstly approximate via finite differences, and secondly use the
-        objective gradient.
+        The derivative of order ``order + 1`` reported by the objective is
+        compared against finite differences of the derivative of order
+        ``order``. For ``order=0`` that is the gradient against finite
+        differences of the function value; for ``order=1`` the Hessian
+        against finite differences of the gradient.
 
         Parameters
         ----------
         x:
-            The parameters for which to evaluate the gradient.
+            The parameters for which to evaluate the derivatives.
         x_indices:
-            Indices for which to compute gradients. Default: all.
+            Indices for which to compute derivatives. Default: all.
         eps:
             Finite differences step size.
         verbosity:
@@ -515,25 +518,31 @@ class ObjectiveBase(ABC):
             Residual (MODE_RES) or objective function value (MODE_FUN)
             computation mode.
         order:
-            Derivative order, either gradient (0) or Hessian (1).
+            Derivative order to check, either gradient (0) or Hessian (1).
         detailed:
             Toggle whether additional values are returned. Additional values
-            are function values, and the central difference weighted by the
-            difference in output from all methods (standard deviation and
-            mean).
+            are the differenced quantity, and the central difference weighted
+            by the difference in output from all methods (standard deviation
+            and mean).
 
         Returns
         -------
         result:
-            gradient, finite difference approximations and error estimates.
+            The checked derivative, finite difference approximations and error
+            estimates. For historical reasons the column holding the checked
+            derivative is named ``grad`` and the columns holding the
+            differenced quantity are named ``fval``, ``fval_p`` and ``fval_m``
+            at every order, so at ``order=1`` ``grad`` holds Hessian columns
+            and ``fval`` holds the gradient.
         """
         if x_indices is None:
             x_indices = list(range(len(x)))
 
-        # function value and objective gradient
-        fval, grad = self(x, (0 + order, 1 + order), mode)
+        # derivatives of order `order` (differenced below) and `order + 1`
+        # (compared against those differences)
+        deriv_lo, deriv_hi = self(x, (order, order + 1), mode)
 
-        grad_list = []
+        deriv_hi_list = []
         fd_f_list = []
         fd_b_list = []
         fd_c_list = []
@@ -542,8 +551,8 @@ class ObjectiveBase(ABC):
         rel_err_list = []
 
         if detailed:
-            fval_p_list = []
-            fval_m_list = []
+            deriv_lo_p_list = []
+            deriv_lo_m_list = []
             std_check_list = []
             mean_check_list = []
 
@@ -552,31 +561,33 @@ class ObjectiveBase(ABC):
             # forward (plus) point
             x_p = copy.deepcopy(x)
             x_p[ix] += eps
-            fval_p = self(x_p, (0,), mode)
+            deriv_lo_p = self(x_p, (order,), mode)
 
             # backward (minus) point
             x_m = copy.deepcopy(x)
             x_m[ix] -= eps
-            fval_m = self(x_m, (0,), mode)
+            deriv_lo_m = self(x_m, (order,), mode)
 
             # finite differences
-            fd_f_ix = (fval_p - fval) / eps
-            fd_b_ix = (fval - fval_m) / eps
-            fd_c_ix = (fval_p - fval_m) / (2 * eps)
+            fd_f_ix = (deriv_lo_p - deriv_lo) / eps
+            fd_b_ix = (deriv_lo - deriv_lo_m) / eps
+            fd_c_ix = (deriv_lo_p - deriv_lo_m) / (2 * eps)
 
-            # gradient in direction ix
-            grad_ix = grad[ix] if grad.ndim == 1 else grad[:, ix]
+            # derivative of order `order + 1` in direction ix
+            deriv_hi_ix = (
+                deriv_hi[ix] if deriv_hi.ndim == 1 else deriv_hi[:, ix]
+            )
 
             # errors
             fd_err_ix = abs(fd_f_ix - fd_b_ix)
-            abs_err_ix = abs(grad_ix - fd_c_ix)
+            abs_err_ix = abs(deriv_hi_ix - fd_c_ix)
             rel_err_ix = abs(abs_err_ix / (fd_c_ix + eps))
 
             if detailed:
-                std_check_ix = (grad_ix - fd_c_ix) / np.std(
+                std_check_ix = (deriv_hi_ix - fd_c_ix) / np.std(
                     [fd_f_ix, fd_b_ix, fd_c_ix]
                 )
-                mean_check_ix = abs(grad_ix - fd_c_ix) / np.mean(
+                mean_check_ix = abs(deriv_hi_ix - fd_c_ix) / np.mean(
                     [
                         abs(fd_f_ix - fd_b_ix),
                         abs(fd_f_ix - fd_c_ix),
@@ -588,7 +599,7 @@ class ObjectiveBase(ABC):
             if verbosity > 1:
                 logger.info(
                     f"index:    {ix}\n"
-                    f"grad:     {grad_ix}\n"
+                    f"grad:     {deriv_hi_ix}\n"
                     f"fd_f:     {fd_f_ix}\n"
                     f"fd_b:     {fd_b_ix}\n"
                     f"fd_c:     {fd_c_ix}\n"
@@ -598,7 +609,7 @@ class ObjectiveBase(ABC):
                 )
 
             # append to lists
-            grad_list.append(grad_ix)
+            deriv_hi_list.append(deriv_hi_ix)
             fd_f_list.append(fd_f_ix)
             fd_b_list.append(fd_b_ix)
             fd_c_list.append(fd_c_ix)
@@ -606,14 +617,14 @@ class ObjectiveBase(ABC):
             abs_err_list.append(np.mean(abs_err_ix))
             rel_err_list.append(np.mean(rel_err_ix))
             if detailed:
-                fval_p_list.append(fval_p)
-                fval_m_list.append(fval_m)
+                deriv_lo_p_list.append(deriv_lo_p)
+                deriv_lo_m_list.append(deriv_lo_m)
                 std_check_list.append(std_check_ix)
                 mean_check_list.append(mean_check_ix)
 
         # create data dictionary for dataframe
         data = {
-            "grad": grad_list,
+            "grad": deriv_hi_list,
             "fd_f": fd_f_list,
             "fd_b": fd_b_list,
             "fd_c": fd_c_list,
@@ -625,9 +636,9 @@ class ObjectiveBase(ABC):
         # update data dictionary if detailed output is requested
         if detailed:
             prefix_data = {
-                "fval": [fval] * len(x_indices),
-                "fval_p": fval_p_list,
-                "fval_m": fval_m_list,
+                "fval": [deriv_lo] * len(x_indices),
+                "fval_p": deriv_lo_p_list,
+                "fval_m": deriv_lo_m_list,
             }
             std_str = "(grad-fd_c)/std({fd_f,fd_b,fd_c})"
             mean_str = "|grad-fd_c|/mean(|fd_f-fd_b|,|fd_f-fd_c|,|fd_b-fd_c|)"
@@ -668,13 +679,15 @@ class ObjectiveBase(ABC):
 
         Parameters
         ----------
-        rtol: relative error tolerance
-        x: The parameters for which to evaluate the gradient
-        x_free: Indices for which to compute gradients
+        x: The parameters for which to evaluate the gradient. Has to be given
+            in this objective's parameter space, i.e. without the parameters
+            that are fixed in the :class:`pypesto.Problem`.
+        x_free: Indices of ``x`` for which to compute gradients.
+            Default: all.
         rtol: relative error tolerance
         atol: absolute error tolerance
         mode: function values or residuals
-        order: gradient order, 0 for gradient, 1 for hessian
+        order: derivative order to check, 0 for gradient, 1 for Hessian
         multi_eps: multiple test step width for FDs
 
         Returns
@@ -683,14 +696,16 @@ class ObjectiveBase(ABC):
             Indicates whether gradients match (True) FDs or not (False)
         """
         par = np.asarray(x)
-        if x_free is None:
-            free_indices = par
-        else:
-            free_indices = par[x_free]
+        if x_free is not None:
+            # the objective is evaluated at the full vector `x`; finite
+            #  differences are only computed for the `x_free` indices
+            kwargs["x_indices"] = x_free
         dfs = []
 
         if mode is None:
-            modes = [MODE_FUN, MODE_RES]
+            # second order derivatives (order == 1) are only defined for
+            # MODE_FUN (there are no second order residual sensitivities)
+            modes = [MODE_FUN] if order == 1 else [MODE_FUN, MODE_RES]
         else:
             modes = [mode]
 
@@ -701,10 +716,11 @@ class ObjectiveBase(ABC):
             try:
                 dfs.append(
                     self.check_grad_multi_eps(
-                        free_indices,
+                        par,
                         *args,
                         **kwargs,
                         mode=mode,
+                        order=order,
                         multi_eps=multi_eps,
                     )
                 )
