@@ -480,71 +480,79 @@ def inject_timepoint_specific_noise(
     Returns
     -------
     noise_distributions:
-        Noise distributions array. Shape: (n_timepoints, n_observables)
+        Noise distributions array. Shape: (n_timepoints, n_observables) if
+        timepoint-specific overrides were found, else unchanged
+        (n_observables,).
     noise_formulae:
         Noise formulae array with timepoint-specific overrides applied.
-        Shape: (n_timepoints, n_observables)
+        Shape: (n_timepoints, n_observables) if timepoint-specific overrides
+        were found, else unchanged (n_observables,).
     """
-    # Get timepoints from measurements
-    timepoints = measurements[:, 0]
-    n_timepoints = len(timepoints)
-
-    # Initialize arrays with default values repeated for each timepoint
-    noise_distributions_expanded = np.tile(
-        noise_distributions, (n_timepoints, 1)
-    )
-    noise_formulae_expanded = np.tile(noise_formulae, (n_timepoints, 1))
-
     # If no noise parameters column, return the 1D defaults
     if NOISE_PARAMETERS not in measurement_df.columns:
         return noise_distributions, noise_formulae
 
-    # Check if there are actually timepoint-specific numeric overrides
-    # Build a lookup dictionary: (time, observable_id) -> noise_parameter_value
-    noise_override_map = {}
-    has_timepoint_specific = False
+    def _to_numeric(value):
+        """Convert to float, or NaN if not a plain number."""
+        if pd.isna(value):
+            return np.nan
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            # not a plain number, e.g. "0.5;2" or a parameter id -- left to
+            # the existing single-parameter-per-observable mechanism
+            return np.nan
 
-    for _, row in measurement_df.iterrows():
-        time = row[TIME]
-        obs_id = row[OBSERVABLE_ID]
-        noise_param = row[NOISE_PARAMETERS]
-        # Only process non-NaN values
-        if pd.notna(noise_param):
-            noise_param_str = str(noise_param)
-            # Check if it's a simple numeric value (not a formula like "0.5;2")
-            try:
-                float(noise_param_str)
-                # It's numeric - add to map
-                noise_override_map[(time, obs_id)] = noise_param_str
-            except ValueError:
-                # Not a simple number (could be "0.5;2", "noise", etc.)
-                # Don't treat as timepoint-specific override
-                pass
+    noise_df = measurement_df.loc[
+        :, [OBSERVABLE_ID, TIME, NOISE_PARAMETERS]
+    ].copy()
+    noise_df["noise_value"] = noise_df[NOISE_PARAMETERS].map(_to_numeric)
 
-    # Check if noise values actually vary by timepoint for any observable
-    if noise_override_map:
-        for obs_id in observable_ids:
-            obs_noise_values = [
-                v for (t, o), v in noise_override_map.items() if o == obs_id
-            ]
-            if len(set(obs_noise_values)) > 1:
-                # This observable has different noise values at different timepoints
-                has_timepoint_specific = True
-                break
-
-    # If no timepoint-specific overrides, return 1D defaults
-    if not has_timepoint_specific:
+    # only observables whose numeric override actually differs across rows
+    # (timepoints or replicates) need to be expanded; a constant numeric
+    # override is equivalent to the existing per-observable default.
+    numeric_rows = noise_df.dropna(subset=["noise_value"])
+    n_unique = numeric_rows.groupby(OBSERVABLE_ID)["noise_value"].nunique()
+    variable_observables = set(n_unique[n_unique > 1].index)
+    if not variable_observables:
         return noise_distributions, noise_formulae
 
-    # Apply timepoint-specific overrides
-    for i_time, time in enumerate(timepoints):
-        for i_obs, obs_id in enumerate(observable_ids):
-            key = (time, obs_id)
-            if key in noise_override_map:
-                # Override the noise formula with the value from measurement table
-                noise_formulae_expanded[i_time, i_obs] = noise_override_map[
-                    key
-                ]
+    # Recreate the exact (time, count) row order used to build `measurements`
+    # (see `measurement_df_to_matrix`) so the noise grid lines up row-for-row
+    # with it, including replicate measurements sharing the same timepoint.
+    noise_df["count"] = noise_df.groupby([OBSERVABLE_ID, TIME]).cumcount()
+    pivot = noise_df.pivot(
+        index=[TIME, "count"], columns=OBSERVABLE_ID, values="noise_value"
+    )
+    pivot = pivot.reindex(columns=observable_ids)
+
+    n_timepoints = measurements.shape[0]
+    if pivot.shape[0] != n_timepoints:
+        raise ValueError(
+            f"Could not align timepoint-specific noise overrides "
+            f"({pivot.shape[0]} rows) with measurements ({n_timepoints} "
+            "rows)."
+        )
+
+    # Use dtype=object explicitly: a fixed-width numpy string dtype inferred
+    # from the (possibly short, e.g. "1") default formulae would silently
+    # truncate longer override values written into it later.
+    noise_formulae_expanded = np.empty(
+        (n_timepoints, len(observable_ids)), dtype=object
+    )
+    noise_distributions_expanded = np.empty(
+        (n_timepoints, len(observable_ids)), dtype=object
+    )
+    for i_obs, obs_id in enumerate(observable_ids):
+        noise_distributions_expanded[:, i_obs] = noise_distributions[i_obs]
+        if obs_id not in variable_observables:
+            noise_formulae_expanded[:, i_obs] = noise_formulae[i_obs]
+            continue
+        overrides = pivot[obs_id].to_numpy()
+        noise_formulae_expanded[:, i_obs] = [
+            noise_formulae[i_obs] if pd.isna(value) else value
+            for value in overrides
+        ]
 
     return noise_distributions_expanded, noise_formulae_expanded
 

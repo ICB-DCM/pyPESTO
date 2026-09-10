@@ -6,6 +6,7 @@ import os
 
 import benchmark_models_petab as models
 import numpy as np
+import pandas as pd
 import petab.v1 as petab
 import petabtests
 import pytest
@@ -13,6 +14,7 @@ import pytest
 import pypesto
 import pypesto.petab
 from pypesto.objective.roadrunner import simulation_to_measurement_df
+from pypesto.objective.roadrunner.utils import inject_timepoint_specific_noise
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -188,3 +190,156 @@ def test_multiprocessing():
             for fval in result.optimize_result.fval
         ]
     )
+
+
+def test_inject_timepoint_specific_noise_no_truncation():
+    """Timepoint-specific numeric noise overrides must not be silently
+    truncated by a fixed-width numpy string dtype inferred from the
+    (possibly short) default noise formula, e.g. "1"."""
+    noise_distributions = np.array(["lin_normal"])
+    noise_formulae = np.array(["1"])
+    observable_ids = ["obs_a"]
+    measurement_df = pd.DataFrame(
+        {
+            "observableId": ["obs_a", "obs_a"],
+            "time": [0, 10],
+            "measurement": [0.7, 0.1],
+            "noiseParameters": [5.0, 25.0],
+        }
+    )
+    measurements = np.array([[0, 0.7], [10, 0.1]])
+
+    _, noise_formulae_out = inject_timepoint_specific_noise(
+        noise_distributions,
+        noise_formulae,
+        measurement_df,
+        observable_ids,
+        measurements,
+    )
+
+    assert [float(v) for v in noise_formulae_out.ravel()] == [5.0, 25.0]
+
+
+def test_inject_timepoint_specific_noise_replicates():
+    """Replicate measurements at the same timepoint with different noise
+    overrides must keep their individual values, not collapse to a single
+    value shared by all replicates at that timepoint."""
+    noise_distributions = np.array(["lin_normal"])
+    noise_formulae = np.array(["1.0"])
+    observable_ids = ["obs_a"]
+    measurement_df = pd.DataFrame(
+        {
+            "observableId": ["obs_a", "obs_a", "obs_a"],
+            "time": [0, 0, 10],
+            "measurement": [0.7, 0.75, 0.1],
+            "noiseParameters": [3.0, 9.0, 3.0],
+        }
+    )
+    measurements = np.array([[0, 0.7], [0, 0.75], [10, 0.1]])
+
+    _, noise_formulae_out = inject_timepoint_specific_noise(
+        noise_distributions,
+        noise_formulae,
+        measurement_df,
+        observable_ids,
+        measurements,
+    )
+
+    assert [float(v) for v in noise_formulae_out.ravel()] == [3.0, 9.0, 3.0]
+
+
+def test_timepoint_specific_noise_end_to_end():
+    """A genuinely timepoint-varying numeric noise override, run through the
+    full roadrunner PEtab import pipeline, must match the log-likelihood
+    computed by petab's own (model-agnostic) reference implementation.
+
+    Regression test for the roadrunner-specific bugs in
+    ``inject_timepoint_specific_noise`` (silent string truncation, and
+    collapsing of replicate noise overrides): either would corrupt the
+    noise values used to simulate here and change the likelihood.
+    """
+    from petab.v1.C import (
+        CONDITION_ID,
+        ESTIMATE,
+        LIN,
+        LOWER_BOUND,
+        MEASUREMENT,
+        NOISE_FORMULA,
+        NOISE_PARAMETERS,
+        NOMINAL_VALUE,
+        OBSERVABLE_FORMULA,
+        OBSERVABLE_ID,
+        PARAMETER_ID,
+        PARAMETER_SCALE,
+        SIMULATION,
+        SIMULATION_CONDITION_ID,
+        TIME,
+        UPPER_BOUND,
+    )
+    from petab.v1.calculate import calculate_llh
+    from petab.v1.models.sbml_model import SbmlModel
+    from petabtests.C import DEFAULT_SBML_FILE
+    from petabtests.model import analytical_a
+
+    a0, b0, k1, k2 = 1, 0, 0.8, 0.6
+    times = [0, 5, 10]
+    # deliberately varying magnitude/digit-width noise values, and not a
+    # single shared value, to exercise both the truncation and the
+    # replicate-alignment paths.
+    noise_values = [0.2, 1.0, 3.0]
+
+    condition_df = pd.DataFrame({CONDITION_ID: ["c0"]}).set_index(CONDITION_ID)
+    measurement_df = pd.DataFrame(
+        {
+            OBSERVABLE_ID: ["obs_a"] * len(times),
+            SIMULATION_CONDITION_ID: ["c0"] * len(times),
+            TIME: times,
+            MEASUREMENT: [
+                analytical_a(t, a0, b0, k1, k2) + 0.01 for t in times
+            ],
+            NOISE_PARAMETERS: noise_values,
+        }
+    )
+    observable_df = pd.DataFrame(
+        {
+            OBSERVABLE_ID: ["obs_a"],
+            OBSERVABLE_FORMULA: ["A"],
+            NOISE_FORMULA: ["noiseParameter1_obs_a"],
+        }
+    ).set_index(OBSERVABLE_ID)
+    parameter_df = pd.DataFrame(
+        {
+            PARAMETER_ID: ["a0", "b0", "k1", "k2"],
+            PARAMETER_SCALE: [LIN] * 4,
+            LOWER_BOUND: [0] * 4,
+            UPPER_BOUND: [10] * 4,
+            NOMINAL_VALUE: [a0, b0, k1, k2],
+            ESTIMATE: [1] * 4,
+        }
+    ).set_index(PARAMETER_ID)
+
+    petab_problem = petab.Problem(
+        model=SbmlModel.from_file(DEFAULT_SBML_FILE),
+        condition_df=condition_df,
+        measurement_df=measurement_df,
+        observable_df=observable_df,
+        parameter_df=parameter_df,
+    )
+
+    simulation_df = measurement_df.rename(columns={MEASUREMENT: SIMULATION})
+    simulation_df[SIMULATION] = [
+        analytical_a(t, a0, b0, k1, k2) for t in times
+    ]
+    expected_llh = calculate_llh(
+        [measurement_df], [simulation_df], [observable_df], parameter_df
+    )
+
+    importer = pypesto.petab.PetabImporter(
+        petab_problem, simulator_type="roadrunner"
+    )
+    obj = importer.create_problem().objective
+    problem_parameters = petab_problem.x_nominal_free_scaled
+    ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
+    llh = -ret["fval"]
+
+    assert llh == pytest.approx(expected_llh, rel=1e-6)
