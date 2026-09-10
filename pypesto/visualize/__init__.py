@@ -17,7 +17,7 @@ from .dimension_reduction import (
     projection_scatter_umap,
     projection_scatter_umap_original,
 )
-from .ensemble import ensemble_identifiability
+from .ensemble import ensemble_identifiability, ensemble_parameters_plot
 from .misc import process_offset_y, process_result_list, process_y_limits
 from .observable_mapping import (
     plot_linear_observable_mappings_from_pypesto_result,
