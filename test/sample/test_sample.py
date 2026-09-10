@@ -32,6 +32,7 @@ from .util import (
     gaussian_nllh_grad,
     gaussian_nllh_hess,
     gaussian_problem,
+    gaussian_problem_with_grad,
     negative_log_posterior,
     negative_log_prior,
     rosenbrock_problem,
@@ -47,6 +48,7 @@ from .util import (
         "Pymc",
         "Emcee",
         "Dynesty",
+        "Mala",
     ]
 )
 def sampler(request):
@@ -58,6 +60,12 @@ def sampler(request):
         )
     elif request.param == "AdaptiveMetropolis":
         return sample.AdaptiveMetropolisSampler(
+            options={
+                "show_progress": False,
+            },
+        )
+    elif request.param == "Mala":
+        return sample.MalaSampler(
             options={
                 "show_progress": False,
             },
@@ -91,11 +99,15 @@ def sampler(request):
         )
 
 
-@pytest.fixture(params=["gaussian", "gaussian_mixture", "rosenbrock"])
+@pytest.fixture(
+    params=["gaussian", "gaussian_with_grad", "gaussian_mixture", "rosenbrock"]
+)
 def problem(request):
     if request.param == "gaussian":
         return gaussian_problem()
-    if request.param == "gaussian_mixture":
+    elif request.param == "gaussian_with_grad":
+        return gaussian_problem_with_grad()
+    elif request.param == "gaussian_mixture":
         return gaussian_mixture_problem()
     elif request.param == "rosenbrock":
         return rosenbrock_problem()
@@ -103,6 +115,14 @@ def problem(request):
 
 def test_pipeline(sampler, problem):
     """Check that a typical pipeline runs through."""
+    if isinstance(sampler, sample.MalaSampler):
+        if not problem.objective.has_grad:
+            pytest.skip("MALA requires gradient information.")
+    if isinstance(sampler, sample.EmceeSampler):
+        if problem.objective.has_grad:
+            pytest.skip(
+                "EMCEE fails to converge when started in optimal point with gradient."
+            )
     # optimization
     optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     result = optimize.minimize(
@@ -202,7 +222,9 @@ def test_regularize_covariance():
     """
     matrix = np.array([[-1.0, -4.0], [-4.0, 1.0]])
     assert np.any(np.linalg.eigvals(matrix) < 0)
-    reg = sample.adaptive_metropolis.regularize_covariance(matrix, 1e-6)
+    reg = sample.adaptive_metropolis.regularize_covariance(
+        matrix, 1e-6, max_tries=1
+    )
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
 
