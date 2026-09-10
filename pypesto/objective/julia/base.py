@@ -1,6 +1,13 @@
-"""Interface to Julia via pyjulia."""
+"""Interface to Julia via juliacall."""
 
 from collections.abc import Callable
+
+# Import juliacall early to avoid conflicts with other libraries (especially numpy)
+# See: https://juliapy.github.io/PythonCall.jl/dev/faq/
+try:
+    from juliacall import Main as jl  # noqa: F401
+except ImportError:
+    jl = None
 
 import numpy as np
 
@@ -27,10 +34,10 @@ def _read_source(module_name: str, source_file: str) -> None:
     module_name: Julia module name.
     source_file: Qualified Julia source file.
     """
-    from julia import Main
+    from juliacall import Main as jl
 
-    if not hasattr(Main, module_name):
-        Main.include(source_file)
+    if not hasattr(jl, module_name):
+        jl.include(source_file)
 
 
 class JuliaObjective(Objective):
@@ -40,45 +47,18 @@ class JuliaObjective(Objective):
     It expects the corresponding Julia objects to be defined in a
     `source_file` within a `module`.
 
-    We use the PyJulia package to access Julia from inside Python.
-    It can be installed via `pip install pypesto[julia]`, however requires
-    additional Julia dependencies to be installed via:
+    We use the juliacall package (part of PythonCall.jl) to access Julia
+    from inside Python. It can be installed via `pip install pypesto[julia]`.
 
-    >>> python -c "import julia; julia.install()"
+    juliacall automatically manages the Julia installation and configuration,
+    so no additional setup steps are required beyond pip installation.
 
     For further information, see
-    https://pyjulia.readthedocs.io/en/latest/installation.html.
+    https://juliapy.github.io/PythonCall.jl/stable/juliacall/
 
-    There are some known problems, e.g. with statically linked Python
-    interpreters, see
-    https://pyjulia.readthedocs.io/en/latest/troubleshooting.html
-    for details.
-    Possible solutions are to pass ``compiled_modules=False`` to the Julia
-    constructor early in your code:
-
-    >>> from julia.api import Julia
-    >>> jl = Julia(compiled_modules=False)
-
-    This however slows down loading and using Julia packages, especially for
-    large ones.
-    An alternative is to use the ``python-jl`` command shipped with PyJulia:
-
-    >>> python-jl MY_SCRIPT.py
-
-    This basically launches a Python interpreter inside Julia.
-    When using Jupyter notebooks, this wrapper can be installed as an
-    additional kernel via:
-
-    >>> python -m ipykernel install --name python-jl [--prefix=/path/to/python/env]
-
-    And changing the first argument in
-    ``/path/to/python/env/share/jupyter/kernels/python-jl/kernel.json``
-    to ``python-jl``.
-
-    Model simulations are eagerly converted to Python objects
-    (specifically, `numpy.ndarray` and `pandas.DataFrame`).
-    This can introduce overhead and could be avoided by an alternative
-    lazy implementation.
+    Model simulations are efficiently handled with minimal overhead.
+    By default, juliacall wraps mutable objects instead of copying them,
+    providing better performance than PyJulia.
 
     Parameters
     ----------
@@ -103,10 +83,10 @@ class JuliaObjective(Objective):
     ):
         # lazy imports
         try:
-            from julia import Main  # noqa: F401
+            from juliacall import Main as jl  # noqa: F401
         except ImportError:
             raise ImportError(
-                "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
+                "Install juliacall, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
             ) from None
 
@@ -133,10 +113,10 @@ class JuliaObjective(Objective):
 
         Use this function to access any variable from the Julia module.
         """
-        from julia import Main
+        from juliacall import Main as jl
 
         if name is not None:
-            ret = getattr(getattr(Main, self.module), name, None)
+            ret = getattr(getattr(jl, self.module), name, None)
             if as_array:
                 ret = _as_array(ret)
             return ret

@@ -1,5 +1,4 @@
 import os
-import unittest
 
 import numpy as np
 
@@ -7,8 +6,6 @@ from pypesto import Problem, optimize
 from pypesto.engine import MultiProcessEngine, SingleCoreEngine
 from pypesto.objective.julia import JuliaObjective, display_source_ipython
 from pypesto.objective.julia.petab_jl_importer import PetabJlImporter
-
-# The pyjulia wrapper appears to ignore global noqas, thus per line here
 
 
 def test_pyjulia_pipeline():
@@ -67,9 +64,6 @@ def test_pyjulia_pipeline():
     )
 
 
-# TODO: REACTIVATE JULIA TESTS - These tests have been temporarily paused
-#  and need to be reactivated.
-@unittest.skip("Julia tests are temporarily disabled.")
 def test_petabJL_interface():
     """Test the interface to PEtab.jl with provided solutions from julia."""
     model_name = "boehm_JProteomeRes2014"
@@ -117,7 +111,6 @@ def test_petabJL_interface():
     assert np.allclose(hess, hess_ref)  # noqa: S101
 
 
-@unittest.skip("Julia tests are temporarily disabled.")
 def test_petabJL_from_module():
     """Test that PEtab.jl is integrated properly."""
     # create objective
@@ -139,7 +132,6 @@ def test_petabJL_from_module():
     )
 
 
-@unittest.skip("Julia tests are temporarily disabled.")
 def test_petabJL_from_yaml():
     """Test that PEtab.jl from yaml file is running smoothly."""
     yaml_file = (

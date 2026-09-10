@@ -3,6 +3,13 @@
 import logging
 import os
 
+# Import juliacall early to avoid conflicts with other libraries (especially numpy)
+# See: https://juliapy.github.io/PythonCall.jl/dev/faq/
+try:
+    from juliacall import Main as jl  # noqa: F401
+except ImportError:
+    jl = None
+
 import numpy as np
 
 from .base import JuliaObjective, _read_source
@@ -37,12 +44,24 @@ class PEtabJlObjective(JuliaObjective):
         """Initialize objective."""
         # lazy imports
         try:
-            from julia import Main, Pkg  # noqa: F401
+            from juliacall import Main as jl  # noqa: F401
 
-            Pkg.activate(".")
+            # Load Pkg into Julia session
+            jl.seval("using Pkg")
+            jl.Pkg.activate(".")
+
+            # Install required packages if not already available
+            # This ensures packages are available even when precompile=False
+            try:
+                jl.seval("using OrdinaryDiffEq")
+            except Exception:
+                logger.info("Installing required Julia packages...")
+                jl.Pkg.add("OrdinaryDiffEq")
+                jl.Pkg.add("PEtab")
+                jl.Pkg.add("Sundials")
         except ImportError:
             raise ImportError(
-                "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
+                "Install juliacall, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
             ) from None
 
@@ -60,6 +79,12 @@ class PEtabJlObjective(JuliaObjective):
 
         petab_jl_problem = self.get(petab_problem_name)
         self.petab_jl_problem = petab_jl_problem
+
+        if petab_jl_problem is None:
+            raise ValueError(
+                f"Could not find petab problem '{petab_problem_name}' in module '{module}'. "
+                f"Make sure the Julia module defines this variable."
+            )
 
         # get functions
         fun = self.petab_jl_problem.nllh
@@ -87,15 +112,24 @@ class PEtabJlObjective(JuliaObjective):
             setattr(self, key, value)
         # lazy imports
         try:
-            from julia import (
-                Main,  # noqa: F401
-                Pkg,
-            )
+            from juliacall import Main as jl  # noqa: F401
 
-            Pkg.activate(".")
+            # Load Pkg into Julia session
+            jl.seval("using Pkg")
+            jl.Pkg.activate(".")
+
+            # Install required packages if not already available
+            # This ensures packages are available even when precompile=False
+            try:
+                jl.seval("using OrdinaryDiffEq")
+            except Exception:
+                logger.info("Installing required Julia packages...")
+                jl.Pkg.add("OrdinaryDiffEq")
+                jl.Pkg.add("PEtab")
+                jl.Pkg.add("Sundials")
         except ImportError:
             raise ImportError(
-                "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
+                "Install juliacall, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
             ) from None
         # Include module if not already included
@@ -103,6 +137,12 @@ class PEtabJlObjective(JuliaObjective):
 
         petab_jl_problem = self.get(self._petab_problem_name)
         self.petab_jl_problem = petab_jl_problem
+
+        if petab_jl_problem is None:
+            raise ValueError(
+                f"Could not find petab problem '{self._petab_problem_name}' in module '{self.module}'. "
+                f"Make sure the Julia module defines this variable."
+            )
 
         # get functions
         fun = self.petab_jl_problem.nllh
@@ -138,19 +178,20 @@ class PEtabJlObjective(JuliaObjective):
             return None
         # lazy imports
         try:
-            from julia import Main  # noqa: F401
+            from juliacall import Main as jl  # noqa: F401
         except ImportError:
             raise ImportError(
-                "Install PyJulia, e.g. via `pip install pypesto[julia]`, "
+                "Install juliacall, e.g. via `pip install pypesto[julia]`, "
                 "and see the class documentation",
             ) from None
         # setting up a local project, where the precompilation will be done in
-        from julia import Pkg
 
-        Pkg.activate(".")
+        # Load Pkg into Julia session
+        jl.seval("using Pkg")
+        jl.Pkg.activate(".")
         # create a Project f"{self.module}_pre".
         try:
-            Pkg.generate(f"{directory}/{self.module}_pre")
+            jl.Pkg.generate(f"{directory}/{self.module}_pre")
         except Exception:
             logger.info("Module is already generated. Skipping generate...")
         # Adjust the precompilation file
@@ -169,16 +210,16 @@ class PEtabJlObjective(JuliaObjective):
                 os.rename("dummy_temp_file.jl", self.source_file)
 
         try:
-            Pkg.develop(path=f"{directory}/{self.module}_pre")
+            jl.Pkg.develop(path=f"{directory}/{self.module}_pre")
         except Exception:
             logger.info("Module is already developed. Skipping develop...")
-        Pkg.activate(f"{directory}/{self.module}_pre/")
+        jl.Pkg.activate(f"{directory}/{self.module}_pre/")
         # add dependencies
-        Pkg.add("PrecompileTools")
-        Pkg.add("OrdinaryDiffEq")
-        Pkg.add("PEtab")
-        Pkg.add("Sundials")
-        Pkg.precompile()
+        jl.Pkg.add("PrecompileTools")
+        jl.Pkg.add("OrdinaryDiffEq")
+        jl.Pkg.add("PEtab")
+        jl.Pkg.add("Sundials")
+        jl.Pkg.precompile()
 
 
 def write_precompilation_module(module, source_file_orig):
