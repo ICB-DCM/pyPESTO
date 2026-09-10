@@ -421,7 +421,14 @@ def calculate_llh(
             return None
 
     def _fill_in_noise_formula(noise_formula):
-        """Fill in the noise formula."""
+        """Resolve a noise formula to its numeric value.
+
+        Raises
+        ------
+        ValueError:
+            If the formula is neither numeric, a mapped parameter, nor a
+            ``noiseFormula_``-prefixed model parameter.
+        """
         # Try numeric conversion first
         numeric_value = _try_convert_to_float(noise_formula)
         if numeric_value is not None:
@@ -434,8 +441,11 @@ def calculate_llh(
             "noiseFormula_"
         ):
             return roadrunner_instance.getValue(noise_formula)
-        # If we couldn't resolve it, return None (will cause error downstream)
-        return None
+        raise ValueError(
+            f"Could not resolve noise formula {noise_formula!r}: it is "
+            "neither numeric, a mapped parameter, nor a "
+            "'noiseFormula_'-prefixed model parameter."
+        )
 
     # replace noise formula with actual value from mapping
     # Handle both 1D (n_observables,) and 2D (n_timepoints, n_observables) arrays
