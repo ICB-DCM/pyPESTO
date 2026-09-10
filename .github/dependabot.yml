@@ -8,4 +8,4 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor"]
-    target-branch: "develop"
+    target-branch: "main"
