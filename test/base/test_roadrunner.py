@@ -248,15 +248,19 @@ def test_inject_timepoint_specific_noise_replicates():
     assert [float(v) for v in noise_formulae_out.ravel()] == [3.0, 9.0, 3.0]
 
 
-def test_timepoint_specific_noise_end_to_end():
-    """A genuinely timepoint-varying numeric noise override, run through the
-    full roadrunner PEtab import pipeline, must match the log-likelihood
-    computed by petab's own (model-agnostic) reference implementation.
+def test_timepoint_specific_noise_2d_with_symbolic_placeholder():
+    """When one observable's noise varies by timepoint (forcing the
+    per-condition noise array to 2D), another observable in the same
+    condition that still uses a *compound* noise formula referencing
+    ``noiseParameter1_x``/``noiseParameter2_x`` placeholders (constant
+    across timepoints, PEtab test case 0014 style) must still get that
+    formula registered as a ``noiseFormula_x`` roadrunner parameter -- a
+    bare placeholder name would instead resolve directly via the standard
+    PEtab parameter mapping, without ever reaching this registration code.
 
-    Regression test for the roadrunner-specific bugs in
-    ``inject_timepoint_specific_noise`` (silent string truncation, and
-    collapsing of replicate noise overrides): either would corrupt the
-    noise values used to simulate here and change the likelihood.
+    This exercises the ``noise_formulae_array.ndim == 2`` branch of
+    ``RoadRunnerObjectiveCreator._check_noise_formulae``, which the
+    purely-numeric test above never reaches.
     """
     from petab.v1.C import (
         CONDITION_ID,
@@ -279,32 +283,36 @@ def test_timepoint_specific_noise_end_to_end():
     from petab.v1.calculate import calculate_llh
     from petab.v1.models.sbml_model import SbmlModel
     from petabtests.C import DEFAULT_SBML_FILE
-    from petabtests.model import analytical_a
+    from petabtests.model import analytical_a, analytical_b
 
     a0, b0, k1, k2 = 1, 0, 0.8, 0.6
-    times = [0, 5, 10]
-    # deliberately varying magnitude/digit-width noise values, and not a
-    # single shared value, to exercise both the truncation and the
-    # replicate-alignment paths.
-    noise_values = [0.2, 1.0, 3.0]
+    times = [0, 10]
 
     condition_df = pd.DataFrame({CONDITION_ID: ["c0"]}).set_index(CONDITION_ID)
     measurement_df = pd.DataFrame(
         {
-            OBSERVABLE_ID: ["obs_a"] * len(times),
-            SIMULATION_CONDITION_ID: ["c0"] * len(times),
-            TIME: times,
+            OBSERVABLE_ID: ["obs_a", "obs_a", "obs_b", "obs_b"],
+            SIMULATION_CONDITION_ID: ["c0"] * 4,
+            TIME: times * 2,
             MEASUREMENT: [
                 analytical_a(t, a0, b0, k1, k2) + 0.01 for t in times
-            ],
-            NOISE_PARAMETERS: noise_values,
+            ]
+            + [analytical_b(t, a0, b0, k1, k2) + 0.01 for t in times],
+            # obs_a varies numerically by timepoint -> forces the array 2D.
+            # obs_b uses the same compound override at both timepoints ->
+            # stays an unresolved formula in that 2D array (matches PEtab
+            # test case 0014's "0.5;2" pattern).
+            NOISE_PARAMETERS: [0.2, 2.0, "0.1;0.2", "0.1;0.2"],
         }
     )
     observable_df = pd.DataFrame(
         {
-            OBSERVABLE_ID: ["obs_a"],
-            OBSERVABLE_FORMULA: ["A"],
-            NOISE_FORMULA: ["noiseParameter1_obs_a"],
+            OBSERVABLE_ID: ["obs_a", "obs_b"],
+            OBSERVABLE_FORMULA: ["A", "B"],
+            NOISE_FORMULA: [
+                "noiseParameter1_obs_a",
+                "noiseParameter1_obs_b + noiseParameter2_obs_b",
+            ],
         }
     ).set_index(OBSERVABLE_ID)
     parameter_df = pd.DataFrame(
@@ -329,7 +337,7 @@ def test_timepoint_specific_noise_end_to_end():
     simulation_df = measurement_df.rename(columns={MEASUREMENT: SIMULATION})
     simulation_df[SIMULATION] = [
         analytical_a(t, a0, b0, k1, k2) for t in times
-    ]
+    ] + [analytical_b(t, a0, b0, k1, k2) for t in times]
     expected_llh = calculate_llh(
         [measurement_df], [simulation_df], [observable_df], parameter_df
     )
@@ -338,6 +346,10 @@ def test_timepoint_specific_noise_end_to_end():
         petab_problem, simulator_type="roadrunner"
     )
     obj = importer.create_problem().objective
+
+    # the placeholder must have been registered as a roadrunner parameter
+    assert obj.roadrunner_instance.getValue("noiseFormula_obs_b") is not None
+
     problem_parameters = petab_problem.x_nominal_free_scaled
     ret = obj(problem_parameters, sensi_orders=(0,), return_dict=True)
     llh = -ret["fval"]
