@@ -60,6 +60,14 @@ class ProfileOptions(dict):
     whole_path:
         Whether to profile the whole bounds or only till we get below the
         ratio.
+    profile_n_starts:
+        Number of optimization starts attempted at each profile point.
+    profile_sampling_sigma:
+        Standard deviation used for each free coordinate when sampling
+        additional optimization startpoints from a Gaussian centered at the
+        point suggested by `profile_next_guess`, in the reduced parameter
+        space. The profiled parameter itself is already fixed and is therefore
+        not perturbed.
     step_size_precheck_mode:
         Controls the step-size precheck, which estimates how many profile
         steps the resolved step sizes imply and reports suspiciously small
@@ -83,6 +91,8 @@ class ProfileOptions(dict):
         reg_order: int = 4,
         adaptive_target_scaling_factor: float = 1.5,
         whole_path: bool = False,
+        profile_n_starts: int = 6,
+        profile_sampling_sigma: float = 0.01,
         step_size_precheck_mode: str = "warn",
         default_step_size: float | None = None,
         min_step_size: float | None = None,
@@ -130,6 +140,8 @@ class ProfileOptions(dict):
         self.reg_order = reg_order
         self.adaptive_target_scaling_factor = adaptive_target_scaling_factor
         self.whole_path = whole_path
+        self.profile_n_starts = profile_n_starts
+        self.profile_sampling_sigma = profile_sampling_sigma
         self.step_size_precheck_mode = step_size_precheck_mode
 
         self.validate()
@@ -210,6 +222,10 @@ class ProfileOptions(dict):
 
         if self.adaptive_target_scaling_factor < 1:
             raise ValueError("adaptive_target_scaling_factor must be > 1.")
+        if self.profile_n_starts < 1:
+            raise ValueError("profile_n_starts must be >= 1.")
+        if self.profile_sampling_sigma <= 0:
+            raise ValueError("profile_sampling_sigma must be > 0.")
         if self.step_size_precheck_mode not in {"off", "warn", "raise"}:
             raise ValueError(
                 "step_size_precheck_mode must be one of "
