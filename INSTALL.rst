@@ -42,7 +42,7 @@ Install from GitHub
 
 If you want the bleeding edge version, install directly from GitHub::
 
-    pip3 install git+https://github.com/icb-dcm/pypesto.git@develop
+    pip3 install git+https://github.com/icb-dcm/pypesto.git@main
 
 If you need to have access to the source code, you can download it via::
 
