@@ -22,10 +22,6 @@ logger = logging.getLogger(__name__)
 )
 def test_petab_case(case, model_type, version):
     """Wrapper for _execute_case for handling test outcomes"""
-    # FIXME https://github.com/ICB-DCM/pyPESTO/issues/1583
-    if model_type == "sbml" and version == "v1.0.0" and case == "0020":
-        pytest.xfail(reason="https://github.com/ICB-DCM/pyPESTO/issues/1583")
-
     try:
         _execute_case(case, model_type, version)
     except Exception as e:
