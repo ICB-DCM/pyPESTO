@@ -1,0 +1,22 @@
+name: Set up tox environment
+description: Set up Python and cache pip/uv/tox directories
+inputs:
+  python-version:
+    description: Python version to set up
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare python ${{ inputs.python-version }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Cache
+      uses: actions/cache@v6
+      with:
+        path: |
+          ~/.cache/pip
+          ~/.cache/uv
+          .tox/
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python-version }}-ci-${{ github.job }}"
