@@ -32,19 +32,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -56,11 +47,10 @@ jobs:
         CC: clang
         CXX: clang++
 
-    - name: Coverage
-      uses: codecov/codecov-action@v7
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   mac:
     runs-on: macos-14
@@ -72,19 +62,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -93,11 +74,10 @@ jobs:
       timeout-minutes: 30
       run: ulimit -n 65536 65536 && tox -e base
 
-    - name: Coverage
-      uses: codecov/codecov-action@v7
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   windows:
     runs-on: windows-latest
@@ -143,19 +123,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici pysb
@@ -167,11 +138,10 @@ jobs:
         CC: clang
         CXX: clang++
 
-    - name: Coverage
-      uses: codecov/codecov-action@v7
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   julia:
     runs-on: ubuntu-latest
@@ -188,19 +158,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache tox and cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install julia
       uses: julia-actions/setup-julia@v3
@@ -219,11 +180,10 @@ jobs:
       timeout-minutes: 25
       run: tox -e julia
 
-    - name: Coverage
-      uses: codecov/codecov-action@v7
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   optimize:
     runs-on: ubuntu-latest
@@ -235,19 +195,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh ipopt
@@ -256,11 +207,10 @@ jobs:
       timeout-minutes: 25
       run: tox -e optimize
 
-    - name: Coverage
-      uses: codecov/codecov-action@v7
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   hierarchical:
     runs-on: ubuntu-latest
@@ -272,19 +222,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -293,11 +234,10 @@ jobs:
       timeout-minutes: 20
       run: tox -e hierarchical
 
-    - name: Coverage
-      uses: codecov/codecov-action@v7
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   select:
     runs-on: ubuntu-latest
@@ -309,19 +249,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
@@ -330,11 +261,10 @@ jobs:
       timeout-minutes: 20
       run: tox -e select
 
-    - name: Coverage
-      uses: codecov/codecov-action@v7
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        files: ./coverage.xml
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   quality:
     runs-on: ubuntu-latest
@@ -346,19 +276,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: pip install tox tox-uv pre-commit
@@ -382,19 +303,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh doc amici
@@ -416,19 +328,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici ipopt
@@ -447,19 +350,10 @@ jobs:
     - name: Check out repository
       uses: actions/checkout@v7
 
-    - name: Prepare python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Cache
-      uses: actions/cache@v6
-      with:
-        path: |
-          ~/.cache/pip
-          ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
 
     - name: Install dependencies
       run: .github/workflows/install_deps.sh amici
