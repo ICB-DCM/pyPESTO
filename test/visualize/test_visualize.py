@@ -1175,6 +1175,23 @@ def test_reference_points():
     visualize.create_references(references=ref_list_2, x=ref2[0], fval=ref2[1])
 
 
+def test_reference_points_mixed_colors():
+    # mixing user-specified and automatic colors must not raise
+    user_color = [1.0, 0.0, 0.0, 1.0]
+    ref_list = visualize.create_references(
+        [
+            {"x": np.array([1.0, 1.5]), "fval": 0.2, "color": user_color},
+            {"x": np.array([1.8, 1.9]), "fval": 0.6},
+            {"x": np.array([1.4, 1.7]), "fval": 0.4},
+        ]
+    )
+
+    # the user-specified color is kept, the others are assigned automatically
+    assert ref_list[0]["color"] == user_color
+    assert all(ref["color"] is not None for ref in ref_list)
+    assert ref_list[1]["color"] != ref_list[2]["color"]
+
+
 def test_process_result_list():
     # create the necessary results
     result_1 = create_optimization_result()

@@ -136,9 +136,9 @@ def assign_colors(ref: Sequence[ReferencePoint]) -> Sequence[ReferencePoint]:
 
     # loop over reference points and assign auto_colors
     auto_color_count = 0
-    for i_num, i_ref in enumerate(ref):
+    for i_ref in ref:
         if i_ref["auto_color"]:
-            i_ref["color"] = auto_colors[i_num]
+            i_ref["color"] = auto_colors[auto_color_count]
             auto_color_count += 1
 
     return ref
