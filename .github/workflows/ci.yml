@@ -52,6 +52,93 @@ jobs:
       with:
         codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
+  sample:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.14']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v7
+
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install tox tox-uv
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: tox -e sample
+
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
+      with:
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+  jax:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.14']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v7
+
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install tox tox-uv
+
+    - name: Run tests
+      timeout-minutes: 15
+      run: tox -e jax
+
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
+      with:
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+  roadrunner:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.14']
+
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v7
+
+    - name: Set up tox environment
+      uses: ./.github/actions/setup-tox
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install tox tox-uv
+
+    - name: Run tests
+      timeout-minutes: 20
+      run: tox -e roadrunner
+
+    - name: Upload coverage
+      uses: ./.github/actions/coverage
+      with:
+        codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
   mac:
     runs-on: macos-14
     strategy:
@@ -72,7 +159,7 @@ jobs:
 
     - name: Run tests
       timeout-minutes: 30
-      run: ulimit -n 65536 65536 && tox -e base
+      run: ulimit -n 65536 65536 && tox -e mac
 
     - name: Upload coverage
       uses: ./.github/actions/coverage
