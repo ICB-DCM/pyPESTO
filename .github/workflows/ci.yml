@@ -366,6 +366,9 @@ jobs:
     - name: Check repository size
       run: tox -e size
 
+    - name: Check all test directories are wired into a tox env
+      run: tox -e check_tests
+
     - name: Run pre-commit hooks
       run: pre-commit run --all-files
 
