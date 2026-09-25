@@ -39,15 +39,23 @@ def test_pyjulia_pipeline():
     # define problem
     lb, ub = [-5.0] * n_p, [5.0] * n_p
     # create 10 random starting points within the bounds
-    x_guesses = rng.uniform(lb, ub, size=(10, n_p))
-    problem = Problem(obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    startpoints = rng.uniform(lb, ub, size=(10, n_p))
+    problem = Problem(obj, lb=lb, ub=ub)
 
     # optimize
-    result = optimize.minimize(problem, engine=SingleCoreEngine(), n_starts=10)
+    result = optimize.minimize(
+        problem,
+        engine=SingleCoreEngine(),
+        n_starts=10,
+        startpoints=startpoints,
+    )
 
     # use parallelization
     result2 = optimize.minimize(
-        problem, engine=MultiProcessEngine(), n_starts=10
+        problem,
+        engine=MultiProcessEngine(),
+        n_starts=10,
+        startpoints=startpoints,
     )
 
     # check results match

@@ -81,13 +81,15 @@ def test_hierarchical_optimization_pipeline():
             ub=problems[False].ub,
         )
     )
-    problems[False].set_x_guesses(startpoints)
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problems[False].set_x_guesses(startpoints)
     outer_indices = [
         ix
         for ix, x in enumerate(problems[False].x_names)
         if x not in problems[True].objective.calculator.get_inner_par_ids()
     ]
-    problems[True].set_x_guesses(startpoints[:, outer_indices])
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problems[True].set_x_guesses(startpoints[:, outer_indices])
 
     inner_solvers = {
         "analytical": AnalyticalInnerSolver(),

@@ -4,13 +4,18 @@ import time
 from collections.abc import Callable
 from typing import Any, Optional
 
+import numpy as np
 from petab_select import Criterion, Model
 
 from ..objective import ObjectiveBase
 from ..optimize import minimize
 from ..problem import Problem
 from ..result import OptimizerResult, Result
-from .misc import SacessMinimizeMethod, model_to_pypesto_problem
+from .misc import (
+    SacessMinimizeMethod,
+    correct_x_guesses,
+    model_to_pypesto_problem,
+)
 
 OBJECTIVE_CUSTOMIZER_TYPE = Callable[[ObjectiveBase], None]
 TYPE_POSTPROCESSOR = Callable[["ModelProblem"], None]  # noqa: F821
@@ -62,6 +67,11 @@ class ModelProblem:
     x_guess:
         A single startpoint, that will be used as one of the
         startpoints in the multi-start optimization.
+    hierarchical:
+        Whether the model involves hierarchical optimization. Used to
+        correctly translate `x_guess` into a startpoint for
+        `pypesto_problem`. Should be set consistently with
+        `model_to_pypesto_problem_method`.
     """
 
     def __init__(
@@ -76,6 +86,7 @@ class ModelProblem:
         postprocessor: Optional["TYPE_POSTPROCESSOR"] = None,
         model_to_pypesto_problem_method: Callable[[Any], Problem] = None,
         minimize_method: Callable[[Problem], Result] = None,
+        hierarchical: bool = False,
     ):
         """Construct then calibrate a model problem.
 
@@ -93,6 +104,7 @@ class ModelProblem:
         self.model = model
         self.criterion = criterion
         self.valid = valid
+        self.hierarchical = hierarchical
 
         self.minimize_options = {}
         if minimize_options is not None:
@@ -114,9 +126,18 @@ class ModelProblem:
 
         if self.valid:
             self.pypesto_problem = self.model_to_pypesto_problem_method(
-                self.model,
-                x_guesses=None if self.x_guess is None else [self.x_guess],
+                self.model
             )
+            self.startpoints = None
+            if self.x_guess is not None:
+                corrected_x_guess = correct_x_guesses(
+                    x_guesses=[self.x_guess],
+                    model=self.model,
+                    hierarchical=self.hierarchical,
+                )
+                self.startpoints = np.asarray(corrected_x_guess)[
+                    :, self.pypesto_problem.x_free_indices
+                ]
 
             if self.objective_customizer is not None:
                 self.objective_customizer(self.pypesto_problem.objective)
@@ -152,14 +173,19 @@ class ModelProblem:
             The optimization result.
         """
         if isinstance(self.minimize_method, SacessMinimizeMethod):
+            # `SacessOptimizer.minimize` does not support explicit
+            # startpoints; `self.startpoints` is not applied here.
             return self.minimize_method(
                 self.pypesto_problem,
                 model_hash=self.model.hash,
                 **self.minimize_options,
             )
+        minimize_options = dict(self.minimize_options)
+        if self.startpoints is not None:
+            minimize_options["startpoints"] = self.startpoints
         return self.minimize_method(
             self.pypesto_problem,
-            **self.minimize_options,
+            **minimize_options,
         )
 
     def set_result(self, result: Result):

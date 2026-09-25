@@ -112,9 +112,13 @@ def test_out_of_bounds_x_guesses(caplog):
     objective = pypesto.Objective()
 
     # define problem with bounds including x_guesses
-    pypesto.Problem(
-        objective=objective, lb=[-1] * 4, ub=[1] * 4, x_guesses=[[1, 0, -1, 4]]
-    )
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        pypesto.Problem(
+            objective=objective,
+            lb=[-1] * 4,
+            ub=[1] * 4,
+            x_guesses=[[1, 0, -1, 4]],
+        )
     expected_warning = (
         "Some initial guesses supplied violate the "
         "bounds set for this problem."

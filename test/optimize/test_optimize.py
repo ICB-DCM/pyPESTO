@@ -386,12 +386,13 @@ def test_mpipoolengine():
         x_guesses = np.array(
             [result1.optimize_result.list[i]["x0"] for i in range(2)]
         )
-        problem = pypesto.Problem(
-            objective=objective,
-            ub=result1.problem.ub,
-            lb=result1.problem.lb,
-            x_guesses=x_guesses,
-        )
+        with pytest.warns(DeprecationWarning, match="x_guesses"):
+            problem = pypesto.Problem(
+                objective=objective,
+                ub=result1.problem.ub,
+                lb=result1.problem.lb,
+                x_guesses=x_guesses,
+            )
         result2 = optimize.minimize(
             problem=problem,
             optimizer=optimizer,
@@ -416,9 +417,10 @@ def test_mpipoolengine():
 
 def test_history_beats_optimizer():
     """Test overwriting from history vs whatever the optimizer reports."""
-    problem = CRProblem(
-        x_guesses=np.array([0.25, 0.25]).reshape(1, -1)
-    ).get_problem()
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problem = CRProblem(
+            x_guesses=np.array([0.25, 0.25]).reshape(1, -1)
+        ).get_problem()
 
     max_fval = 10
     scipy_options = {"maxfun": max_fval}
@@ -658,7 +660,10 @@ def test_scipy_integrated_grad():
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     x_guesses = [[0.5, 0.5]]
-    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problem = pypesto.Problem(
+            objective=obj, lb=lb, ub=ub, x_guesses=x_guesses
+        )
     optimizer = optimize.ScipyOptimizer(options={"maxiter": 10})
     optimize_options = optimize.OptimizeOptions(allow_failed_starts=False)
     history_options = pypesto.HistoryOptions(trace_record=True)
@@ -683,7 +688,10 @@ def test_ipopt_approx_grad():
     lb = 0 * np.ones((1, 2))
     ub = 1 * np.ones((1, 2))
     x_guesses = [[0.5, 0.5]]
-    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problem = pypesto.Problem(
+            objective=obj, lb=lb, ub=ub, x_guesses=x_guesses
+        )
     optimizer = optimize.IpoptOptimizer(
         options={"maxiter": 10, "approx_grad": True}
     )
@@ -698,9 +706,10 @@ def test_ipopt_approx_grad():
         progress_bar=False,
     )
     obj2 = rosen_for_sensi(max_sensi_order=1, integrated=integrated)["obj"]
-    problem2 = pypesto.Problem(
-        objective=obj2, lb=lb, ub=ub, x_guesses=x_guesses
-    )
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problem2 = pypesto.Problem(
+            objective=obj2, lb=lb, ub=ub, x_guesses=x_guesses
+        )
     optimizer2 = optimize.IpoptOptimizer(options={"maxiter": 10})
     result2 = optimize.minimize(
         problem=problem2,
@@ -729,7 +738,8 @@ def test_correct_startpoint_usage(optimizer):
         return
 
     # define a problem with an x_guess
-    problem = CRProblem(x_guesses=[np.array([0.1, 0.1])]).get_problem()
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problem = CRProblem(x_guesses=[np.array([0.1, 0.1])]).get_problem()
 
     # run optimization
     result = optimize.minimize(
@@ -740,7 +750,31 @@ def test_correct_startpoint_usage(optimizer):
         history_options=pypesto.HistoryOptions(trace_record=True),
     )
     # check that the startpoint was used
-    assert problem.x_guesses[0] == pytest.approx(
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        expected_x0 = problem.x_guesses[0]
+    assert expected_x0 == pytest.approx(
+        result.optimize_result[0].history.get_x_trace(0)
+    )
+
+
+def test_minimize_with_explicit_startpoints():
+    """Test that `minimize(..., startpoints=...)` is used as documented,
+    without touching the deprecated `Problem.x_guesses`."""
+    problem = CRProblem().get_problem()
+    startpoints = np.array([[0.1, 0.1]])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        result = optimize.minimize(
+            problem=problem,
+            optimizer=optimize.ScipyOptimizer(),
+            n_starts=1,
+            startpoints=startpoints,
+            progress_bar=False,
+            history_options=pypesto.HistoryOptions(trace_record=True),
+        )
+
+    assert startpoints[0] == pytest.approx(
         result.optimize_result[0].history.get_x_trace(0)
     )
 

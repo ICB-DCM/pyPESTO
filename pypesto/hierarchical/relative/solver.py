@@ -422,7 +422,8 @@ class NumericalInnerSolver(RelativeInnerSolver):
     Attributes
     ----------
     minimize_kwargs:
-        Passed to the `pypesto.optimize.minimize` call.
+        Passed to the `pypesto.optimize.minimize` call. A `startpoints`
+        entry, if present, is overwritten internally.
     n_cached:
         Number of optimized parameter vectors to save.
     problem_kwargs:
@@ -535,12 +536,13 @@ class NumericalInnerSolver(RelativeInnerSolver):
         pypesto_problem = Problem(
             objective, lb=lb, ub=ub, x_names=x_names, **self.problem_kwargs
         )
-        pypesto_problem.set_x_guesses(
-            x_guesses[:, pypesto_problem.x_free_indices]
-        )
 
         # perform the actual optimization
-        result = minimize(pypesto_problem, **self.minimize_kwargs)
+        minimize_kwargs = {
+            **self.minimize_kwargs,
+            "startpoints": x_guesses[:, pypesto_problem.x_free_indices],
+        }
+        result = minimize(pypesto_problem, **minimize_kwargs)
         best_par = result.optimize_result.list[0]["x"]
 
         # Check if the index of an optimized parameter on the dummy bound

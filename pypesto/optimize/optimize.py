@@ -2,6 +2,8 @@ import logging
 from collections.abc import Callable, Iterable
 from warnings import warn
 
+import numpy as np
+
 from ..engine import Engine, SingleCoreEngine
 from ..history import HistoryOptions
 from ..problem import Problem
@@ -27,6 +29,7 @@ def minimize(
     n_starts: int = 100,
     ids: Iterable[str] = None,
     startpoint_method: StartpointMethod | Callable | bool = None,
+    startpoints: np.ndarray | Iterable[Iterable[float]] | None = None,
     result: Result = None,
     engine: Engine = None,
     progress_bar: bool = None,
@@ -52,6 +55,12 @@ def minimize(
         Method for how to choose start points. ``False`` means the optimizer does
         not require start points, e.g. for the :class:`pypesto.optimize.PyswarmOptimizer`.
         **Deprecated. Use ``problem.startpoint_method`` instead.**
+    startpoints:
+        Explicit starting points, shape ``(k, problem.dim)`` with
+        ``k <= n_starts``, given in the free-parameter space of `problem`.
+        These are used as the first `k` startpoints; the remaining
+        `n_starts - k` are generated via `startpoint_method`. This is the
+        preferred replacement for the deprecated `problem.x_guesses`.
     result:
         A result object to append the optimization results to. For example,
         one might append more runs to a previous optimization. If None,
@@ -115,9 +124,10 @@ def minimize(
     history_options = HistoryOptions.assert_instance(history_options)
 
     # assign startpoints
-    startpoints = startpoint_method(
+    x0s = startpoint_method(
         n_starts=n_starts,
         problem=problem,
+        startpoints=None if startpoints is None else np.asarray(startpoints),
     )
 
     ids = assign_ids(
@@ -142,7 +152,7 @@ def minimize(
 
     # define tasks
     tasks = []
-    for startpoint, id in zip(startpoints, ids, strict=True):
+    for startpoint, id in zip(x0s, ids, strict=True):
         task = OptimizerTask(
             optimizer=optimizer,
             problem=problem,

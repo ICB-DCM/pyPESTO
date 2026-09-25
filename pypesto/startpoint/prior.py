@@ -29,14 +29,7 @@ class PriorStartpoints(CheckedStartpoints):
 
         Parameters
         ----------
-        use_guesses:
-            Whether to use guesses provided in the problem.
-        check_fval:
-            Whether to check function values at the startpoint, and resample
-            if not finite.
-        check_grad:
-            Whether to check gradients at the startpoint, and resample
-            if not finite.
+        use_guesses, check_fval, check_grad: As in CheckedStartpoints.
         """
         super().__init__(
             use_guesses=use_guesses,
