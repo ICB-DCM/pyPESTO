@@ -160,12 +160,13 @@ class PetabStartpoints(CheckedStartpoints):
         self,
         n_starts: int,
         problem: Problem,
+        startpoints: np.ndarray | None = None,
     ) -> np.ndarray:
         """Call the startpoint method."""
         # Update the list of priors if needed
         self._setup(pypesto_problem=problem)
 
-        return super().__call__(n_starts, problem)
+        return super().__call__(n_starts, problem, startpoints=startpoints)
 
     def sample(
         self,

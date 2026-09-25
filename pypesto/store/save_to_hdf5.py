@@ -78,8 +78,8 @@ class ProblemHDF5Writer:
                 a
                 for a in dir(problem)
                 if not a.startswith("__")
-                and not callable(getattr(problem, a))
                 and not hasattr(type(problem), a)
+                and not callable(getattr(problem, a))
             ]
 
             problem_grp = f.create_group("problem")

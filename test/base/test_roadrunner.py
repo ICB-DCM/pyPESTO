@@ -160,14 +160,14 @@ def test_multiprocessing():
     )
 
     problem = importer.create_problem()
-    # start 30 times from the same point
-    start_points = [problem.get_full_vector(problem.get_startpoints(1))] * 30
-    problem.set_x_guesses(np.vstack(start_points))
+    # start (up to) 30 times from the same point
+    startpoints = np.tile(problem.get_startpoints(1), (30, 1))
 
     # for later comparisons, do one optimization run with single core
     result_single = pypesto.optimize.minimize(
         problem=problem,
         n_starts=1,
+        startpoints=startpoints,
         engine=pypesto.engine.SingleCoreEngine(),
         progress_bar=False,
     )
@@ -177,6 +177,7 @@ def test_multiprocessing():
     result = pypesto.optimize.minimize(
         problem=problem,
         n_starts=15,
+        startpoints=startpoints,
         engine=engine,
         progress_bar=True,
     )

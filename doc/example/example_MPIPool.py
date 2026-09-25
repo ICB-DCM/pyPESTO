@@ -15,7 +15,7 @@ from pypesto.engine.mpi_pool import MPIPoolEngine
 from pypesto.store import OptimizationResultHDF5Writer, ProblemHDF5Writer
 
 
-def setup_rosen_problem(n_starts: int = 2):
+def setup_rosen_problem():
     """
     Set up the rosenbrock problem and return a pypesto.Problem.
     """
@@ -29,13 +29,7 @@ def setup_rosen_problem(n_starts: int = 2):
     lb = -5 * np.ones((dim_full, 1))
     ub = 5 * np.ones((dim_full, 1))
 
-    # fixing startpoints
-    startpoints = pypesto.startpoint.latin_hypercube(
-        n_starts=n_starts, lb=lb, ub=ub
-    )
-    problem = pypesto.Problem(
-        objective=objective, lb=lb, ub=ub, x_guesses=startpoints
-    )
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
     return problem
 
 
@@ -47,6 +41,10 @@ if __name__ == "__main__":
     n_starts = 2
     # create problem
     problem = setup_rosen_problem()
+    # fixing startpoints
+    startpoints = pypesto.startpoint.latin_hypercube(
+        n_starts=n_starts, lb=problem.lb, ub=problem.ub
+    )
     # create optimizer
     optimizer = optimize.FidesOptimizer(verbose=40)
 
@@ -55,6 +53,7 @@ if __name__ == "__main__":
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
+        startpoints=startpoints,
         engine=MPIPoolEngine(),
         progress_bar=False,
     )
