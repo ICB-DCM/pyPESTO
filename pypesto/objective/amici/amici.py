@@ -776,8 +776,7 @@ class AmiciPetabV2Objective(AmiciObjective):
         self,
         petab_importer: amici.importers.petab.PetabImporter,
         force_compile: bool = False,
-        non_quantitative_data_types: set[str] | None = None,
-        inner_options: dict | None = None,
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator | None = None,
         **kwargs,
     ) -> None:
         """Initialize the objective.
@@ -788,58 +787,39 @@ class AmiciPetabV2Objective(AmiciObjective):
             The AMICI PEtab importer for the (v2) PEtab problem.
         force_compile:
             If ``True``, force (re-)import/compilation of the AMICI model even
-            if a compiled model already exists.
-        non_quantitative_data_types:
-            The non-quantitative data types in the problem, to be handled by
-            hierarchical optimization
-            (see :class:`pypesto.hierarchical.InnerCalculatorCollectorPetabV2`).
-            If given, the parameters estimated in the inner problems are
-            removed from the objective's ``x_ids``.
-        inner_options:
-            Options for the inner problems and solvers of hierarchical
-            optimization.
+            if a compiled model already exists. Only used to create the
+            simulator, if ``petab_simulator`` is not given.
+        petab_simulator:
+            The PEtab simulator that evaluates the objective. Created from
+            ``petab_importer`` if not given. Pass one to share it with a
+            calculator built for it, such as
+            :class:`pypesto.hierarchical.InnerCalculatorCollectorPetabV2`.
         kwargs:
-            Additional arguments passed on to :class:`AmiciObjective`.
+            Additional arguments passed on to :class:`AmiciObjective`. A
+            ``calculator`` given here replaces the default
+            :class:`AmiciCalculatorPetabV2`.
         """
         from .amici_calculator import AmiciCalculatorPetabV2
 
         self._petab_simulator: amici.sim.sundials.petab.PetabSimulator = (
-            petab_importer.create_simulator(force_import=force_compile)
+            petab_simulator
+            if petab_simulator is not None
+            else petab_importer.create_simulator(force_import=force_compile)
         )
         self.petab_problem = petab_importer.petab_problem
 
         # the simulator creates its own ExpData objects for every simulation,
         #  so steady-state guesses cannot be passed on to it
         kwargs.setdefault("guess_steadystate", False)
-
-        if non_quantitative_data_types:
-            from ...hierarchical.inner_calculator_collector import (
-                InnerCalculatorCollectorPetabV2,
+        if kwargs.get("calculator") is None:
+            kwargs["calculator"] = AmiciCalculatorPetabV2(
+                self._petab_simulator
             )
-
-            calculator = InnerCalculatorCollectorPetabV2(
-                data_types=non_quantitative_data_types,
-                petab_simulator=self._petab_simulator,
-                inner_options=inner_options or {},
-            )
-            # the inner problems are solved from the observables, sigmas and
-            #  their sensitivities
-            kwargs["amici_reporting"] = asd.RDataReporting.full
-            # parameters estimated in the inner subproblems are removed from
-            #  the objective parameters
-            inner_parameter_ids = set(calculator.get_inner_par_ids())
-            x_ids = kwargs.get("x_ids") or self.petab_problem.x_ids
-            kwargs["x_ids"] = [
-                x_id for x_id in x_ids if x_id not in inner_parameter_ids
-            ]
-        else:
-            calculator = AmiciCalculatorPetabV2(self._petab_simulator)
 
         super().__init__(
             amici_model=self._petab_simulator.model,
             amici_solver=self._petab_simulator.solver,
             edatas=self._petab_simulator.exp_man.create_edatas(),
-            calculator=calculator,
             **kwargs,
         )
         # `AmiciObjective` works on clones of the model and the solver, but the

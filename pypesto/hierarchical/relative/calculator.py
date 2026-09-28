@@ -296,9 +296,11 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         if self.evaluator is not None:
             # The evaluator simulates from `x_dct` and ignores the PEtab v1
-            #  parameter mapping, so the optimal values have to go there. Its
-            #  plist comes from the problem's free parameters, which exclude
-            #  the inner ones, so the mapping rewrite below is unnecessary.
+            #  parameter mapping, so the optimal values have to go there.
+            #  Unlike the mapping rewrite below, this keeps the model
+            #  parameters that the inner parameters override in the plist:
+            #  their sensitivities are computed and then discarded, since the
+            #  inner parameters are not among the objective's parameters.
             x_dct = copy.deepcopy(x_dct)
             x_dct.update(inner_parameters)
         else:

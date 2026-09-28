@@ -2,10 +2,10 @@
 
 import logging
 
+import numpy as np
 import pandas as pd
 
 from ...C import (
-    LIN,
     MEASUREMENT_TYPE,
     PARAMETER_TYPE,
     SEMIQUANTITATIVE,
@@ -127,6 +127,30 @@ class RelativeInnerProblem(AmiciInnerProblem):
         return [x for x in self.xs.values() if obs_idx in x.observable_indices]
 
 
+def _assign_measurement_indices(
+    inner_parameters: list[RelativeInnerParameter],
+    ixs: dict[str, list[tuple[int, int, int]]],
+    data: list[np.ndarray],
+    amici_model: "asd.Model",
+) -> None:
+    """Assign each inner parameter its measurements and observables.
+
+    Shared by the PEtab v1 and v2 inner problems, which differ only in how
+    ``ixs``, the ``(condition, time, observable)`` indices of each inner
+    parameter's measurements, are obtained.
+    """
+    ix_matrices = ix_matrices_from_arrays(ixs, data)
+    observable_ids = amici_model.get_observable_ids()
+    for par in inner_parameters:
+        par.ixs = ix_matrices[par.inner_parameter_id]
+        par.observable_indices = [
+            meas_indices[2] for meas_indices in ixs[par.inner_parameter_id]
+        ]
+        par.observable_ids = [
+            observable_ids[obs_idx] for obs_idx in par.observable_indices
+        ]
+
+
 def inner_problem_from_petab_problem(
     petab_problem: "petab.Problem",
     amici_model: "asd.Model",
@@ -150,22 +174,10 @@ def inner_problem_from_petab_problem(
         petab_problem, amici_model, x_ids
     )
 
-    # transform experimental data
     data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
-
-    # matrixify
-    ix_matrices = ix_matrices_from_arrays(ixs, data)
-
-    # assign matrices, observable indices and ids to inner parameters
-    for par in inner_parameters:
-        par.ixs = ix_matrices[par.inner_parameter_id]
-        par.observable_indices = [
-            meas_indices[2] for meas_indices in ixs[par.inner_parameter_id]
-        ]
-        par.observable_ids = [
-            amici_model.get_observable_ids()[obs_idx]
-            for obs_idx in par.observable_indices
-        ]
+    _assign_measurement_indices(
+        inner_parameters, ixs=ixs, data=data, amici_model=amici_model
+    )
 
     par_group_types = {
         tuple(obs_pars.split(";")): (
@@ -405,22 +417,10 @@ def inner_problem_from_petab_v2_problem(
         petab_problem, amici_model, x_ids
     )
 
-    # transform experimental data
     data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
-
-    # matrixify
-    ix_matrices = ix_matrices_from_arrays(ixs, data)
-
-    # assign matrices, observable indices and ids to inner parameters
-    for par in inner_parameters:
-        par.ixs = ix_matrices[par.inner_parameter_id]
-        par.observable_indices = [
-            meas_indices[2] for meas_indices in ixs[par.inner_parameter_id]
-        ]
-        par.observable_ids = [
-            amici_model.get_observable_ids()[obs_idx]
-            for obs_idx in par.observable_indices
-        ]
+    _assign_measurement_indices(
+        inner_parameters, ixs=ixs, data=data, amici_model=amici_model
+    )
 
     # detect coupled scaling and offset parameters, i.e., pairs of scaling
     #  and offset parameters that override the placeholders of the same

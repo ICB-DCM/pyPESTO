@@ -400,7 +400,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             }
         )
 
-    def _inner_only_result(
+    def _direct_to_relative_calculator(
         self,
         x_dct: dict,
         sensi_orders: tuple[int],
@@ -413,7 +413,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ) -> dict | None:
-        """Return the inner calculator's own result, where that suffices.
+        """Delegate to the relative calculator, where it can handle the call.
 
         For adjoint gradients, for second-order sensitivities, or in
         residual mode, the relative calculator computes the objective and
@@ -602,7 +602,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
 
         if (
-            ret := self._inner_only_result(
+            ret := self._direct_to_relative_calculator(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
                 mode=mode,
@@ -741,67 +741,6 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
             self.relative_observable_ids = (
                 relative_inner_problem.get_relative_observable_ids()
             )
-
-    def _inner_only_result(
-        self,
-        x_dct: dict,
-        sensi_orders: tuple[int],
-        mode: ModeType,
-        amici_model: AmiciModel,
-        amici_solver: AmiciSolver,
-        edatas: list[asd.ExpData],
-        n_threads: int,
-        x_ids: Sequence[str],
-        parameter_mapping: ParameterMapping,
-        fim_for_hess: bool,
-    ) -> dict | None:
-        """See :meth:`InnerCalculatorCollector._inner_only_result`.
-
-        Unlike the PEtab v1 dispatch, this one also requires a gradient
-        before it takes the adjoint route.
-        """
-        if not (
-            (
-                1 in sensi_orders
-                and amici_solver.get_sensitivity_method()
-                == asd.SensitivityMethod.adjoint
-            )
-            or 2 in sensi_orders
-            or mode == MODE_RES
-        ):
-            return None
-
-        # `PetabSimulator.simulate` fills missing parameters from the
-        #  nominal values, so the inner parameters need dummy values
-        x_dct = x_dct | self.necessary_par_dummy_values
-        # the relative calculator owns the simulate-solve-simulate scheme
-        #  and evaluates through the injected evaluator. It is called
-        #  directly rather than through `__call__`, whose own dispatch
-        #  does not route residual mode here.
-        relative_calculator = self.inner_calculators[0]
-        inner_result, inner_parameters = relative_calculator.call_amici_twice(
-            x_dct=x_dct,
-            sensi_orders=sensi_orders,
-            mode=mode,
-            amici_model=amici_model,
-            amici_solver=amici_solver,
-            edatas=edatas,
-            n_threads=n_threads,
-            x_ids=x_ids,
-            parameter_mapping=parameter_mapping,
-            fim_for_hess=fim_for_hess,
-        )
-        inner_result[INNER_PARAMETERS] = (
-            np.array(
-                [
-                    inner_parameters[x_id]
-                    for x_id in relative_calculator.inner_problem.get_x_ids()
-                ]
-            )
-            if inner_parameters is not None
-            else None
-        )
-        return inner_result
 
     def _simulate(
         self,

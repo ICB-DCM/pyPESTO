@@ -18,6 +18,7 @@ from pypesto.C import (
     InnerParameterType,
 )
 from pypesto.hierarchical import InnerCalculatorCollectorPetabV2
+from pypesto.hierarchical.base_problem import scale_back_value
 from pypesto.hierarchical.petab import validate_hierarchical_petab_problem
 from pypesto.petab import PetabImporter
 from pypesto.problem import HierarchicalProblem
@@ -76,15 +77,6 @@ def objective_v2(importer_v2):
     return importer_v2.create_objective_creator().create_objective()
 
 
-def _to_linear(x_scaled, scales):
-    return np.asarray(
-        [
-            x if scale == LIN else 10.0**x
-            for x, scale in zip(x_scaled, scales, strict=True)
-        ]
-    )
-
-
 def _grad_to_scaled(grad_linear, x_linear, scales):
     """Convert a gradient w.r.t. linear parameters to parameter scale."""
     return np.asarray(
@@ -116,7 +108,7 @@ def test_hierarchical_petab_v2_structure(
     expected_inner_ids = [
         parameter.id
         for parameter in petab_problem_v2.parameters
-        if (parameter.model_extra or {}).get("parameterType")
+        if (parameter.model_extra or {}).get(PARAMETER_TYPE)
         in list(InnerParameterType)
     ]
     assert sorted(
@@ -153,7 +145,7 @@ def test_hierarchical_petab_v2_matches_v1(
         x_scaled = x_nominal_scaled + (
             rng.uniform(-0.2, 0.2, size=len(x_names_free)) if i_point else 0.0
         )
-        x_linear = _to_linear(x_scaled, scales)
+        x_linear = np.asarray(list(map(scale_back_value, x_scaled, scales)))
 
         fval_v1, grad_v1 = problem_v1.objective(x_scaled, sensi_orders=(0, 1))
         fval_v2, grad_v2 = problem_v2.objective(x_linear, sensi_orders=(0, 1))
@@ -238,6 +230,9 @@ def test_hierarchical_petab_v2_adjoint_hessian_residuals(
         rtol=1e-3,
         atol=1e-3 * np.max(np.abs(grad_forward)),
     )
+    # value-only calls with adjoint sensitivities are simulated, not
+    #  delegated to the relative calculator
+    assert np.isclose(objective(x, sensi_orders=(0,)), fval_forward, rtol=1e-6)
 
     # FIM-based Hessian
     objective.amici_solver.set_sensitivity_method(SensitivityMethod.forward)
