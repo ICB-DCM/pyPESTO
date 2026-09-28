@@ -156,7 +156,7 @@ def test_plist_mapping():
     """
     model_name = "Bruno_JExpBot2016"
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
     objective_creator = petab_importer.create_objective_creator()
     problem = petab_importer.create_problem(
@@ -220,7 +220,7 @@ def test_max_sensi_order():
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
     importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
 
     # define test parameter
