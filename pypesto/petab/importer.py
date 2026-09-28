@@ -129,7 +129,7 @@ class PetabImporter:
             get_petab_non_quantitative_data_types(petab_problem)
         )
 
-        if self._non_quantitative_data_types is None and hierarchical:
+        if not self._non_quantitative_data_types and hierarchical:
             raise ValueError(
                 "Hierarchical optimization enabled, but no non-quantitative "
                 "data types specified. Specify non-quantitative data types "
