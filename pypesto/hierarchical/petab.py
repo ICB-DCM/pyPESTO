@@ -745,8 +745,6 @@ def validate_measurement_formulae_v2(
     -------
     A dataframe containing the inner parameters for each measurement.
     """
-    import petab.v2.C as petab_v2_C
-
     observables = {
         observable.id: observable for observable in petab_problem.observables
     }
@@ -798,7 +796,7 @@ def validate_measurement_formulae_v2(
         if (
             any(v is not None for v in (offset, scaling, sigma))
             # NoiseDistribution is a str enum
-            and observable.noise_distribution != petab_v2_C.NORMAL
+            and observable.noise_distribution != v2.C.NORMAL
         ):
             raise NotImplementedError(
                 "Noise distributions other than `normal` are not supported "
