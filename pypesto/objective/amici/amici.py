@@ -197,10 +197,14 @@ class AmiciObjective(ObjectiveBase):
 
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
-        if (
-            self.guess_steadystate is not False
-            and self.amici_model.nx_solver_reinit > 0
-        ):
+        # AMICI renamed the `nx_solver_reinit` attribute to the `nx_reinit()`
+        #  method (https://github.com/AMICI-dev/AMICI/commit/93e1dacc810a);
+        #  support both until the rename has been released.
+        if hasattr(self.amici_model, "nx_reinit"):
+            nx_reinit = self.amici_model.nx_reinit()
+        else:
+            nx_reinit = self.amici_model.nx_solver_reinit
+        if self.guess_steadystate is not False and nx_reinit > 0:
             if self.guess_steadystate:
                 raise ValueError(
                     "Steadystate prediction is not supported "
