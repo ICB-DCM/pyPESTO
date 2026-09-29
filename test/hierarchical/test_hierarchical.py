@@ -11,6 +11,7 @@ from amici.sim.sundials import SensitivityMethod
 
 import pypesto
 from pypesto.C import (
+    FVAL,
     INNER_PARAMETER_BOUNDS,
     LIN,
     LOWER_BOUND,
@@ -850,3 +851,41 @@ def test_validate_with_some_sigmas_not_hierarchical():
             measurement_df=measurement_df,
         )
     )
+
+
+def test_hierarchical_adjoint_value_only_with_quantitative_data():
+    """Test adjoint value-only calls on a problem with quantitative data.
+
+    With adjoint sensitivities, value-only calls used to be handed to the
+    relative calculator alone, which never adds the contribution of the
+    quantitative observables, so the objective depended on whether a
+    gradient was requested (#1767).
+    """
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    # make rSTAT5A an ordinary quantitative observable
+    for par_id in (
+        "scaling_rSTAT5A_rel",
+        "offset_rSTAT5A_rel",
+        "sd_rSTAT5A_rel",
+    ):
+        petab_problem.parameter_df.loc[par_id, PARAMETER_TYPE] = np.nan
+    importer = PetabImporter(petab_problem, hierarchical=True)
+    objective = importer.create_problem(importer.create_objective()).objective
+    assert objective.calculator.quantitative_data_mask is not None
+
+    x_nominal = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
+    x = np.asarray([x_nominal[x_id] for x_id in objective.x_names])
+
+    fvals = {}
+    for method in (SensitivityMethod.forward, SensitivityMethod.adjoint):
+        objective.amici_solver.set_sensitivity_method(method)
+        for sensi_orders in ((0,), (0, 1)):
+            fvals[method.name, sensi_orders] = objective(
+                x, sensi_orders=sensi_orders, return_dict=True
+            )[FVAL]
+    reference = fvals["forward", (0,)]
+    assert np.allclose(list(fvals.values()), reference, rtol=1e-6), fvals
