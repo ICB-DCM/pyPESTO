@@ -16,6 +16,7 @@ import numpy as np
 from ..C import (
     AMICI_SIGMAY,
     AMICI_SSIGMAY,
+    AMICI_SSIGMAZ,
     AMICI_SY,
     AMICI_Y,
     CENSORED,
@@ -110,6 +111,8 @@ class InnerCalculatorCollector(AmiciCalculator):
         )
 
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
+
+        self._known_least_squares_safe = False
 
         #: per condition, the ``(par_sim_slice, par_opt_slice)`` pairs
         #: mapping the sensitivities onto the optimization parameters.
@@ -410,22 +413,15 @@ class InnerCalculatorCollector(AmiciCalculator):
     ) -> dict | None:
         """Return the inner calculator's own result, where that suffices.
 
-        For adjoint gradients, for second-order sensitivities, or in
+        With adjoint sensitivities, for second-order sensitivities, or in
         residual mode, the relative calculator computes the objective and
         its derivatives itself, with the inner parameters fixed at their
         optimal values, so the collector does not simulate at all. Returns
         ``None`` when it has to.
-
-        Value-only calls with adjoint sensitivities are simulated like any
-        other: the relative calculator alone would evaluate only the
-        observables of its inner problem, leaving out the quantitative ones.
         """
         if not (
-            (
-                1 in sensi_orders
-                and amici_solver.get_sensitivity_method()
-                == asd.SensitivityMethod.adjoint
-            )
+            amici_solver.get_sensitivity_method()
+            == asd.SensitivityMethod.adjoint
             or 2 in sensi_orders
             or mode == MODE_RES
         ):
@@ -519,6 +515,29 @@ class InnerCalculatorCollector(AmiciCalculator):
             if 1 in sensi_orders:
                 ret[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
             return rdatas, ret
+
+        if (
+            not self._known_least_squares_safe
+            and mode == MODE_RES
+            and 1 in sensi_orders
+        ):
+            if not amici_model.get_add_sigma_residuals() and any(
+                (
+                    (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
+                    or (
+                        r[AMICI_SSIGMAZ] is not None
+                        and np.any(r[AMICI_SSIGMAZ])
+                    )
+                )
+                for r in rdatas
+            ):
+                raise RuntimeError(
+                    "Cannot use least squares solver with"
+                    "parameter dependent sigma! Support can be "
+                    "enabled via "
+                    "amici_model.set_add_sigma_residuals()."
+                )
+            self._known_least_squares_safe = True  # don't check this again
 
         return rdatas, None
 
