@@ -1,7 +1,6 @@
 """Test the execution engines."""
 
 import copy
-import os
 
 import amici.sim.sundials as asd
 import benchmark_models_petab as models
@@ -58,11 +57,7 @@ def test_petab():
 
 def _test_petab(engine):
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(
-            models.MODELS_DIR,
-            "Boehm_JProteomeRes2014",
-            "Boehm_JProteomeRes2014.yaml",
-        )
+        models.get_problem_yaml_path("Boehm_JProteomeRes2014")
     )
     problem = petab_importer.create_problem()
     optimizer = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
@@ -79,11 +74,7 @@ def _test_petab(engine):
 def test_deepcopy_objective():
     """Test copying objectives (needed for MultiProcessEngine)."""
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(
-            models.MODELS_DIR,
-            "Boehm_JProteomeRes2014",
-            "Boehm_JProteomeRes2014.yaml",
-        )
+        models.get_problem_yaml_path("Boehm_JProteomeRes2014")
     )
     factory = petab_importer.create_objective_creator()
     amici_model = factory.create_model()
@@ -124,11 +115,7 @@ def test_deepcopy_objective():
 def test_pickle_objective():
     """Test serializing objectives (needed for MultiThreadEngine)."""
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(
-            models.MODELS_DIR,
-            "Boehm_JProteomeRes2014",
-            "Boehm_JProteomeRes2014.yaml",
-        )
+        models.get_problem_yaml_path("Boehm_JProteomeRes2014")
     )
     factory = petab_importer.create_objective_creator()
     objective = factory.create_objective()
