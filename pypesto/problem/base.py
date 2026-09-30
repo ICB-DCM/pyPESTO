@@ -1,6 +1,7 @@
 import copy
 import logging
 import sys
+import warnings
 from collections.abc import Callable, Iterable
 from typing import (
     SupportsFloat,
@@ -56,6 +57,10 @@ class Problem:
     x_guesses:
         Guesses for the parameter values, shape (g, dim), where g denotes the
         number of guesses. These are used as start points in the optimization.
+
+        .. deprecated::
+            Pass explicit starting points via
+            ``pypesto.optimize.minimize(..., startpoints=...)`` instead.
     x_names:
         Parameter names that can be optionally used e.g. in visualizations.
         If objective.get_x_names() is not None, those values are used,
@@ -142,9 +147,18 @@ class Problem:
             for idx, x in enumerate(x_fixed_vals)
         ]
 
-        if x_guesses is None:
+        if x_guesses is not None:
+            warnings.warn(
+                "The `x_guesses` argument of `Problem` is deprecated and "
+                "will be removed in a future release. Pass explicit "
+                "starting points to `pypesto.optimize.minimize(..., "
+                "startpoints=...)` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        else:
             x_guesses = np.zeros((0, self.dim_full))
-        self.x_guesses_full: np.ndarray = np.array(x_guesses)
+        self._x_guesses_full: np.ndarray = np.array(x_guesses)
 
         if x_names is None and objective.x_names is not None:
             x_names = objective.x_names
@@ -197,8 +211,48 @@ class Problem:
 
     @property
     def x_guesses(self) -> np.ndarray:
-        """Return guesses of the free parameter values."""
-        return self.x_guesses_full[:, self.x_free_indices]
+        """Return guesses of the free parameter values.
+
+        .. deprecated::
+            Pass explicit starting points via
+            ``pypesto.optimize.minimize(..., startpoints=...)`` instead.
+        """
+        warnings.warn(
+            "`Problem.x_guesses` is deprecated and will be removed in a "
+            "future release. Use `pypesto.optimize.minimize(..., "
+            "startpoints=...)` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._x_guesses_full[:, self.x_free_indices]
+
+    @property
+    def x_guesses_full(self) -> np.ndarray:
+        """Return guesses of the full parameter values.
+
+        .. deprecated::
+            Pass explicit starting points via
+            ``pypesto.optimize.minimize(..., startpoints=...)`` instead.
+        """
+        warnings.warn(
+            "`Problem.x_guesses_full` is deprecated and will be removed in "
+            "a future release. Use `pypesto.optimize.minimize(..., "
+            "startpoints=...)` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._x_guesses_full
+
+    @x_guesses_full.setter
+    def x_guesses_full(self, x_guesses_full: np.ndarray) -> None:
+        warnings.warn(
+            "`Problem.x_guesses_full` is deprecated and will be removed in "
+            "a future release. Use `pypesto.optimize.minimize(..., "
+            "startpoints=...)` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self._x_guesses_full = x_guesses_full
 
     @property
     def dim(self) -> int:
@@ -231,13 +285,13 @@ class Problem:
             if self.__getattribute__(attr).size != self.dim_full:
                 raise AssertionError(f"{attr} dimension invalid.")
 
-        if self.x_guesses_full.shape[1] != self.dim_full:
+        if self._x_guesses_full.shape[1] != self.dim_full:
             x_guesses_full = np.empty(
-                (self.x_guesses_full.shape[0], self.dim_full)
+                (self._x_guesses_full.shape[0], self.dim_full)
             )
             x_guesses_full[:] = np.nan
-            x_guesses_full[:, self.x_free_indices] = self.x_guesses_full
-            self.x_guesses_full = x_guesses_full
+            x_guesses_full[:, self.x_free_indices] = self._x_guesses_full
+            self._x_guesses_full = x_guesses_full
 
         # make objective aware of fixed parameters
         self.objective.update_from_problem(
@@ -274,10 +328,11 @@ class Problem:
 
     def _check_x_guesses(self) -> None:
         """Check whether the supplied x_guesses adhere to the bounds."""
-        if self.x_guesses.size == 0:
+        x_guesses = self._x_guesses_full[:, self.x_free_indices]
+        if x_guesses.size == 0:
             return
-        adheres_ub = self.x_guesses <= self.ub
-        adheres_lb = self.x_guesses >= self.lb
+        adheres_ub = x_guesses <= self.ub
+        adheres_lb = x_guesses >= self.lb
         adheres_bounds = adheres_ub & adheres_lb
         # if any bounds are violated, log a warning
         if not adheres_bounds.all():
@@ -290,16 +345,27 @@ class Problem:
         """
         Set the x_guesses of a problem.
 
+        .. deprecated::
+            Pass explicit starting points via
+            ``pypesto.optimize.minimize(..., startpoints=...)`` instead.
+
         Parameters
         ----------
         x_guesses:
         """
+        warnings.warn(
+            "`Problem.set_x_guesses()` is deprecated and will be removed "
+            "in a future release. Pass explicit starting points to "
+            "`pypesto.optimize.minimize(..., startpoints=...)` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         x_guesses_full = np.array(x_guesses)
         if x_guesses_full.shape[1] != self.dim_full:
             raise ValueError(
                 "The dimension of individual x_guesses must be dim_full."
             )
-        self.x_guesses_full = x_guesses_full
+        self._x_guesses_full = x_guesses_full
         self._check_x_guesses()
 
     def fix_parameters(

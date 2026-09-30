@@ -1,5 +1,7 @@
 """Test the startpoint methods."""
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -90,7 +92,10 @@ def test_resampling(check_fval: bool, check_grad: bool):
 
     # define objective and problem
     obj = pypesto.Objective(fun=fun, grad=grad)
-    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub, x_guesses=x_guesses)
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        problem = pypesto.Problem(
+            objective=obj, lb=lb, ub=ub, x_guesses=x_guesses
+        )
 
     # define startpoint method (here only considering uniform for simplicity)
     startpoint_method = pypesto.startpoint.UniformStartpoints(
@@ -100,7 +105,8 @@ def test_resampling(check_fval: bool, check_grad: bool):
     )
 
     # find startpoints
-    xs = startpoint_method(n_starts=40, problem=problem)
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        xs = startpoint_method(n_starts=40, problem=problem)
 
     # calculate function values and gradients
     fvals = np.array([fun(x) for x in xs])
@@ -123,6 +129,44 @@ def test_resampling(check_fval: bool, check_grad: bool):
         assert not np.allclose(x_guesses, xs[:n_guesses, :])
     else:
         assert np.allclose(x_guesses, xs[:n_guesses, :])
+
+
+@pytest.mark.parametrize("n_starts,k", [(10, 3), (10, 10), (10, 15)])
+def test_explicit_startpoints(n_starts: int, k: int):
+    """Test that explicit `startpoints` are used, without deprecation
+    warnings, and combined correctly with sampled points."""
+    dim = 2
+    lb = -2 * np.ones(dim)
+    ub = 3 * np.ones(dim)
+
+    obj = pypesto.Objective(fun=lambda x: np.sum(x**2))
+    problem = pypesto.Problem(objective=obj, lb=lb, ub=ub)
+
+    explicit = pypesto.startpoint.uniform(n_starts=k, lb=lb, ub=ub)
+    startpoint_method = pypesto.startpoint.UniformStartpoints()
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        xs = startpoint_method(
+            n_starts=n_starts, problem=problem, startpoints=explicit
+        )
+
+    assert xs.shape == (n_starts, dim)
+    n_used = min(k, n_starts)
+    assert np.allclose(explicit[:n_used], xs[:n_used])
+
+
+def test_no_startpoints_rejects_explicit_startpoints():
+    """`NoStartpoints` must reject non-empty explicit `startpoints`."""
+    problem = pypesto.Problem(
+        objective=pypesto.Objective(fun=lambda x: np.sum(x**2)),
+        lb=-np.ones(2),
+        ub=np.ones(2),
+    )
+    with pytest.raises(ValueError):
+        pypesto.startpoint.NoStartpoints()(
+            n_starts=2, problem=problem, startpoints=np.zeros((1, 2))
+        )
 
 
 def test_startpoints_from_problem():
@@ -236,8 +280,11 @@ def test_prior_startpoints_no_priors():
     # Create PriorStartpoints instance
     startpoint_method = PriorStartpoints(use_guesses=False)
 
-    # Generate startpoints
-    xs = startpoint_method(n_starts=20, problem=problem)
+    # Generate startpoints; `use_guesses=False` with no guesses set must not
+    # trigger the `Problem.x_guesses` deprecation warning.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        xs = startpoint_method(n_starts=20, problem=problem)
 
     # Check shape and bounds
     assert xs.shape == (20, dim)

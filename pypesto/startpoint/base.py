@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import TYPE_CHECKING
@@ -27,6 +28,7 @@ class StartpointMethod(ABC):
         self,
         n_starts: int,
         problem: pypesto.problem.Problem,
+        startpoints: np.ndarray | None = None,
     ) -> np.ndarray:
         """Generate startpoints.
 
@@ -34,6 +36,10 @@ class StartpointMethod(ABC):
         ----------
         n_starts: Number of starts.
         problem: Problem specifying e.g. dimensions, bounds, and guesses.
+        startpoints:
+            Explicit points to use as the first startpoints, shape
+            ``(k, problem.dim)`` with ``k <= n_starts``. Any remaining
+            startpoints are generated as usual.
 
         Returns
         -------
@@ -48,8 +54,14 @@ class NoStartpoints(StartpointMethod):
         self,
         n_starts: int,
         problem: pypesto.problem.Problem,
+        startpoints: np.ndarray | None = None,
     ) -> np.ndarray:
         """Generate a (n_starts, dim) nan matrix."""
+        if startpoints is not None and len(startpoints) > 0:
+            raise ValueError(
+                "Explicit `startpoints` were provided, but this optimizer "
+                "does not use startpoints."
+            )
         startpoints = np.full(shape=(n_starts, problem.dim), fill_value=np.nan)
         return startpoints
 
@@ -69,6 +81,11 @@ class CheckedStartpoints(StartpointMethod, ABC):
         ----------
         use_guesses:
             Whether to use guesses provided in the problem.
+
+            .. deprecated::
+                ``problem.x_guesses`` is deprecated. Pass explicit starting
+                points via ``pypesto.optimize.minimize(...,
+                startpoints=...)`` instead.
         check_fval:
             Whether to check function values at the startpoint, and resample
             if not finite.
@@ -84,31 +101,54 @@ class CheckedStartpoints(StartpointMethod, ABC):
         self,
         n_starts: int,
         problem: pypesto.problem.Problem,
+        startpoints: np.ndarray | None = None,
     ) -> np.ndarray:
         """Generate checked startpoints."""
-        # shape: (n_guesses, dim)
-        x_guesses = problem.x_guesses
-        if not self.use_guesses:
-            x_guesses = np.zeros(shape=(0, problem.dim))
         dim = problem.dim
+
+        # shape: (k, dim)
+        x_explicit = (
+            np.zeros(shape=(0, dim))
+            if startpoints is None
+            else np.asarray(startpoints)
+        )
+        if x_explicit.size and x_explicit.shape[1] != dim:
+            raise ValueError(
+                f"`startpoints` must have shape (k, {dim}), got "
+                f"{x_explicit.shape}."
+            )
+
+        # shape: (n_guesses, dim). `problem.x_guesses` is deprecated;
+        # bypass the public property to avoid an extra warning on read,
+        # and only warn if the deprecated guesses are actually used here.
+        x_guesses = np.zeros(shape=(0, dim))
+        if self.use_guesses:
+            x_guesses = problem._x_guesses_full[:, problem.x_free_indices]
+            if x_guesses.shape[0] > 0:
+                warnings.warn(
+                    "`problem.x_guesses` is deprecated and will be removed "
+                    "in a future release. Pass explicit starting points via "
+                    "`pypesto.optimize.minimize(..., startpoints=...)` "
+                    "instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+
+        x_have = np.vstack([x_explicit, x_guesses])
         lb, ub = problem.lb_init, problem.ub_init
 
         # number of required startpoints
-        n_guesses = x_guesses.shape[0]
-        n_required = n_starts - n_guesses
+        n_have = x_have.shape[0]
+        n_required = n_starts - n_have
 
         if n_required <= 0:
-            return x_guesses[:n_starts, :]
-
-        # apply startpoint method
-        x_sampled = self.sample(
-            n_starts=n_required, lb=lb, ub=ub, priors=problem.x_priors
-        )
-
-        # assemble
-        xs = np.zeros(shape=(n_starts, dim))
-        xs[0:n_guesses, :] = x_guesses
-        xs[n_guesses:n_starts, :] = x_sampled
+            xs = x_have[:n_starts, :]
+        else:
+            # apply startpoint method
+            x_sampled = self.sample(
+                n_starts=n_required, lb=lb, ub=ub, priors=problem.x_priors
+            )
+            xs = np.vstack([x_have, x_sampled])
 
         # check, resample and order startpoints
         xs = self.check_and_resample(

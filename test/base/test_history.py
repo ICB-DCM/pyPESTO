@@ -635,12 +635,8 @@ def test_hdf5_history_mp():
     startpoints = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts, lb=lb, ub=ub
     )
-    problem1 = pypesto.Problem(
-        objective=objective1, lb=lb, ub=ub, x_guesses=startpoints
-    )
-    problem2 = pypesto.Problem(
-        objective=objective2, lb=lb, ub=ub, x_guesses=startpoints
-    )
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub)
+    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub)
 
     optimizer1 = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
     optimizer2 = pypesto.optimize.ScipyOptimizer(options={"maxiter": 10})
@@ -657,6 +653,7 @@ def test_hdf5_history_mp():
             problem=problem1,
             optimizer=optimizer1,
             n_starts=n_starts,
+            startpoints=startpoints,
             history_options=history_options_mem,
             engine=MultiProcessEngine(),
             progress_bar=False,
@@ -667,6 +664,7 @@ def test_hdf5_history_mp():
             problem=problem2,
             optimizer=optimizer2,
             n_starts=n_starts,
+            startpoints=startpoints,
             history_options=history_options_mp,
             engine=MultiProcessEngine(),
             progress_bar=False,

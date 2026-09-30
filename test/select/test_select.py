@@ -429,12 +429,13 @@ def test_custom_objective(petab_problem_yaml):
             model=model,
         )
 
-        pypesto_problem = pypesto.Problem(
-            objective=objective,
-            lb=petab_problem.lb,
-            ub=petab_problem.ub,
-            x_guesses=corrected_x_guesses,
-        )
+        with pytest.warns(DeprecationWarning, match="x_guesses"):
+            pypesto_problem = pypesto.Problem(
+                objective=objective,
+                lb=petab_problem.lb,
+                ub=petab_problem.ub,
+                x_guesses=corrected_x_guesses,
+            )
 
         return pypesto_problem
 
@@ -462,7 +463,8 @@ def test_custom_objective(petab_problem_yaml):
     expected_x_guess.update(parameters)
     expected_x_guess = expected_x_guess.values
 
-    test_x_guess = pypesto_problem.x_guesses[0]
+    with pytest.warns(DeprecationWarning, match="x_guesses"):
+        test_x_guess = pypesto_problem.x_guesses[0]
     # The x_guess was generated correctly from the partial dictionary, with remaining results taken from the nominal values of the PEtab parameter table.
     assert np.isclose(test_x_guess, expected_x_guess).all()
 

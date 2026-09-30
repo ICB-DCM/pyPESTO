@@ -49,6 +49,12 @@ class UniformStartpoints(FunctionStartpoints):
         check_fval: bool = False,
         check_grad: bool = False,
     ):
+        """Initialize.
+
+        Parameters
+        ----------
+        use_guesses, check_fval, check_grad: As in CheckedStartpoints.
+        """
         super().__init__(
             function=uniform,
             use_guesses=use_guesses,

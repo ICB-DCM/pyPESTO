@@ -1,8 +1,8 @@
 """Validation intervals."""
 
 import logging
-from copy import deepcopy
 
+import numpy as np
 from scipy.stats import chi2
 
 from ..engine import Engine
@@ -88,14 +88,13 @@ def validation_profile_significance(
     if result_full_data is None:
         x_0 = result_training_data.optimize_result.x
 
-        # copy problem, in order to not change/overwrite x_guesses
-        problem = deepcopy(problem_full_data)
-        problem.set_x_guesses(x_0)
-
         result_full_data = minimize(
-            problem=problem,
+            problem=problem_full_data,
             optimizer=optimizer,
             n_starts=n_starts,
+            startpoints=np.asarray(
+                [problem_full_data.get_reduced_vector(x) for x in x_0]
+            ),
             engine=engine,
             progress_bar=False,
         )
