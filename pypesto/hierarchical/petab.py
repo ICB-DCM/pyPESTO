@@ -306,6 +306,11 @@ def validate_measurement_formulae(
             InnerParameterType.SCALING,
             InnerParameterType.SIGMA,
         ],
+        # `dtype=object` keeps the `None` sentinels as `None`; pandas would
+        #  otherwise coerce a mixed str/None column to a string dtype whose
+        #  missing value is NaN, and `validate_inner_parameter_pairings`
+        #  compares against `None` (and `nan != nan`).
+        dtype=object,
     )
 
 

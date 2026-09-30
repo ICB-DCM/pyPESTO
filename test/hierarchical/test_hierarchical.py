@@ -11,6 +11,7 @@ from amici.sim.sundials import SensitivityMethod
 
 import pypesto
 from pypesto.C import (
+    FVAL,
     INNER_PARAMETER_BOUNDS,
     LIN,
     LOWER_BOUND,
@@ -796,3 +797,95 @@ def test_validate():
         measurement_df=measurement_df,
     )
     validate_hierarchical_petab_problem(petab_problem)
+
+
+def test_validate_with_some_sigmas_not_hierarchical():
+    """Test validation when only some observables have a hierarchical sigma.
+
+    The inner parameter table then mixes ids and `None` in its sigma column.
+    pandas 3 used to store such a column as strings with `NaN` for the
+    missing values, and the pairing check took that `NaN` for a sigma paired
+    with the other observable's scaling (#1765).
+    """
+    observable_df = petab.get_observable_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1", "obs2"],
+                petab.OBSERVABLE_FORMULA: [
+                    "observableParameter1_obs1 * x1",
+                    "observableParameter1_obs2 * x2",
+                ],
+                petab.NOISE_FORMULA: [
+                    "noiseParameter1_obs1",
+                    "noiseParameter1_obs2",
+                ],
+            }
+        )
+    )
+    # obs1 has a hierarchical sigma and obs2 a numeric one. obs2 is measured
+    #  twice, so that its scaling is paired with the missing sigma twice.
+    measurement_df = petab.get_measurement_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1", "obs2", "obs2"],
+                petab.TIME: [0, 0, 1],
+                petab.MEASUREMENT: [1, 2, 3],
+                petab.OBSERVABLE_PARAMETERS: ["s1", "s2", "s2"],
+                petab.NOISE_PARAMETERS: ["sd1", 0.1, 0.1],
+            }
+        )
+    )
+    parameter_df = petab.get_parameter_df(
+        pd.DataFrame(
+            {
+                petab.PARAMETER_ID: ["s1", "s2", "sd1"],
+                PARAMETER_TYPE: ["scaling", "scaling", "sigma"],
+                petab.ESTIMATE: [1, 1, 1],
+            }
+        )
+    )
+    validate_hierarchical_petab_problem(
+        petab.Problem(
+            observable_df=observable_df,
+            parameter_df=parameter_df,
+            measurement_df=measurement_df,
+        )
+    )
+
+
+def test_hierarchical_adjoint_value_only_with_quantitative_data():
+    """Test adjoint value-only calls on a problem with quantitative data.
+
+    With adjoint sensitivities, value-only calls used to be handed to the
+    relative calculator alone, which never adds the contribution of the
+    quantitative observables, so the objective depended on whether a
+    gradient was requested (#1767).
+    """
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    # make rSTAT5A an ordinary quantitative observable
+    for par_id in (
+        "scaling_rSTAT5A_rel",
+        "offset_rSTAT5A_rel",
+        "sd_rSTAT5A_rel",
+    ):
+        petab_problem.parameter_df.loc[par_id, PARAMETER_TYPE] = np.nan
+    importer = PetabImporter(petab_problem, hierarchical=True)
+    objective = importer.create_problem(importer.create_objective()).objective
+    assert objective.calculator.quantitative_data_mask is not None
+
+    x_nominal = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
+    x = np.asarray([x_nominal[x_id] for x_id in objective.x_names])
+
+    fvals = {}
+    for method in (SensitivityMethod.forward, SensitivityMethod.adjoint):
+        objective.amici_solver.set_sensitivity_method(method)
+        for sensi_orders in ((0,), (0, 1)):
+            fvals[method.name, sensi_orders] = objective(
+                x, sensi_orders=sensi_orders, return_dict=True
+            )[FVAL]
+    reference = fvals["forward", (0,)]
+    assert np.allclose(list(fvals.values()), reference, rtol=1e-6), fvals
