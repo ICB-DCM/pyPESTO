@@ -105,6 +105,8 @@ class PetabImporter:
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
             parameter table). Required for ordinal, censored and semiquantitative data.
+            For PEtab v2 problems, only relative data (scaling/offset/sigma
+            parameters) are supported so far.
         inner_options:
             Options for the inner problems and solvers.
             If not provided, default options will be used.
@@ -118,12 +120,6 @@ class PetabImporter:
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
-
-        if self._hierarchical and isinstance(self.petab_problem, v2.Problem):
-            raise NotImplementedError(
-                "Hierarchical optimization is not yet supported "
-                "for PEtab v2 problems."
-            )
 
         self._non_quantitative_data_types = (
             get_petab_non_quantitative_data_types(petab_problem)

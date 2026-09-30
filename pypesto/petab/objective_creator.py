@@ -30,7 +30,10 @@ from petab.v1.parameter_mapping import ParMappingDictQuadruple
 from petab.v1.simulate import Simulator
 
 from ..C import CENSORED, CONDITION_SEP, LIN, ORDINAL, SEMIQUANTITATIVE
-from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
+from ..hierarchical.inner_calculator_collector import (
+    InnerCalculatorCollector,
+    InnerCalculatorCollectorPetabV2,
+)
 from ..objective import AmiciObjective, ObjectiveBase, PetabSimulatorObjective
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.roadrunner import (
@@ -628,15 +631,9 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         """
         Initialize the creator.
 
-        See :class:`AmiciObjectiveCreator`. Hierarchical optimization and
-        non-quantitative data types are not supported for PEtab v2 yet.
+        See :class:`AmiciObjectiveCreator`. Of the non-quantitative data
+        types, only relative data are supported for PEtab v2 so far.
         """
-        if hierarchical or non_quantitative_data_types or inner_options:
-            raise NotImplementedError(
-                "Hierarchical optimization and non-quantitative data types "
-                "are not supported for PEtab v2 problems yet."
-            )
-
         super().__init__(
             petab_problem=petab_problem,
             hierarchical=hierarchical,
@@ -752,7 +749,10 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             Passed to AMICI's model compilation. If True, the compilation
             progress is printed.
         **kwargs:
-            Additional arguments passed on to the objective.
+            Additional arguments passed on to the objective. In case of
+            relative measurements, ``inner_options`` can optionally
+            be passed here. If none are given, ``inner_options`` given to the
+            importer constructor (or inner defaults) will be chosen.
 
         Returns
         -------
@@ -760,8 +760,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         """
         from ..objective.amici.amici import AmiciPetabV2Objective
 
-        # the objective creates its own simulator from the PEtab importer,
-        #  which in turn owns the model, the solver and the ExpData objects
+        # the simulator owns the model, the solver and the ExpData objects
         if model is not None or solver is not None or edatas is not None:
             warnings.warn(
                 "`model`, `solver` and `edatas` are not supported for PEtab "
@@ -769,12 +768,37 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
                 stacklevel=2,
             )
         petab_importer = self._create_amici_importer()
+        petab_simulator = petab_importer.create_simulator(
+            force_import=force_compile
+        )
+
+        x_ids = self.petab_problem.x_ids
+        if self._hierarchical and self._non_quantitative_data_types:
+            inner_options = kwargs.pop("inner_options", None)
+            if inner_options is None:
+                inner_options = self.inner_options or {}
+            calculator = InnerCalculatorCollectorPetabV2(
+                data_types=self._non_quantitative_data_types,
+                petab_simulator=petab_simulator,
+                inner_options=inner_options,
+            )
+            kwargs["calculator"] = calculator
+            # The inner solvers need the observables, the sigmas and their
+            #  sensitivities, which `likelihood` does not report.
+            #  `observables_likelihood` suffices for function values and
+            #  gradients but not for residual mode, and the reporting mode is
+            #  fixed here for every call; the PEtab v1 path uses `full` too.
+            kwargs["amici_reporting"] = asd.RDataReporting.full
+            # parameters estimated in the inner subproblems are removed from
+            #  the objective parameters
+            inner_parameter_ids = set(calculator.get_inner_par_ids())
+            x_ids = [x_id for x_id in x_ids if x_id not in inner_parameter_ids]
 
         return AmiciPetabV2Objective(
             petab_importer=petab_importer,
+            petab_simulator=petab_simulator,
             amici_object_builder=self,
-            x_ids=self.petab_problem.x_ids,
-            force_compile=force_compile,
+            x_ids=x_ids,
             **kwargs,
         )
 

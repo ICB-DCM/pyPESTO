@@ -763,8 +763,9 @@ class AmiciPetabV2Objective(AmiciObjective):
         * Steady-state guessing (``guess_steadystate``) is not available: the
           PEtab simulator creates its own :class:`amici.ExpData` objects for
           every simulation, so guesses cannot be passed on to it.
-        * Hierarchical optimization and non-quantitative data types (ordinal,
-          censored, semiquantitative) are not supported.
+        * Of the non-quantitative data types, only relative data
+          (hierarchically optimized scaling/offset/sigma parameters) are
+          supported; ordinal, censored and semiquantitative data are not.
         * Predictors (:class:`pypesto.predict.AmiciPredictor`) and the
           conversion of predictions to PEtab dataframes are not supported.
         * Custom timepoints (:meth:`AmiciObjective.set_custom_timepoints`)
@@ -775,6 +776,7 @@ class AmiciPetabV2Objective(AmiciObjective):
         self,
         petab_importer: amici.importers.petab.PetabImporter,
         force_compile: bool = False,
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator | None = None,
         **kwargs,
     ) -> None:
         """Initialize the objective.
@@ -785,26 +787,39 @@ class AmiciPetabV2Objective(AmiciObjective):
             The AMICI PEtab importer for the (v2) PEtab problem.
         force_compile:
             If ``True``, force (re-)import/compilation of the AMICI model even
-            if a compiled model already exists.
+            if a compiled model already exists. Only used to create the
+            simulator, if ``petab_simulator`` is not given.
+        petab_simulator:
+            The PEtab simulator that evaluates the objective. Created from
+            ``petab_importer`` if not given. Pass one to share it with a
+            calculator built for it, such as
+            :class:`pypesto.hierarchical.InnerCalculatorCollectorPetabV2`.
         kwargs:
-            Additional arguments passed on to :class:`AmiciObjective`.
+            Additional arguments passed on to :class:`AmiciObjective`. A
+            ``calculator`` given here replaces the default
+            :class:`AmiciCalculatorPetabV2`.
         """
         from .amici_calculator import AmiciCalculatorPetabV2
 
         self._petab_simulator: amici.sim.sundials.petab.PetabSimulator = (
-            petab_importer.create_simulator(force_import=force_compile)
+            petab_simulator
+            if petab_simulator is not None
+            else petab_importer.create_simulator(force_import=force_compile)
         )
         self.petab_problem = petab_importer.petab_problem
 
         # the simulator creates its own ExpData objects for every simulation,
         #  so steady-state guesses cannot be passed on to it
         kwargs.setdefault("guess_steadystate", False)
+        if kwargs.get("calculator") is None:
+            kwargs["calculator"] = AmiciCalculatorPetabV2(
+                self._petab_simulator
+            )
 
         super().__init__(
             amici_model=self._petab_simulator.model,
             amici_solver=self._petab_simulator.solver,
             edatas=self._petab_simulator.exp_man.create_edatas(),
-            calculator=AmiciCalculatorPetabV2(self._petab_simulator),
             **kwargs,
         )
         # `AmiciObjective` works on clones of the model and the solver, but the

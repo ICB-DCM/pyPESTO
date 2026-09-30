@@ -9,9 +9,13 @@ from __future__ import annotations
 import copy
 import warnings
 from collections.abc import Sequence
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import amici.sim.sundials.petab
+    from petab import v2
 
 from ..C import (
     AMICI_SIGMAY,
@@ -42,6 +46,7 @@ from ..objective.amici.amici_util import (
     filter_return_dict,
     init_return_values,
     par_index_slices,
+    petab_v2_index_slices,
 )
 
 try:
@@ -395,7 +400,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             }
         )
 
-    def _inner_only_result(
+    def _direct_to_relative_calculator(
         self,
         x_dct: dict,
         sensi_orders: tuple[int],
@@ -408,7 +413,7 @@ class InnerCalculatorCollector(AmiciCalculator):
         parameter_mapping: ParameterMapping,
         fim_for_hess: bool,
     ) -> dict | None:
-        """Return the inner calculator's own result, where that suffices.
+        """Delegate to the relative calculator, where it can handle the call.
 
         For adjoint gradients, for second-order sensitivities, or in
         residual mode, the relative calculator computes the objective and
@@ -597,7 +602,7 @@ class InnerCalculatorCollector(AmiciCalculator):
             )
 
         if (
-            ret := self._inner_only_result(
+            ret := self._direct_to_relative_calculator(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
                 mode=mode,
@@ -645,6 +650,143 @@ class InnerCalculatorCollector(AmiciCalculator):
             fim_for_hess=fim_for_hess,
             index_slices=self._index_slices,
         )
+
+
+class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
+    """Class to collect inner calculators for PEtab v2 problems.
+
+    PEtab v2 counterpart of :class:`InnerCalculatorCollector`, for use with
+    :class:`pypesto.objective.amici.amici.AmiciPetabV2Objective`. Simulations
+    are delegated to the :class:`amici.sim.sundials.petab.PetabSimulator`,
+    which maps the PEtab problem parameters to the model parameters. Only
+    relative (and quantitative) data are supported.
+
+    Parameters
+    ----------
+    data_types:
+        List of non-quantitative data types in the problem.
+    petab_simulator:
+        The PEtab simulator of the :class:`AmiciPetabV2Objective` this
+        calculator belongs to.
+    inner_options:
+        Options for the inner problems and solvers.
+    """
+
+    def __init__(
+        self,
+        data_types: set[str],
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator,
+        inner_options: dict,
+    ):
+        from ..objective.amici.amici_calculator import AmiciCalculatorPetabV2
+
+        self.petab_simulator = petab_simulator
+        #: plain (non-hierarchical) evaluation of the PEtab v2 problem
+        self._evaluator = AmiciCalculatorPetabV2(petab_simulator)
+
+        edatas = petab_simulator.exp_man.create_edatas()
+        super().__init__(
+            data_types=data_types,
+            petab_problem=petab_simulator.exp_man.petab_problem,
+            model=petab_simulator.model,
+            edatas=edatas,
+            inner_options=inner_options,
+        )
+        #: the ``ExpData`` objects the index slices are built against
+        self._edatas = edatas
+
+    @property
+    def free_parameter_ids(self) -> set[str] | None:
+        """IDs of the parameters that are free in the pyPESTO problem.
+
+        See :class:`AmiciCalculatorPetabV2`.
+        """
+        return self._evaluator.free_parameter_ids
+
+    @free_parameter_ids.setter
+    def free_parameter_ids(self, value: set[str] | None) -> None:
+        self._evaluator.free_parameter_ids = value
+
+    def construct_inner_calculators(
+        self,
+        petab_problem: v2.Problem,
+        model: AmiciModel,
+        edatas: list[asd.ExpData],
+        inner_options: dict,
+    ):
+        """Construct inner calculators for each data type."""
+        self.necessary_par_dummy_values = {}
+
+        if unsupported_data_types := self.data_types - {RELATIVE}:
+            raise NotImplementedError(
+                f"Data types {unsupported_data_types} are not yet supported "
+                "for PEtab v2 problems."
+            )
+
+        if RELATIVE in self.data_types:
+            relative_inner_problem = RelativeInnerProblem.from_petab_v2_amici(
+                petab_problem, model, edatas
+            )
+            self.necessary_par_dummy_values.update(
+                relative_inner_problem.get_dummy_values(scaled=True)
+            )
+            self.inner_calculators.append(
+                RelativeAmiciCalculator(
+                    inner_problem=relative_inner_problem,
+                    # PEtab v2 is simulated through the PEtab simulator, not
+                    #  the v1 parameter-mapping machinery of the base class
+                    evaluator=self._evaluator,
+                )
+            )
+            self.relative_observable_ids = (
+                relative_inner_problem.get_relative_observable_ids()
+            )
+
+    def _simulate(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ) -> tuple[list[asd.ReturnDataView], dict | None]:
+        """See :meth:`InnerCalculatorCollector._simulate`.
+
+        The PEtab simulator handles the parameter mapping, so
+        ``parameter_mapping`` is unused.
+        """
+        if self._index_slices is None:
+            self._index_slices = petab_v2_index_slices(
+                petab_problem=self.petab_simulator.exp_man.petab_problem,
+                par_sim_ids=self.petab_simulator.model.get_free_parameter_ids(),
+                edatas=self._edatas,
+                par_opt_ids=x_ids,
+            )
+            for calculator in self.inner_calculators:
+                calculator.index_slices = self._index_slices
+
+        ret = self._evaluator(
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
+        rdatas = ret[RDATAS]
+        # if any simulation failed, meaningful inner parameters are unlikely
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+            return rdatas, ret
+        return rdatas, None
 
 
 def calculate_quantitative_result(
