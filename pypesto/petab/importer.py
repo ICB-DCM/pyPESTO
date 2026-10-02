@@ -41,6 +41,7 @@ from ..result import PredictionResult
 from ..startpoint import StartpointMethod
 from .objective_creator import (
     AmiciObjectiveCreator,
+    AmiciPetabV2MultiModelObjectiveCreator,
     AmiciPetabV2ObjectiveCreator,
     ObjectiveCreator,
     PetabSimulatorObjectiveCreator,
@@ -157,14 +158,14 @@ class PetabImporter:
                 petab_problem
             ):
                 raise ValueError("Invalid PEtab problem.")
-            if (
-                isinstance(petab_problem, v2.Problem)
-                and (
-                    validation_result := petab_problem.validate()
-                ).has_errors()
-            ):
-                validation_result.log(logger=logger)
-                raise ValueError("Invalid PEtab v2 problem.")
+            if isinstance(petab_problem, v2.Problem):
+                _validate_petab_v2_problem(petab_problem)
+
+        if self._hierarchical and _is_multi_model(petab_problem):
+            raise NotImplementedError(
+                "Hierarchical optimization is not supported for PEtab v2 "
+                "problems with multiple models."
+            )
 
         if self._hierarchical and validate_petab_hierarchical:
             from ..hierarchical.petab import (
@@ -377,6 +378,13 @@ class PetabImporter:
                 raise ValueError(
                     "Only 'amici' simulator type is supported for PEtab v2 "
                     "problems."
+                )
+            if _is_multi_model(self.petab_problem):
+                return AmiciPetabV2MultiModelObjectiveCreator(
+                    petab_problem=self.petab_problem,
+                    output_folder=self.output_folder,
+                    model_name=self.model_name,
+                    validate_petab=self.validate_petab,
                 )
             return AmiciPetabV2ObjectiveCreator(
                 petab_problem=self.petab_problem,
@@ -716,7 +724,11 @@ def _find_output_folder_name(
         os.makedirs(PetabImporter.MODEL_BASE_DIR)
 
     # try model id
-    model_id = petab_problem.model.model_id
+    if _is_multi_model(petab_problem):
+        # the models are compiled into subfolders named after their IDs
+        model_id = petab_problem.id
+    else:
+        model_id = petab_problem.model.model_id
     if model_name is not None:
         model_id = model_name
 
@@ -735,3 +747,51 @@ def _find_output_folder_name(
 def _find_model_name(output_folder: str) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
+
+
+def _is_multi_model(petab_problem: petab.Problem | v2.Problem) -> bool:
+    """Check whether the problem is a PEtab v2 problem with multiple models."""
+    return (
+        isinstance(petab_problem, v2.Problem) and len(petab_problem.models) > 1
+    )
+
+
+def _validate_petab_v2_problem(petab_problem: v2.Problem) -> None:
+    """Validate a PEtab v2 problem, raise if it is invalid.
+
+    libpetab cannot validate multi-model problems yet
+    (https://github.com/PEtab-dev/libpetab-python/issues/392). For those, only
+    the assignment of measurements to models is checked on the full problem,
+    and every single-model problem
+    (:func:`pypesto.petab.util.split_petab_problem_by_model`) is validated
+    separately.
+    """
+    if not _is_multi_model(petab_problem):
+        problems = {None: petab_problem}
+    else:
+        from petab.v2.lint import CheckMeasurementModelId
+
+        from .util import split_petab_problem_by_model
+
+        validation_result = petab_problem.validate(
+            validation_tasks=[CheckMeasurementModelId()]
+        )
+        if validation_result.has_errors():
+            validation_result.log(logger=logger)
+            raise ValueError("Invalid PEtab v2 problem.")
+        problems = split_petab_problem_by_model(petab_problem)
+        if unused := set(petab_problem.x_ids).difference(
+            *(problem.x_ids for problem in problems.values())
+        ):
+            raise ValueError(
+                f"Invalid PEtab v2 problem. Parameters {unused} are not "
+                "used by any model."
+            )
+
+    for model_id, problem in problems.items():
+        if (validation_result := problem.validate()).has_errors():
+            validation_result.log(logger=logger)
+            raise ValueError(
+                "Invalid PEtab v2 problem"
+                + (f" for model `{model_id}`." if model_id else ".")
+            )
