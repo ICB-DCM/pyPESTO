@@ -250,11 +250,9 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
         #  PEtab problem, also for those fixed in the pyPESTO problem. Unlike
         #  for PEtab v1, `plist` cannot be narrowed down from here, since it is
         #  set by `ExperimentManager.apply_parameters`.
+        petab_problem = self.petab_simulator.exp_man.petab_problem
         petab_ix = {
-            x_id: ix
-            for ix, x_id in enumerate(
-                self.petab_simulator.exp_man.petab_problem.x_free_ids
-            )
+            x_id: ix for ix, x_id in enumerate(petab_problem.x_free_ids)
         }
         # positions in the pyPESTO parameter vector and the corresponding
         #  positions in the PEtab sensitivity arrays
@@ -266,7 +264,9 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
             #  estimated in the PEtab problem, is a constant in the AMICI model
             #  (non_estimated_parameters_as_constants=True) -- there are no
             #  sensitivities for it, and only sensi_order 0 is supported
-            if missing := self.free_parameter_ids - set(petab_ix):
+            if missing := (
+                self.free_parameter_ids & set(petab_problem.x_ids)
+            ) - set(petab_ix):
                 raise ValueError(
                     f"Cannot compute gradient, missing entry for {missing}. "
                     "Those parameters are not estimated in the PEtab problem "
@@ -276,7 +276,15 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
 
         # run amici simulation; parameter mapping and the aggregation of the
         #  results across experiments are handled by the PEtab simulator
-        result = self.petab_simulator.simulate(x_dct)
+        #  -- for a multi-model problem, `x_dct` also contains the parameters
+        #  of the other models, which the simulator does not accept
+        result = self.petab_simulator.simulate(
+            {
+                x_id: x_dct[x_id]
+                for x_id in petab_problem.x_ids
+                if x_id in x_dct
+            }
+        )
         rdatas = result.rdatas
         # the simulator creates its own ExpData objects
         edatas = result.edatas
