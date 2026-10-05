@@ -437,6 +437,45 @@ def test_petab_v2_boehm():
         assert local_result.fval < local_result.fval0
 
 
+def test_petab_v2_priors_missing_sensitivities():
+    """Missing sensitivities must be detected behind an AggregatedObjective.
+
+    Regression test: with priors, the AMICI objective is wrapped in an
+    ``AggregatedObjective``, which did not forward the free parameters to it,
+    so the gradient for parameters not estimated in the PEtab problem was
+    silently 0.
+    """
+    import copy
+    import pickle
+
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path("Boehm_JProteomeRes2014")
+    )
+    petab_problem.parameters[0].prior_distribution = "normal"
+    petab_problem.parameters[0].prior_parameters = [0.0, 1.0]
+    problem = PetabImporter(petab_problem).create_problem()
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+
+    problem.unfix_parameters(petab_problem.x_fixed_indices)
+    for problem_ in (
+        problem,
+        copy.deepcopy(problem),
+        pickle.loads(pickle.dumps(problem)),  # noqa: S301
+    ):
+        with pytest.raises(ValueError, match="Cannot compute gradient"):
+            problem_.objective(
+                np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
+            )
+
+    problem.fix_parameters(
+        petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
+    )
+    _, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert len(grad) == petab_problem.n_estimated
+
+
 def test_petab_v2_residuals():
     """Residual mode (MODE_RES) for a PEtab v2 problem: residuals and their
     sensitivities, plus the least-squares-safe guard for parameter-dependent

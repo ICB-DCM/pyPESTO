@@ -152,6 +152,33 @@ class AggregatedObjective(ObjectiveBase):
         for objective in self._objectives:
             objective.initialize()
 
+    def update_from_problem(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ):
+        """See `ObjectiveBase` documentation.
+
+        Also forwarded to the aggregated objectives, which may need to know
+        the fixed parameters. They are still evaluated via
+        ``call_unprocessed`` on the full parameter vector.
+        """
+        super().update_from_problem(
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals,
+        )
+        for objective in self._objectives:
+            objective.update_from_problem(
+                dim_full=dim_full,
+                x_free_indices=x_free_indices,
+                x_fixed_indices=x_fixed_indices,
+                x_fixed_vals=x_fixed_vals,
+            )
+
     def get_config(self) -> dict:
         """Return basic information of the objective configuration."""
         info = super().get_config()
