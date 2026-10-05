@@ -350,13 +350,13 @@ def test_petab_v2_boehm():
     # fixing parameters, ...
     problem.unfix_parameters(petab_problem.x_fixed_indices)
     assert problem.dim == len(petab_problem.parameters)
-    with pytest.raises(ValueError, match="Cannot compute gradient"):
-        # cannot compute sensitivities for fixed parameters
-        problem.objective(
-            np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
-        )
-    fval = problem.objective(np.asarray(petab_problem.x_nominal))
+    # no sensitivities for PEtab-non-estimated parameters
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
+    )
     assert np.isclose(fval, expected_fval_nominal)
+    assert np.isnan(grad[petab_problem.x_fixed_indices]).all()
+    assert np.isfinite(grad[petab_problem.x_free_indices]).all()
     # re-fixing parameters
     problem.fix_parameters(
         petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
@@ -438,12 +438,11 @@ def test_petab_v2_boehm():
 
 
 def test_petab_v2_priors_missing_sensitivities():
-    """Missing sensitivities must be detected behind an AggregatedObjective.
+    """Missing sensitivities must be NaN behind an AggregatedObjective.
 
     Regression test: with priors, the AMICI objective is wrapped in an
-    ``AggregatedObjective``, which did not forward the free parameters to it,
-    so the gradient for parameters not estimated in the PEtab problem was
-    silently 0.
+    ``AggregatedObjective``; the gradient for parameters not estimated in the
+    PEtab problem must not be silently 0 there either.
     """
     import copy
     import pickle
@@ -462,10 +461,13 @@ def test_petab_v2_priors_missing_sensitivities():
         copy.deepcopy(problem),
         pickle.loads(pickle.dumps(problem)),  # noqa: S301
     ):
-        with pytest.raises(ValueError, match="Cannot compute gradient"):
-            problem_.objective(
-                np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
-            )
+        _, grad, hess = problem_.objective(
+            np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1, 2)
+        )
+        assert np.isnan(grad[petab_problem.x_fixed_indices]).all()
+        assert np.isfinite(grad[petab_problem.x_free_indices]).all()
+        assert np.isnan(hess[petab_problem.x_fixed_indices]).all()
+        assert np.isnan(hess[:, petab_problem.x_fixed_indices]).all()
 
     problem.fix_parameters(
         petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
@@ -474,6 +476,24 @@ def test_petab_v2_priors_missing_sensitivities():
         np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
     )
     assert len(grad) == petab_problem.n_estimated
+    assert np.isfinite(grad).all()
+
+
+def test_petab_v1_non_estimated_gradient_nan():
+    """PEtab-non-estimated parameters of a PEtab v1 problem are AMICI
+    constants by default -- their gradient must be NaN, not 0, when they are
+    unfixed in the pyPESTO problem."""
+    petab_problem = models.get_problem("Boehm_JProteomeRes2014")
+    problem = PetabImporter(petab_problem).create_problem()
+    x = np.asarray(petab_problem.x_nominal_scaled)
+    _, grad_fixed = problem.objective(x[problem.x_free_indices], (0, 1))
+
+    non_estimated = list(problem.x_fixed_indices)
+    problem.unfix_parameters(non_estimated)
+    _, grad = problem.objective(x, sensi_orders=(0, 1))
+    estimated = [ix for ix in range(len(x)) if ix not in non_estimated]
+    assert np.isnan(grad[non_estimated]).all()
+    assert np.allclose(grad[estimated], grad_fixed)
 
 
 def test_petab_v2_residuals():

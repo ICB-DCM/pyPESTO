@@ -178,12 +178,6 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
     ):
         super().__init__(**kwargs)
         self.petab_simulator = petab_simulator
-        #: IDs of the parameters that are free in the pyPESTO problem, i.e.,
-        #: those for which sensitivities are required. Set by
-        #: :class:`AmiciPetabV2Objective` as soon as the objective is part of
-        #: a :class:`pypesto.Problem`; ``None`` disables the check for
-        #: missing sensitivities.
-        self.free_parameter_ids: set[str] | None = None
 
     def __call__(
         self,
@@ -244,8 +238,8 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
         #  parameters estimated in the *PEtab* problem. Parameters that are
         #  fixed in the pyPESTO problem are still estimated in the PEtab
         #  problem; parameters that are not estimated in the PEtab problem have
-        #  no sensitivities and keep their zero entries below (they can only be
-        #  fixed in the pyPESTO problem, see the check further down).
+        #  no sensitivities (their entries are set to NaN by
+        #  :class:`AmiciPetabV2Objective`).
         # TODO: sensitivities are computed for all parameters estimated in the
         #  PEtab problem, also for those fixed in the pyPESTO problem. Unlike
         #  for PEtab v1, `plist` cannot be narrowed down from here, since it is
@@ -260,19 +254,6 @@ class AmiciCalculatorPetabV2(AmiciCalculator):
         #  positions in the PEtab sensitivity arrays
         opt_ix_sel = [ix for ix, x_id in enumerate(x_ids) if x_id in petab_ix]
         sim_ix_sel = [petab_ix[x_ids[ix]] for ix in opt_ix_sel]
-
-        if self.free_parameter_ids is not None and sensi_order > 0:
-            # a parameter that is free in the pyPESTO problem, but not
-            #  estimated in the PEtab problem, is a constant in the AMICI model
-            #  (non_estimated_parameters_as_constants=True) -- there are no
-            #  sensitivities for it, and only sensi_order 0 is supported
-            if missing := self.free_parameter_ids - set(petab_ix):
-                raise ValueError(
-                    f"Cannot compute gradient, missing entry for {missing}. "
-                    "Those parameters are not estimated in the PEtab problem "
-                    "-- fix them in the pyPESTO problem, or request "
-                    "`sensi_orders=(0,)` only."
-                )
 
         # run amici simulation; parameter mapping and the aggregation of the
         #  results across experiments are handled by the PEtab simulator
