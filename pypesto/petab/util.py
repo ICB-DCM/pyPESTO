@@ -274,6 +274,8 @@ def split_petab_problem_by_model(
     from petab.v2.lint import get_valid_parameters_for_parameter_table
 
     model_ids = {model.model_id for model in petab_problem.models}
+    if len(model_ids) != len(petab_problem.models):
+        raise ValueError("Model IDs must be unique.")
     if unassigned := [
         m for m in petab_problem.measurements if m.model_id not in model_ids
     ]:
