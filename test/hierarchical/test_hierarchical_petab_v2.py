@@ -224,6 +224,9 @@ def test_hierarchical_petab_v2_adjoint_hessian_residuals(
     ]
 
     fval_forward, grad_forward = objective(x, sensi_orders=(0, 1))
+    non_est = np.setdiff1d(np.arange(len(x)), est)
+    assert non_est.size > 0
+    assert np.isnan(grad_forward[non_est]).all()
     grad_forward = grad_forward[est]
 
     # adjoint sensitivities (computes the inner parameters from a first
