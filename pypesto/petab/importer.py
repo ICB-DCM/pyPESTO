@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import tempfile
@@ -697,9 +698,9 @@ def _find_output_folder_name(
     """
     Find a name for storing the compiled amici model in.
 
-    If available, use the model name from the ``petab_problem`` or the
-    provided ``model_name`` (latter is given priority), otherwise create a
-    unique name. The folder will be located in the
+    If provided, use ``model_name``. Otherwise, use the model id from the
+    ``petab_problem`` combined with a short hash of the model, since model
+    ids need not be unique across problems. If neither is available, create a unique name. The folder will be located in the
     :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
     """
     # check whether location for amici model is a file
@@ -715,10 +716,10 @@ def _find_output_folder_name(
     if not os.path.exists(PetabImporter.MODEL_BASE_DIR):
         os.makedirs(PetabImporter.MODEL_BASE_DIR)
 
-    # try model id
-    model_id = petab_problem.model.model_id
     if model_name is not None:
         model_id = model_name
+    elif model_id := petab_problem.model.model_id:
+        model_id = f"{model_id}_{_model_hash(petab_problem.model)}"
 
     if model_id:
         output_folder = os.path.abspath(
@@ -730,6 +731,15 @@ def _find_output_folder_name(
             tempfile.mkdtemp(dir=PetabImporter.MODEL_BASE_DIR)
         )
     return output_folder
+
+
+def _model_hash(model) -> str:
+    """Short hash of the model content."""
+    if hasattr(model, "to_sbml_str"):
+        model_str = model.to_sbml_str()
+    else:
+        model_str = model.to_str()
+    return hashlib.sha256(model_str.encode()).hexdigest()[:8]
 
 
 def _find_model_name(output_folder: str) -> str:

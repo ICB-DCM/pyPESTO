@@ -566,6 +566,18 @@ def test_petab_v2_schwen():
     assert np.all(np.isfinite(startpoints))
 
 
+def test_output_folder_unique_per_model():
+    """Different models with the same model id must not share a folder."""
+    output_folders = set()
+    for problem_id in ("Boehm_JProteomeRes2014", "Schwen_PONE2014"):
+        petab_problem = petab.v2.Problem.from_yaml(
+            models.get_problem_yaml_path(problem_id)
+        )
+        petab_problem.model.model_id = "model"
+        output_folders.add(PetabImporter(petab_problem).output_folder)
+    assert len(output_folders) == 2
+
+
 def test_petab_v2_prior_indexing():
     """Priors must be assigned to the correct parameter index in ``x_full``.
 
