@@ -904,31 +904,17 @@ def _noise_models_petab_problem(
     distribution, all without inner parameters, next to an observable whose
     sigma is estimated hierarchically.
     """
-    import libsbml
     from petab.v1.models.sbml_model import SbmlModel
 
-    # dA/dt = k2 - k1 * A, A(0) = 1
-    document = libsbml.SBMLDocument(3, 1)
-    sbml_model = document.createModel()
-    compartment = sbml_model.createCompartment()
-    compartment.setId("c")
-    compartment.setSize(1)
-    compartment.setConstant(True)
-    species = sbml_model.createSpecies()
-    species.setId("A")
-    species.setCompartment("c")
-    species.setInitialAmount(1)
-    species.setConstant(False)
-    species.setBoundaryCondition(False)
-    species.setHasOnlySubstanceUnits(False)
-    for parameter_id, value in (("k1", 0.5), ("k2", 0.1)):
-        parameter = sbml_model.createParameter()
-        parameter.setId(parameter_id)
-        parameter.setValue(value)
-        parameter.setConstant(True)
-    rate_rule = sbml_model.createRateRule()
-    rate_rule.setVariable("A")
-    rate_rule.setMath(libsbml.parseL3Formula("k2 - k1 * A"))
+    model = SbmlModel.from_antimony(
+        """
+        model conversion
+            A = 1; B = 0; k1 = 0.5; k2 = 0.1
+            r1: A => B; k1 * A
+            r2: B => A; k2 * B
+        end
+        """
+    )
 
     noise_models = [
         (transformation, distribution)
@@ -957,7 +943,7 @@ def _noise_models_petab_problem(
     )
 
     time = np.array([0.0, 1, 2, 4, 6, 10])
-    simulation = 0.2 + 0.8 * np.exp(-0.5 * time)
+    simulation = 1 / 6 + 5 / 6 * np.exp(-0.6 * time)
     measurement_df = pd.concat(
         [
             pd.DataFrame(
@@ -993,7 +979,7 @@ def _noise_models_petab_problem(
     )
 
     return petab.Problem(
-        model=SbmlModel.from_string(libsbml.writeSBMLToString(document)),
+        model=model,
         condition_df=petab.get_condition_df(
             pd.DataFrame({petab.CONDITION_ID: ["c0"]})
         ),

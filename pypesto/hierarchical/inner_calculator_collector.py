@@ -120,8 +120,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         )
 
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
-        #: per model observable, its ``(transformation, distribution)``
-        self.noise_models = self._get_noise_models(petab_problem, model)
+        #: per model observable, its AMICI noise distribution
+        self.noise_distributions = self._get_noise_distributions(
+            petab_problem, model
+        )
 
         #: per condition, the ``(par_sim_slice, par_opt_slice)`` pairs
         #: mapping the sensitivities onto the optimization parameters.
@@ -274,28 +276,26 @@ class InnerCalculatorCollector(AmiciCalculator):
         return quantitative_data_mask
 
     @staticmethod
-    def _get_noise_models(
+    def _get_noise_distributions(
         petab_problem: petab.Problem,
         model: AmiciModel,
-    ) -> list[tuple[str, str]]:
-        """Get the noise model of each model observable.
+    ) -> list[str]:
+        """Get the noise distribution of each model observable.
 
-        Returns the ``(transformation, distribution)`` of each observable, in
-        the order of the model observables, for
+        Returns AMICI's noise distribution identifier (e.g. ``log10-normal``)
+        of each observable, in the order of the model observables, for
         :func:`calculate_quantitative_result`.
         """
-        noise_models = []
-        for observable_id in model.get_observable_ids():
-            observable = petab_problem.observable_df.loc[observable_id]
-            transformation = observable.get(petab.OBSERVABLE_TRANSFORMATION)
-            distribution = observable.get(petab.NOISE_DISTRIBUTION)
-            noise_models.append(
-                (
-                    LIN if petab.is_empty(transformation) else transformation,
-                    NORMAL if petab.is_empty(distribution) else distribution,
-                )
+        from amici.importers.petab.v1._import_helpers import (
+            petab_noise_distribution_to_amici,
+        )
+
+        return [
+            petab_noise_distribution_to_amici(
+                petab_problem.observable_df.loc[observable_id]
             )
-        return noise_models
+            for observable_id in model.get_observable_ids()
+        ]
 
     def get_inner_par_ids(self) -> list[str]:
         """Return the ids of inner parameters of all inner problems."""
@@ -408,7 +408,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 edatas=edatas,
                 mode=mode,
                 quantitative_data_mask=self.quantitative_data_mask,
-                noise_models=self.noise_models,
+                noise_distributions=self.noise_distributions,
                 dim=dim,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
@@ -728,21 +728,14 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         self._edatas = edatas
 
     @staticmethod
-    def _get_noise_models(
+    def _get_noise_distributions(
         petab_problem: v2.Problem,
         model: AmiciModel,
-    ) -> list[tuple[str, str]]:
-        """See :meth:`InnerCalculatorCollector._get_noise_models`."""
-        from petab.v2 import C as V2C
-
-        noise_models = {
-            V2C.NORMAL: (LIN, NORMAL),
-            V2C.LAPLACE: (LIN, LAPLACE),
-            V2C.LOG_NORMAL: (LOG, NORMAL),
-            V2C.LOG_LAPLACE: (LOG, LAPLACE),
-        }
+    ) -> list[str]:
+        """See :meth:`InnerCalculatorCollector._get_noise_distributions`."""
+        # the PEtab v2 noise distributions are AMICI noise distributions
         return [
-            noise_models[petab_problem[observable_id].noise_distribution]
+            petab_problem[observable_id].noise_distribution
             for observable_id in model.get_observable_ids()
         ]
 
@@ -834,7 +827,7 @@ def calculate_quantitative_result(
     sensi_orders: tuple[int],
     mode: ModeType,
     quantitative_data_mask: list[np.ndarray],
-    noise_models: Sequence[tuple[str, str]],
+    noise_distributions: Sequence[str],
     dim: int,
     parameter_mapping: ParameterMapping,
     par_opt_ids: list[str],
@@ -843,7 +836,7 @@ def calculate_quantitative_result(
 ):
     """Calculate the function values from rdatas and return as dict.
 
-    ``noise_models`` is the ``(transformation, distribution)`` of each model
+    ``noise_distributions`` is AMICI's noise distribution of each model
     observable. ``index_slices`` maps the simulation sensitivities onto the
     optimization parameters per condition; derived from ``parameter_mapping``
     if not given.
@@ -861,24 +854,26 @@ def calculate_quantitative_result(
             for m in parameter_mapping
         ]
 
-    # the model observables of each noise model
+    # the model observables of each noise distribution
     observable_masks = {
-        noise_model: np.array([nm == noise_model for nm in noise_models])
-        for noise_model in set(noise_models)
+        noise_distribution: np.array(
+            [nd == noise_distribution for nd in noise_distributions]
+        )
+        for noise_distribution in set(noise_distributions)
     }
 
     # iterate over simulation conditions
     for condition_ix, (rdata, edata, mask) in enumerate(
         zip(rdatas, edatas, quantitative_data_mask, strict=True)
     ):
-        for noise_model, observable_mask in observable_masks.items():
+        for noise_distribution, observable_mask in observable_masks.items():
             # `observable_mask` broadcasts over the time points
             data_mask = mask & observable_mask
             nllh_i, dsim_i, dsigma_i = _noise_model_terms(
                 data=edata[data_mask],
                 sim=rdata[AMICI_Y][data_mask],
                 sigma=rdata[AMICI_SIGMAY][data_mask],
-                noise_model=noise_model,
+                noise_distribution=noise_distribution,
             )
             nllh += np.sum(nllh_i)
 
@@ -911,13 +906,11 @@ def _noise_model_terms(
     data: np.ndarray,
     sim: np.ndarray,
     sigma: np.ndarray,
-    noise_model: tuple[str, str],
+    noise_distribution: str,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Compute the negative log-likelihood of each data point.
 
-    The same as AMICI's cost function for the noise distribution
-    ``{transformation}-{distribution}`` of
-    ``noise_model = (transformation, distribution)``, see
+    The same as AMICI's cost function for ``noise_distribution``, see
     :func:`amici.importers.utils.noise_distribution_to_cost_function`.
 
     Returns
@@ -925,10 +918,19 @@ def _noise_model_terms(
     The negative log-likelihood of each data point, and its derivatives
     w.r.t. ``sim`` and ``sigma``.
     """
-    transformation, distribution = noise_model
+    # e.g. `log10-normal`, `laplace`
+    transformation, _, distribution = noise_distribution.rpartition("-")
+    if transformation not in ("", LIN, LOG, LOG10) or distribution not in (
+        NORMAL,
+        LAPLACE,
+    ):
+        raise NotImplementedError(
+            f"Noise distribution `{noise_distribution}` is not supported."
+        )
+
     # residual on the transformed scale, its derivative w.r.t. `sim`, and the
     #  Jacobian of the transformation of the data
-    if transformation == LIN:
+    if transformation in ("", LIN):
         residual = sim - data
         dresidual_dsim = 1.0
         jacobian_term = 0.0
@@ -936,14 +938,10 @@ def _noise_model_terms(
         residual = np.log(sim) - np.log(data)
         dresidual_dsim = 1 / sim
         jacobian_term = np.log(data)
-    elif transformation == LOG10:
+    else:
         residual = np.log10(sim) - np.log10(data)
         dresidual_dsim = 1 / (sim * np.log(10))
         jacobian_term = np.log(data * np.log(10))
-    else:
-        raise NotImplementedError(
-            f"Observable transformation `{transformation}` is not supported."
-        )
 
     if distribution == NORMAL:
         nllh = (
@@ -951,14 +949,10 @@ def _noise_model_terms(
         )
         dnllh_dresidual = residual / sigma**2
         dnllh_dsigma = (1 - (residual / sigma) ** 2) / sigma
-    elif distribution == LAPLACE:
+    else:
         nllh = np.log(2 * sigma) + np.abs(residual) / sigma
         dnllh_dresidual = np.sign(residual) / sigma
         dnllh_dsigma = (1 - np.abs(residual) / sigma) / sigma
-    else:
-        raise NotImplementedError(
-            f"Noise distribution `{distribution}` is not supported."
-        )
 
     return (
         nllh + jacobian_term,
