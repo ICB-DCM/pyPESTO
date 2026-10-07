@@ -216,13 +216,24 @@ def test_hierarchical_petab_v2_adjoint_hessian_residuals(
     objective = copy.deepcopy(objective_v2)
     x_nominal = petab_problem_v2.get_x_nominal_dict()
     x = np.asarray([x_nominal[x_id] for x_id in objective.x_ids])
+    # PEtab-non-estimated parameters have no sensitivities (NaN)
+    est = [
+        ix
+        for ix, x_id in enumerate(objective.x_ids)
+        if x_id in petab_problem_v2.x_free_ids
+    ]
 
     fval_forward, grad_forward = objective(x, sensi_orders=(0, 1))
+    non_est = np.setdiff1d(np.arange(len(x)), est)
+    assert non_est.size > 0
+    assert np.isnan(grad_forward[non_est]).all()
+    grad_forward = grad_forward[est]
 
     # adjoint sensitivities (computes the inner parameters from a first
     #  simulation, then uses AMICI with fixed inner parameters)
     objective.amici_solver.set_sensitivity_method(SensitivityMethod.adjoint)
     fval_adjoint, grad_adjoint = objective(x, sensi_orders=(0, 1))
+    grad_adjoint = grad_adjoint[est]
     assert np.isclose(fval_forward, fval_adjoint, rtol=1e-6)
     assert np.allclose(
         grad_forward,
@@ -238,6 +249,7 @@ def test_hierarchical_petab_v2_adjoint_hessian_residuals(
     objective.amici_solver.set_sensitivity_method(SensitivityMethod.forward)
     hess = objective(x, sensi_orders=(2,))
     assert hess.shape == (len(x), len(x))
+    hess = hess[np.ix_(est, est)]
     # the FIM is a positive semi-definite approximation of the Hessian
     eigvals = np.linalg.eigvalsh(hess)
     assert np.min(eigvals) >= -1e-6 * np.max(np.abs(eigvals))
