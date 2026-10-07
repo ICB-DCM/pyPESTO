@@ -61,9 +61,12 @@ def test_petab_v2_index_slices_match_amici_gradient(boehm_v2_objective):
     ):
         np.add.at(assembled, par_opt_slice, -rdata.sllh[par_sim_slice])
 
-    assert np.allclose(assembled, ret["grad"], rtol=1e-8, atol=1e-8), (
-        f"assembled={assembled}\nexpected={ret['grad']}"
-    )
+    # PEtab-non-estimated parameters have no sensitivities (NaN)
+    est = np.isin(objective.x_ids, petab_problem.x_free_ids)
+    assert np.isnan(ret["grad"][~est]).all()
+    assert np.allclose(
+        assembled[est], ret["grad"][est], rtol=1e-8, atol=1e-8
+    ), f"assembled={assembled}\nexpected={ret['grad']}"
     # the comparison is only meaningful if the slices select something and
     #  the gradient is not near zero to begin with. A few components of this
     #  problem's gradient legitimately are, so require a majority rather than
