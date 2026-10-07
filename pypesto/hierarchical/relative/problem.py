@@ -454,7 +454,7 @@ def inner_parameters_from_petab_v2_problem(
     field (column) in the PEtab parameter table.
 
     A PEtab v2 problem exposes v1-shaped tables, so this only adapts them and
-    reuses the v1 reader: v2 has no parameter scales (everything is linear),
+    reuses the v1 reader: inner parameters of v2 problems are always linear,
     and the bounds of all inner parameter types except scaling and offset are
     replaced by the fixed ones hierarchical optimization requires.
     """

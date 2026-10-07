@@ -16,6 +16,9 @@ from ...C import (
     FVAL,
     GRAD,
     HESS,
+    LIN,
+    LOG,
+    LOG10,
     MODE_FUN,
     MODE_RES,
     RDATAS,
@@ -814,6 +817,7 @@ class AmiciPetabV2Objective(AmiciObjective):
         petab_importer: amici.importers.petab.PetabImporter,
         force_compile: bool = False,
         petab_simulator: amici.sim.sundials.petab.PetabSimulator | None = None,
+        parameter_scales: dict[str, str] | None = None,
         **kwargs,
     ) -> None:
         """Initialize the objective.
@@ -831,6 +835,10 @@ class AmiciPetabV2Objective(AmiciObjective):
             ``petab_importer`` if not given. Pass one to share it with a
             calculator built for it, such as
             :class:`pypesto.hierarchical.InnerCalculatorCollectorPetabV2`.
+        parameter_scales:
+            The scale (``'lin'``, ``'log'`` or ``'log10'``) of each parameter
+            in the objective's input, by parameter ID; linear if not listed.
+            Derivatives are returned with respect to the scaled parameters.
         kwargs:
             Additional arguments passed on to :class:`AmiciObjective`. A
             ``calculator`` given here replaces the default
@@ -844,6 +852,7 @@ class AmiciPetabV2Objective(AmiciObjective):
             else petab_importer.create_simulator(force_import=force_compile)
         )
         self.petab_problem = petab_importer.petab_problem
+        self.parameter_scales = parameter_scales or {}
 
         # the simulator creates its own ExpData objects for every simulation,
         #  so steady-state guesses cannot be passed on to it
@@ -893,6 +902,51 @@ class AmiciPetabV2Objective(AmiciObjective):
             x_fixed_vals=x_fixed_vals,
         )
 
+    def call_unprocessed(
+        self,
+        x: np.ndarray,
+        sensi_orders: tuple[int, ...],
+        mode: ModeType,
+        return_dict: bool = False,
+        **kwargs,
+    ):
+        """See :meth:`AmiciObjective.call_unprocessed`.
+
+        The PEtab simulator takes linear parameters, so ``x`` is unscaled
+        first, and the derivatives are transformed to ``parameter_scales``.
+        """
+        if not self.parameter_scales:
+            return super().call_unprocessed(
+                x, sensi_orders, mode, return_dict, **kwargs
+            )
+        # TODO: let AMICI handle the scales, once it supports them for PEtab
+        #  v2 (https://github.com/AMICI-dev/AMICI/issues/3311)
+        from petab.v1 import unscale
+
+        scales = [self.parameter_scales.get(x_id, LIN) for x_id in self.x_ids]
+        x_lin = np.array(
+            [unscale(x_i, scale) for x_i, scale in zip(x, scales, strict=True)]
+        )
+        ret = super().call_unprocessed(
+            x_lin, sensi_orders, mode, return_dict, **kwargs
+        )
+
+        # derivative of the linear w.r.t. the scaled parameters
+        dx_lin = np.array(
+            [
+                {LIN: 1.0, LOG: x_i, LOG10: x_i * np.log(10)}[scale]
+                for x_i, scale in zip(x_lin, scales, strict=True)
+            ]
+        )
+        if GRAD in ret:
+            ret[GRAD] = ret[GRAD] * dx_lin
+        if HESS in ret:
+            # the Hessian is the FIM, so there is no second-order term
+            ret[HESS] = ret[HESS] * np.outer(dx_lin, dx_lin)
+        if SRES in ret:
+            ret[SRES] = ret[SRES] * dx_lin
+        return ret
+
     def _x_ix_without_sensitivities(
         self, parameter_mapping: ParameterMapping
     ) -> list[int]:
@@ -922,9 +976,17 @@ class AmiciPetabV2Objective(AmiciObjective):
             Indicates whether gradients match (True) FDs or not (False)
         """
         if x is None:
-            # PEtab v2 does not have parameter scales
+            from petab.v1 import scale
+
             x_nominal = self.petab_problem.get_x_nominal_dict()
-            x_full = np.array([x_nominal[x_id] for x_id in self.x_ids])
+            x_full = np.array(
+                [
+                    scale(
+                        x_nominal[x_id], self.parameter_scales.get(x_id, LIN)
+                    )
+                    for x_id in self.x_ids
+                ]
+            )
             x_free_ids = set(self.petab_problem.x_free_ids)
             free = {
                 ix for ix, x_id in enumerate(self.x_ids) if x_id in x_free_ids

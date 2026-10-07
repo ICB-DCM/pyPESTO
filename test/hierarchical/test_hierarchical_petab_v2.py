@@ -68,6 +68,19 @@ def problem_v2(importer_v2):
 
 
 @pytest.fixture(scope="module")
+def problem_v2_scaled(petab_problem_v1, petab_problem_v2):
+    """The v2 problem on the parameter scales of the v1 problem."""
+    return PetabImporter(
+        petab_problem_v2,
+        hierarchical=True,
+        model_name="Boehm_hierarchical_petab_v2",
+        parameter_scales=petab_problem_v1.parameter_df[
+            PARAMETER_SCALE
+        ].to_dict(),
+    ).create_problem()
+
+
+@pytest.fixture(scope="module")
 def objective_v2(importer_v2):
     """A v2 hierarchical objective that is not part of a problem.
 
@@ -117,11 +130,14 @@ def test_hierarchical_petab_v2_structure(
 
 
 def test_hierarchical_petab_v2_matches_v1(
-    petab_problem_v1, problem_v1, problem_v2
+    petab_problem_v1, problem_v1, problem_v2, problem_v2_scaled
 ):
     """Function values, gradients and inner parameters match between the
     PEtab v1 and v2 hierarchical objectives."""
     assert problem_v1.x_free_indices == problem_v2.x_free_indices
+    assert problem_v2_scaled.x_scales == problem_v1.x_scales
+    assert np.allclose(problem_v2_scaled.lb_full, problem_v1.lb_full)
+    assert np.allclose(problem_v2_scaled.ub_full, problem_v1.ub_full)
     x_names_free = [problem_v1.x_names[ix] for ix in problem_v1.x_free_indices]
     scales = [
         petab_problem_v1.parameter_df.loc[x_id, PARAMETER_SCALE]
@@ -149,14 +165,22 @@ def test_hierarchical_petab_v2_matches_v1(
 
         fval_v1, grad_v1 = problem_v1.objective(x_scaled, sensi_orders=(0, 1))
         fval_v2, grad_v2 = problem_v2.objective(x_linear, sensi_orders=(0, 1))
+        fval_v2_scaled, grad_v2_scaled = problem_v2_scaled.objective(
+            x_scaled, sensi_orders=(0, 1)
+        )
 
         assert np.isclose(fval_v1, fval_v2, rtol=RTOL_FVAL)
-        assert np.allclose(
-            grad_v1,
+        assert np.isclose(fval_v1, fval_v2_scaled, rtol=RTOL_FVAL)
+        for grad_v2_ in (
             _grad_to_scaled(grad_v2, x_linear, scales),
-            rtol=RTOL_GRAD,
-            atol=RTOL_GRAD * np.max(np.abs(grad_v1)),
-        )
+            grad_v2_scaled,
+        ):
+            assert np.allclose(
+                grad_v1,
+                grad_v2_,
+                rtol=RTOL_GRAD,
+                atol=RTOL_GRAD * np.max(np.abs(grad_v1)),
+            )
 
         # the optimal inner parameters agree
         ret_v1 = problem_v1.objective(
@@ -181,6 +205,18 @@ def test_hierarchical_petab_v2_matches_v1(
         )
         for inner_id, value_v1 in inner_v1.items():
             assert np.isclose(value_v1, inner_v2[inner_id], rtol=1e-5)
+
+
+def test_hierarchical_petab_v2_scaled_inner_parameters(petab_problem_v2):
+    """Inner parameters are estimated on linear scale."""
+    importer = PetabImporter(
+        petab_problem_v2,
+        hierarchical=True,
+        model_name="Boehm_hierarchical_petab_v2",
+        parameter_scales={"scaling_pSTAT5A_rel": "log10"},
+    )
+    with pytest.raises(ValueError, match="Inner parameters"):
+        importer.create_problem()
 
 
 def test_hierarchical_petab_v2_gradient_check(petab_problem_v2, objective_v2):
