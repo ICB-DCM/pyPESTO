@@ -695,18 +695,6 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         #: the ``ExpData`` objects the index slices are built against
         self._edatas = edatas
 
-    @property
-    def free_parameter_ids(self) -> set[str] | None:
-        """IDs of the parameters that are free in the pyPESTO problem.
-
-        See :class:`AmiciCalculatorPetabV2`.
-        """
-        return self._evaluator.free_parameter_ids
-
-    @free_parameter_ids.setter
-    def free_parameter_ids(self, value: set[str] | None) -> None:
-        self._evaluator.free_parameter_ids = value
-
     def construct_inner_calculators(
         self,
         petab_problem: v2.Problem,
