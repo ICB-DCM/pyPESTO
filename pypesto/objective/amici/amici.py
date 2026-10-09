@@ -14,9 +14,12 @@ import pandas as pd
 
 from ...C import (
     FVAL,
+    GRAD,
+    HESS,
     MODE_FUN,
     MODE_RES,
     RDATAS,
+    SRES,
     SUFFIXES_CSV,
     SUFFIXES_HDF5,
     ModeType,
@@ -507,6 +510,17 @@ class AmiciObjective(ObjectiveBase):
             fim_for_hess=self.fim_for_hess,
         )
 
+        # no sensitivities were computed for these entries -- mark them as
+        #  unknown instead of leaving them at 0
+        if ix := self._x_ix_without_sensitivities(parameter_mapping):
+            if GRAD in ret:
+                ret[GRAD][ix] = np.nan
+            if HESS in ret:
+                ret[HESS][ix, :] = np.nan
+                ret[HESS][:, ix] = np.nan
+            if SRES in ret:
+                ret[SRES][:, ix] = np.nan
+
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]
 
@@ -521,6 +535,29 @@ class AmiciObjective(ObjectiveBase):
                 self.store_steadystate_guess(data_ix, x_dct, rdata)
 
         return ret
+
+    def _x_ix_without_sensitivities(
+        self, parameter_mapping: ParameterMapping
+    ) -> list[int]:
+        """Get the indices of the parameters without sensitivities.
+
+        These are the parameters that are mapped to AMICI constants (fixed
+        parameters) in any condition, e.g. PEtab-non-estimated parameters for
+        a model imported with ``non_estimated_parameters_as_constants=True``.
+        """
+        to_constants = {
+            mapped_to
+            for condition_mapping in parameter_mapping
+            for mapping in (
+                condition_mapping.map_sim_fix,
+                condition_mapping.map_preeq_fix,
+            )
+            for mapped_to in mapping.values()
+            if isinstance(mapped_to, str)
+        }
+        return [
+            ix for ix, x_id in enumerate(self.x_ids) if x_id in to_constants
+        ]
 
     def par_arr_to_dct(self, x: Sequence[float]) -> dict[str, float]:
         """Create dict from parameter vector."""
@@ -846,9 +883,7 @@ class AmiciPetabV2Objective(AmiciObjective):
         PEtab problem parameters to model parameters is done by the PEtab
         simulator. Parameters that are fixed in the pyPESTO problem are simply
         simulated at their fixed values, which are part of the (full)
-        parameter vector passed to the objective. The calculator only needs to
-        know which parameters are free, to be able to tell whether all
-        required sensitivities are available.
+        parameter vector passed to the objective.
         """
         ObjectiveBase.update_from_problem(
             self,
@@ -857,9 +892,24 @@ class AmiciPetabV2Objective(AmiciObjective):
             x_fixed_indices=x_fixed_indices,
             x_fixed_vals=x_fixed_vals,
         )
-        self.calculator.free_parameter_ids = {
-            self.x_ids[ix] for ix in x_free_indices
-        }
+
+    def _x_ix_without_sensitivities(
+        self, parameter_mapping: ParameterMapping
+    ) -> list[int]:
+        """Get the indices of the parameters without sensitivities.
+
+        The PEtab simulator only computes sensitivities for the parameters
+        estimated in the PEtab problem. Parameters that are not part of the
+        PEtab problem at all -- those of the other models of a multi-model
+        problem -- do not affect this objective.
+        """
+        petab_problem = self._petab_simulator.exp_man.petab_problem
+        estimated = set(petab_problem.x_free_ids)
+        return [
+            ix
+            for ix, x_id in enumerate(self.x_ids)
+            if x_id in petab_problem.x_ids and x_id not in estimated
+        ]
 
     def check_gradients_match_finite_differences(
         self, *args, x: np.ndarray = None, **kwargs
