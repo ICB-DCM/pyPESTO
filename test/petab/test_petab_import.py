@@ -624,10 +624,6 @@ def test_petab_v2_parameter_scales_invalid():
     with pytest.raises(ValueError, match="no_such_parameter"):
         importer.create_problem()
 
-    next(p for p in petab_problem_v2.parameters if p.id == "k_phos").lb = 0.0
-    with pytest.raises(ValueError, match="positive lower bound"):
-        PetabImporter(petab_problem_v2, parameter_scales={"k_phos": "log10"})
-
     with pytest.raises(ValueError, match="only supported for PEtab v2"):
         PetabImporter(
             models.get_problem(problem_id), parameter_scales={"k_phos": "lin"}

@@ -742,17 +742,6 @@ def _validate_parameter_scales(
             "`parameter_scales` is only supported for PEtab v2 problems. For "
             "PEtab v1, use the `parameterScale` column of the parameter table."
         )
-    if non_positive := [
-        parameter.id
-        for parameter in petab_problem.parameters
-        if parameter.estimate
-        and parameter_scales.get(parameter.id, petab.LIN) != petab.LIN
-        and parameter.lb <= 0
-    ]:
-        raise ValueError(
-            "Parameters estimated on log scale need a positive lower bound: "
-            f"{non_positive}."
-        )
     return dict(parameter_scales)
 
 
