@@ -27,8 +27,13 @@ from ..C import (
     GRAD,
     HESS,
     INNER_PARAMETERS,
+    LAPLACE,
+    LIN,
+    LOG,
+    LOG10,
     METHOD,
     MODE_RES,
+    NORMAL,
     ORDINAL,
     ORDINAL_OPTIONS,
     RDATAS,
@@ -115,6 +120,10 @@ class InnerCalculatorCollector(AmiciCalculator):
         )
 
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
+        #: per model observable, its AMICI noise distribution
+        self.noise_distributions = self._get_noise_distributions(
+            petab_problem, model
+        )
 
         #: per condition, the ``(par_sim_slice, par_opt_slice)`` pairs
         #: mapping the sensitivities onto the optimization parameters.
@@ -266,6 +275,28 @@ class InnerCalculatorCollector(AmiciCalculator):
 
         return quantitative_data_mask
 
+    @staticmethod
+    def _get_noise_distributions(
+        petab_problem: petab.Problem,
+        model: AmiciModel,
+    ) -> list[str]:
+        """Get the noise distribution of each model observable.
+
+        Returns AMICI's noise distribution identifier (e.g. ``log10-normal``)
+        of each observable, in the order of the model observables, for
+        :func:`calculate_quantitative_result`.
+        """
+        from amici.importers.petab.v1._import_helpers import (
+            petab_noise_distribution_to_amici,
+        )
+
+        return [
+            petab_noise_distribution_to_amici(
+                petab_problem.observable_df.loc[observable_id]
+            )
+            for observable_id in model.get_observable_ids()
+        ]
+
     def get_inner_par_ids(self) -> list[str]:
         """Return the ids of inner parameters of all inner problems."""
         return [
@@ -377,6 +408,7 @@ class InnerCalculatorCollector(AmiciCalculator):
                 edatas=edatas,
                 mode=mode,
                 quantitative_data_mask=self.quantitative_data_mask,
+                noise_distributions=self.noise_distributions,
                 dim=dim,
                 parameter_mapping=parameter_mapping,
                 par_opt_ids=x_ids,
@@ -695,6 +727,18 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         #: the ``ExpData`` objects the index slices are built against
         self._edatas = edatas
 
+    @staticmethod
+    def _get_noise_distributions(
+        petab_problem: v2.Problem,
+        model: AmiciModel,
+    ) -> list[str]:
+        """See :meth:`InnerCalculatorCollector._get_noise_distributions`."""
+        # the PEtab v2 noise distributions are AMICI noise distributions
+        return [
+            petab_problem[observable_id].noise_distribution
+            for observable_id in model.get_observable_ids()
+        ]
+
     def construct_inner_calculators(
         self,
         petab_problem: v2.Problem,
@@ -783,6 +827,7 @@ def calculate_quantitative_result(
     sensi_orders: tuple[int],
     mode: ModeType,
     quantitative_data_mask: list[np.ndarray],
+    noise_distributions: Sequence[str],
     dim: int,
     parameter_mapping: ParameterMapping,
     par_opt_ids: list[str],
@@ -791,8 +836,10 @@ def calculate_quantitative_result(
 ):
     """Calculate the function values from rdatas and return as dict.
 
-    ``index_slices`` maps the simulation sensitivities onto the optimization
-    parameters per condition; derived from ``parameter_mapping`` if not given.
+    ``noise_distributions`` is AMICI's noise distribution of each model
+    observable. ``index_slices`` maps the simulation sensitivities onto the
+    optimization parameters per condition; derived from ``parameter_mapping``
+    if not given.
     """
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
         sensi_orders, mode, dim
@@ -801,68 +848,48 @@ def calculate_quantitative_result(
     # transform experimental data
     edatas = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
-    # calculate the function value
-    for rdata, edata, mask in zip(
-        rdatas, edatas, quantitative_data_mask, strict=True
-    ):
-        data_i = edata[mask]
-        sim_i = rdata[AMICI_Y][mask]
-        sigma_i = rdata[AMICI_SIGMAY][mask]
+    if 1 in sensi_orders and index_slices is None:
+        index_slices = [
+            par_index_slices(par_opt_ids, par_sim_ids, m.map_sim_var)
+            for m in parameter_mapping
+        ]
 
-        nllh += 0.5 * np.nansum(
-            np.log(2 * np.pi * sigma_i**2) + (data_i - sim_i) ** 2 / sigma_i**2
+    # the model observables of each noise distribution
+    observable_masks = {
+        noise_distribution: np.array(
+            [nd == noise_distribution for nd in noise_distributions]
         )
+        for noise_distribution in set(noise_distributions)
+    }
 
-    # calculate the gradient if requested
-    if 1 in sensi_orders:
-        if index_slices is None:
-            index_slices = [
-                par_index_slices(par_opt_ids, par_sim_ids, m.map_sim_var)
-                for m in parameter_mapping
-            ]
-        # iterate over simulation conditions
-        for rdata, edata, mask, (par_sim_slice, par_opt_slice) in zip(
-            rdatas, edatas, quantitative_data_mask, index_slices, strict=True
-        ):
-            data_i = edata[mask]
-            sim_i = rdata[AMICI_Y][mask]
-            sigma_i = rdata[AMICI_SIGMAY][mask]
+    # iterate over simulation conditions
+    for condition_ix, (rdata, edata, mask) in enumerate(
+        zip(rdatas, edatas, quantitative_data_mask, strict=True)
+    ):
+        for noise_distribution, observable_mask in observable_masks.items():
+            # `observable_mask` broadcasts over the time points
+            data_mask = mask & observable_mask
+            nllh_i, dsim_i, dsigma_i = _noise_model_terms(
+                data=edata[data_mask],
+                sim=rdata[AMICI_Y][data_mask],
+                sigma=rdata[AMICI_SIGMAY][data_mask],
+                noise_distribution=noise_distribution,
+            )
+            nllh += np.sum(nllh_i)
 
-            n_parameters = rdata[AMICI_SY].shape[1]
-
-            # Get sensitivities of observables and sigmas
-            sensitivities_i = np.asarray(
-                [
-                    rdata[AMICI_SY][:, parameter_index, :][mask]
-                    for parameter_index in range(n_parameters)
+            # calculate the gradient if requested
+            if 1 in sensi_orders:
+                # sensitivities of observables and sigmas,
+                #  shape (n_simulation_parameters, n_data)
+                sy_i = np.moveaxis(rdata[AMICI_SY], 1, 0)[:, data_mask]
+                ssigma_i = np.moveaxis(rdata[AMICI_SSIGMAY], 1, 0)[
+                    :, data_mask
                 ]
-            )
-            ssigma_i = np.asarray(
-                [
-                    rdata[AMICI_SSIGMAY][:, parameter_index, :][mask]
-                    for parameter_index in range(n_parameters)
-                ]
-            )
-            # calculate the gradient for the condition
-            gradient_for_condition = np.nansum(
-                np.multiply(
-                    ssigma_i,
-                    (
-                        (
-                            np.full(len(data_i), 1)
-                            - (data_i - sim_i) ** 2 / sigma_i**2
-                        )
-                        / sigma_i
-                    ),
-                ),
-                axis=1,
-            ) + np.nansum(
-                np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)),
-                axis=1,
-            )
-            np.add.at(
-                snllh, par_opt_slice, gradient_for_condition[par_sim_slice]
-            )
+                gradient_i = np.sum(
+                    sy_i * dsim_i + ssigma_i * dsigma_i, axis=1
+                )
+                par_sim_slice, par_opt_slice = index_slices[condition_ix]
+                np.add.at(snllh, par_opt_slice, gradient_i[par_sim_slice])
 
     ret = {
         FVAL: nllh,
@@ -873,3 +900,62 @@ def calculate_quantitative_result(
         RDATAS: rdatas,
     }
     return filter_return_dict(ret)
+
+
+def _noise_model_terms(
+    data: np.ndarray,
+    sim: np.ndarray,
+    sigma: np.ndarray,
+    noise_distribution: str,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute the negative log-likelihood of each data point.
+
+    The same as AMICI's cost function for ``noise_distribution``, see
+    :func:`amici.importers.utils.noise_distribution_to_cost_function`.
+
+    Returns
+    -------
+    The negative log-likelihood of each data point, and its derivatives
+    w.r.t. ``sim`` and ``sigma``.
+    """
+    # e.g. `log10-normal`, `laplace`
+    transformation, _, distribution = noise_distribution.rpartition("-")
+    if transformation not in ("", LIN, LOG, LOG10) or distribution not in (
+        NORMAL,
+        LAPLACE,
+    ):
+        raise NotImplementedError(
+            f"Noise distribution `{noise_distribution}` is not supported."
+        )
+
+    # residual on the transformed scale, its derivative w.r.t. `sim`, and the
+    #  Jacobian of the transformation of the data
+    if transformation in ("", LIN):
+        residual = sim - data
+        dresidual_dsim = 1.0
+        jacobian_term = 0.0
+    elif transformation == LOG:
+        residual = np.log(sim) - np.log(data)
+        dresidual_dsim = 1 / sim
+        jacobian_term = np.log(data)
+    else:
+        residual = np.log10(sim) - np.log10(data)
+        dresidual_dsim = 1 / (sim * np.log(10))
+        jacobian_term = np.log(data * np.log(10))
+
+    if distribution == NORMAL:
+        nllh = (
+            0.5 * np.log(2 * np.pi * sigma**2) + 0.5 * (residual / sigma) ** 2
+        )
+        dnllh_dresidual = residual / sigma**2
+        dnllh_dsigma = (1 - (residual / sigma) ** 2) / sigma
+    else:
+        nllh = np.log(2 * sigma) + np.abs(residual) / sigma
+        dnllh_dresidual = np.sign(residual) / sigma
+        dnllh_dsigma = (1 - np.abs(residual) / sigma) / sigma
+
+    return (
+        nllh + jacobian_term,
+        dnllh_dresidual * dresidual_dsim,
+        dnllh_dsigma,
+    )

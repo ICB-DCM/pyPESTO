@@ -12,8 +12,12 @@ from amici.sim.sundials import SensitivityMethod
 import pypesto
 from pypesto.C import (
     FVAL,
+    GRAD,
     INNER_PARAMETER_BOUNDS,
+    INNER_PARAMETERS,
     LIN,
+    LOG,
+    LOG10,
     LOWER_BOUND,
     MODE_FUN,
     MODE_RES,
@@ -929,3 +933,151 @@ def test_hierarchical_adjoint_value_only_with_quantitative_data():
             )[FVAL]
     reference = fvals["forward", (0,)]
     assert np.allclose(list(fvals.values()), reference, rtol=1e-6), fvals
+
+
+def _noise_models_petab_problem(
+    transformations: list[str],
+) -> petab.Problem:
+    """A PEtab problem with quantitative data under several noise models.
+
+    One observable for each combination of ``transformations`` and noise
+    distribution, all without inner parameters, next to an observable whose
+    sigma is estimated hierarchically.
+    """
+    from petab.v1.models.sbml_model import SbmlModel
+
+    model = SbmlModel.from_antimony(
+        """
+        model conversion
+            A = 1; B = 0; k1 = 0.5; k2 = 0.1
+            r1: A => B; k1 * A
+            r2: B => A; k2 * B
+        end
+        """
+    )
+
+    noise_models = [
+        (transformation, distribution)
+        for transformation in transformations
+        for distribution in (petab.NORMAL, petab.LAPLACE)
+    ]
+    observable_df = pd.DataFrame(
+        {
+            petab.OBSERVABLE_ID: [
+                f"obs_{transformation}_{distribution}"
+                for transformation, distribution in noise_models
+            ]
+            + ["obs_hierarchical"],
+            petab.OBSERVABLE_FORMULA: "A",
+            petab.OBSERVABLE_TRANSFORMATION: [
+                transformation for transformation, _ in noise_models
+            ]
+            + [LIN],
+            petab.NOISE_DISTRIBUTION: [
+                distribution for _, distribution in noise_models
+            ]
+            + [petab.NORMAL],
+            petab.NOISE_FORMULA: ["0.2"] * len(noise_models)
+            + ["noiseParameter1_obs_hierarchical"],
+        }
+    )
+
+    time = np.array([0.0, 1, 2, 4, 6, 10])
+    simulation = 1 / 6 + 5 / 6 * np.exp(-0.6 * time)
+    measurement_df = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    petab.OBSERVABLE_ID: observable_id,
+                    petab.SIMULATION_CONDITION_ID: "c0",
+                    petab.TIME: time,
+                    petab.MEASUREMENT: simulation
+                    * np.exp(0.1 * np.sin(time + observable_ix)),
+                    petab.OBSERVABLE_PARAMETERS: "",
+                    petab.NOISE_PARAMETERS: "sigma"
+                    if observable_id == "obs_hierarchical"
+                    else "",
+                }
+            )
+            for observable_ix, observable_id in enumerate(
+                observable_df[petab.OBSERVABLE_ID]
+            )
+        ],
+        ignore_index=True,
+    )
+
+    parameter_df = pd.DataFrame(
+        {
+            petab.PARAMETER_ID: ["k1", "k2", "sigma"],
+            petab.PARAMETER_SCALE: LIN,
+            petab.LOWER_BOUND: [1e-3, 1e-3, 0],
+            petab.UPPER_BOUND: [1e1, 1e1, np.inf],
+            petab.NOMINAL_VALUE: [0.4, 0.15, 1],
+            petab.ESTIMATE: 1,
+            PARAMETER_TYPE: [None, None, InnerParameterType.SIGMA],
+        }
+    )
+
+    return petab.Problem(
+        model=model,
+        condition_df=petab.get_condition_df(
+            pd.DataFrame({petab.CONDITION_ID: ["c0"]})
+        ),
+        observable_df=petab.get_observable_df(observable_df),
+        measurement_df=petab.get_measurement_df(measurement_df),
+        parameter_df=petab.get_parameter_df(parameter_df),
+    )
+
+
+@pytest.mark.parametrize("petab_version", ["v1", "v2"])
+def test_hierarchical_quantitative_noise_models(petab_version, tmp_path):
+    """Test quantitative data under noise models other than lin-normal.
+
+    The hierarchical objective has to match the non-hierarchical one at the
+    optimal inner parameters. The data without inner parameters used to be
+    scored as normally distributed on the linear scale, whatever their
+    transformation and noise distribution (#1777).
+    """
+    if petab_version == "v1":
+        petab_problem = _noise_models_petab_problem([LIN, LOG, LOG10])
+    else:
+        from petab import v2
+
+        # PEtab v2 has no log10 transformation
+        _noise_models_petab_problem([LIN, LOG]).to_files_generic(
+            prefix_path=tmp_path / "v1"
+        )
+        petab_problem = v2.Problem.from_yaml(tmp_path / "v1" / "problem.yaml")
+
+    importer_kwargs = {
+        "model_name": f"hierarchical_noise_models_{petab_version}",
+        "output_folder": str(tmp_path / "amici"),
+    }
+    objective, objective_full = (
+        PetabImporter(
+            petab_problem, hierarchical=hierarchical, **importer_kwargs
+        )
+        .create_objective_creator()
+        .create_objective()
+        for hierarchical in (True, False)
+    )
+
+    x = {"k1": 0.4, "k2": 0.15}
+    ret = objective(
+        np.array([x[x_id] for x_id in objective.x_ids]),
+        sensi_orders=(0, 1),
+        return_dict=True,
+    )
+    x["sigma"] = ret[INNER_PARAMETERS][0]
+    fval_full, grad_full = objective_full(
+        np.array([x[x_id] for x_id in objective_full.x_ids]),
+        sensi_orders=(0, 1),
+    )
+
+    assert np.isclose(ret[FVAL], fval_full, rtol=1e-6)
+    grad_full = dict(zip(objective_full.x_ids, grad_full, strict=True))
+    assert np.allclose(
+        ret[GRAD],
+        [grad_full[x_id] for x_id in objective.x_ids],
+        rtol=1e-6,
+    )
