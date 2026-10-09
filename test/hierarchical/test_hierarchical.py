@@ -803,6 +803,46 @@ def test_validate():
     validate_hierarchical_petab_problem(petab_problem)
 
 
+def test_validate_non_normal_noise():
+    """Inner parameters on a non-Gaussian observable are rejected."""
+    observable_df = petab.get_observable_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1"],
+                petab.OBSERVABLE_FORMULA: ["observableParameter1_obs1 * x1"],
+                petab.NOISE_FORMULA: ["0.1"],
+                petab.NOISE_DISTRIBUTION: [petab.LAPLACE],
+            }
+        )
+    )
+    measurement_df = petab.get_measurement_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1"],
+                petab.TIME: [0],
+                petab.MEASUREMENT: [1],
+                petab.OBSERVABLE_PARAMETERS: ["s"],
+            }
+        )
+    )
+    parameter_df = petab.get_parameter_df(
+        pd.DataFrame(
+            {
+                petab.PARAMETER_ID: ["s"],
+                "parameterType": ["scaling"],
+                "estimate": [1],
+            }
+        )
+    )
+    petab_problem = petab.Problem(
+        observable_df=observable_df,
+        parameter_df=parameter_df,
+        measurement_df=measurement_df,
+    )
+    with pytest.raises(NotImplementedError, match="Noise distribution"):
+        validate_hierarchical_petab_problem(petab_problem)
+
+
 def test_validate_with_some_sigmas_not_hierarchical():
     """Test validation when only some observables have a hierarchical sigma.
 
