@@ -10,7 +10,9 @@ from petab import v1, v2
 from petab.v1.C import (
     ESTIMATE,
     LIN,
+    NOISE_DISTRIBUTION,
     NOISE_PARAMETERS,
+    NORMAL,
     OBSERVABLE_ID,
     OBSERVABLE_PARAMETERS,
     OBSERVABLE_TRANSFORMATION,
@@ -597,6 +599,22 @@ def _get_symbolic_formula_from_measurement(
                 f"inner parameters. "
                 f"Observable transformation: `{observable_transformation}`. "
                 f"Measurement:\n{measurement}"
+            )
+
+        # the analytical inner solver assumes additive Gaussian noise
+        noise_distribution = petab_problem.observable_df.loc[
+            observable_id
+        ].get(NOISE_DISTRIBUTION)
+        if (
+            not petab.is_empty(noise_distribution)
+            and noise_distribution != NORMAL
+        ):
+            raise NotImplementedError(
+                "Noise distributions other than `normal` are not supported "
+                "if the observable is associated with hierarchically "
+                "optimized inner parameters. "
+                f"Observable: `{observable_id}`. "
+                f"Noise distribution: `{noise_distribution}`."
             )
 
     return symbolic_formula, symbolic_formula_inner_parameters
