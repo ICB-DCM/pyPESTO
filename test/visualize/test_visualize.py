@@ -515,17 +515,18 @@ def test_parameters_hierarchical(scale_to_interval):
     importer = pypesto.petab.PetabImporter(petab_problem, hierarchical=True)
     helper_problem = importer.create_problem()
 
-    # set x_guesses to nominal values for fast optimization
-    x_guesses = np.asarray(petab_problem.x_nominal_scaled)[
+    # use the nominal values as a startpoint for fast optimization
+    x_guess = np.asarray(petab_problem.x_nominal_scaled)[
         helper_problem.x_free_indices
     ]
-    problem = importer.create_problem(x_guesses=[x_guesses])
+    problem = importer.create_problem()
 
     # run optimization
     n_starts = 1
     result = optimize.minimize(
         problem=problem,
         n_starts=n_starts,
+        startpoints=[x_guess],
         progress_bar=False,
     )
 
@@ -1520,11 +1521,11 @@ def test_time_trajectory_model():
         )
     )
     x_guess = np.array([x_nominal_by_id[xid] for xid in problem.x_names])
-    problem.set_x_guesses([x_guess])
 
     result = optimize.minimize(
         problem=problem,
         n_starts=1,
+        startpoints=[x_guess[problem.x_free_indices]],
         optimizer=optimize.ScipyOptimizer(
             method="L-BFGS-B", options={"maxiter": 1}
         ),

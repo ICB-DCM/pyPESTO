@@ -148,12 +148,8 @@ def test_storage_trace(hdf5_file):
     startpoints = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts, lb=lb, ub=ub
     )
-    problem1 = pypesto.Problem(
-        objective=objective1, lb=lb, ub=ub, x_guesses=startpoints
-    )
-    problem2 = pypesto.Problem(
-        objective=objective2, lb=lb, ub=ub, x_guesses=startpoints
-    )
+    problem1 = pypesto.Problem(objective=objective1, lb=lb, ub=ub)
+    problem2 = pypesto.Problem(objective=objective2, lb=lb, ub=ub)
 
     optimizer1 = optimize.ScipyOptimizer(options={"maxiter": 10})
     optimizer2 = optimize.ScipyOptimizer(options={"maxiter": 10})
@@ -166,6 +162,7 @@ def test_storage_trace(hdf5_file):
         problem=problem1,
         optimizer=optimizer1,
         n_starts=n_starts,
+        startpoints=startpoints,
         history_options=history_options_hdf5,
         progress_bar=False,
     )
@@ -176,6 +173,7 @@ def test_storage_trace(hdf5_file):
         problem=problem2,
         optimizer=optimizer2,
         n_starts=n_starts,
+        startpoints=startpoints,
         history_options=history_options_memory,
         progress_bar=False,
     )
@@ -223,9 +221,7 @@ def test_storage_profiling():
     startpoints = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts, lb=lb, ub=ub
     )
-    problem = pypesto.Problem(
-        objective=objective, lb=lb, ub=ub, x_guesses=startpoints
-    )
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     optimizer = optimize.ScipyOptimizer()
 
@@ -233,6 +229,7 @@ def test_storage_profiling():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
+        startpoints=startpoints,
         progress_bar=False,
     )
     profile_original = profile.parameter_profile(
@@ -343,9 +340,7 @@ def test_storage_sampling():
     startpoints = pypesto.startpoint.latin_hypercube(
         n_starts=n_starts, lb=lb, ub=ub
     )
-    problem = pypesto.Problem(
-        objective=objective, lb=lb, ub=ub, x_guesses=startpoints
-    )
+    problem = pypesto.Problem(objective=objective, lb=lb, ub=ub)
 
     optimizer = optimize.ScipyOptimizer()
 
@@ -353,6 +348,7 @@ def test_storage_sampling():
         problem=problem,
         optimizer=optimizer,
         n_starts=n_starts,
+        startpoints=startpoints,
         progress_bar=False,
     )
     x_0 = result_optimization.optimize_result[0]["x"]

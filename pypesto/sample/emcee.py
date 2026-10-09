@@ -170,7 +170,8 @@ class EmceeSampler(Sampler):
 
         # assign startpoints
         if self.state is None:
-            if x0.ndim > 1 and len(x0.shape[0]) > 1:
+            x0 = np.asarray(x0)
+            if x0.ndim > 1 and x0.shape[0] > 1:
                 logger.warning(
                     "More than a single vector was provided to initialize the "
                     "walker positions. If these vectors do not exist in a "
@@ -179,32 +180,16 @@ class EmceeSampler(Sampler):
                     "emcee FAQ: "
                     "https://emcee.readthedocs.io/en/stable/user/faq/ )."
                 )
-                #  extract x0
-                x0 = np.asarray(x0)
-                if x0.ndim == 1:
-                    x0 = [x0]
-                x0 = np.array([problem.get_full_vector(x) for x in x0])
-                x_guesses_full0 = problem.x_guesses_full
-                #  add x0 to guesses
-                problem.set_x_guesses(
-                    np.vstack(
-                        (
-                            x0,
-                            problem.x_guesses_full,
-                        )
-                    )
-                )
-                #  sample start points
+                #  sample start points, using the provided vectors first
                 initial_state = UniformStartpoints(
-                    use_guesses=True,
+                    use_guesses=False,
                     check_fval=True,
                     check_grad=False,
                 )(
                     n_starts=self.nwalkers,
                     problem=problem,
+                    startpoints=x0,
                 )
-                #  restore original guesses
-                problem.set_x_guesses(x_guesses_full0)
             else:
                 initial_state = self.get_epsilon_ball_initial_state(
                     center=x0,
