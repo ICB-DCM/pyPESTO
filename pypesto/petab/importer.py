@@ -126,6 +126,7 @@ class PetabImporter:
             scales, and so are the objective's input and its derivatives.
             Inner parameters of hierarchical optimization are always linear.
             For PEtab v1, scales are taken from the ``parameterScale`` column.
+            Requires amici>1.1.0.
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
