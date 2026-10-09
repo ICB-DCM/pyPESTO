@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
   merge_group:
   schedule:
-    # run Monday and Thursday at 03:42 UTC
-    - cron: '42 3 * * MON,THU'
+    # run Monday at 03:42 UTC
+    - cron: '42 3 * * MON'
 
 env:
   # use all available cores for compiling amici models
@@ -90,18 +90,33 @@ jobs:
       uses: actions/checkout@v7
 
     - name: Prepare python ${{ matrix.python-version }}
+      id: setup-python
       uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache
+    # same cache layout as .github/actions/setup-tox, with windows paths
+    - name: Get ISO week
+      id: week
+      shell: bash
+      run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache downloads
       uses: actions/cache@v6
       with:
         path: |
           ~\AppData\Local\pip\Cache
           ~\AppData\Local\uv\cache
-          .tox
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ matrix.python-version }}-ci-${{ github.job }}"
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-${{ steps.week.outputs.week }}"
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-
+          ${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-
+
+    - name: Cache tox environments
+      uses: actions/cache@v6
+      with:
+        path: .tox
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-tox-${{ github.job }}-${{ hashFiles('tox.ini', 'pyproject.toml') }}-${{ steps.week.outputs.week }}"
 
     - name: Install dependencies
       run: |
