@@ -730,7 +730,11 @@ def _validate_parameter_scales(
     petab_problem: petab.Problem | v2.Problem,
     parameter_scales: dict[str, str],
 ) -> dict[str, str]:
-    """Check the ``parameter_scales`` argument of :class:`PetabImporter`."""
+    """Check the ``parameter_scales`` argument of :class:`PetabImporter`.
+
+    Unknown parameter IDs and invalid scales are rejected by AMICI's
+    :meth:`amici.importers.petab.PetabImporter.create_simulator`.
+    """
     if not parameter_scales:
         return {}
     if not isinstance(petab_problem, v2.Problem):
@@ -738,16 +742,6 @@ def _validate_parameter_scales(
             "`parameter_scales` is only supported for PEtab v2 problems. For "
             "PEtab v1, use the `parameterScale` column of the parameter table."
         )
-    if unknown := set(parameter_scales) - set(petab_problem.x_ids):
-        raise ValueError(
-            f"`parameter_scales` contains unknown parameter IDs: {unknown}."
-        )
-    if invalid := set(parameter_scales.values()) - {
-        petab.LIN,
-        petab.LOG,
-        petab.LOG10,
-    }:
-        raise ValueError(f"Invalid parameter scales: {invalid}.")
     if non_positive := [
         parameter.id
         for parameter in petab_problem.parameters

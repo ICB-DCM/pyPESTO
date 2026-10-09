@@ -617,14 +617,16 @@ def test_petab_v2_parameter_scales_invalid():
     petab_problem_v2 = petab.v2.Problem.from_yaml(
         models.get_problem_yaml_path(problem_id)
     )
+    # validated by AMICI when creating the simulator
+    importer = PetabImporter(
+        petab_problem_v2, parameter_scales={"no_such_parameter": "log10"}
+    )
+    with pytest.raises(ValueError, match="no_such_parameter"):
+        importer.create_problem()
+
     next(p for p in petab_problem_v2.parameters if p.id == "k_phos").lb = 0.0
-    for parameter_scales, match in (
-        ({"no_such_parameter": "log10"}, "unknown parameter IDs"),
-        ({"k_phos": "log2"}, "Invalid parameter scales"),
-        ({"k_phos": "log10"}, "positive lower bound"),
-    ):
-        with pytest.raises(ValueError, match=match):
-            PetabImporter(petab_problem_v2, parameter_scales=parameter_scales)
+    with pytest.raises(ValueError, match="positive lower bound"):
+        PetabImporter(petab_problem_v2, parameter_scales={"k_phos": "log10"})
 
     with pytest.raises(ValueError, match="only supported for PEtab v2"):
         PetabImporter(
