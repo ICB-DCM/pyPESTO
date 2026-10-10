@@ -406,7 +406,9 @@ def plot_linear_observable_mappings_from_pypesto_result(
         )
 
         # Get the data mask for the current observable.
-        observable_data_mask = scaling_factor.ixs or offset.ixs
+        observable_data_mask = (
+            scaling_factor if scaling_factor is not None else offset
+        ).ixs
 
         # Get the measurements for the current observable.
         measurements = extract_expdata_using_mask(
