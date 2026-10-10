@@ -29,6 +29,7 @@ from .util import (
     compute_optimal_offset_coupled,
     compute_optimal_scaling,
     compute_optimal_sigma,
+    subtract_unscaled_constants,
 )
 
 try:
@@ -63,8 +64,8 @@ class RelativeInnerSolver(InnerSolver):
             ``ReturnData.sigmay``. Same order as simulations in the
             PEtab problem.
         """
-        relevant_data = copy.deepcopy(problem.data)
-        sim = copy.deepcopy(sim)
+        relevant_data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
         sigma = copy.deepcopy(sigma)
         inner_parameters = copy.deepcopy(inner_parameters)
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
@@ -148,8 +149,8 @@ class RelativeInnerSolver(InnerSolver):
         -------
         The gradients with respect to the outer parameters.
         """
-        relevant_data = copy.deepcopy(problem.data)
-        sim = copy.deepcopy(sim)
+        relevant_data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
         sigma = copy.deepcopy(sigma)
         inner_parameters = copy.deepcopy(inner_parameters)
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
@@ -253,13 +254,21 @@ class RelativeInnerSolver(InnerSolver):
         inner_parameters = copy.deepcopy(inner_parameters)
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
 
-        # apply offsets, scalings and sigmas
+        # apply offsets, scalings and sigmas. The scaling does not multiply
+        #  the unscaled constants, so it is applied without them, and the
+        #  change it makes is added to the simulation.
+        unscaled_sim = subtract_unscaled_constants(sim, problem)
+        scaled_sim = copy.deepcopy(unscaled_sim)
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
             apply_scaling(
                 scaling_value=inner_parameters[x.inner_parameter_id],
-                sim=sim,
+                sim=scaled_sim,
                 mask=x.ixs,
             )
+        for sim_i, unscaled_sim_i, scaled_sim_i in zip(
+            sim, unscaled_sim, scaled_sim, strict=True
+        ):
+            sim_i += scaled_sim_i - unscaled_sim_i
 
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
             apply_offset(
@@ -311,8 +320,8 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
             ``problem``.
         """
         x_opt = {}
-        data = copy.deepcopy(problem.data)
-        sim = copy.deepcopy(sim)
+        data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
         sigma = copy.deepcopy(sigma)
 
         # compute optimal offsets
@@ -505,7 +514,8 @@ class NumericalInnerSolver(RelativeInnerSolver):
         x_guesses = self.sample_startpoints(problem, pars)
 
         x_names = [x.inner_parameter_id for x in pars]
-        data = problem.data
+        data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
 
         # objective function
         def fun(x):

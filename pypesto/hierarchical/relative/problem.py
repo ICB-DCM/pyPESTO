@@ -40,6 +40,9 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+#: temporary measurement table column, see :func:`_with_unscaled_constants`
+_UNSCALED_CONSTANT = "unscaledConstant"
+
 
 class RelativeInnerProblem(AmiciInnerProblem):
     r"""Inner optimization problem for relative data with scaling/offset.
@@ -53,10 +56,18 @@ class RelativeInnerProblem(AmiciInnerProblem):
         per simulation condition. Missing observations as NaN.
     edatas:
         AMICI ``ExpData``\s for each simulation condition.
+    unscaled_constants:
+        The constant observable terms that the scaling does not multiply
+        (see :func:`pypesto.hierarchical.petab.get_unscaled_constants`). One
+        matrix per simulation condition, like ``data``. ``None`` if there are
+        none.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self, unscaled_constants: list[np.ndarray] | None = None, **kwargs
+    ):
         super().__init__(**kwargs)
+        self.unscaled_constants = unscaled_constants
 
     @staticmethod
     def from_petab_amici(
@@ -151,6 +162,26 @@ def _assign_measurement_indices(
         ]
 
 
+def _unscaled_constant_matrices(
+    unscaled_constants: dict[tuple[int, int, int], float],
+    data: list[np.ndarray],
+) -> list[np.ndarray] | None:
+    """Arrange the unscaled constants like ``data``.
+
+    See :attr:`RelativeInnerProblem.unscaled_constants`.
+    """
+    if not unscaled_constants:
+        return None
+    matrices = [np.zeros_like(cond_data) for cond_data in data]
+    for (
+        condition_ix,
+        time_ix,
+        observable_ix,
+    ), constant in unscaled_constants.items():
+        matrices[condition_ix][time_ix, observable_ix] = constant
+    return matrices
+
+
 def inner_problem_from_petab_problem(
     petab_problem: "petab.Problem",
     amici_model: "asd.Model",
@@ -170,7 +201,7 @@ def inner_problem_from_petab_problem(
     x_ids = [x.inner_parameter_id for x in inner_parameters]
 
     # used indices for all measurement specific parameters
-    ixs = ixs_for_measurement_specific_parameters(
+    ixs, unscaled_constants = ixs_for_measurement_specific_parameters(
         petab_problem, amici_model, x_ids
     )
 
@@ -181,7 +212,8 @@ def inner_problem_from_petab_problem(
 
     par_group_types = {
         tuple(obs_pars.split(";")): (
-            petab_problem.parameter_df.loc[obs_par, PARAMETER_TYPE]
+            # numeric overrides are not in the parameter table
+            petab_problem.parameter_df[PARAMETER_TYPE].get(obs_par)
             for obs_par in obs_pars.split(";")
         )
         for (obs_id, obs_pars), _ in petab_problem.measurement_df.groupby(
@@ -201,7 +233,14 @@ def inner_problem_from_petab_problem(
 
     assign_coupled_pairs(inner_parameters, coupled_pars)
 
-    return RelativeInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
+    return RelativeInnerProblem(
+        xs=inner_parameters,
+        data=data,
+        edatas=edatas,
+        unscaled_constants=_unscaled_constant_matrices(
+            unscaled_constants, data
+        ),
+    )
 
 
 def assign_coupled_pairs(
@@ -310,7 +349,10 @@ def ixs_for_measurement_specific_parameters(
     petab_problem: "petab.Problem",
     amici_model: "asd.Model",
     x_ids: list[str],
-) -> dict[str, list[tuple[int, int, int]]]:
+) -> tuple[
+    dict[str, list[tuple[int, int, int]]],
+    dict[tuple[int, int, int], float],
+]:
     """
     Create mapping of parameters to measurements.
 
@@ -320,9 +362,15 @@ def ixs_for_measurement_specific_parameters(
     `(condition index, time index, observable index)` tuples in which this
     output parameter is used. For each condition, the time index refers to
     a sorted list of non-unique time points for which there are measurements.
+
+    A second dictionary maps such tuples to the measurement's nonzero
+    constant that the scaling does not multiply (see
+    :func:`pypesto.hierarchical.petab.get_unscaled_constants`).
     """
     ixs_for_par = {}
+    unscaled_constants = {}
     observable_ids = amici_model.get_observable_ids()
+    measurement_df = _with_unscaled_constants(petab_problem, x_ids)
 
     simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()
@@ -330,12 +378,37 @@ def ixs_for_measurement_specific_parameters(
     for condition_ix, condition in simulation_conditions.iterrows():
         # measurement table for current condition
         df_for_condition = petab.get_rows_for_condition(
-            measurement_df=petab_problem.measurement_df, condition=condition
+            measurement_df=measurement_df, condition=condition
         )
         _ixs_for_condition(
-            df_for_condition, condition_ix, observable_ids, x_ids, ixs_for_par
+            df_for_condition,
+            condition_ix,
+            observable_ids,
+            x_ids,
+            ixs_for_par,
+            unscaled_constants,
         )
-    return ixs_for_par
+    return ixs_for_par, unscaled_constants
+
+
+def _with_unscaled_constants(
+    petab_problem: "petab.Problem | v2.Problem",
+    x_ids: list[str],
+) -> pd.DataFrame:
+    """Get the measurement table, with each measurement's unscaled constant.
+
+    Only the estimated inner parameters ``x_ids`` count: a parameter that is
+    annotated but not estimated is simulated at its nominal value.
+    """
+    from ..petab import get_unscaled_constants
+
+    return petab_problem.measurement_df.assign(
+        **{
+            _UNSCALED_CONSTANT: get_unscaled_constants(
+                petab_problem, inner_parameter_ids=x_ids
+            )
+        }
+    )
 
 
 def _ixs_for_condition(
@@ -344,10 +417,13 @@ def _ixs_for_condition(
     observable_ids: list[str],
     x_ids: list[str],
     ixs_for_par: dict[str, list[tuple[int, int, int]]],
+    unscaled_constants: dict[tuple[int, int, int], float],
 ) -> None:
     """Add the measurement indices of one condition to ``ixs_for_par``.
 
-    See :func:`ixs_for_measurement_specific_parameters`.
+    And add the nonzero constants in the measurement table's
+    ``_UNSCALED_CONSTANT`` column to ``unscaled_constants``. See
+    :func:`ixs_for_measurement_specific_parameters`.
     """
     # unique sorted list of timepoints
     timepoints = sorted(df_for_condition[TIME].unique().astype(float))
@@ -387,12 +463,13 @@ def _ixs_for_condition(
                 measurement.get(NOISE_PARAMETERS, None)
             )
 
+            ix = (condition_ix, time_w_reps_ix, observable_ix)
             # try to insert if hierarchical parameter
             for override in observable_overrides + noise_overrides:
                 if override in x_ids:
-                    ixs_for_par.setdefault(override, []).append(
-                        (condition_ix, time_w_reps_ix, observable_ix)
-                    )
+                    ixs_for_par.setdefault(override, []).append(ix)
+            if constant := measurement[_UNSCALED_CONSTANT]:
+                unscaled_constants[ix] = constant
 
 
 def inner_problem_from_petab_v2_problem(
@@ -412,19 +489,11 @@ def inner_problem_from_petab_v2_problem(
 
     x_ids = [x.inner_parameter_id for x in inner_parameters]
 
-    # used indices for all measurement specific parameters
-    ixs = ixs_for_measurement_specific_parameters_v2(
-        petab_problem, amici_model, x_ids
-    )
-
-    data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
-    _assign_measurement_indices(
-        inner_parameters, ixs=ixs, data=data, amici_model=amici_model
-    )
-
     # detect coupled scaling and offset parameters, i.e., pairs of scaling
     #  and offset parameters that override the placeholders of the same
-    #  measurement (numeric and unrelated overrides do not count)
+    #  measurement (numeric and unrelated overrides do not count). Done
+    #  first, so that a partially estimated pair is reported as such, rather
+    #  than as an observable formula with a non-constant term.
     annotated = get_inner_parameters_v2(petab_problem)
     coupled_pars = set()
     for measurement in petab_problem.measurements:
@@ -441,7 +510,24 @@ def inner_problem_from_petab_v2_problem(
 
     assign_coupled_pairs(inner_parameters, coupled_pars, strict=True)
 
-    return RelativeInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
+    # used indices for all measurement specific parameters
+    ixs, unscaled_constants = ixs_for_measurement_specific_parameters_v2(
+        petab_problem, amici_model, x_ids
+    )
+
+    data = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
+    _assign_measurement_indices(
+        inner_parameters, ixs=ixs, data=data, amici_model=amici_model
+    )
+
+    return RelativeInnerProblem(
+        xs=inner_parameters,
+        data=data,
+        edatas=edatas,
+        unscaled_constants=_unscaled_constant_matrices(
+            unscaled_constants, data
+        ),
+    )
 
 
 def inner_parameters_from_petab_v2_problem(
@@ -477,7 +563,10 @@ def ixs_for_measurement_specific_parameters_v2(
     petab_problem: "v2.Problem",
     amici_model: "asd.Model",
     x_ids: list[str],
-) -> dict[str, list[tuple[int, int, int]]]:
+) -> tuple[
+    dict[str, list[tuple[int, int, int]]],
+    dict[tuple[int, int, int], float],
+]:
     """
     Create mapping of parameters to measurements for a PEtab v2 problem.
 
@@ -487,8 +576,9 @@ def ixs_for_measurement_specific_parameters_v2(
     :class:`amici.sim.sundials.petab.ExperimentManager`.
     """
     ixs_for_par = {}
+    unscaled_constants = {}
     observable_ids = amici_model.get_observable_ids()
-    measurement_df = petab_problem.measurement_df
+    measurement_df = _with_unscaled_constants(petab_problem, x_ids)
 
     for condition_ix, experiment in enumerate(petab_problem.experiments):
         _ixs_for_condition(
@@ -497,5 +587,6 @@ def ixs_for_measurement_specific_parameters_v2(
             observable_ids,
             x_ids,
             ixs_for_par,
+            unscaled_constants,
         )
-    return ixs_for_par
+    return ixs_for_par, unscaled_constants
