@@ -1,6 +1,7 @@
 """Helper methods for hierarchical optimization with PEtab."""
 
 import warnings
+from collections.abc import Collection, Iterator
 
 import pandas as pd
 import petab.v1 as petab
@@ -284,7 +285,7 @@ def validate_measurement_formulae(
     inner_parameter_sets = []
 
     for _, measurement in petab_problem.measurement_df.iterrows():
-        offset, scaling = _validate_measurement_specific_observable_formula(
+        offset, scaling, _ = _validate_measurement_specific_observable_formula(
             measurement=measurement,
             petab_problem=petab_problem,
             inner_parameters=inner_parameters,
@@ -320,7 +321,7 @@ def _validate_measurement_specific_observable_formula(
     measurement: pd.Series,
     petab_problem: v1.Problem,
     inner_parameters: dict[str, InnerParameterType],
-) -> tuple[InnerParameterType, InnerParameterType]:
+) -> tuple[sp.Symbol, sp.Symbol, float]:
     """Check whether a measurement observable formula is valid.
 
     Parameters
@@ -334,7 +335,7 @@ def _validate_measurement_specific_observable_formula(
 
     Returns
     -------
-    The offset and scaling parameters.
+    See :func:`_validate_observable_formula_form`.
     """
     formula, formula_inner_parameters = _get_symbolic_formula_from_measurement(
         measurement=measurement,
@@ -350,11 +351,16 @@ def _validate_measurement_specific_observable_formula(
 def _validate_observable_formula_form(
     formula: sp.Expr,
     formula_inner_parameters: dict[sp.Symbol, InnerParameterType],
-) -> tuple[sp.Symbol, sp.Symbol]:
+) -> tuple[sp.Symbol, sp.Symbol, float]:
     """Check that inner parameters enter an observable formula as expected.
 
     The observable formula should take the form
-    ``y = scaling * (...) + offset``.
+    ``y = scaling * (...) [+ constant] [+ offset]``.
+
+    The model is simulated with the scaling at its dummy value 1, which
+    yields ``(...) + constant``. Terms that the scaling does not multiply
+    must therefore be constant, so that the inner problem can subtract them
+    again.
 
     Parameters
     ----------
@@ -366,7 +372,8 @@ def _validate_observable_formula_form(
 
     Returns
     -------
-    The offset and scaling parameters.
+    The offset and scaling parameters, and the constant that the scaling does
+    not multiply (zero if there is no scaling).
     """
     offset = None
     scaling = None
@@ -418,12 +425,32 @@ def _validate_observable_formula_form(
                     "A scaling is in the observable formula, but is not of "
                     "the expected form. The observable formula should take "
                     "the form `y = scaling*(...) [+ offset]`. Observable "
-                    f"formula: `{formula}`. Offset: `{scaling}`."
+                    f"formula: `{formula}`. Scaling: `{scaling}`."
                 ) from e
         else:
             raise ValueError("Unknown error: unexpected inner parameter type.")
 
-    return offset, scaling
+    if scaling is None:
+        return offset, scaling, 0.0
+
+    unscaled = sp.Add(
+        *(
+            term
+            for term in terms
+            if scaling not in term.free_symbols and term != offset
+        )
+    )
+    if unscaled.free_symbols:
+        raise ValueError(
+            "A scaling is in the observable formula, but the formula has "
+            "terms that are neither multiplied by the scaling nor the offset, "
+            "and that are not constant. The observable formula should take "
+            "the form `y = scaling*(...) [+ constant] [+ offset]`. "
+            f"Observable formula: `{formula}`. Scaling: `{scaling}`. "
+            f"Non-constant terms: `{unscaled}`. Estimate the scaling as an "
+            "outer parameter instead."
+        )
+    return offset, scaling, float(unscaled)
 
 
 def _validate_measurement_specific_noise_formula(
@@ -749,30 +776,17 @@ def get_inner_parameters_v2(
     return inner_parameters
 
 
-def validate_measurement_formulae_v2(
+def _iterate_measurement_formulae_v2(
     petab_problem: v2.Problem,
-    inner_parameters: dict[str, InnerParameterType],
-) -> pd.DataFrame:
-    """Check whether formulae associated with a measurement are valid.
+) -> Iterator[tuple[v2.Observable, sp.Expr, sp.Expr]]:
+    """Iterate over the measurements of a PEtab v2 problem, in table order.
 
-    PEtab v2 version of :func:`validate_measurement_formulae`.
-
-    Parameters
-    ----------
-    petab_problem:
-        The PEtab v2 problem.
-    inner_parameters:
-        See :func:`get_inner_parameters_v2`.
-
-    Returns
-    -------
-    A dataframe containing the inner parameters for each measurement.
+    Yields the observable of each measurement, and its observable and noise
+    formulae with the measurement-specific overrides substituted.
     """
     observables = {
         observable.id: observable for observable in petab_problem.observables
     }
-
-    inner_parameter_sets = []
     for measurement in petab_problem.measurements:
         observable = observables[measurement.observable_id]
 
@@ -793,10 +807,94 @@ def validate_measurement_formulae_v2(
         )
 
         # PEtab v2 parses the formulas into sympy expressions already
-        observable_formula = observable.formula.subs(substitutions)
-        noise_formula = observable.noise_formula.subs(substitutions)
+        yield (
+            observable,
+            observable.formula.subs(substitutions),
+            observable.noise_formula.subs(substitutions),
+        )
 
-        offset, scaling = _validate_observable_formula_form(
+
+def get_unscaled_constants(
+    petab_problem: v1.Problem | v2.Problem,
+    inner_parameter_ids: Collection[str],
+) -> list[float]:
+    """Get the constant observable terms that the scaling does not multiply.
+
+    See :func:`_validate_observable_formula_form`.
+
+    Parameters
+    ----------
+    petab_problem:
+        The PEtab problem, with inner parameters.
+    inner_parameter_ids:
+        The inner parameters to consider. Any other parameter counts as an
+        ordinary parameter, which makes the terms it appears in non-constant.
+
+    Returns
+    -------
+    The constant, for each measurement in the order of the measurement
+    table. Zero for measurements without a scaling.
+    """
+    inner_parameters = {
+        parameter_id: parameter_type
+        for parameter_id, parameter_type in (
+            get_inner_parameters_v2(petab_problem)
+            if isinstance(petab_problem, v2.Problem)
+            else get_inner_parameters(petab_problem)
+        ).items()
+        if parameter_id in inner_parameter_ids
+    }
+    if isinstance(petab_problem, v2.Problem):
+        return [
+            _validate_observable_formula_form(
+                formula=observable_formula,
+                formula_inner_parameters=_get_formula_inner_parameters(
+                    symbolic_formula=observable_formula,
+                    formula_type="observable",
+                    inner_parameters=inner_parameters,
+                ),
+            )[2]
+            for _, observable_formula, _ in _iterate_measurement_formulae_v2(
+                petab_problem
+            )
+        ]
+
+    return [
+        _validate_measurement_specific_observable_formula(
+            measurement=measurement,
+            petab_problem=petab_problem,
+            inner_parameters=inner_parameters,
+        )[2]
+        for _, measurement in petab_problem.measurement_df.iterrows()
+    ]
+
+
+def validate_measurement_formulae_v2(
+    petab_problem: v2.Problem,
+    inner_parameters: dict[str, InnerParameterType],
+) -> pd.DataFrame:
+    """Check whether formulae associated with a measurement are valid.
+
+    PEtab v2 version of :func:`validate_measurement_formulae`.
+
+    Parameters
+    ----------
+    petab_problem:
+        The PEtab v2 problem.
+    inner_parameters:
+        See :func:`get_inner_parameters_v2`.
+
+    Returns
+    -------
+    A dataframe containing the inner parameters for each measurement.
+    """
+    inner_parameter_sets = []
+    for (
+        observable,
+        observable_formula,
+        noise_formula,
+    ) in _iterate_measurement_formulae_v2(petab_problem):
+        offset, scaling, _ = _validate_observable_formula_form(
             formula=observable_formula,
             formula_inner_parameters=_get_formula_inner_parameters(
                 symbolic_formula=observable_formula,
