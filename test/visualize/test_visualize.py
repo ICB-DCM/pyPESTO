@@ -1687,6 +1687,41 @@ def test_visualize_estimated_observable_mapping():
 
 
 @close_fig
+def test_visualize_estimated_observable_mapping_offset_only(tmp_path):
+    """A relative observable can have an offset without a scaling."""
+    import petabtests
+
+    petab_problem = petab.Problem.from_yaml(
+        petabtests.get_case_dir("0001", "sbml", "v1.0.0") / "_0001.yaml"
+    )
+    petab_problem.observable_df[petab.OBSERVABLE_FORMULA] = (
+        "A + observableParameter1_obs_a"
+    )
+    petab_problem.measurement_df[petab.OBSERVABLE_PARAMETERS] = "offset_a"
+    petab_problem.parameter_df.loc["offset_a"] = [petab.LIN, -10, 10, 0, 1]
+    petab_problem.parameter_df[pypesto.C.PARAMETER_TYPE] = None
+    petab_problem.parameter_df.loc["offset_a", pypesto.C.PARAMETER_TYPE] = (
+        pypesto.C.InnerParameterType.OFFSET
+    )
+
+    importer = pypesto.petab.PetabImporter(
+        petab_problem,
+        hierarchical=True,
+        model_name="observable_mapping_offset_only",
+        output_folder=str(tmp_path),
+    )
+    problem = importer.create_problem()
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        optimizer=optimize.ScipyOptimizer(options={"maxiter": 1}),
+        progress_bar=False,
+    )
+    axes = visualize.visualize_estimated_observable_mapping(result, problem)
+    assert axes.size == 1
+
+
+@close_fig
 def test_projection_scatter_umap_parameters():
     """Test UMAP projection scatter visualization for parameters."""
     problem = create_petab_problem()
