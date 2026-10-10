@@ -626,6 +626,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         hierarchical: bool = False,
         non_quantitative_data_types: Iterable[str] | None = None,
         inner_options: dict[str, Any] | None = None,
+        parameter_scales: dict[str, str] | None = None,
         **kwargs,
     ):
         """
@@ -633,6 +634,9 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
 
         See :class:`AmiciObjectiveCreator`. Of the non-quantitative data
         types, only relative data are supported for PEtab v2 so far.
+        ``parameter_scales`` is passed on to
+        :meth:`amici.importers.petab.PetabImporter.create_simulator`, which
+        requires amici>1.1.0.
         """
         super().__init__(
             petab_problem=petab_problem,
@@ -641,6 +645,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             inner_options=inner_options,
             **kwargs,
         )
+        self.parameter_scales = parameter_scales
 
     def compile_model(self, **kwargs):
         """
@@ -769,7 +774,13 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             )
         petab_importer = self._create_amici_importer()
         petab_simulator = petab_importer.create_simulator(
-            force_import=force_compile
+            force_import=force_compile,
+            # only pass if set: parameter scales were added after amici 1.1.0
+            **(
+                {"parameter_scales": self.parameter_scales}
+                if self.parameter_scales
+                else {}
+            ),
         )
 
         x_ids = self.petab_problem.x_ids

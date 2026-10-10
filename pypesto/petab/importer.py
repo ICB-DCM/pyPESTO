@@ -82,6 +82,7 @@ class PetabImporter:
         simulator_type: str = AMICI,
         simulator: petab.Simulator | None = None,
         rr: roadrunner.RoadRunner | None = None,
+        parameter_scales: dict[str, str] | None = None,
     ):
         """Initialize importer.
 
@@ -117,9 +118,21 @@ class PetabImporter:
         simulator:
             In case of a ``simulator_type == 'petab'``, the simulator object
             has to be provided. Otherwise, the argument is not used.
+        parameter_scales:
+            PEtab v2 only: the scale (``'lin'``, ``'log'`` or ``'log10'``) on
+            which to estimate each parameter, by parameter ID. Parameters
+            not listed are estimated on linear scale. Bounds, fixed values,
+            start points and priors of the pyPESTO problem are on these
+            scales, and so are the objective's input and its derivatives.
+            Inner parameters of hierarchical optimization are always linear.
+            For PEtab v1, scales are taken from the ``parameterScale`` column.
+            Requires amici>1.1.0.
         """
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
+        self.parameter_scales = _validate_parameter_scales(
+            petab_problem, parameter_scales or {}
+        )
 
         self._non_quantitative_data_types = (
             get_petab_non_quantitative_data_types(petab_problem)
@@ -335,13 +348,23 @@ class PetabImporter:
                         str(parameter.prior_distribution),
                     ),
                     prior_parameters=parameter.prior_parameters,
-                    # PEtab v2 does not support parameter scales
-                    parameter_scale="lin",
+                    parameter_scale=self.parameter_scales.get(
+                        parameter.id, petab.LIN
+                    ),
                 )
             )
         if prior_list:
             return NegLogParameterPriors(prior_list)
         return None
+
+    def _scale(
+        self, x_ids: Sequence[str], values: Sequence[float]
+    ) -> list[float]:
+        """Scale PEtab v2 parameter values according to `parameter_scales`."""
+        return [
+            petab.scale(value, self.parameter_scales.get(x_id, petab.LIN))
+            for x_id, value in zip(x_ids, values, strict=True)
+        ]
 
     def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
@@ -386,6 +409,7 @@ class PetabImporter:
                 inner_options=self.inner_options,
                 non_quantitative_data_types=self._non_quantitative_data_types,
                 validate_petab=self.validate_petab,
+                parameter_scales=self.parameter_scales,
             )
 
         if simulator_type == AMICI:
@@ -455,9 +479,12 @@ class PetabImporter:
             ub = self.petab_problem.ub_scaled
             prior = self.create_prior()
         else:
-            x_fixed_vals = self.petab_problem.x_nominal_fixed
-            lb = self.petab_problem.lb
-            ub = self.petab_problem.ub
+            x_fixed_vals = self._scale(
+                self.petab_problem.x_fixed_ids,
+                self.petab_problem.x_nominal_fixed,
+            )
+            lb = self._scale(x_ids, self.petab_problem.lb)
+            ub = self._scale(x_ids, self.petab_problem.ub)
             prior = self._create_prior_v2()
 
         # Raise error if the correct calculator is not used.
@@ -471,6 +498,15 @@ class PetabImporter:
         # inner subproblem are removed from the outer problem
         if self._hierarchical:
             inner_parameter_ids = objective.calculator.get_inner_par_ids()
+            if scaled_inner := set(inner_parameter_ids) & {
+                x_id
+                for x_id, scale in self.parameter_scales.items()
+                if scale != petab.LIN
+            }:
+                raise ValueError(
+                    "Inner parameters are estimated on linear scale, but "
+                    f"`parameter_scales` sets another scale for {scaled_inner}."
+                )
             lb = [
                 b
                 for x, b in zip(x_ids, lb, strict=True)
@@ -496,8 +532,9 @@ class PetabImporter:
                 for x_id in x_ids
             ]
         else:
-            # PEtab v2 -- no parameter scaling
-            x_scales = [petab.LIN for x_id in x_ids]
+            x_scales = [
+                self.parameter_scales.get(x_id, petab.LIN) for x_id in x_ids
+            ]
 
         if problem_kwargs is None:
             problem_kwargs = {}
@@ -688,6 +725,25 @@ class PetabImporter:
         raise NotImplementedError(
             "This function has been moved to `AmiciObjectiveCreator`."
         )
+
+
+def _validate_parameter_scales(
+    petab_problem: petab.Problem | v2.Problem,
+    parameter_scales: dict[str, str],
+) -> dict[str, str]:
+    """Check the ``parameter_scales`` argument of :class:`PetabImporter`.
+
+    Unknown parameter IDs and invalid scales are rejected by AMICI's
+    :meth:`amici.importers.petab.PetabImporter.create_simulator`.
+    """
+    if not parameter_scales:
+        return {}
+    if not isinstance(petab_problem, v2.Problem):
+        raise ValueError(
+            "`parameter_scales` is only supported for PEtab v2 problems. For "
+            "PEtab v1, use the `parameterScale` column of the parameter table."
+        )
+    return dict(parameter_scales)
 
 
 def _find_output_folder_name(

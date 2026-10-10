@@ -232,7 +232,7 @@ jobs:
 
     - name: Run tests
       timeout-minutes: 20
-      run: tox -e hierarchical
+      run: tox -e hierarchical && tox e -e hierarchical -- pip uninstall -y amici
 
     - name: Upload coverage
       uses: ./.github/actions/coverage
