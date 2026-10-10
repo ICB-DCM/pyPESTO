@@ -8,12 +8,12 @@ has to subtract the constant again, see #1785.
 import copy
 from pathlib import Path
 
-import libsbml
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
 import pytest
 import sympy as sp
+from amici.importers.antimony import antimony2sbml
 from amici.sim.sundials import SensitivityMethod
 from petab import v2
 
@@ -304,33 +304,17 @@ TIMES = np.array([0.5, 1.0, 2.0, 4.0, 8.0])
 CONDITIONS = ["c0", "c1"]
 
 
-def _toy_sbml() -> str:
-    """x1' = -k1 x1, x2' = k1 x1 - k2 x2, with x1(0) = 1, x2(0) = 0."""
-    document = libsbml.SBMLDocument(3, 1)
-    model = document.createModel()
-    model.setId("toy")
-    compartment = model.createCompartment()
-    compartment.setId("cell")
-    compartment.setSize(1)
-    compartment.setConstant(True)
-    for species_id, initial_concentration in (("x1", 1.0), ("x2", 0.0)):
-        species = model.createSpecies()
-        species.setId(species_id)
-        species.setCompartment("cell")
-        species.setInitialConcentration(initial_concentration)
-        species.setHasOnlySubstanceUnits(False)
-        species.setBoundaryCondition(False)
-        species.setConstant(False)
-    for parameter_id, value in OUTER_PARAMETERS_TRUE.items():
-        parameter = model.createParameter()
-        parameter.setId(parameter_id)
-        parameter.setValue(value)
-        parameter.setConstant(True)
-    for species_id, rate in (("x1", "-k1 * x1"), ("x2", "k1 * x1 - k2 * x2")):
-        rule = model.createRateRule()
-        rule.setVariable(species_id)
-        rule.setMath(libsbml.parseL3Formula(rate))
-    return libsbml.writeSBMLToString(document)
+#: x1' = -k1 x1, x2' = k1 x1 - k2 x2, with x1(0) = 1, x2(0) = 0
+TOY_MODEL = """
+model toy
+  compartment cell = 1
+  species x1 in cell = 1, x2 in cell = 0
+  J1: x1 -> x2; k1 * x1
+  J2: x2 -> ; k2 * x2
+  k1 = 0.5
+  k2 = 0.3
+end
+"""
 
 
 def _true_measurements(observable_id: str, condition_ix: int) -> np.ndarray:
@@ -372,7 +356,7 @@ def _true_measurements(observable_id: str, condition_ix: int) -> np.ndarray:
 def toy_problem_dir(tmp_path_factory) -> Path:
     """A PEtab v1 problem with one observable per form, with noisy data."""
     directory = tmp_path_factory.mktemp("observable_formula_forms")
-    (directory / "model.xml").write_text(_toy_sbml())
+    (directory / "model.xml").write_text(antimony2sbml(TOY_MODEL))
 
     rng = np.random.default_rng(1)
     measurements = []
