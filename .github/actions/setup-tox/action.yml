@@ -8,15 +8,34 @@ runs:
   using: composite
   steps:
     - name: Prepare python ${{ inputs.python-version }}
+      id: setup-python
       uses: actions/setup-python@v7
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: Cache
+    # rotate caches weekly, so upstream releases are picked up
+    - name: Get ISO week
+      id: week
+      shell: bash
+      run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+    # download caches never decide which versions get installed,
+    # so falling back to older entries is safe
+    - name: Cache downloads
       uses: actions/cache@v6
       with:
         path: |
           ~/.cache/pip
           ~/.cache/uv
-          .tox/
-        key: "${{ runner.os }}-${{ runner.arch }}-py${{ inputs.python-version }}-ci-${{ github.job }}"
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-${{ steps.week.outputs.week }}"
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-
+          ${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-
+
+    # no restore-keys: restoring an older env would bring back stale
+    # dependencies
+    - name: Cache tox environments
+      uses: actions/cache@v6
+      with:
+        path: .tox/
+        key: "${{ runner.os }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-tox-${{ github.job }}-${{ hashFiles('tox.ini', 'pyproject.toml') }}-${{ steps.week.outputs.week }}"
