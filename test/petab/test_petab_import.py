@@ -600,15 +600,15 @@ def test_petab_v2_parameter_scales():
     x = np.asarray(petab_problem_v1.x_nominal_free_scaled)
     fval_v1, grad_v1, hess_v1 = problem_v1.objective(x, sensi_orders=(0, 1, 2))
     fval_v2, grad_v2, hess_v2 = problem_v2.objective(x, sensi_orders=(0, 1, 2))
-    assert np.isclose(fval_v2, fval_v1, rtol=1e-6)
-    assert np.allclose(grad_v2, grad_v1, rtol=1e-3, atol=1e-3)
-    assert np.allclose(hess_v2, hess_v1, rtol=1e-3, atol=1e-3)
+    assert np.isclose(fval_v2, fval_v1)
+    assert np.allclose(grad_v2, grad_v1)
+    assert np.allclose(hess_v2, hess_v1)
 
     for problem in (problem_v1, problem_v2):
         problem.objective.amici_model.set_add_sigma_residuals(True)
     sres_v1 = problem_v1.objective(x, sensi_orders=(1,), mode=MODE_RES)
     sres_v2 = problem_v2.objective(x, sensi_orders=(1,), mode=MODE_RES)
-    assert np.allclose(sres_v2, sres_v1, rtol=1e-3, atol=1e-3)
+    assert np.allclose(sres_v2, sres_v1)
 
 
 def test_petab_v2_parameter_scales_invalid():

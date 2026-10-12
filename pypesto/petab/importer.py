@@ -498,15 +498,6 @@ class PetabImporter:
         # inner subproblem are removed from the outer problem
         if self._hierarchical:
             inner_parameter_ids = objective.calculator.get_inner_par_ids()
-            if scaled_inner := set(inner_parameter_ids) & {
-                x_id
-                for x_id, scale in self.parameter_scales.items()
-                if scale != petab.LIN
-            }:
-                raise ValueError(
-                    "Inner parameters are estimated on linear scale, but "
-                    f"`parameter_scales` sets another scale for {scaled_inner}."
-                )
             lb = [
                 b
                 for x, b in zip(x_ids, lb, strict=True)

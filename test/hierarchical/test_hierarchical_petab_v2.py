@@ -181,6 +181,13 @@ def test_hierarchical_petab_v2_matches_v1(
                 rtol=RTOL_GRAD,
                 atol=RTOL_GRAD * np.max(np.abs(grad_v1)),
             )
+        # the FIM transforms with the chain rule
+        dx_linear = _grad_to_scaled(np.ones_like(x_linear), x_linear, scales)
+        assert np.allclose(
+            problem_v2_scaled.objective(x_scaled, sensi_orders=(2,)),
+            problem_v2.objective(x_linear, sensi_orders=(2,))
+            * np.outer(dx_linear, dx_linear),
+        )
 
         # the optimal inner parameters agree
         ret_v1 = problem_v1.objective(
@@ -216,7 +223,7 @@ def test_hierarchical_petab_v2_scaled_inner_parameters(petab_problem_v2):
         parameter_scales={"scaling_pSTAT5A_rel": "log10"},
     )
     with pytest.raises(ValueError, match="Inner parameters"):
-        importer.create_problem()
+        importer.create_objective_creator().create_objective()
 
 
 def test_hierarchical_petab_v2_gradient_check(petab_problem_v2, objective_v2):

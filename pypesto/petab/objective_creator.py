@@ -647,6 +647,15 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         )
         self.parameter_scales = parameter_scales
 
+    def _parameter_scales_kwargs(self) -> dict[str, dict[str, str]]:
+        """Get the ``parameter_scales`` keyword argument for AMICI.
+
+        Only passed if set: parameter scales were added after amici 1.1.0.
+        """
+        if not self.parameter_scales:
+            return {}
+        return {"parameter_scales": self.parameter_scales}
+
     def compile_model(self, **kwargs):
         """
         Compile the model.
@@ -727,6 +736,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             #  experiment table is converted to the model), and only that
             #  version matches the compiled model
             petab_problem=self._create_amici_importer().petab_problem,
+            **self._parameter_scales_kwargs(),
         ).create_edatas()
 
     def create_objective(
@@ -774,13 +784,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             )
         petab_importer = self._create_amici_importer()
         petab_simulator = petab_importer.create_simulator(
-            force_import=force_compile,
-            # only pass if set: parameter scales were added after amici 1.1.0
-            **(
-                {"parameter_scales": self.parameter_scales}
-                if self.parameter_scales
-                else {}
-            ),
+            force_import=force_compile, **self._parameter_scales_kwargs()
         )
 
         x_ids = self.petab_problem.x_ids
@@ -803,6 +807,15 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             # parameters estimated in the inner subproblems are removed from
             #  the objective parameters
             inner_parameter_ids = set(calculator.get_inner_par_ids())
+            if scaled_inner := {
+                x_id
+                for x_id in inner_parameter_ids
+                if (self.parameter_scales or {}).get(x_id, LIN) != LIN
+            }:
+                raise ValueError(
+                    "Inner parameters are estimated on linear scale, but "
+                    f"`parameter_scales` sets another scale for {scaled_inner}."
+                )
             x_ids = [x_id for x_id in x_ids if x_id not in inner_parameter_ids]
 
         return AmiciPetabV2Objective(
