@@ -453,14 +453,16 @@ def test_analytical_computations():
     assert np.isclose(sigma_value, expected_sigma_value, rtol=rtol)
 
 
-def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
+def inner_problem_exp(
+    add_scaling: bool = True, add_offset: bool = True, sigma: float = 3
+):
     function = np.exp
     timepoints = np.linspace(0, 3, 101)
 
     expected_values = {
         "scaling_": 5,
         "offset_": 2,
-        "sigma_": 3,
+        "sigma_": sigma,
     }
 
     simulation = function(timepoints)
@@ -535,9 +537,11 @@ def test_analytical_inner_solver():
     assert np.isclose(result["sigma_"], expected_values["sigma_"], rtol=rtol)
 
 
-def test_numerical_inner_solver():
+# small sigma: the line search must not step onto the sigma bound 0
+@pytest.mark.parametrize("sigma", [3, 0.01])
+def test_numerical_inner_solver(sigma):
     """Test numerically-solved hierarchical inner parameters."""
-    inner_problem, expected_values, simulation = inner_problem_exp()
+    inner_problem, expected_values, simulation = inner_problem_exp(sigma=sigma)
 
     dummy_sigma = np.ones(simulation.shape)
 
