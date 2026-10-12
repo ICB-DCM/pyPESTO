@@ -499,16 +499,34 @@ class NumericalInnerSolver(RelativeInnerSolver):
                 i for i in range(len(pars)) if pars[i].ub != np.inf
             ]
 
-        lb = [x.lb for x in pars]
-        ub = [x.ub for x in pars]
+        # Optimize sigmas on log scale: the likelihood is undefined at their
+        #  lower bound 0, onto which the line search may otherwise project.
+        is_sigma = np.array(
+            [x.inner_parameter_type == InnerParameterType.SIGMA for x in pars]
+        )
 
-        x_guesses = self.sample_startpoints(problem, pars)
+        def to_opt(x):
+            x = np.array(x, dtype=float)
+            with np.errstate(divide="ignore"):
+                x[..., is_sigma] = np.log(x[..., is_sigma])
+            return x
+
+        def from_opt(x):
+            x = np.array(x, dtype=float)
+            x[..., is_sigma] = np.exp(x[..., is_sigma])
+            return x
+
+        lb = to_opt([x.lb for x in pars])
+        ub = to_opt([x.ub for x in pars])
+
+        x_guesses = to_opt(self.sample_startpoints(problem, pars))
 
         x_names = [x.inner_parameter_id for x in pars]
         data = problem.data
 
         # objective function
         def fun(x):
+            x = from_opt(x)
             _sim = copy.deepcopy(sim)
             _sigma = copy.deepcopy(sigma)
             _data = copy.deepcopy(data)
@@ -541,7 +559,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
 
         # perform the actual optimization
         result = minimize(pypesto_problem, **self.minimize_kwargs)
-        best_par = result.optimize_result.list[0]["x"]
+        best_par = from_opt(result.optimize_result.list[0]["x"])
 
         # Check if the index of an optimized parameter on the dummy bound
         # is not in the list of specified bounds. If so, raise an error.
@@ -567,7 +585,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
         x_opt = dict(zip(pypesto_problem.x_names, best_par, strict=True))
 
         # cache
-        self.x_guesses = np.array(
+        self.x_guesses = from_opt(
             [
                 entry["x"]
                 for entry in result.optimize_result.list[: self.n_cached]
