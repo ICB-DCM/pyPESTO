@@ -357,10 +357,13 @@ def _validate_observable_formula_form(
     The observable formula should take the form
     ``y = scaling * (...) [+ constant] [+ offset]``.
 
-    The model is simulated with the scaling at its dummy value 1, which
-    yields ``(...) + constant``. Terms that the scaling does not multiply
-    must therefore be constant, so that the inner problem can subtract them
-    again.
+    Neither the offset nor the constant is multiplied by the scaling, but
+    the inner problem treats them differently: the offset is removed from the
+    simulation by its dummy value 0, the constant is not, and is subtracted
+    instead (see
+    :attr:`pypesto.hierarchical.relative.RelativeInnerProblem.unscaled_constants`).
+    Only a constant can be subtracted without simulating it separately, so
+    any other term that the scaling does not multiply is rejected.
 
     Parameters
     ----------
@@ -444,8 +447,10 @@ def _validate_observable_formula_form(
         raise ValueError(
             "A scaling is in the observable formula, but the formula has "
             "terms that are neither multiplied by the scaling nor the offset, "
-            "and that are not constant. The observable formula should take "
-            "the form `y = scaling*(...) [+ constant] [+ offset]`. "
+            "and that are not constant. Hierarchical optimization can only "
+            "remove constant terms from the simulation before applying the "
+            "scaling. The observable formula should take the form "
+            "`y = scaling*(...) [+ constant] [+ offset]`. "
             f"Observable formula: `{formula}`. Scaling: `{scaling}`. "
             f"Non-constant terms: `{unscaled}`. Estimate the scaling as an "
             "outer parameter instead."
@@ -818,9 +823,11 @@ def get_unscaled_constants(
     petab_problem: v1.Problem | v2.Problem,
     inner_parameter_ids: Collection[str],
 ) -> list[float]:
-    """Get the constant observable terms that the scaling does not multiply.
+    """Get the constant of each measurement's observable formula.
 
-    See :func:`_validate_observable_formula_form`.
+    That is, ``c`` in ``y = scaling * h + c [+ offset]``. See
+    :attr:`pypesto.hierarchical.relative.RelativeInnerProblem.unscaled_constants`
+    for why it is needed, and :func:`_validate_observable_formula_form`.
 
     Parameters
     ----------

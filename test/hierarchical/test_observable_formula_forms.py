@@ -1,8 +1,9 @@
 """Tests for the observable formula forms of hierarchical optimization.
 
-An observable ``y = scaling * h + constant [+ offset]`` is simulated with the
-scaling at its dummy value 1, i.e. as ``h + constant``. The inner problem then
-has to subtract the constant again, see #1785.
+For an observable ``y = scaling * h + constant [+ offset]``, the inner problem
+is solved with the simulation at scaling 1 and offset 0, i.e. ``h + constant``.
+Unlike the offset, the constant is part of that simulation, and has to be
+subtracted before the scaling is applied, see #1785.
 """
 
 import copy

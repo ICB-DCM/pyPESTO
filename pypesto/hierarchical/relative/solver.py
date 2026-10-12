@@ -254,9 +254,10 @@ class RelativeInnerSolver(InnerSolver):
         inner_parameters = copy.deepcopy(inner_parameters)
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
 
-        # apply offsets, scalings and sigmas. The scaling does not multiply
-        #  the unscaled constants, so it is applied without them, and the
-        #  change it makes is added to the simulation.
+        # apply offsets, scalings and sigmas. The simulation is `h + c`, and
+        #  the model output `scaling * h + c [+ offset]`: the scaling applies
+        #  to `h` alone, so the change it makes there is added to the
+        #  simulation (see `RelativeInnerProblem.unscaled_constants`).
         unscaled_sim = subtract_unscaled_constants(sim, problem)
         scaled_sim = copy.deepcopy(unscaled_sim)
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):

@@ -57,10 +57,19 @@ class RelativeInnerProblem(AmiciInnerProblem):
     edatas:
         AMICI ``ExpData``\s for each simulation condition.
     unscaled_constants:
-        The constant observable terms that the scaling does not multiply
-        (see :func:`pypesto.hierarchical.petab.get_unscaled_constants`). One
-        matrix per simulation condition, like ``data``. ``None`` if there are
-        none.
+        The constant ``c`` of each measurement with an observable
+        ``y = scaling * h + c [+ offset]``. One matrix per simulation
+        condition, like ``data``, zero where there is no constant. ``None``
+        if there are none.
+
+        The inner problem is solved with the model simulated at the dummy
+        values of the inner parameters, scaling 1 and offset 0. That
+        simulation is ``h + c``: the offset drops out, but the constant does
+        not. The solvers multiply the simulation by the scaling, which would
+        scale the constant too. So the constant is subtracted from both the
+        simulation and the data, which leaves ``y - c = scaling * h
+        [+ offset]``. The offset needs no such correction: its dummy value
+        already removes it from the simulation.
     """
 
     def __init__(
