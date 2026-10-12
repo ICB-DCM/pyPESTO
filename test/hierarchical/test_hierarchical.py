@@ -453,14 +453,16 @@ def test_analytical_computations():
     assert np.isclose(sigma_value, expected_sigma_value, rtol=rtol)
 
 
-def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
+def inner_problem_exp(
+    add_scaling: bool = True, add_offset: bool = True, sigma: float = 3
+):
     function = np.exp
     timepoints = np.linspace(0, 3, 101)
 
     expected_values = {
         "scaling_": 5,
         "offset_": 2,
-        "sigma_": 3,
+        "sigma_": sigma,
     }
 
     simulation = function(timepoints)
@@ -535,9 +537,11 @@ def test_analytical_inner_solver():
     assert np.isclose(result["sigma_"], expected_values["sigma_"], rtol=rtol)
 
 
-def test_numerical_inner_solver():
+# small sigma: the line search must not step onto the sigma bound 0
+@pytest.mark.parametrize("sigma", [3, 0.01])
+def test_numerical_inner_solver(sigma):
     """Test numerically-solved hierarchical inner parameters."""
-    inner_problem, expected_values, simulation = inner_problem_exp()
+    inner_problem, expected_values, simulation = inner_problem_exp(sigma=sigma)
 
     dummy_sigma = np.ones(simulation.shape)
 
@@ -797,6 +801,46 @@ def test_validate():
         measurement_df=measurement_df,
     )
     validate_hierarchical_petab_problem(petab_problem)
+
+
+def test_validate_non_normal_noise():
+    """Inner parameters on a non-Gaussian observable are rejected."""
+    observable_df = petab.get_observable_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1"],
+                petab.OBSERVABLE_FORMULA: ["observableParameter1_obs1 * x1"],
+                petab.NOISE_FORMULA: ["0.1"],
+                petab.NOISE_DISTRIBUTION: [petab.LAPLACE],
+            }
+        )
+    )
+    measurement_df = petab.get_measurement_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1"],
+                petab.TIME: [0],
+                petab.MEASUREMENT: [1],
+                petab.OBSERVABLE_PARAMETERS: ["s"],
+            }
+        )
+    )
+    parameter_df = petab.get_parameter_df(
+        pd.DataFrame(
+            {
+                petab.PARAMETER_ID: ["s"],
+                "parameterType": ["scaling"],
+                "estimate": [1],
+            }
+        )
+    )
+    petab_problem = petab.Problem(
+        observable_df=observable_df,
+        parameter_df=parameter_df,
+        measurement_df=measurement_df,
+    )
+    with pytest.raises(NotImplementedError, match="Noise distribution"):
+        validate_hierarchical_petab_problem(petab_problem)
 
 
 def test_validate_with_some_sigmas_not_hierarchical():
