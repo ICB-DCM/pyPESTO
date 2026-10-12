@@ -18,6 +18,9 @@ import pypesto
 import pypesto.optimize
 import pypesto.petab
 from pypesto.petab import PetabImporter
+from pypesto.testing.examples import (
+    get_Boehm_JProteomeRes2014_hierarchical_petab,
+)
 
 # In CI, bionetgen is installed here
 BNGPATH = os.path.abspath(
@@ -575,6 +578,19 @@ def test_output_folder_unique_per_model():
         )
         petab_problem.model.model_id = "model"
         output_folders.add(PetabImporter(petab_problem).output_folder)
+    assert len(output_folders) == 2
+
+
+def test_output_folder_unique_per_observables():
+    """Problems that share a model but not the observables, which AMICI
+    compiles into the model, must not share a folder."""
+    output_folders = {
+        PetabImporter(petab_problem).output_folder
+        for petab_problem in (
+            models.get_problem("Boehm_JProteomeRes2014"),
+            get_Boehm_JProteomeRes2014_hierarchical_petab(),
+        )
+    }
     assert len(output_folders) == 2
 
 

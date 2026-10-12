@@ -183,6 +183,44 @@ def test_hierarchical_petab_v2_matches_v1(
             assert np.isclose(value_v1, inner_v2[inner_id], rtol=1e-5)
 
 
+def test_hierarchical_petab_v2_fim_matches_v1(
+    petab_problem_v1, problem_v1, problem_v2
+):
+    """The FIM-based Hessians match between the PEtab v1 and v2 hierarchical
+    objectives.
+
+    Unlike the function value and gradient, AMICI computes the FIM with the
+    optimal inner parameters filled into the compiled observables, so a model
+    compiled for other observables shows only here.
+    """
+    x_names_free = [problem_v1.x_names[ix] for ix in problem_v1.x_free_indices]
+    scales = [
+        petab_problem_v1.parameter_df.loc[x_id, PARAMETER_SCALE]
+        for x_id in x_names_free
+    ]
+    x_linear = petab_problem_v1.parameter_df.loc[
+        x_names_free, NOMINAL_VALUE
+    ].to_numpy()
+    x_scaled = np.asarray(
+        [
+            x if scale == LIN else np.log10(x)
+            for x, scale in zip(x_linear, scales, strict=True)
+        ]
+    )
+    # the v1 objective operates on scaled parameters, the v2 objective on
+    #  linear ones -- transform the v2 FIM with the chain rule
+    dx = _grad_to_scaled(np.ones_like(x_linear), x_linear, scales)
+
+    hess_v1 = problem_v1.objective(x_scaled, sensi_orders=(2,))
+    hess_v2 = problem_v2.objective(x_linear, sensi_orders=(2,))
+    assert np.allclose(
+        hess_v1,
+        hess_v2 * np.outer(dx, dx),
+        rtol=RTOL_GRAD,
+        atol=RTOL_GRAD * np.max(np.abs(hess_v1)),
+    )
+
+
 def test_hierarchical_petab_v2_gradient_check(petab_problem_v2, objective_v2):
     """The v2 hierarchical gradient matches finite differences."""
     objective = copy.deepcopy(objective_v2)

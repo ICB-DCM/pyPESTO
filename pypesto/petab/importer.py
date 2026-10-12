@@ -699,9 +699,11 @@ def _find_output_folder_name(
     Find a name for storing the compiled amici model in.
 
     If provided, use ``model_name``. Otherwise, use the model id from the
-    ``petab_problem`` combined with a short hash of the model, since model
-    ids need not be unique across problems. If neither is available, create a unique name. The folder will be located in the
-    :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the current directory.
+    ``petab_problem`` combined with a short hash of the model and the
+    observable table, since model ids need not be unique across problems. If
+    neither is available, create a unique name. The folder will be located in
+    the :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the current
+    directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(
@@ -719,7 +721,7 @@ def _find_output_folder_name(
     if model_name is not None:
         model_id = model_name
     elif model_id := petab_problem.model.model_id:
-        model_id = f"{model_id}_{_model_hash(petab_problem.model)}"
+        model_id = f"{model_id}_{_model_hash(petab_problem)}"
 
     if model_id:
         output_folder = os.path.abspath(
@@ -733,12 +735,19 @@ def _find_output_folder_name(
     return output_folder
 
 
-def _model_hash(model) -> str:
-    """Short hash of the model content."""
+def _model_hash(petab_problem: petab.Problem | v2.Problem) -> str:
+    """Short hash of the model content and the observable table.
+
+    AMICI compiles the observables into the model, so problems that share a
+    model but differ in their observables need separate builds.
+    """
+    model = petab_problem.model
     if hasattr(model, "to_sbml_str"):
         model_str = model.to_sbml_str()
     else:
         model_str = model.to_str()
+    if petab_problem.observable_df is not None:
+        model_str += petab_problem.observable_df.to_csv(sep="\t")
     return hashlib.sha256(model_str.encode()).hexdigest()[:8]
 
 
