@@ -450,12 +450,14 @@ def stats_lowlevel(
     """
     fvals = result.optimize_result.fval
     values = [[res[property_name]] for res in result.optimize_result.list]
-    values, fvals = delete_nan_inf(fvals, values)
 
-    if start_indices is not None:
+    if start_indices is None:
+        values, fvals = delete_nan_inf(fvals, values)
+    else:
+        # the start indices refer to all starts, and exclude non-finite ones
         start_indices = process_start_indices(result, start_indices)
-        values = values[start_indices]
-        fvals = fvals[start_indices]
+        values = np.asarray(values)[start_indices]
+        fvals = np.asarray(fvals)[start_indices]
 
     n_starts = len(values)
 
