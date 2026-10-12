@@ -700,10 +700,10 @@ def _find_output_folder_name(
 
     If provided, use ``model_name``. Otherwise, use the model id from the
     ``petab_problem`` combined with a short hash of the model and the
-    observable table, since model ids need not be unique across problems. If
-    neither is available, create a unique name. The folder will be located in
-    the :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the current
-    directory.
+    observable and mapping tables, since model ids need not be unique across
+    problems. If neither is available, create a unique name. The folder will
+    be located in the :obj:`PetabImporter.MODEL_BASE_DIR` subdirectory of the
+    current directory.
     """
     # check whether location for amici model is a file
     if os.path.exists(PetabImporter.MODEL_BASE_DIR) and not os.path.isdir(
@@ -736,18 +736,20 @@ def _find_output_folder_name(
 
 
 def _model_hash(petab_problem: petab.Problem | v2.Problem) -> str:
-    """Short hash of the model content and the observable table.
+    """Short hash of the model content, the observable and mapping tables.
 
-    AMICI compiles the observables into the model, so problems that share a
-    model but differ in their observables need separate builds.
+    AMICI compiles the observables and mappings into the model, so problems
+    that share a model but differ in these tables need separate builds.
     """
     model = petab_problem.model
     if hasattr(model, "to_sbml_str"):
         model_str = model.to_sbml_str()
     else:
         model_str = model.to_str()
-    if petab_problem.observable_df is not None:
-        model_str += petab_problem.observable_df.to_csv(sep="\t")
+    # PEtab v1 and v2 problems both provide these tables as data frames
+    for table in (petab_problem.observable_df, petab_problem.mapping_df):
+        if table is not None:
+            model_str += table.to_csv(sep="\t")
     return hashlib.sha256(model_str.encode()).hexdigest()[:8]
 
 
