@@ -1,7 +1,7 @@
 """Helper methods for hierarchical optimization with PEtab."""
 
 import warnings
-from collections.abc import Collection, Iterator
+from collections.abc import Iterator
 
 import pandas as pd
 import petab.v1 as petab
@@ -280,7 +280,7 @@ def validate_measurement_formulae(
     -------
     A dataframe containing the inner parameters for each measurement.
     """
-    inner_parameters = get_inner_parameters(petab_problem=petab_problem)
+    inner_parameters = _get_estimated_inner_parameters(petab_problem)
 
     inner_parameter_sets = []
 
@@ -357,13 +357,12 @@ def _validate_observable_formula_form(
     The observable formula should take the form
     ``y = scaling * (...) [+ constant] [+ offset]``.
 
-    Neither the offset nor the constant is multiplied by the scaling, but
-    the inner problem treats them differently: the offset is removed from the
-    simulation by its dummy value 0, the constant is not, and is subtracted
-    instead (see
+    The inner solvers multiply the whole simulated observable by the
+    scaling, so terms that the scaling does not multiply have to be kept out
+    of it. A constant is subtracted beforehand (see
     :attr:`pypesto.hierarchical.relative.RelativeInnerProblem.unscaled_constants`).
-    Only a constant can be subtracted without simulating it separately, so
-    any other term that the scaling does not multiply is rejected.
+    Terms that depend on states or parameters cannot be separated from the
+    scaled term in a single simulation, so they are rejected.
 
     Parameters
     ----------
@@ -447,9 +446,9 @@ def _validate_observable_formula_form(
         raise ValueError(
             "A scaling is in the observable formula, but the formula has "
             "terms that are neither multiplied by the scaling nor the offset, "
-            "and that are not constant. Hierarchical optimization can only "
-            "remove constant terms from the simulation before applying the "
-            "scaling. The observable formula should take the form "
+            "and that are not constant. Hierarchical optimization can keep "
+            "only constant terms out of the scaling. The observable formula "
+            "should take the form "
             "`y = scaling*(...) [+ constant] [+ offset]`. "
             f"Observable formula: `{formula}`. Scaling: `{scaling}`. "
             f"Non-constant terms: `{unscaled}`. Estimate the scaling as an "
@@ -739,7 +738,7 @@ def validate_hierarchical_petab_problem_v2(petab_problem: v2.Problem) -> None:
             "PEtab v2 problems."
         )
 
-    inner_parameters = get_inner_parameters_v2(petab_problem)
+    inner_parameters = _get_estimated_inner_parameters(petab_problem)
     if not inner_parameters:
         return
 
@@ -819,38 +818,50 @@ def _iterate_measurement_formulae_v2(
         )
 
 
+def _get_estimated_inner_parameters(
+    petab_problem: v1.Problem | v2.Problem,
+) -> dict[str, InnerParameterType]:
+    """Get the inner parameters that are estimated.
+
+    A parameter with a ``parameterType`` that is not estimated is simulated
+    at its nominal value, like any other fixed parameter.
+    """
+    if isinstance(petab_problem, v2.Problem):
+        inner_parameters = get_inner_parameters_v2(petab_problem)
+        estimated = {
+            par.id for par in petab_problem.parameters if par.estimate
+        }
+    else:
+        inner_parameters = get_inner_parameters(petab_problem)
+        parameter_df = petab_problem.parameter_df
+        estimated = set(parameter_df.index[parameter_df[ESTIMATE] == 1])
+    return {
+        parameter_id: parameter_type
+        for parameter_id, parameter_type in inner_parameters.items()
+        if parameter_id in estimated
+    }
+
+
 def get_unscaled_constants(
     petab_problem: v1.Problem | v2.Problem,
-    inner_parameter_ids: Collection[str],
 ) -> list[float]:
     """Get the constant of each measurement's observable formula.
 
-    That is, ``c`` in ``y = scaling * h + c [+ offset]``. See
-    :attr:`pypesto.hierarchical.relative.RelativeInnerProblem.unscaled_constants`
-    for why it is needed, and :func:`_validate_observable_formula_form`.
+    That is, ``c`` in ``y = scaling * h + c [+ offset]``, which must not be
+    scaled. See
+    :attr:`pypesto.hierarchical.relative.RelativeInnerProblem.unscaled_constants`.
 
     Parameters
     ----------
     petab_problem:
         The PEtab problem, with inner parameters.
-    inner_parameter_ids:
-        The inner parameters to consider. Any other parameter counts as an
-        ordinary parameter, which makes the terms it appears in non-constant.
 
     Returns
     -------
     The constant, for each measurement in the order of the measurement
     table. Zero for measurements without a scaling.
     """
-    inner_parameters = {
-        parameter_id: parameter_type
-        for parameter_id, parameter_type in (
-            get_inner_parameters_v2(petab_problem)
-            if isinstance(petab_problem, v2.Problem)
-            else get_inner_parameters(petab_problem)
-        ).items()
-        if parameter_id in inner_parameter_ids
-    }
+    inner_parameters = _get_estimated_inner_parameters(petab_problem)
     if isinstance(petab_problem, v2.Problem):
         return [
             _validate_observable_formula_form(

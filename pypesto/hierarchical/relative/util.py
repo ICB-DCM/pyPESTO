@@ -49,10 +49,7 @@ def subtract_unscaled_constants(
 ) -> list[np.ndarray]:
     """Subtract the unscaled constants from data or simulations.
 
-    For an observable ``y = scaling * h + c [+ offset]``, the simulation at
-    the dummy inner parameters is ``h + c``. With ``c`` subtracted from both
-    the data and the simulation, the solvers fit the usual
-    ``y - c = scaling * h [+ offset]``. See
+    This keeps the constants out of the scaling, see
     :attr:`pypesto.hierarchical.relative.RelativeInnerProblem.unscaled_constants`.
 
     Parameters

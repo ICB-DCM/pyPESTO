@@ -1,9 +1,8 @@
 """Tests for the observable formula forms of hierarchical optimization.
 
-For an observable ``y = scaling * h + constant [+ offset]``, the inner problem
-is solved with the simulation at scaling 1 and offset 0, i.e. ``h + constant``.
-Unlike the offset, the constant is part of that simulation, and has to be
-subtracted before the scaling is applied, see #1785.
+The inner solvers multiply the simulated observable by the scaling. For an
+observable ``y = scaling * h + constant [+ offset]``, they used to scale the
+constant too, see #1785.
 """
 
 import copy
@@ -76,6 +75,8 @@ s, b, t = sp.symbols("s b t")
         ("s*x1 + t", {s: SCALING}, ValueError),
         # the scaling must be a single factor of a single term
         ("s*(x1 + x2) + s", {s: SCALING}, ValueError),
+        # equivalent to s*(x1 + x2) and supportable in principle, but the
+        #  check is on the terms as written
         ("s*x1 + s*x2", {s: SCALING}, ValueError),
         ("s**2*(x1 + x2)", {s: SCALING}, ValueError),
         ("x1/s", {s: SCALING}, ValueError),
@@ -171,50 +172,6 @@ def test_inner_solver_with_unscaled_constants(solver_class, with_offset):
     )
 
 
-def test_get_unscaled_constants_of_fixed_scaling():
-    """A scaling that is annotated, but not estimated, is no inner parameter:
-    the model is simulated at its nominal value, so the other terms of the
-    observable formula are not restricted."""
-    petab_problem = petab.Problem(
-        observable_df=petab.get_observable_df(
-            pd.DataFrame(
-                {
-                    petab.OBSERVABLE_ID: ["obs"],
-                    petab.OBSERVABLE_FORMULA: [
-                        "observableParameter1_obs * x1 + x2"
-                    ],
-                    petab.NOISE_FORMULA: [0.1],
-                }
-            )
-        ),
-        measurement_df=petab.get_measurement_df(
-            pd.DataFrame(
-                {
-                    petab.OBSERVABLE_ID: ["obs"],
-                    petab.SIMULATION_CONDITION_ID: ["c0"],
-                    petab.TIME: [0],
-                    petab.MEASUREMENT: [1],
-                    petab.OBSERVABLE_PARAMETERS: ["s"],
-                }
-            )
-        ),
-        parameter_df=petab.get_parameter_df(
-            pd.DataFrame(
-                {
-                    petab.PARAMETER_ID: ["s"],
-                    PARAMETER_TYPE: [SCALING],
-                    petab.ESTIMATE: [0],
-                }
-            )
-        ),
-    )
-    assert get_unscaled_constants(petab_problem, inner_parameter_ids=[]) == [
-        0.0
-    ]
-    with pytest.raises(ValueError, match="not constant"):
-        get_unscaled_constants(petab_problem, inner_parameter_ids=["s"])
-
-
 #: The observables of the toy model, one per form. Each maps to its
 #: observable formula, its noise formula, and its observable and noise
 #: parameter overrides in each condition.
@@ -240,14 +197,13 @@ OBSERVABLES = {
         ["s_co;b_co"] * 2,
         None,
     ),
-    # the constant is a numeric override; two observables with different
-    #  constants share the scaling. (PEtab v2 import in AMICI does not
-    #  support overrides that differ between conditions.)
+    # the constant is a numeric override, different in each condition, and
+    #  different from that of the next observable, which shares the scaling
     "obs_override": (
         "observableParameter1_obs_override * x2"
         " + observableParameter2_obs_override",
         "0.1",
-        ["s_ov;0.3"] * 2,
+        ["s_ov;0.3", "s_ov;0.6"],
         None,
     ),
     "obs_override2": (
@@ -302,7 +258,10 @@ INNER_PARAMETERS_TRUE = {
 }
 OUTER_PARAMETERS_TRUE = {"k1": 0.5, "k2": 0.3}
 TIMES = np.array([0.5, 1.0, 2.0, 4.0, 8.0])
-CONDITIONS = ["c0", "c1"]
+#: the conditions, and the initial value of x1 in each. The conditions need
+#: to change something, otherwise the upgrade to PEtab v2 drops them, and all
+#: measurements end up in a single experiment.
+CONDITIONS = {"c0": 1.0, "c1": 2.0}
 
 
 #: x1' = -k1 x1, x2' = k1 x1 - k2 x2, with x1(0) = 1, x2(0) = 0
@@ -321,9 +280,11 @@ end
 def _true_measurements(observable_id: str, condition_ix: int) -> np.ndarray:
     """The observable at the true parameters, at ``TIMES``."""
     k1, k2 = OUTER_PARAMETERS_TRUE.values()
+    x1_0 = list(CONDITIONS.values())[condition_ix]
+    decay1, decay2 = np.exp(-k1 * TIMES), np.exp(-k2 * TIMES)
     states = {
-        "x1": np.exp(-k1 * TIMES),
-        "x2": k1 / (k2 - k1) * (np.exp(-k1 * TIMES) - np.exp(-k2 * TIMES)),
+        "x1": x1_0 * decay1,
+        "x2": x1_0 * k1 / (k2 - k1) * (decay1 - decay2),
     }
     formula, _, overrides, _ = OBSERVABLES[observable_id]
     formula = sp.sympify(formula)
@@ -392,7 +353,11 @@ def toy_problem_dir(tmp_path_factory) -> Path:
     inner_ids = list(INNER_PARAMETERS_TRUE)
     tables = {
         "conditions": pd.DataFrame(
-            {petab.CONDITION_ID: CONDITIONS, petab.CONDITION_NAME: CONDITIONS}
+            {
+                petab.CONDITION_ID: list(CONDITIONS),
+                petab.CONDITION_NAME: list(CONDITIONS),
+                "x1": list(CONDITIONS.values()),
+            }
         ),
         "observables": pd.DataFrame(
             {
@@ -488,7 +453,7 @@ def objectives(request, toy_problem_dir, tmp_path_factory):
     ids=["forward", "adjoint"],
 )
 def test_observable_formula_forms_objective(
-    objectives, outer_parameters, sensitivity_method
+    objectives, toy_problem_dir, outer_parameters, sensitivity_method
 ):
     """The hierarchical objective is the standard objective minimized over
     the inner parameters, for every supported form.
@@ -550,11 +515,35 @@ def test_observable_formula_forms_objective(
         )
 
     if outer_parameters == OUTER_PARAMETERS_TRUE:
-        # close to the values that the data were generated with
-        for inner_id, (_, value) in INNER_PARAMETERS_TRUE.items():
-            assert np.isclose(
-                inner_parameters[inner_id], value, rtol=0.2, atol=0.2
-            ), (inner_id, inner_parameters[inner_id], value)
+        # close to the values that the data were generated with, and the
+        #  sigma close to the noise that was actually drawn
+        measurement_df = pd.read_csv(
+            toy_problem_dir / "measurements.tsv", sep="\t"
+        )
+        noise = np.concatenate(
+            [
+                measurement_df.loc[
+                    (measurement_df[petab.OBSERVABLE_ID] == "obs_sigma")
+                    & (
+                        measurement_df[petab.SIMULATION_CONDITION_ID]
+                        == condition_id
+                    ),
+                    petab.MEASUREMENT,
+                ]
+                - _true_measurements("obs_sigma", condition_ix)
+                for condition_ix, condition_id in enumerate(CONDITIONS)
+            ]
+        )
+        expected = {
+            inner_id: value
+            for inner_id, (_, value) in INNER_PARAMETERS_TRUE.items()
+        } | {"sd_sig": np.sqrt(np.mean(noise**2))}
+        for inner_id, value in expected.items():
+            assert np.isclose(inner_parameters[inner_id], value, rtol=0.05), (
+                inner_id,
+                inner_parameters[inner_id],
+                value,
+            )
 
 
 @pytest.mark.parametrize("petab_version", [1, 2])
@@ -572,3 +561,12 @@ def test_validate_non_constant_unscaled_terms(toy_problem_dir, petab_version):
         petab_problem["obs_const"].formula += sp.Symbol("x2", real=True)
     with pytest.raises(ValueError, match="Non-constant terms: `x2 ?[+]"):
         validate_hierarchical_petab_problem(petab_problem)
+
+    # a scaling that is annotated but not estimated is simulated at its
+    #  nominal value, so it does not restrict the other terms
+    if petab_version == 1:
+        petab_problem.parameter_df.loc["s_const", petab.ESTIMATE] = 0
+    else:
+        petab_problem["s_const"].estimate = False
+    validate_hierarchical_petab_problem(petab_problem)
+    get_unscaled_constants(petab_problem)

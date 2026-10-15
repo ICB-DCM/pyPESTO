@@ -58,18 +58,15 @@ class RelativeInnerProblem(AmiciInnerProblem):
         AMICI ``ExpData``\s for each simulation condition.
     unscaled_constants:
         The constant ``c`` of each measurement with an observable
-        ``y = scaling * h + c [+ offset]``. One matrix per simulation
-        condition, like ``data``, zero where there is no constant. ``None``
-        if there are none.
+        ``y = scaling * h + c [+ offset]``, i.e. a fixed offset. One matrix
+        per simulation condition, like ``data``, zero where there is no
+        constant. ``None`` if there are none.
 
-        The inner problem is solved with the model simulated at the dummy
-        values of the inner parameters, scaling 1 and offset 0. That
-        simulation is ``h + c``: the offset drops out, but the constant does
-        not. The solvers multiply the simulation by the scaling, which would
-        scale the constant too. So the constant is subtracted from both the
-        simulation and the data, which leaves ``y - c = scaling * h
-        [+ offset]``. The offset needs no such correction: its dummy value
-        already removes it from the simulation.
+        The solvers multiply the simulated observable by the scaling. ``c``
+        is part of that simulation, but must not be scaled, so it is
+        subtracted from the simulation and the data first. An estimated
+        offset needs no such correction: it is 0 in the simulation, and the
+        solvers add it after scaling.
     """
 
     def __init__(
@@ -379,7 +376,7 @@ def ixs_for_measurement_specific_parameters(
     ixs_for_par = {}
     unscaled_constants = {}
     observable_ids = amici_model.get_observable_ids()
-    measurement_df = _with_unscaled_constants(petab_problem, x_ids)
+    measurement_df = _with_unscaled_constants(petab_problem)
 
     simulation_conditions = (
         petab_problem.get_simulation_conditions_from_measurement_df()
@@ -402,21 +399,12 @@ def ixs_for_measurement_specific_parameters(
 
 def _with_unscaled_constants(
     petab_problem: "petab.Problem | v2.Problem",
-    x_ids: list[str],
 ) -> pd.DataFrame:
-    """Get the measurement table, with each measurement's unscaled constant.
-
-    Only the estimated inner parameters ``x_ids`` count: a parameter that is
-    annotated but not estimated is simulated at its nominal value.
-    """
+    """Get the measurement table, with each measurement's unscaled constant."""
     from ..petab import get_unscaled_constants
 
     return petab_problem.measurement_df.assign(
-        **{
-            _UNSCALED_CONSTANT: get_unscaled_constants(
-                petab_problem, inner_parameter_ids=x_ids
-            )
-        }
+        **{_UNSCALED_CONSTANT: get_unscaled_constants(petab_problem)}
     )
 
 
@@ -587,7 +575,7 @@ def ixs_for_measurement_specific_parameters_v2(
     ixs_for_par = {}
     unscaled_constants = {}
     observable_ids = amici_model.get_observable_ids()
-    measurement_df = _with_unscaled_constants(petab_problem, x_ids)
+    measurement_df = _with_unscaled_constants(petab_problem)
 
     for condition_ix, experiment in enumerate(petab_problem.experiments):
         _ixs_for_condition(
