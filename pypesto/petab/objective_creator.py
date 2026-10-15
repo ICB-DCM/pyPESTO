@@ -34,7 +34,12 @@ from ..hierarchical.inner_calculator_collector import (
     InnerCalculatorCollector,
     InnerCalculatorCollectorPetabV2,
 )
-from ..objective import AmiciObjective, ObjectiveBase, PetabSimulatorObjective
+from ..objective import (
+    AggregatedObjective,
+    AmiciObjective,
+    ObjectiveBase,
+    PetabSimulatorObjective,
+)
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.roadrunner import (
     ExpData,
@@ -772,7 +777,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             force_import=force_compile
         )
 
-        x_ids = self.petab_problem.x_ids
+        x_ids = kwargs.pop("x_ids", self.petab_problem.x_ids)
         if self._hierarchical and self._non_quantitative_data_types:
             inner_options = kwargs.pop("inner_options", None)
             if inner_options is None:
@@ -895,6 +900,89 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         return self.prediction_to_petab_measurement_df(
             prediction, predictor
         ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+
+
+class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
+    """ObjectiveCreator for a PEtab v2 problem with multiple models.
+
+    The problem is split into one single-model problem per model (see
+    :func:`pypesto.petab.util.split_petab_problem_by_model`), each of which is
+    imported separately. Since the models share the parameters but not the
+    data, the objective is the sum of the per-model objectives.
+    """
+
+    def __init__(
+        self,
+        petab_problem: v2.Problem,
+        output_folder: str,
+        model_name: str,
+        validate_petab: bool = True,
+    ):
+        """
+        Initialize the creator.
+
+        Parameters
+        ----------
+        petab_problem:
+            The multi-model PEtab v2 problem.
+        output_folder:
+            Base folder for the compiled models. Each model is compiled into
+            a subfolder named after its model ID.
+        model_name:
+            Prefix of the names of the compiled model modules, which are
+            ``{model_name}_{model_id}``.
+        validate_petab:
+            Whether to validate the single-model problems on import.
+        """
+        from .util import split_petab_problem_by_model
+
+        self.petab_problem = petab_problem
+        self.sub_creators: dict[str, AmiciPetabV2ObjectiveCreator] = {
+            model_id: AmiciPetabV2ObjectiveCreator(
+                petab_problem=sub_problem,
+                output_folder=os.path.join(output_folder, model_id),
+                model_name=f"{model_name}_{model_id}",
+                validate_petab=validate_petab,
+            )
+            for model_id, sub_problem in split_petab_problem_by_model(
+                petab_problem
+            ).items()
+        }
+
+    def compile_model(self, **kwargs):
+        """Compile all models.
+
+        See :meth:`AmiciPetabV2ObjectiveCreator.compile_model`.
+        """
+        for sub_creator in self.sub_creators.values():
+            sub_creator.compile_model(**kwargs)
+
+    def create_objective(self, **kwargs) -> AggregatedObjective:
+        """Create the objective.
+
+        Parameters
+        ----------
+        kwargs:
+            Passed to :meth:`AmiciPetabV2ObjectiveCreator.create_objective`
+            for every model.
+
+        Returns
+        -------
+        An :class:`pypesto.objective.AggregatedObjective` of one
+        :class:`pypesto.objective.AmiciPetabV2Objective` per model. All of
+        them take the parameter vector of the full problem.
+        """
+        x_ids = self.petab_problem.x_ids
+        # the per-model objectives take the parameters of the full problem,
+        #  so that they can be summed; their calculators pass on only the
+        #  parameters of the respective model to the simulator
+        return AggregatedObjective(
+            [
+                sub_creator.create_objective(x_ids=x_ids, **kwargs)
+                for sub_creator in self.sub_creators.values()
+            ],
+            x_names=x_ids,
+        )
 
 
 class PetabSimulatorObjectiveCreator(ObjectiveCreator):

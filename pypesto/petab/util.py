@@ -249,3 +249,107 @@ class PetabStartpoints(CheckedStartpoints):
             ]
 
         return np.array(startpoints).T
+
+
+def split_petab_problem_by_model(
+    petab_problem: "v2.Problem",
+) -> dict[str, "v2.Problem"]:
+    """Split a multi-model PEtab v2 problem into single-model problems.
+
+    Neither libpetab nor AMICI handle more than one model per problem yet
+    (see https://github.com/PEtab-dev/libpetab-python/issues/392), so pyPESTO
+    imports, validates and simulates every model separately. Each sub-problem
+    contains the model, its measurements, and the experiments, conditions,
+    observables, mappings and parameters these require.
+
+    Parameters
+    ----------
+    petab_problem:
+        The PEtab v2 problem.
+
+    Returns
+    -------
+    The single-model problems, keyed by model ID.
+    """
+    from petab.v2.lint import get_valid_parameters_for_parameter_table
+
+    model_ids = {model.model_id for model in petab_problem.models}
+    if len(model_ids) != len(petab_problem.models):
+        raise ValueError("Model IDs must be unique.")
+    if unassigned := [
+        m for m in petab_problem.measurements if m.model_id not in model_ids
+    ]:
+        raise ValueError(
+            f"Measurement not assigned to any model: {unassigned[0]}"
+        )
+
+    sub_problems = {}
+    for model in petab_problem.models:
+        measurements = [
+            m
+            for m in petab_problem.measurements
+            if m.model_id == model.model_id
+        ]
+        experiment_ids = {m.experiment_id for m in measurements}
+        experiments = [
+            e for e in petab_problem.experiments if e.id in experiment_ids
+        ]
+        condition_ids = {
+            condition_id
+            for e in experiments
+            for period in e.periods
+            for condition_id in period.condition_ids
+        }
+        observable_ids = {m.observable_id for m in measurements}
+
+        sub_problem = v2.Problem(
+            models=[model],
+            condition_tables=[
+                v2.ConditionTable(
+                    [
+                        c
+                        for c in petab_problem.conditions
+                        if c.id in condition_ids
+                    ]
+                )
+            ],
+            experiment_tables=[v2.ExperimentTable(experiments)],
+            observable_tables=[
+                v2.ObservableTable(
+                    [
+                        o
+                        for o in petab_problem.observables
+                        if o.id in observable_ids
+                    ]
+                )
+            ],
+            measurement_tables=[v2.MeasurementTable(measurements)],
+            mapping_tables=[
+                v2.MappingTable(
+                    [
+                        m
+                        for m in petab_problem.mappings
+                        if m.model_id is None
+                        or model.has_entity_with_id(m.model_id)
+                    ]
+                )
+            ],
+            extensions=petab_problem.extensions,
+        )
+        # the parameter table is shared -- keep the parameters that are valid
+        #  for this model
+        valid_parameter_ids = get_valid_parameters_for_parameter_table(
+            sub_problem
+        )
+        sub_problem.parameter_tables = [
+            v2.ParameterTable(
+                [
+                    p
+                    for p in petab_problem.parameters
+                    if p.id in valid_parameter_ids
+                ]
+            )
+        ]
+        sub_problems[model.model_id] = sub_problem
+
+    return sub_problems

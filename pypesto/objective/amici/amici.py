@@ -899,11 +899,16 @@ class AmiciPetabV2Objective(AmiciObjective):
         """Get the indices of the parameters without sensitivities.
 
         The PEtab simulator only computes sensitivities for the parameters
-        estimated in the PEtab problem.
+        estimated in the PEtab problem. Parameters that are not part of the
+        PEtab problem at all -- those of the other models of a multi-model
+        problem -- do not affect this objective.
         """
-        estimated = set(self._petab_simulator.exp_man.petab_problem.x_free_ids)
+        petab_problem = self._petab_simulator.exp_man.petab_problem
+        estimated = set(petab_problem.x_free_ids)
         return [
-            ix for ix, x_id in enumerate(self.x_ids) if x_id not in estimated
+            ix
+            for ix, x_id in enumerate(self.x_ids)
+            if x_id in petab_problem.x_ids and x_id not in estimated
         ]
 
     def check_gradients_match_finite_differences(
