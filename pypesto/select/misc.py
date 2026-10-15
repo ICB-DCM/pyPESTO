@@ -14,10 +14,6 @@ from petab_select.constants import PETAB_PROBLEM
 from ..history import Hdf5History
 from ..objective import Objective
 from ..optimize import Optimizer
-from ..optimize.ess import (
-    SacessOptimizer,
-    get_default_ess_options,
-)
 from ..petab import PetabImporter
 from ..problem import Problem
 
@@ -176,17 +172,30 @@ def correct_x_guesses(
 class SacessMinimizeMethod:
     """Create a minimize method for SaCeSS that adapts to each problem.
 
-    When a pyPESTO SaCeSS optimizer is created, it takes the problem
-    dimension as input. Hence, an optimizer needs to be constructed for
-    each problem. Objects of this class act like a minimize method for model
-    selection, but a new problem-specific SaCeSS optimizer will be created
-    every time a model is minimized.
+    Runs :class:`pyscat.SacessOptimizer` (``pip install pyscat``). A SaCeSS
+    optimizer is constructed for one problem, so objects of this class act
+    like a minimize method for model selection, creating a new
+    problem-specific SaCeSS optimizer every time a model is minimized.
 
-    Instance attributes correspond to pyPESTO's SaCeSS optimizer, and are
+    Instance attributes correspond to pyscat's SaCeSS optimizer, and are
     documented there. Extra keyword arguments supplied to the constructor
     will be passed on to the constructor of the SaCeSS optimizer, for example,
-    `max_walltime_s` can be specified in this way. If specified, `tmpdir` will
-    be treated as a parent directory.
+    `max_walltime_s` can be specified in this way.
+
+    Parameters
+    ----------
+    num_workers:
+        The number of SaCeSS workers.
+    local_optimizer:
+        The local optimizer of the scatter searches, see
+        :func:`pyscat.get_default_ess_options`. ``None`` runs no local
+        searches.
+    tmpdir:
+        With ``save_history``, the histories of each model are saved to
+        ``tmpdir / <model hash> / "history"``. Defaults to
+        ``sacess_tmpdir`` in the current working directory.
+    save_history:
+        Whether to save the history of each SaCeSS worker.
     """
 
     def __init__(
@@ -213,7 +222,7 @@ class SacessMinimizeMethod:
     def __call__(
         self, problem: Problem, model_hash: ModelHash, **minimize_options
     ):
-        """Create then run a problem-specific sacess optimizer.
+        """Create then run a problem-specific SaCeSS optimizer.
 
         Parameters
         ----------
@@ -222,38 +231,45 @@ class SacessMinimizeMethod:
         model_hash:
             The model hash.
         minimize_options:
-            Passed to :meth:`SacessOptimizer.minimize`.
+            Not supported: :meth:`pyscat.SacessOptimizer.minimize` takes no
+            arguments. Pass SaCeSS settings to the constructor instead.
 
         Returns
         -------
-        The output from :meth:`SacessOptimizer.minimize`.
+        The output from :meth:`pyscat.SacessOptimizer.minimize`.
         """
+        try:
+            import pyscat
+        except ImportError as e:
+            raise ImportError(
+                "SacessMinimizeMethod requires pyscat: `pip install pyscat`."
+            ) from e
+
+        if minimize_options:
+            raise ValueError(
+                "SaCeSS does not take minimize options, but got "
+                f"{sorted(minimize_options)}. Pass SaCeSS settings to "
+                "`SacessMinimizeMethod` instead."
+            )
+
         # create optimizer
-        ess_init_args = get_default_ess_options(
+        ess_init_args = pyscat.get_default_ess_options(
             num_workers=self.num_workers,
             dim=problem.dim,
         )
         for x in ess_init_args:
             x["local_optimizer"] = self.local_optimizer
-        model_tmpdir = None
-        if self.tmpdir is not None:
-            model_tmpdir = self.tmpdir / str(model_hash)
-            model_tmpdir.mkdir(exist_ok=False, parents=True)
-
-        ess = SacessOptimizer(
+        ess = pyscat.SacessOptimizer(
+            problem=problem,
             ess_init_args=ess_init_args,
-            tmpdir=model_tmpdir,
             **self.optimizer_kwargs,
         )
 
         # optimize
-        result = ess.minimize(
-            problem=problem,
-            **minimize_options,
-        )
+        result = ess.minimize()
 
         if self.save_history:
-            history_dir = model_tmpdir / "history"
+            history_dir = self.tmpdir / str(model_hash) / "history"
             history_dir.mkdir(exist_ok=False, parents=True)
             for history_index, history in enumerate(ess.histories):
                 Hdf5History.from_history(
