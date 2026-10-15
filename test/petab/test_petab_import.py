@@ -312,8 +312,9 @@ def test_petab_v2_boehm():
     )
     expected_fval_nominal = 138.22199693517703
 
-    # create model
-    importer = PetabImporter(petab_problem)
+    # create model; explicit model name, because benchmark problems upgraded
+    #  to PEtab v2 all get the model id `model` (from the SBML file name)
+    importer = PetabImporter(petab_problem, model_name=f"{problem_id}_v2")
     problem = importer.create_problem()
     assert problem.x_names == petab_problem.x_ids
     assert problem.dim == petab_problem.n_estimated == 9
@@ -452,7 +453,9 @@ def test_petab_v2_priors_missing_sensitivities():
     )
     petab_problem.parameters[0].prior_distribution = "normal"
     petab_problem.parameters[0].prior_parameters = [0.0, 1.0]
-    problem = PetabImporter(petab_problem).create_problem()
+    problem = PetabImporter(
+        petab_problem, model_name="Boehm_JProteomeRes2014_v2"
+    ).create_problem()
     assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
 
     problem.unfix_parameters(petab_problem.x_fixed_indices)
@@ -505,7 +508,9 @@ def test_petab_v2_residuals():
     petab_problem = petab.v2.Problem.from_yaml(
         models.get_problem_yaml_path("Boehm_JProteomeRes2014")
     )
-    problem = PetabImporter(petab_problem).create_problem()
+    problem = PetabImporter(
+        petab_problem, model_name="Boehm_JProteomeRes2014_v2"
+    ).create_problem()
     objective = problem.objective
     x = np.asarray(petab_problem.x_nominal_free)
 
@@ -552,7 +557,7 @@ def test_petab_v2_schwen():
         models.get_problem_yaml_path(problem_id)
     )
     assert petab_problem.n_priors
-    importer = PetabImporter(petab_problem)
+    importer = PetabImporter(petab_problem, model_name=f"{problem_id}_v2")
     problem = importer.create_problem()
     assert problem.x_names == petab_problem.x_ids
     assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
