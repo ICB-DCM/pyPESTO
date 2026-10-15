@@ -831,6 +831,8 @@ class AmiciPetabV2Objective(AmiciObjective):
             ``petab_importer`` if not given. Pass one to share it with a
             calculator built for it, such as
             :class:`pypesto.hierarchical.InnerCalculatorCollectorPetabV2`.
+            The objective takes parameters, and returns derivatives, on the
+            simulator's parameter scales.
         kwargs:
             Additional arguments passed on to :class:`AmiciObjective`. A
             ``calculator`` given here replaces the default
@@ -922,8 +924,11 @@ class AmiciPetabV2Objective(AmiciObjective):
             Indicates whether gradients match (True) FDs or not (False)
         """
         if x is None:
-            # PEtab v2 does not have parameter scales
+            exp_man = self._petab_simulator.exp_man
             x_nominal = self.petab_problem.get_x_nominal_dict()
+            # parameter scales were added after amici 1.1.0
+            if hasattr(exp_man, "scale_parameters"):
+                x_nominal = exp_man.scale_parameters(x_nominal)
             x_full = np.array([x_nominal[x_id] for x_id in self.x_ids])
             x_free_ids = set(self.petab_problem.x_free_ids)
             free = {
