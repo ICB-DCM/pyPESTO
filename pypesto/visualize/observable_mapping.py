@@ -34,6 +34,7 @@ try:
     from ..hierarchical.base_problem import scale_back_value_dict
     from ..hierarchical.relative.calculator import RelativeAmiciCalculator
     from ..hierarchical.relative.problem import RelativeInnerProblem
+    from ..hierarchical.relative.util import subtract_unscaled_constants
     from ..hierarchical.semiquantitative.calculator import SemiquantCalculator
     from ..hierarchical.semiquantitative.solver import (
         SemiquantInnerSolver,
@@ -342,8 +343,12 @@ def plot_linear_observable_mappings_from_pypesto_result(
             "solutions."
         )
 
-    # Get the simulation.
-    sim = [rdata[AMICI_Y] for rdata in inner_rdatas]
+    # Get the simulation and the data, without any constants that the scaling
+    #  does not multiply, so that they are related by the linear mapping.
+    sim = subtract_unscaled_constants(
+        [rdata[AMICI_Y] for rdata in inner_rdatas], inner_problem
+    )
+    data = subtract_unscaled_constants(inner_problem.data, inner_problem)
 
     # Get the inner parameters from the pypesto result.
     inner_parameter_values = dict(
@@ -410,7 +415,7 @@ def plot_linear_observable_mappings_from_pypesto_result(
 
         # Get the measurements for the current observable.
         measurements = extract_expdata_using_mask(
-            expdata=inner_problem.data, mask=observable_data_mask
+            expdata=data, mask=observable_data_mask
         )
 
         # Get the simulation for the current observable.
