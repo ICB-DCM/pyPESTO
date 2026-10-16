@@ -568,15 +568,14 @@ def sacess_history(
 ) -> matplotlib.axes.Axes:
     """Plot `SacessOptimizer` history.
 
-    Plot the history of the best objective values for each
-    :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
-    worker over computation time as step splot.
+    .. deprecated::
+        Use :func:`pyscat.plot.plot_sacess_history` (``pip install pyscat``).
 
     Parameters
     ----------
     histories:
         List of histories from different workers as obtained from
-        :attr:`pypesto.optimize.ess.sacess.SacessOptimizer.histories`.
+        :attr:`pyscat.SacessOptimizer.histories`.
     ax:
         Axes object to use.
 
@@ -584,42 +583,12 @@ def sacess_history(
     -------
     The plot axes. `ax` or a new axes if `ax` was `None`.
     """
-    ax = get_ax(ax)
-    if len(histories) == 0:
-        warnings.warn("No histories to plot.", stacklevel=2)
-
-    # plot overall minimum
-    t_overall, fx_overall = monotonic_history(histories)
-    ax.step(
-        t_overall,
-        fx_overall,
-        linestyle="dotted",
-        color="grey",
-        where="post",
-        label="overall",
-        alpha=0.8,
+    warnings.warn(
+        "`pypesto.visualize.optimizer_history.sacess_history` is deprecated. "
+        "Use `pyscat.plot.plot_sacess_history` instead.",
+        DeprecationWarning,
+        stacklevel=2,
     )
+    from pyscat.plot import plot_sacess_history
 
-    # plot steps of individual workers
-    for worker_idx, history in enumerate(histories):
-        x, y = history.get_time_trace(), history.get_fval_trace()
-        if len(x) == 0:
-            warnings.warn(f"No trace for worker #{worker_idx}.", stacklevel=2)
-            continue
-        # extend from last decrease to last timepoint
-        x = np.append(x, [np.max(t_overall)])
-        y = np.append(y, [np.min(y)])
-        lines = ax.step(
-            x, y, ".-", where="post", label=f"worker {worker_idx}", alpha=0.8
-        )
-        # Plot last point without marker, unless we actually had an improvement there.
-        # The time point of the overall last improvement is appended to all histories,
-        # even if redundant, so we can just skip the marker for the last point.
-        for line in lines:
-            line.set_markevery([True] * (len(x) - 1) + [False])
-
-    ax.legend()
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("fval")
-    ax.set_title("SacessOptimizer convergence")
-    return ax
+    return plot_sacess_history(histories, ax=ax)

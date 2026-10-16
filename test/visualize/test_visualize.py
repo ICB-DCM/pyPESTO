@@ -1597,17 +1597,19 @@ def test_monotonic_history():
 
 @close_fig
 def test_sacess_history():
-    """Test pypesto.visualize.optimizer_history.sacess_history"""
-    from pypesto.optimize.ess.sacess import ESSExitFlag, SacessOptimizer
+    """The deprecated SaCeSS history plot forwards to pyscat."""
+    pyscat = pytest.importorskip("pyscat")
     from pypesto.visualize.optimizer_history import sacess_history
 
-    problem = create_problem()
-    sacess = SacessOptimizer(
-        max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
+    sacess = pyscat.SacessOptimizer(
+        problem=create_problem(),
+        max_walltime_s=1,
+        num_workers=2,
+        sacess_loglevel=logging.WARNING,
     )
-    sacess.minimize(problem)
-    assert sacess.exit_flag == ESSExitFlag.MAX_TIME
-    sacess_history(sacess.histories)
+    sacess.minimize()
+    with pytest.warns(DeprecationWarning, match="plot_sacess_history"):
+        sacess_history(sacess.histories)
 
 
 @pytest.mark.parametrize(
