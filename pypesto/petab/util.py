@@ -159,6 +159,7 @@ class PetabStartpoints(CheckedStartpoints):
         super().__init__(**kwargs)
         self._petab_problem = petab_problem
         self._priors: list[tuple] | None = None
+        self._scales: list[str] | None = None
         self._free_ids: list[str] | None = None
 
     def _setup(
@@ -206,6 +207,10 @@ class PetabStartpoints(CheckedStartpoints):
                 if parameter.estimate
             }
         self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
+        self._scales = [
+            pypesto_problem.x_scales[ix]
+            for ix in pypesto_problem.x_free_indices
+        ]
 
     def __call__(
         self,
@@ -238,13 +243,14 @@ class PetabStartpoints(CheckedStartpoints):
             # PEtab v2 -- sample from the parameter prior distributions,
             #  falling back to a uniform distribution over the bounds of the
             #  `pypesto.Problem`, which may be tighter than the PEtab bounds
-            #  (e.g. during profiling)
+            #  (e.g. during profiling). The bounds are on parameter scale, the
+            #  prior distributions on linear scale.
             startpoints = [
-                prior_dist.sample(n_starts)
+                petab.scale(prior_dist.sample(n_starts), scale)
                 if prior_dist is not None
                 else np.random.uniform(cur_lb, cur_ub, n_starts)
-                for prior_dist, cur_lb, cur_ub in zip(
-                    self._priors, lb, ub, strict=True
+                for prior_dist, scale, cur_lb, cur_ub in zip(
+                    self._priors, self._scales, lb, ub, strict=True
                 )
             ]
 
