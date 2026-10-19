@@ -49,9 +49,9 @@ from .objective_creator import (
 from .util import PetabStartpoints, get_petab_non_quantitative_data_types
 
 try:
-    import amici
+    import amici.sim.sundials as asd
 except ImportError:
-    amici = None
+    asd = None
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +60,7 @@ class PetabImporter:
     """
     Importer for PEtab files.
 
-    Create an :class:`amici.amici.Model`, an :class:`pypesto.objective.AmiciObjective` or a
+    Create an :class:`amici.sim.sundials.Model`, an :class:`pypesto.objective.AmiciObjective` or a
     :class:`pypesto.problem.Problem` from PEtab files. The created objective function is a
     negative log-likelihood function and can thus be negative. The actual
     form of the likelihood depends on the noise model specified in the provided PEtab problem.
@@ -68,7 +68,7 @@ class PetabImporter:
     `PEtab documentation <https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions>`_.
     """  # noqa
 
-    MODEL_BASE_DIR = f"amici_models/{version('amici') if amici else ''}"
+    MODEL_BASE_DIR = f"amici_models/{version('amici') if asd else ''}"
 
     def __init__(
         self,
@@ -570,7 +570,7 @@ class PetabImporter:
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
-    ) -> amici.Model:
+    ) -> asd.Model:
         """See :meth:`AmiciObjectiveCreator.create_model`."""
         warnings.warn(
             "This function has been moved to `AmiciObjectiveCreator`.",
@@ -589,9 +589,9 @@ class PetabImporter:
 
     def create_objective(
         self,
-        model: amici.Model = None,
-        solver: amici.Solver = None,
-        edatas: Sequence[amici.ExpData] = None,
+        model: asd.Model = None,
+        solver: asd.Solver = None,
+        edatas: Sequence[asd.ExpData] = None,
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
@@ -651,8 +651,8 @@ class PetabImporter:
 
     def rdatas_to_measurement_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
         """See :meth:`AmiciObjectiveCreator.rdatas_to_measurement_df`."""
@@ -662,8 +662,8 @@ class PetabImporter:
 
     def rdatas_to_simulation_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
     ) -> pd.DataFrame:
         """
         See :meth:`rdatas_to_measurement_df`.
