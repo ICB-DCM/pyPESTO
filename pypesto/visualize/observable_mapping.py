@@ -584,8 +584,8 @@ def plot_splines_from_pypesto_result(
 
 
 def plot_splines_from_inner_result(
-    inner_problem: "pypesto.hierarchical.spline_approximation.problem.SplineInnerProblem",
-    inner_solver: "pypesto.hierarchical.spline_approximation.solver.SplineInnerSolver",
+    inner_problem: "pypesto.hierarchical.semiquantitative.problem.SemiquantProblem",
+    inner_solver: "pypesto.hierarchical.semiquantitative.solver.SemiquantInnerSolver",
     results: list[dict],
     sim: list[np.ndarray],
     observable_ids=None,
