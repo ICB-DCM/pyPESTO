@@ -191,11 +191,18 @@ class SacessMinimizeMethod:
         :func:`pyscat.get_default_ess_options`. ``None`` runs no local
         searches.
     tmpdir:
-        With ``save_history``, the histories of each model are saved to
-        ``tmpdir / <model hash> / "history"``. Defaults to
-        ``sacess_tmpdir`` in the current working directory.
+        Parent directory for model-specific directories
+        ``tmpdir / <model hash>``, which are used as the ``autosave_dir`` of
+        each SaCeSS optimizer. With ``save_history``, the histories of each
+        model are saved to ``tmpdir / <model hash> / "history"``. Defaults to
+        ``sacess_tmpdir`` in the current working directory if
+        ``save_history`` is set.
     save_history:
         Whether to save the history of each SaCeSS worker.
+    optimizer_kwargs:
+        Passed on to :class:`pyscat.SacessOptimizer`, for example
+        ``max_walltime_s``. ``problem``, ``ess_init_args`` and, if ``tmpdir``
+        is set, ``autosave_dir`` are set by this class.
     """
 
     def __init__(
@@ -259,9 +266,15 @@ class SacessMinimizeMethod:
         )
         for x in ess_init_args:
             x["local_optimizer"] = self.local_optimizer
+        model_tmpdir = None
+        if self.tmpdir is not None:
+            model_tmpdir = self.tmpdir / str(model_hash)
+            model_tmpdir.mkdir(exist_ok=False, parents=True)
+
         ess = pyscat.SacessOptimizer(
             problem=problem,
             ess_init_args=ess_init_args,
+            autosave_dir=model_tmpdir,
             **self.optimizer_kwargs,
         )
 
@@ -269,7 +282,7 @@ class SacessMinimizeMethod:
         result = ess.minimize()
 
         if self.save_history:
-            history_dir = self.tmpdir / str(model_hash) / "history"
+            history_dir = model_tmpdir / "history"
             history_dir.mkdir(exist_ok=False, parents=True)
             for history_index, history in enumerate(ess.histories):
                 Hdf5History.from_history(

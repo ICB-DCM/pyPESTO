@@ -560,35 +560,3 @@ def monotonic_history(
         fx_mono = np.append(fx_mono, [fx_mono.min()])
 
     return t_mono, fx_mono
-
-
-def sacess_history(
-    histories: list[HistoryBase],
-    ax: matplotlib.axes.Axes | None = None,
-) -> matplotlib.axes.Axes:
-    """Plot `SacessOptimizer` history.
-
-    .. deprecated::
-        Use :func:`pyscat.plot.plot_sacess_history` (``pip install pyscat``).
-
-    Parameters
-    ----------
-    histories:
-        List of histories from different workers as obtained from
-        :attr:`pyscat.SacessOptimizer.histories`.
-    ax:
-        Axes object to use.
-
-    Returns
-    -------
-    The plot axes. `ax` or a new axes if `ax` was `None`.
-    """
-    warnings.warn(
-        "`pypesto.visualize.optimizer_history.sacess_history` is deprecated. "
-        "Use `pyscat.plot.plot_sacess_history` instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    from pyscat.plot import plot_sacess_history
-
-    return plot_sacess_history(histories, ax=ax)

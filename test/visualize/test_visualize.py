@@ -1,5 +1,4 @@
 import functools
-import logging
 import os
 from collections.abc import Sequence
 from copy import deepcopy
@@ -1593,23 +1592,6 @@ def test_monotonic_history():
             -7.0,
             -9.0,
         ]
-
-
-@close_fig
-def test_sacess_history():
-    """The deprecated SaCeSS history plot forwards to pyscat."""
-    pyscat = pytest.importorskip("pyscat")
-    from pypesto.visualize.optimizer_history import sacess_history
-
-    sacess = pyscat.SacessOptimizer(
-        problem=create_problem(),
-        max_walltime_s=1,
-        num_workers=2,
-        sacess_loglevel=logging.WARNING,
-    )
-    sacess.minimize()
-    with pytest.warns(DeprecationWarning, match="plot_sacess_history"):
-        sacess_history(sacess.histories)
 
 
 @pytest.mark.parametrize(
