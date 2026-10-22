@@ -4,14 +4,63 @@ import logging
 import warnings
 
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 from scipy.stats import norm
 
 logger = logging.getLogger(__name__)
 
+# Number of candidate burn-in positions in the sequential Geweke test.
+N_FRAGMENTS = 20
+
+
+def _hann_window(nw: int) -> np.ndarray:
+    """Symmetric Hann window of length `nw` (MATLAB's ``hanning``)."""
+    t = np.arange(1, nw + 1)
+    return 0.5 * (1 - np.cos(2 * np.pi * t / (nw + 1)))
+
+
+def _welch_layout(n: int, nw: int) -> tuple[int, int]:
+    """Step between window starts and number of windows (50% overlap)."""
+    step = nw - nw // 2
+    if step == 0:
+        return 0, 0
+    return step, max((n - nw // 2) // step, 0)
+
+
+def _spectral_density_at_zero(x: np.ndarray, nw: int) -> np.ndarray:
+    """
+    Welch estimate of the spectral density at frequency zero.
+
+    At frequency zero, the periodogram of a tapered window is the squared
+    weighted sum of the window. This is batch means with overlapping,
+    Hann-tapered batches of length `nw`. The input is used as is (no
+    centering).
+
+    Parameters
+    ----------
+    x:
+        Array of shape (n_samples, n_par).
+    nw:
+        Window (batch) length.
+
+    Returns
+    -------
+    Array of shape (n_par,). NaN if no window of length >= 2 fits.
+    """
+    n, n_par = x.shape
+    step, k = _welch_layout(n, nw)
+    if nw < 2 or k == 0:
+        return np.full(n_par, np.nan)
+    w = _hann_window(nw)
+    # (k, n_par, nw): the k windows of each column
+    windows = sliding_window_view(x, nw, axis=0)[: (k - 1) * step + 1 : step]
+    weighted_sums = windows @ w
+    return np.mean(weighted_sums**2, axis=0) / (w @ w)
+
 
 def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
     """
-    Power spectral density using Hanning window.
+    Power spectral density using Welch's method with a Hann window.
 
     Parameters
     ----------
@@ -21,82 +70,61 @@ def spectrum(x: np.ndarray, nfft: int = None, nw: int = None) -> np.ndarray:
     nfft:
         The n-point discrete Fourier Transform.
     nw:
-        Number of windows.
+        Window length.
 
     Returns
     -------
     spectral_density:
-        The spectral density.
+        The spectral density at the first ``nfft // 2`` Fourier
+        frequencies. The input is not centered.
     """
+    x = np.asarray(x, dtype=float)
     if nfft is None:
-        nfft = np.min(len(x), 256)
-
+        nfft = min(len(x), 256)
     if nw is None:
-        nw = np.floor(nfft / 4).astype(int)
+        nw = nfft // 4
 
-    n_overlap = np.floor(nw / 2).astype(int)
+    step, k = _welch_layout(len(x), nw)
+    if k == 0:
+        return np.full(nfft // 2, np.nan)
 
-    # Hanning window
-    w = 0.5 * (
-        1 - np.cos(2 * np.pi * np.transpose(np.arange(1, nw + 1)) / (nw + 1))
-    )
-    n = len(x)
-    if n < nw:
-        x[nw] = 0
-        n = nw
-
-    # Number of windows
-    k = (
-        np.floor((n - n_overlap) / (nw - n_overlap)).astype(int)
-        if nw != n_overlap
-        else 0
-    )
-    index = np.arange(nw)
-    # Normalizing scale factor
-    kmu = k * np.linalg.norm(w) ** 2
-    spectral_density = np.zeros(nfft)
-
-    for _ in range(k):
-        xw = w * x[index]
-        index += nw - n_overlap
-        Xx = np.absolute(np.fft.fft(xw, n=nfft, axis=0)) ** 2
-        spectral_density += Xx
-
-    n2 = np.floor(nfft / 2).astype(int)
-
-    spectral_density = spectral_density[0:n2]
-
-    # Normalize
-    if kmu != 0:
-        spectral_density = spectral_density * (1 / kmu)
-    else:
-        spectral_density = np.full(spectral_density.shape, np.nan)
-
-    return spectral_density
+    w = _hann_window(nw)
+    windows = sliding_window_view(x, nw)[: (k - 1) * step + 1 : step] * w
+    periodograms = np.abs(np.fft.fft(windows, n=nfft, axis=1)) ** 2
+    spectral_density = np.sum(periodograms, axis=0) / (k * (w @ w))
+    return spectral_density[: nfft // 2]
 
 
-def spectrum0(x: np.ndarray) -> np.ndarray:
+def spectrum0(x: np.ndarray, nw: int = None) -> np.ndarray:
     """
     Calculate the spectral density at frequency zero.
+
+    This estimates the long-run variance
+    S(0) = gamma(0) + 2 * sum_k gamma(k) of each column, so that
+    S(0) / n estimates the variance of the column mean. Each column is
+    centered with its own mean first. Without centering, the estimate
+    picks up a bias proportional to the squared mean.
 
     Parameters
     ----------
     x:
-        Fraction/fragment of the MCMC chain.
+        Fraction/fragment of the MCMC chain, shape (n_samples, n_par).
+    nw:
+        Batch length. Defaults to ``floor(sqrt(n_samples))``, so that both
+        the batch length and the number of batches grow with the chain
+        length, which consistency requires.
 
     Returns
     -------
     spectral_density_zero:
-        Spectral density at zero.
+        Spectral density at zero, shape (1, n_par).
     """
-    n_samples, n_par = x.shape
-    spectral_density_zero = np.zeros((1, n_par))
-
-    for i in range(n_par):
-        _spectral_density_zero = spectrum(x[:, i], n_samples)
-        if len(_spectral_density_zero) > 0:
-            spectral_density_zero[:, i] = _spectral_density_zero[0]
-    return spectral_density_zero
+    x = np.asarray(x, dtype=float)
+    n_samples = x.shape[0]
+    if nw is None:
+        nw = int(np.floor(np.sqrt(n_samples)))
+    centered = x - x.mean(axis=0) if n_samples else x
+    return _spectral_density_at_zero(centered, nw)[np.newaxis, :]
 
 
 def calculate_zscore(
@@ -105,11 +133,14 @@ def calculate_zscore(
     """
     Perform a Geweke test on a chain.
 
-    Use the first "a" fraction and the last "b" fraction of it for
-    comparison. Test for equality of the means of the first a% and last b%
-    of a Markov chain.
+    Test for equality of the means of the first `a` fraction and the last
+    `b` fraction of a Markov chain, with the variance of each mean
+    estimated from the spectral density at zero (see :func:`spectrum0`).
 
     See:
+    John Geweke. Evaluating the accuracy of sampling-based approaches to the
+    calculation of posterior moments. Bayesian Statistics 4:169--193, 1992.
+
     Stephen P. Brooks and Gareth O. Roberts.
     Assessing convergence of Markov chain Monte Carlo
     algorithms. Statistics and Computing, 8:319--335, 1998.
@@ -125,47 +156,76 @@ def calculate_zscore(
     Returns
     -------
     z_score:
-        Z-score of the Geweke test.
+        Z-score of the Geweke test. 0 if both means are equal, also when
+        their variance estimate is 0; +-inf if only the variance is 0;
+        NaN if the fractions are too short to estimate the variance.
     p:
         Significance level of the Geweke test.
     """
-    nsamples, _ = chain.shape
-
-    # Define First fraction
-    index_a = np.floor(a * nsamples).astype(int)
-    # Define Second fraction
-    index_b = nsamples - np.floor(b * nsamples).astype(int) + 1
-
-    # Check if appropiate indexes
-    if (index_a + index_b) / nsamples > 1:
+    if not (0 < a < 1 and 0 < b < 1):
+        raise ValueError("The fractions a and b must lie in (0, 1).")
+    if a + b > 1:
         raise ValueError(
-            "Sample size too small to "
-            "meaningfully extract subsets "
-            "for Geweke's test."
+            "The first and last fraction of the chain overlap (a + b > 1)."
         )
 
-    # Expect to see RuntimeWarnings in this block for short chains
-    with warnings.catch_warnings():
+    nsamples, _ = chain.shape
+    n_a = int(np.floor(a * nsamples))
+    n_b = int(np.floor(b * nsamples))
+    first = chain[:n_a, :]
+    last = chain[nsamples - n_b :, :]
+
+    # Expect to see RuntimeWarnings in this block for short or constant
+    # chains
+    with (
+        warnings.catch_warnings(),
+        np.errstate(divide="ignore", invalid="ignore"),
+    ):
         warnings.simplefilter("ignore", category=RuntimeWarning)
-        # Mean of First fraction
-        mean_a = np.mean(chain[0:index_a, :], axis=0)
-        # Mean of Second fraction
-        mean_b = np.mean(chain[index_b:, :], axis=0)
-
-        # Spectral estimates for variance
-        spectrum_a = spectrum0(chain[0:index_a, :])
-        spectrum_b = spectrum0(chain[index_b:, :])
-
-        # Calculate z-score
-        z_score = (mean_a - mean_b) / (
-            np.sqrt(
-                spectrum_a / index_a + spectrum_b / (nsamples - index_b + 1)
-            )
-        )
-        # Calculate significance (p value)
-        p = 2 * (1 - norm.cdf(np.absolute(z_score)))
+        mean_diff = np.mean(first, axis=0) - np.mean(last, axis=0)
+        variance = spectrum0(first) / n_a + spectrum0(last) / n_b
+        z_score = np.where(mean_diff == 0, 0.0, mean_diff / np.sqrt(variance))
+        p = 2 * norm.sf(np.absolute(z_score))
 
     return z_score, p
+
+
+def _first_not_rejected(max_abs_z: np.ndarray, zscore: float) -> int | None:
+    """
+    Holm's step-down procedure over the fragments of the sequential test.
+
+    Each fragment's null hypothesis is "this sub-chain is stationary", with
+    p-value from the largest |z| over all parameters. The family-wise level
+    is ``alpha = 2 * (1 - Phi(zscore))``.
+
+    See:
+    Sture Holm. A simple sequentially rejective multiple test procedure.
+    Scandinavian Journal of Statistics, 6(2):65--70, 1979.
+
+    Parameters
+    ----------
+    max_abs_z:
+        Largest absolute z-score per fragment. NaN counts as rejected.
+    zscore:
+        Single-test z threshold defining the family-wise level.
+
+    Returns
+    -------
+    Index of the first fragment (in chain order) that is not rejected, or
+    None if all are rejected.
+    """
+    n_tests = len(max_abs_z)
+    alpha = 2 * norm.sf(zscore)
+    p_values = 2 * norm.sf(np.nan_to_num(max_abs_z, nan=np.inf))
+
+    rejected = np.zeros(n_tests, dtype=bool)
+    for rank, idx in enumerate(np.argsort(p_values, kind="stable")):
+        if p_values[idx] > alpha / (n_tests - rank):
+            break
+        rejected[idx] = True
+
+    not_rejected = np.flatnonzero(~rejected)
+    return int(not_rejected[0]) if len(not_rejected) else None
 
 
 def burn_in_by_sequential_geweke(
@@ -174,12 +234,24 @@ def burn_in_by_sequential_geweke(
     """
     Calculate the burn-in of MCMC chains.
 
+    The Geweke test is applied to the chain without its first 0, 1/20,
+    2/20, ... of samples, and the burn-in is the first of these starting
+    points that is not rejected, with Holm's correction for testing all
+    starting points. Each parameter is tested separately and the largest
+    |z| counts.
+
+    See:
+    Benjamin Ballnus et al. Comprehensive benchmarking of Markov chain
+    Monte Carlo methods for dynamical systems. BMC Systems Biology 11:63,
+    2017 (Additional file 1, Section 2).
+
     Parameters
     ----------
     chain:
         The MCMC chain after removing warm up phase.
     zscore:
-        The Geweke test threshold.
+        The Geweke test threshold for a single test. It sets the
+        family-wise significance level ``2 * (1 - Phi(zscore))``.
 
     Returns
     -------
@@ -189,31 +261,19 @@ def burn_in_by_sequential_geweke(
         regarding Geweke test.
     """
     nsamples, npar = chain.shape
-    # number of fragments
-    n = 20
-    # round each element to the nearest integer
-    # toward zero
-    step = np.floor(nsamples / n).astype(int)
-    fragments = np.arange(0, nsamples - 1, step)
 
-    z = np.zeros((len(fragments), npar))
-    for i, indices in enumerate(fragments):
-        # Calculate z-score
-        z[i, :], _ = calculate_zscore(chain[indices:, :])
+    first = None
+    if nsamples >= N_FRAGMENTS:
+        step = nsamples // N_FRAGMENTS
+        fragments = np.arange(0, nsamples - 1, step)
 
-    # Sort z-score for Bonferroni-Holm inverse
-    # to sorting p-values
-    max_z = np.max(np.absolute(z), axis=1)
-    idxs = max_z.argsort()[::-1]  # sort descend
-    alpha2 = zscore * np.ones(len(idxs))
+        z = np.zeros((len(fragments), npar))
+        for i, start in enumerate(fragments):
+            z[i, :], _ = calculate_zscore(chain[start:, :])
 
-    for i in range(len(max_z)):
-        alpha2[idxs[i]] /= len(fragments) - np.argwhere(idxs == i).item(0) + 1
+        first = _first_not_rejected(np.max(np.absolute(z), axis=1), zscore)
 
-    if np.any(alpha2 > max_z):
-        burn_in = (np.where(alpha2 > max_z)[0][0]) * step
-    else:
-        burn_in = nsamples
+    if first is None:
         logger.warning(
             "Burn in index coincides with chain "
             "length. The chain seems to not have "
@@ -221,5 +281,6 @@ def burn_in_by_sequential_geweke(
             "You may want to use a larger number "
             "of samples."
         )
+        return nsamples
 
-    return burn_in
+    return int(fragments[first])
