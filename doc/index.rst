@@ -24,6 +24,7 @@ pyPESTO - Parameter EStimation TOolbox for python
 
    install
    example
+   lognormal_relative
    storage_format.md
    api
 
