@@ -10,6 +10,8 @@ from petab import v1, v2
 from petab.v1.C import (
     ESTIMATE,
     LIN,
+    LOG,
+    LOG10,
     NOISE_DISTRIBUTION,
     NOISE_PARAMETERS,
     NORMAL,
@@ -589,10 +591,9 @@ def _get_symbolic_formula_from_measurement(
         observable_transformation = petab_problem.observable_df.loc[
             observable_id
         ].get(OBSERVABLE_TRANSFORMATION)
-        if (
-            observable_transformation is not None
-            and observable_transformation != LIN
-        ):
+        if not petab.is_empty(
+            observable_transformation
+        ) and observable_transformation not in (LIN, LOG, LOG10):
             raise ValueError(
                 "Non-linear observable transformations are not supported if "
                 "the observable is associated with hierarchically-optimized "
@@ -601,7 +602,37 @@ def _get_symbolic_formula_from_measurement(
                 f"Measurement:\n{measurement}"
             )
 
-        # the analytical inner solver assumes additive Gaussian noise
+        if observable_transformation in (LOG, LOG10):
+            if (
+                InnerParameterType.OFFSET
+                in symbolic_formula_inner_parameters.values()
+            ):
+                raise NotImplementedError(
+                    "Inner offsets are not supported for log-normal data."
+                )
+            for symbol, kind in symbolic_formula_inner_parameters.items():
+                if (
+                    kind == InnerParameterType.SCALING
+                    and sp.simplify(
+                        symbolic_formula
+                        - symbol * sp.diff(symbolic_formula, symbol)
+                    )
+                    != 0
+                ):
+                    raise NotImplementedError(
+                        "Log-normal inner scaling must multiply the entire "
+                        "observable formula; additive terms are not supported."
+                    )
+                prior = petab_problem.parameter_df.loc[symbol.name].get(
+                    petab.OBJECTIVE_PRIOR_TYPE
+                )
+                if not petab.is_empty(prior):
+                    raise NotImplementedError(
+                        "Inner parameter priors are not supported for "
+                        "log-normal data."
+                    )
+
+        # Only normal noise is supported, on the specified observation scale.
         noise_distribution = petab_problem.observable_df.loc[
             observable_id
         ].get(NOISE_DISTRIBUTION)
