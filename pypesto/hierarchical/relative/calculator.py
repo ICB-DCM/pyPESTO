@@ -39,6 +39,7 @@ from ...objective.amici.amici_util import (
     init_return_values,
 )
 from ..base_problem import scale_back_value_dict
+from .lognormal import LogNormalInnerSolver
 from .problem import AmiciInnerProblem
 from .solver import AnalyticalInnerSolver, InnerSolver
 
@@ -60,7 +61,8 @@ class RelativeAmiciCalculator(AmiciCalculator):
             The inner problem of a hierarchical optimization problem.
         inner_solver:
             A solver to solve ``inner_problem``.
-            Defaults to ``pypesto.hierarchical.solver.AnalyticalInnerSolver``.
+            Defaults to ``AnalyticalInnerSolver`` for linear-normal data
+            and ``LogNormalInnerSolver`` for supported log-normal data.
         evaluator:
             Performs a plain, non-hierarchical evaluation of the problem;
             used to obtain simulations at given parameters. Defaults to this
@@ -76,7 +78,17 @@ class RelativeAmiciCalculator(AmiciCalculator):
         self.evaluator = evaluator
 
         if inner_solver is None:
-            inner_solver = AnalyticalInnerSolver()
+            inner_solver = (
+                LogNormalInnerSolver()
+                if getattr(inner_problem, "has_log_transformed_data", False)
+                else AnalyticalInnerSolver()
+            )
+        if getattr(inner_problem, "has_log_transformed_data", False):
+            if not isinstance(inner_solver, LogNormalInnerSolver):
+                raise NotImplementedError(
+                    "Log-normal inner problems require LogNormalInnerSolver."
+                )
+            inner_solver.validate_problem(inner_problem)
         self.inner_solver = inner_solver
 
         #: ``(par_sim_slice, par_opt_slice)`` index pairs per condition,
@@ -155,6 +167,13 @@ class RelativeAmiciCalculator(AmiciCalculator):
         inner_result:
             A dict containing the calculation results: FVAL, GRAD, RDATAS and INNER_PARAMETERS.
         """
+        if getattr(self.inner_problem, "has_log_transformed_data", False) and (
+            mode == MODE_RES or 2 in sensi_orders
+        ):
+            raise NotImplementedError(
+                "Log-normal inner problems currently support only function "
+                "values and first derivatives in function mode."
+            )
         if not self.inner_problem.check_edatas(edatas=edatas):
             raise ValueError(
                 "The experimental data provided to this call differs from "
