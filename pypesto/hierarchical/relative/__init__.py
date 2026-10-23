@@ -24,5 +24,6 @@ The implementation in this package is based on:
 """
 
 from .calculator import RelativeAmiciCalculator
+from .lognormal import LogNormalInnerSolver
 from .problem import RelativeInnerProblem
 from .solver import AnalyticalInnerSolver, NumericalInnerSolver

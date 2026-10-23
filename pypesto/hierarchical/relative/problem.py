@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 
 from ...C import (
+    LIN,
+    LOG,
+    LOG10,
     MEASUREMENT_TYPE,
     PARAMETER_TYPE,
     SEMIQUANTITATIVE,
@@ -55,8 +58,24 @@ class RelativeInnerProblem(AmiciInnerProblem):
         AMICI ``ExpData``\s for each simulation condition.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, observable_transformations=None, **kwargs):
         super().__init__(**kwargs)
+        self.observable_transformations = tuple(
+            observable_transformations
+            if observable_transformations is not None
+            else [LIN] * self.data[0].shape[1]
+        )
+        if len(self.observable_transformations) != self.data[0].shape[1]:
+            raise ValueError(
+                "An observable transformation is required per observable."
+            )
+        self.has_log_transformed_data = any(
+            transformation in (LOG, LOG10)
+            and any(mask[:, index].any() for mask in self.data_mask)
+            for index, transformation in enumerate(
+                self.observable_transformations
+            )
+        )
 
     @staticmethod
     def from_petab_amici(
@@ -201,7 +220,22 @@ def inner_problem_from_petab_problem(
 
     assign_coupled_pairs(inner_parameters, coupled_pars)
 
-    return RelativeInnerProblem(xs=inner_parameters, data=data, edatas=edatas)
+    transformations = [
+        petab_problem.observable_df.loc[observable_id].get(
+            petab.OBSERVABLE_TRANSFORMATION, LIN
+        )
+        for observable_id in amici_model.get_observable_ids()
+    ]
+    transformations = [
+        LIN if petab.is_empty(transformation) else transformation
+        for transformation in transformations
+    ]
+    return RelativeInnerProblem(
+        xs=inner_parameters,
+        data=data,
+        edatas=edatas,
+        observable_transformations=transformations,
+    )
 
 
 def assign_coupled_pairs(
