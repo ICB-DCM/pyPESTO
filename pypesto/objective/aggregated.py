@@ -11,8 +11,10 @@ from ..C import (
     GRAD,
     HESS,
     HESSP,
+    INNER_PARAMETERS,
     RDATAS,
     RES,
+    SPLINE_KNOTS,
     SRES,
     ModeType,
 )
@@ -264,6 +266,14 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     for rval in rvals:
         if RDATAS in rval:
             result[RDATAS].extend(rval[RDATAS])
+
+    # concatenate the inner parameters of hierarchical objectives, in the
+    #  order of the objectives
+    for key in [INNER_PARAMETERS, SPLINE_KNOTS]:
+        if values := [
+            value for rval in rvals if (value := rval.get(key)) is not None
+        ]:
+            result[key] = [x for value in values for x in value]
 
     # initialize res and sres
     if RES in rvals[0]:

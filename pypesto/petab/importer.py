@@ -33,7 +33,10 @@ from ..C import (
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
 )
-from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
+from ..hierarchical.inner_calculator_collector import (
+    AggregatedInnerCalculators,
+    InnerCalculatorCollector,
+)
 from ..objective import AggregatedObjective, AmiciObjective, ObjectiveBase
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
@@ -189,13 +192,24 @@ class PetabImporter:
                 raise ValueError("Invalid PEtab v2 problem.")
 
         if self._hierarchical and _is_multi_model(petab_problem):
-            # TODO: supportable if no model's inner parameters occur in
-            #  another model -- then each model's inner problems are
-            #  independent
-            raise NotImplementedError(
-                "Hierarchical optimization is not supported for PEtab v2 "
-                "problems with multiple models yet."
-            )
+            # each model's inner problems are solved separately, which
+            #  requires that the models do not share inner parameters
+            from ..hierarchical.petab import _get_estimated_inner_parameters
+
+            inner_parameters = _get_estimated_inner_parameters(petab_problem)
+            sub_x_ids = [
+                set(sub_problem.x_ids)
+                for sub_problem in petab_problem.split_by_model().values()
+            ]
+            if shared := sorted(
+                x_id
+                for x_id in inner_parameters
+                if sum(x_id in x_ids for x_ids in sub_x_ids) > 1
+            ):
+                raise NotImplementedError(
+                    "Hierarchical optimization is not supported for inner "
+                    f"parameters shared between models: {shared}."
+                )
 
         if self._hierarchical and validate_petab_hierarchical:
             from ..hierarchical.petab import (
@@ -424,6 +438,8 @@ class PetabImporter:
                     petab_problem=self.petab_problem,
                     output_folder=self.output_folder,
                     model_name=self.model_name,
+                    hierarchical=self._hierarchical,
+                    inner_options=self.inner_options,
                     validate_petab=self.validate_petab,
                 )
             return AmiciPetabV2ObjectiveCreator(
@@ -514,7 +530,10 @@ class PetabImporter:
 
         # Raise error if the correct calculator is not used.
         if self._hierarchical:
-            if not isinstance(objective.calculator, InnerCalculatorCollector):
+            if not isinstance(
+                objective.calculator,
+                InnerCalculatorCollector | AggregatedInnerCalculators,
+            ):
                 raise AssertionError(
                     f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
