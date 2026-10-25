@@ -754,8 +754,13 @@ if __name__ == "__main__":
 
 def _petab_v2_multi_model_problem(
     model_ids: Sequence[str],
+    k_deg_prior: tuple[float, float] | None = None,
 ) -> petab.v2.Problem:
-    """Two models that share the degradation rate and the noise level."""
+    """Two models that share the degradation rate and the noise level.
+
+    Optionally, with a normal prior (mean, standard deviation) on the
+    degradation rate.
+    """
     from petab.v2.models.sbml_model import SbmlModel
 
     production_rates = {"A": 1.0, "B": 2.0}
@@ -770,7 +775,17 @@ def _petab_v2_multi_model_problem(
             for m in model_ids
         ]
     )
-    problem.add_parameter("k_deg", lb=0.01, ub=10, nominal_value=0.4)
+    problem.add_parameter(
+        "k_deg",
+        lb=0.01,
+        ub=10,
+        nominal_value=0.4,
+        **(
+            {"prior_dist": "normal", "prior_pars": k_deg_prior}
+            if k_deg_prior
+            else {}
+        ),
+    )
     problem.add_parameter("sigma", lb=0.01, ub=10, nominal_value=0.2)
     for m in model_ids:
         problem.add_parameter(
@@ -826,6 +841,26 @@ def test_petab_v2_multi_model():
     assert problem.objective.check_gradients_match_finite_differences(
         x=x, mode=MODE_FUN
     )
+
+    # a prior on a shared parameter is added once, not once per model
+    from scipy.stats import norm
+
+    prior_mean, prior_sd = 0.5, 0.1
+    prior_problem = PetabImporter(
+        _petab_v2_multi_model_problem(
+            ["A", "B"], k_deg_prior=(prior_mean, prior_sd)
+        ),
+        model_name="petab_v2_multi_model",
+    ).create_problem()
+    prior_fval, prior_grad = prior_problem.objective(x, sensi_orders=(0, 1))
+    ix_k_deg = petab_problem.x_ids.index("k_deg")
+    k_deg = x[ix_k_deg]
+    assert np.isclose(
+        prior_fval, fval - norm.logpdf(k_deg, prior_mean, prior_sd)
+    )
+    expected_grad = grad.copy()
+    expected_grad[ix_k_deg] += (k_deg - prior_mean) / prior_sd**2
+    assert np.allclose(prior_grad, expected_grad)
 
     # optimization works
     result = pypesto.optimize.minimize(

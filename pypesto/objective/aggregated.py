@@ -26,6 +26,7 @@ class AggregatedObjective(ObjectiveBase):
         self,
         objectives: Sequence[ObjectiveBase],
         x_names: Sequence[str] = None,
+        x_indices: Sequence[Sequence[int] | None] | None = None,
     ):
         """
         Initialize objective.
@@ -38,6 +39,12 @@ class AggregatedObjective(ObjectiveBase):
             Sequence of names of the (optimized) parameters.
             (Details see documentation of x_names in
             :class:`pypesto.ObjectiveBase`)
+        x_indices:
+            For each objective, the indices of the parameters it takes,
+            relative to the parameter vector of this objective. Its
+            derivatives are mapped back to the full parameter vector. ``None``
+            (the default, also per objective) passes the full parameter
+            vector.
         """
         # input typechecks
         if not isinstance(objectives, Sequence):
@@ -56,7 +63,19 @@ class AggregatedObjective(ObjectiveBase):
         if not objectives:
             raise ValueError("Length of objectives must be at least one")
 
+        if x_indices is None:
+            x_indices = [None] * len(objectives)
+        elif len(x_indices) != len(objectives):
+            raise ValueError(
+                "The length of `x_indices` must match the number of "
+                "objectives."
+            )
+
         self._objectives = objectives
+        self._x_indices = [
+            None if ix is None else np.asarray(ix, dtype=int)
+            for ix in x_indices
+        ]
 
         super().__init__(x_names=x_names)
 
@@ -65,8 +84,13 @@ class AggregatedObjective(ObjectiveBase):
         other = AggregatedObjective(
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
+            x_indices=deepcopy(self._x_indices),
         )
-        for key in set(self.__dict__.keys()) - {"_objectives", "x_names"}:
+        for key in set(self.__dict__.keys()) - {
+            "_objectives",
+            "x_names",
+            "_x_indices",
+        }:
             other.__dict__[key] = deepcopy(self.__dict__[key])
 
         return other
@@ -134,15 +158,22 @@ class AggregatedObjective(ObjectiveBase):
                 )
         return aggregate_results(
             [
-                objective.call_unprocessed(
-                    x,
-                    sensi_orders,
-                    mode,
-                    **kwargs,
-                    **cur_kwargs,
+                _expand_result(
+                    objective.call_unprocessed(
+                        x if x_ix is None else x[x_ix],
+                        sensi_orders,
+                        mode,
+                        **kwargs,
+                        **cur_kwargs,
+                    ),
+                    x_ix=x_ix,
+                    dim=len(x),
                 )
-                for objective, cur_kwargs in zip(
-                    self._objectives, kwargs_list, strict=True
+                for objective, x_ix, cur_kwargs in zip(
+                    self._objectives,
+                    self._x_indices,
+                    kwargs_list,
+                    strict=True,
                 )
             ]
         )
@@ -158,6 +189,29 @@ class AggregatedObjective(ObjectiveBase):
         for n_obj, obj in enumerate(self._objectives):
             info[f"objective_{n_obj}"] = obj.get_config()
         return info
+
+
+def _expand_result(
+    rval: ResultDict, x_ix: np.ndarray | None, dim: int
+) -> ResultDict:
+    """Map the derivatives w.r.t. the parameters ``x_ix`` to all parameters.
+
+    The objective does not depend on the other parameters.
+    """
+    if x_ix is None:
+        return rval
+    rval = dict(rval)
+    if (grad := rval.get(GRAD)) is not None:
+        rval[GRAD] = np.zeros(dim)
+        rval[GRAD][x_ix] = grad
+    if (hess := rval.get(HESS)) is not None:
+        rval[HESS] = np.zeros((dim, dim))
+        rval[HESS][np.ix_(x_ix, x_ix)] = hess
+    if (sres := rval.get(SRES)) is not None:
+        sres = np.asarray(sres)
+        rval[SRES] = np.zeros((sres.shape[0], dim))
+        rval[SRES][:, x_ix] = sres
+    return rval
 
 
 def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:

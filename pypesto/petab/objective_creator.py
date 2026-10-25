@@ -793,7 +793,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             force_import=force_compile, **self._parameter_scales_kwargs()
         )
 
-        x_ids = kwargs.pop("x_ids", self.petab_problem.x_ids)
+        x_ids = self.petab_problem.x_ids
         if self._hierarchical and self._non_quantitative_data_types:
             inner_options = kwargs.pop("inner_options", None)
             if inner_options is None:
@@ -934,6 +934,11 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
     :meth:`petab.v2.Problem.split_by_model`), each of which is imported
     separately. Since the models share the parameters but not the data, the
     objective is the sum of the per-model objectives.
+
+    The per-model objectives are likelihoods only: the parameter priors are
+    defined on the shared parameter table, and
+    :meth:`pypesto.petab.PetabImporter.create_problem` adds them once to the
+    sum.
     """
 
     def __init__(
@@ -990,19 +995,23 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
         Returns
         -------
         An :class:`pypesto.objective.AggregatedObjective` of one
-        :class:`pypesto.objective.AmiciPetabV2Objective` per model. All of
-        them take the parameter vector of the full problem.
+        :class:`pypesto.objective.AmiciPetabV2Objective` per model, which
+        takes the parameter vector of the full problem and passes each model
+        the parameters of its single-model problem.
         """
         x_ids = self.petab_problem.x_ids
-        # the per-model objectives take the parameters of the full problem,
-        #  so that they can be summed; their calculators pass on only the
-        #  parameters of the respective model to the simulator
+        x_index = {x_id: ix for ix, x_id in enumerate(x_ids)}
+        objectives = [
+            sub_creator.create_objective(**kwargs)
+            for sub_creator in self.sub_creators.values()
+        ]
         return AggregatedObjective(
-            [
-                sub_creator.create_objective(x_ids=x_ids, **kwargs)
-                for sub_creator in self.sub_creators.values()
-            ],
+            objectives,
             x_names=x_ids,
+            x_indices=[
+                [x_index[x_id] for x_id in objective.x_ids]
+                for objective in objectives
+            ],
         )
 
 
