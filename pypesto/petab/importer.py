@@ -189,9 +189,12 @@ class PetabImporter:
                 raise ValueError("Invalid PEtab v2 problem.")
 
         if self._hierarchical and _is_multi_model(petab_problem):
+            # TODO: supportable if no model's inner parameters occur in
+            #  another model -- then each model's inner problems are
+            #  independent
             raise NotImplementedError(
                 "Hierarchical optimization is not supported for PEtab v2 "
-                "problems with multiple models."
+                "problems with multiple models yet."
             )
 
         if self._hierarchical and validate_petab_hierarchical:
