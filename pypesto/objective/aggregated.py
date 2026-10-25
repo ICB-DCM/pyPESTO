@@ -40,11 +40,12 @@ class AggregatedObjective(ObjectiveBase):
             (Details see documentation of x_names in
             :class:`pypesto.ObjectiveBase`)
         x_indices:
-            For each objective, the indices of the parameters it takes,
-            relative to the parameter vector of this objective. Its
-            derivatives are mapped back to the full parameter vector. ``None``
-            (the default, also per objective) passes the full parameter
-            vector.
+            For each objective, the indices (in ``x_names``) of the parameters
+            it takes, in the order it takes them. Its derivatives are mapped
+            back to the full parameter vector; those w.r.t. the other
+            parameters are zero. An entry ``None`` stands for all parameters.
+            If ``x_indices`` is ``None`` (the default), every objective takes
+            the full parameter vector. Requires ``x_names``.
         """
         # input typechecks
         if not isinstance(objectives, Sequence):
@@ -63,19 +64,12 @@ class AggregatedObjective(ObjectiveBase):
         if not objectives:
             raise ValueError("Length of objectives must be at least one")
 
-        if x_indices is None:
-            x_indices = [None] * len(objectives)
-        elif len(x_indices) != len(objectives):
-            raise ValueError(
-                "The length of `x_indices` must match the number of "
-                "objectives."
-            )
-
         self._objectives = objectives
-        self._x_indices = [
-            None if ix is None else np.asarray(ix, dtype=int)
-            for ix in x_indices
-        ]
+        self._x_indices = (
+            None
+            if x_indices is None
+            else _check_x_indices(objectives, x_names, x_indices)
+        )
 
         super().__init__(x_names=x_names)
 
@@ -171,7 +165,7 @@ class AggregatedObjective(ObjectiveBase):
                 )
                 for objective, x_ix, cur_kwargs in zip(
                     self._objectives,
-                    self._x_indices,
+                    self._x_indices or [None] * len(self._objectives),
                     kwargs_list,
                     strict=True,
                 )
@@ -189,6 +183,41 @@ class AggregatedObjective(ObjectiveBase):
         for n_obj, obj in enumerate(self._objectives):
             info[f"objective_{n_obj}"] = obj.get_config()
         return info
+
+
+def _check_x_indices(
+    objectives: Sequence[ObjectiveBase],
+    x_names: Sequence[str] | None,
+    x_indices: Sequence[Sequence[int] | None],
+) -> list[np.ndarray]:
+    """Check ``x_indices`` and replace ``None`` by all parameter indices.
+
+    See :class:`AggregatedObjective`.
+    """
+    if x_names is None:
+        raise ValueError("`x_indices` requires `x_names`.")
+    if len(x_indices) != len(objectives):
+        raise ValueError(
+            "The length of `x_indices` must match the number of objectives."
+        )
+    dim = len(x_names)
+    checked = []
+    for objective, x_ix in zip(objectives, x_indices, strict=True):
+        x_ix = np.arange(dim) if x_ix is None else np.asarray(x_ix, dtype=int)
+        if x_ix.ndim != 1 or len(set(x_ix)) != len(x_ix):
+            raise ValueError(f"`x_indices` must be unique, got {x_ix}.")
+        if np.any((x_ix < 0) | (x_ix >= dim)):
+            raise ValueError(f"`x_indices` must be in [0, {dim}), got {x_ix}.")
+        # objectives without own parameter names cannot be checked further
+        if objective.x_names is not None and list(objective.x_names) != [
+            x_names[ix] for ix in x_ix
+        ]:
+            raise ValueError(
+                f"`x_indices` select {[x_names[ix] for ix in x_ix]}, but "
+                f"the objective takes {list(objective.x_names)}."
+            )
+        checked.append(x_ix)
+    return checked
 
 
 def _expand_result(
