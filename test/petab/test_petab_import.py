@@ -313,8 +313,9 @@ def test_petab_v2_boehm():
     )
     expected_fval_nominal = 138.22199693517703
 
-    # create model
-    importer = PetabImporter(petab_problem)
+    # create model; explicit model name, because benchmark problems upgraded
+    #  to PEtab v2 all get the model id `model` (from the SBML file name)
+    importer = PetabImporter(petab_problem, model_name=f"{problem_id}_v2")
     problem = importer.create_problem()
     assert problem.x_names == petab_problem.x_ids
     assert problem.dim == petab_problem.n_estimated == 9
@@ -453,7 +454,9 @@ def test_petab_v2_priors_missing_sensitivities():
     )
     petab_problem.parameters[0].prior_distribution = "normal"
     petab_problem.parameters[0].prior_parameters = [0.0, 1.0]
-    problem = PetabImporter(petab_problem).create_problem()
+    problem = PetabImporter(
+        petab_problem, model_name="Boehm_JProteomeRes2014_v2"
+    ).create_problem()
     assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
 
     problem.unfix_parameters(petab_problem.x_fixed_indices)
@@ -506,7 +509,9 @@ def test_petab_v2_residuals():
     petab_problem = petab.v2.Problem.from_yaml(
         models.get_problem_yaml_path("Boehm_JProteomeRes2014")
     )
-    problem = PetabImporter(petab_problem).create_problem()
+    problem = PetabImporter(
+        petab_problem, model_name="Boehm_JProteomeRes2014_v2"
+    ).create_problem()
     objective = problem.objective
     x = np.asarray(petab_problem.x_nominal_free)
 
@@ -553,7 +558,7 @@ def test_petab_v2_schwen():
         models.get_problem_yaml_path(problem_id)
     )
     assert petab_problem.n_priors
-    importer = PetabImporter(petab_problem)
+    importer = PetabImporter(petab_problem, model_name=f"{problem_id}_v2")
     problem = importer.create_problem()
     assert problem.x_names == petab_problem.x_ids
     assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
@@ -565,6 +570,70 @@ def test_petab_v2_schwen():
     startpoints = problem.startpoint_method(n_starts=5, problem=problem)
     assert startpoints.shape == (5, problem.dim)
     assert np.all(np.isfinite(startpoints))
+
+
+def test_petab_v2_parameter_scales():
+    """A PEtab v2 problem estimated on the scales of the PEtab v1 problem it
+    was upgraded from matches the v1 problem."""
+    from pypesto.C import MODE_RES
+
+    problem_id = "Boehm_JProteomeRes2014"
+    petab_problem_v1 = models.get_problem(problem_id)
+    petab_problem_v2 = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    problem_v1 = PetabImporter(petab_problem_v1).create_problem()
+    problem_v2 = PetabImporter(
+        petab_problem_v2,
+        parameter_scales=petab_problem_v1.parameter_df[
+            petab.v1.C.PARAMETER_SCALE
+        ].to_dict(),
+    ).create_problem()
+
+    assert problem_v2.x_names == problem_v1.x_names
+    assert problem_v2.x_scales == problem_v1.x_scales
+    assert problem_v2.x_fixed_indices == problem_v1.x_fixed_indices
+    for attr in ("lb_full", "ub_full", "x_fixed_vals"):
+        assert np.allclose(
+            getattr(problem_v2, attr), getattr(problem_v1, attr)
+        )
+    startpoints = problem_v2.get_startpoints(100)
+    assert np.all(
+        (startpoints >= problem_v2.lb) & (startpoints <= problem_v2.ub)
+    )
+
+    # objective input and derivatives are on parameter scale
+    x = np.asarray(petab_problem_v1.x_nominal_free_scaled)
+    fval_v1, grad_v1, hess_v1 = problem_v1.objective(x, sensi_orders=(0, 1, 2))
+    fval_v2, grad_v2, hess_v2 = problem_v2.objective(x, sensi_orders=(0, 1, 2))
+    assert np.isclose(fval_v2, fval_v1)
+    assert np.allclose(grad_v2, grad_v1)
+    assert np.allclose(hess_v2, hess_v1)
+
+    for problem in (problem_v1, problem_v2):
+        problem.objective.amici_model.set_add_sigma_residuals(True)
+    sres_v1 = problem_v1.objective(x, sensi_orders=(1,), mode=MODE_RES)
+    sres_v2 = problem_v2.objective(x, sensi_orders=(1,), mode=MODE_RES)
+    assert np.allclose(sres_v2, sres_v1)
+
+
+def test_petab_v2_parameter_scales_invalid():
+    """Invalid parameter scales are rejected."""
+    problem_id = "Boehm_JProteomeRes2014"
+    petab_problem_v2 = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    # validated by AMICI when creating the simulator
+    importer = PetabImporter(
+        petab_problem_v2, parameter_scales={"no_such_parameter": "log10"}
+    )
+    with pytest.raises(ValueError, match="no_such_parameter"):
+        importer.create_problem()
+
+    with pytest.raises(ValueError, match="only supported for PEtab v2"):
+        PetabImporter(
+            models.get_problem(problem_id), parameter_scales={"k_phos": "lin"}
+        )
 
 
 def test_petab_v2_prior_indexing():
@@ -611,11 +680,13 @@ def test_petab_v2_prior_indexing():
     )
     importer = PetabImporter.__new__(PetabImporter)
     importer.petab_problem = fake_problem
+    importer.parameter_scales = {"p3": "log10"}
 
     prior = importer._create_prior_v2()
     # priors only for the estimated parameters p1 and p3, at their positions
     #  in x_ids (1 and 3) -- not at the running prior count (0 and 1)
     assert [entry["index"] for entry in prior.prior_list] == [1, 3]
+    assert [entry["scale"] for entry in prior.prior_list] == ["lin", "log10"]
 
 
 def test_petab_v2_startpoint_sampling():
@@ -652,21 +723,25 @@ def test_petab_v2_startpoint_sampling():
     ]
     petab_problem = SimpleNamespace(parameters=parameters)
     startpoint_method = PetabStartpoints(petab_problem=petab_problem)
+    # the prior distribution is on linear scale, the startpoints are on
+    #  parameter scale
     pypesto_problem = SimpleNamespace(
-        x_names=["p_lognormal", "p_uniform"], x_free_indices=[0, 1]
+        x_names=["p_lognormal", "p_uniform"],
+        x_free_indices=[0, 1],
+        x_scales=["log10", "lin"],
     )
     startpoint_method._setup(pypesto_problem)
 
     startpoints = startpoint_method.sample(
         n_starts=20,
-        lb=np.array([1e-3, 0.0]),
-        ub=np.array([1e3, 10.0]),
+        lb=np.array([-3.0, 0.0]),
+        ub=np.array([3.0, 10.0]),
     )
     assert startpoints.shape == (20, 2)
     assert np.all(np.isfinite(startpoints))
     # sampled startpoints respect the parameter bounds
-    assert np.all(startpoints[:, 0] >= 1e-3)
-    assert np.all(startpoints[:, 0] <= 1e3)
+    assert np.all(startpoints[:, 0] >= -3.0)
+    assert np.all(startpoints[:, 0] <= 3.0)
     assert np.all(startpoints[:, 1] >= 0.0)
     assert np.all(startpoints[:, 1] <= 10.0)
 

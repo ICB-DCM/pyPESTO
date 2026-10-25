@@ -482,7 +482,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
             preeq_dummy = [""] * edata_conditions.shape[0]
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
-        edata_conditions.drop_duplicates(inplace=True)
+        edata_conditions = edata_conditions.drop_duplicates()
 
         if condition_ids is None:
             condition_ids = [
@@ -632,6 +632,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         hierarchical: bool = False,
         non_quantitative_data_types: Iterable[str] | None = None,
         inner_options: dict[str, Any] | None = None,
+        parameter_scales: dict[str, str] | None = None,
         **kwargs,
     ):
         """
@@ -639,6 +640,9 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
 
         See :class:`AmiciObjectiveCreator`. Of the non-quantitative data
         types, only relative data are supported for PEtab v2 so far.
+        ``parameter_scales`` is passed on to
+        :meth:`amici.importers.petab.PetabImporter.create_simulator`, which
+        requires amici>1.1.0.
         """
         super().__init__(
             petab_problem=petab_problem,
@@ -647,6 +651,16 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             inner_options=inner_options,
             **kwargs,
         )
+        self.parameter_scales = parameter_scales
+
+    def _parameter_scales_kwargs(self) -> dict[str, dict[str, str]]:
+        """Get the ``parameter_scales`` keyword argument for AMICI.
+
+        Only passed if set: parameter scales were added after amici 1.1.0.
+        """
+        if not self.parameter_scales:
+            return {}
+        return {"parameter_scales": self.parameter_scales}
 
     def compile_model(self, **kwargs):
         """
@@ -728,6 +742,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             #  experiment table is converted to the model), and only that
             #  version matches the compiled model
             petab_problem=self._create_amici_importer().petab_problem,
+            **self._parameter_scales_kwargs(),
         ).create_edatas()
 
     def create_objective(
@@ -775,7 +790,7 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             )
         petab_importer = self._create_amici_importer()
         petab_simulator = petab_importer.create_simulator(
-            force_import=force_compile
+            force_import=force_compile, **self._parameter_scales_kwargs()
         )
 
         x_ids = kwargs.pop("x_ids", self.petab_problem.x_ids)
@@ -798,6 +813,15 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
             # parameters estimated in the inner subproblems are removed from
             #  the objective parameters
             inner_parameter_ids = set(calculator.get_inner_par_ids())
+            if scaled_inner := {
+                x_id
+                for x_id in inner_parameter_ids
+                if (self.parameter_scales or {}).get(x_id, LIN) != LIN
+            }:
+                raise ValueError(
+                    "Inner parameters are estimated on linear scale, but "
+                    f"`parameter_scales` sets another scale for {scaled_inner}."
+                )
             x_ids = [x_id for x_id in x_ids if x_id not in inner_parameter_ids]
 
         return AmiciPetabV2Objective(
