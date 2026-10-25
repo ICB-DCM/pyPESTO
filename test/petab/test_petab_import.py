@@ -703,8 +703,9 @@ def _petab_v2_multi_model_problem(
         )
         problem.add_observable(f"obs_{m}", f"x_{m}", noise_formula="sigma")
         for t, y in zip([1, 2, 5], measurements[m], strict=True):
-            problem.add_measurement(f"obs_{m}", time=t, measurement=y)
-            problem.measurements[-1].model_id = m
+            problem.add_measurement(
+                f"obs_{m}", time=t, measurement=y, model_id=m
+            )
     return problem
 
 

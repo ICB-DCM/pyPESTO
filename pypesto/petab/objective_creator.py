@@ -11,6 +11,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import (
     Any,
 )
@@ -82,7 +83,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         hierarchical: bool = False,
         non_quantitative_data_types: Iterable[str] | None = None,
         inner_options: dict[str, Any] | None = None,
-        output_folder: str | None = None,
+        output_folder: str | Path | None = None,
         model_name: str | None = None,
         validate_petab: bool = True,
     ):
@@ -906,15 +907,15 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
     """ObjectiveCreator for a PEtab v2 problem with multiple models.
 
     The problem is split into one single-model problem per model (see
-    :func:`pypesto.petab.util.split_petab_problem_by_model`), each of which is
-    imported separately. Since the models share the parameters but not the
-    data, the objective is the sum of the per-model objectives.
+    :meth:`petab.v2.Problem.split_by_model`), each of which is imported
+    separately. Since the models share the parameters but not the data, the
+    objective is the sum of the per-model objectives.
     """
 
     def __init__(
         self,
         petab_problem: v2.Problem,
-        output_folder: str,
+        output_folder: str | Path,
         model_name: str,
         validate_petab: bool = True,
     ):
@@ -934,19 +935,15 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
         validate_petab:
             Whether to validate the single-model problems on import.
         """
-        from .util import split_petab_problem_by_model
-
         self.petab_problem = petab_problem
         self.sub_creators: dict[str, AmiciPetabV2ObjectiveCreator] = {
             model_id: AmiciPetabV2ObjectiveCreator(
                 petab_problem=sub_problem,
-                output_folder=os.path.join(output_folder, model_id),
+                output_folder=Path(output_folder, model_id),
                 model_name=f"{model_name}_{model_id}",
                 validate_petab=validate_petab,
             )
-            for model_id, sub_problem in split_petab_problem_by_model(
-                petab_problem
-            ).items()
+            for model_id, sub_problem in petab_problem.split_by_model().items()
         }
 
     def compile_model(self, **kwargs):

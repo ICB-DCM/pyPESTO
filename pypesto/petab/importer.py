@@ -8,6 +8,7 @@ import tempfile
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import version
+from pathlib import Path
 from typing import (
     Any,
 )
@@ -74,7 +75,7 @@ class PetabImporter:
     def __init__(
         self,
         petab_problem: petab.Problem | v2.Problem,
-        output_folder: str | None = None,
+        output_folder: str | Path | None = None,
         model_name: str | None = None,
         validate_petab: bool = True,
         validate_petab_hierarchical: bool = True,
@@ -119,6 +120,13 @@ class PetabImporter:
             In case of a ``simulator_type == 'petab'``, the simulator object
             has to be provided. Otherwise, the argument is not used.
         """
+        if _is_multi_model(petab_problem) and not hasattr(
+            v2.Problem, "split_by_model"
+        ):
+            raise NotImplementedError(
+                "PEtab v2 problems with multiple models require a version of "
+                "the `petab` package with `Problem.split_by_model`."
+            )
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
 
@@ -158,8 +166,14 @@ class PetabImporter:
                 petab_problem
             ):
                 raise ValueError("Invalid PEtab problem.")
-            if isinstance(petab_problem, v2.Problem):
-                _validate_petab_v2_problem(petab_problem)
+            if (
+                isinstance(petab_problem, v2.Problem)
+                and (
+                    validation_result := petab_problem.validate()
+                ).has_errors()
+            ):
+                validation_result.log(logger=logger)
+                raise ValueError("Invalid PEtab v2 problem.")
 
         if self._hierarchical and _is_multi_model(petab_problem):
             raise NotImplementedError(
@@ -197,7 +211,7 @@ class PetabImporter:
     @staticmethod
     def from_yaml(
         yaml_config: dict | str,
-        output_folder: str = None,
+        output_folder: str | Path | None = None,
         model_name: str = None,
         simulator_type: str = AMICI,
     ) -> PetabImporter:
@@ -744,7 +758,7 @@ def _find_output_folder_name(
     return output_folder
 
 
-def _find_model_name(output_folder: str) -> str:
+def _find_model_name(output_folder: str | Path) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
 
@@ -754,44 +768,3 @@ def _is_multi_model(petab_problem: petab.Problem | v2.Problem) -> bool:
     return (
         isinstance(petab_problem, v2.Problem) and len(petab_problem.models) > 1
     )
-
-
-def _validate_petab_v2_problem(petab_problem: v2.Problem) -> None:
-    """Validate a PEtab v2 problem, raise if it is invalid.
-
-    libpetab cannot validate multi-model problems yet
-    (https://github.com/PEtab-dev/libpetab-python/issues/392). For those, only
-    the assignment of measurements to models is checked on the full problem,
-    and every single-model problem
-    (:func:`pypesto.petab.util.split_petab_problem_by_model`) is validated
-    separately.
-    """
-    if not _is_multi_model(petab_problem):
-        problems = {None: petab_problem}
-    else:
-        from petab.v2.lint import CheckMeasurementModelId
-
-        from .util import split_petab_problem_by_model
-
-        validation_result = petab_problem.validate(
-            validation_tasks=[CheckMeasurementModelId()]
-        )
-        if validation_result.has_errors():
-            validation_result.log(logger=logger)
-            raise ValueError("Invalid PEtab v2 problem.")
-        problems = split_petab_problem_by_model(petab_problem)
-        if unused := set(petab_problem.x_ids).difference(
-            *(problem.x_ids for problem in problems.values())
-        ):
-            raise ValueError(
-                f"Invalid PEtab v2 problem. Parameters {unused} are not "
-                "used by any model."
-            )
-
-    for model_id, problem in problems.items():
-        if (validation_result := problem.validate()).has_errors():
-            validation_result.log(logger=logger)
-            raise ValueError(
-                "Invalid PEtab v2 problem"
-                + (f" for model `{model_id}`." if model_id else ".")
-            )
