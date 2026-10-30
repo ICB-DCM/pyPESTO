@@ -65,7 +65,7 @@ Changelog = "https://pypesto.readthedocs.io/en/latest/changelog.html"
 
 [project.optional-dependencies]
 amici = [
-  "amici>=1.0.0",
+  "amici>=1.2.0",
 ]
 
 petab = [

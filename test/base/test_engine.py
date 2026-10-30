@@ -131,14 +131,9 @@ def test_pickle_objective():
         objective.amici_model.get_free_parameter_ids()
         == objective2.amici_model.get_free_parameter_ids()
     )
-    assert (
-        objective.amici_solver.get_sensitivity_order()
-        == objective2.amici_solver.get_sensitivity_order()
-    )
-    assert (
-        objective.amici_solver.get_sensitivity_method()
-        == objective2.amici_solver.get_sensitivity_method()
-    )
+    assert asd.get_solver_settings(
+        objective.amici_solver
+    ) == asd.get_solver_settings(objective2.amici_solver)
     assert len(objective.edatas) == len(objective2.edatas)
 
 
