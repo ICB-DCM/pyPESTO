@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pypesto"
 description = "python-based Parameter EStimation TOolbox"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dynamic = ["version", "readme"]
 authors = [
   { name = "The pyPESTO developers", email = "yannik.schaelte@gmail.com" },
@@ -40,18 +40,17 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.11",
 ]
 
 dependencies = [
-  "numpy>=1.19.1,!=1.24.0",
-  "scipy>=1.5.2",
-  "pandas>=1.5.0",
-  "cloudpickle>=1.5.0",
-  "matplotlib>=3.6.2",
+  "numpy>=1.26.0",
+  "scipy>=1.11.2",
+  "pandas>=2.1.1",
+  "cloudpickle>=2.1.0",
+  "matplotlib>=3.7.3",
   "more-itertools>=9.0.0",
-  "seaborn>=0.11.2",
-  "h5py>=3.1.0,!=3.15.0",
+  "seaborn>=0.12.2",
+  "h5py>=3.10.0,!=3.15.0",
   "tqdm>=4.46.0",
   "tabulate>=0.8.10",
 ]
@@ -82,7 +81,7 @@ dlib = [
 
 nlopt = [
   # != 2.9.0: https://github.com/stevengj/nlopt/issues/575
-  "nlopt>=2.6.2,!=2.9.0",
+  "nlopt>=2.7.1,!=2.9.0",
 ]
 
 pyswarm = [
@@ -102,7 +101,7 @@ fides = [
 ]
 
 mpi = [
-  "mpi4py>=3.0.3",
+  "mpi4py>=3.1.5",
 ]
 
 pymc = [
@@ -110,8 +109,8 @@ pymc = [
 ]
 
 jax = [
-  "jax>=0.4.1",
-  "jaxlib>=0.4.1",
+  "jax>=0.4.18",
+  "jaxlib>=0.4.18",
 ]
 
 emcee = [
@@ -125,7 +124,7 @@ dynesty = [
 mltools = [
   "umap-learn[plot]>=0.5.3",
   "holoviews>=1.18",
-  "scikit-learn>=0.24.1",
+  "scikit-learn>=1.3.1",
 ]
 
 julia = [

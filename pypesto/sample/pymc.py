@@ -75,16 +75,6 @@ def _eval_last_evaluation(
     return last_evaluation
 
 
-# TODO: once Python 3.11 support is dropped, require only ArviZ >=1.1.0
-#  and simplify this helper to `data.posterior.to_dataset()`.
-def _get_posterior_dataset(data: Any) -> Any:
-    """Return posterior as an xarray Dataset across ArviZ versions."""
-    posterior = data.posterior
-    if hasattr(posterior, "to_array"):
-        return posterior
-    return posterior.to_dataset()
-
-
 class PymcObjectiveOp(_PT_OP_BASE):
     """PyTensor wrapper around a (non-normalized) log-probability function."""
 
@@ -323,7 +313,7 @@ class PymcSampler(Sampler):
 
     def get_samples(self) -> McmcPtResult:
         """Convert result from pymc to McmcPtResult."""
-        posterior = _get_posterior_dataset(self.data)
+        posterior = self.data.posterior.to_dataset()
 
         # dimensions
         n_par, n_chain, n_iter = np.asarray(posterior.to_array()).shape
