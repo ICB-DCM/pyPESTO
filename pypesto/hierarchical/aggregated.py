@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+import numpy as np
+
 from ..C import INNER_PARAMETERS
 from ..objective import AggregatedObjective
 from ..objective.base import ResultDict
@@ -81,8 +83,22 @@ class AggregatedHierarchicalObjective(AggregatedObjective):
     def _aggregate_results(self, rvals: Sequence[ResultDict]) -> ResultDict:
         """Aggregate the results, and concatenate the inner parameters."""
         result = super()._aggregate_results(rvals)
-        if inner_parameters := [
-            x for rval in rvals for x in rval.get(INNER_PARAMETERS) or []
-        ]:
-            result[INNER_PARAMETERS] = inner_parameters
+        if all(rval.get(INNER_PARAMETERS) is None for rval in rvals):
+            return result
+        # an objective whose simulation failed returns no inner parameters;
+        #  NaNs keep the others under their names
+        result[INNER_PARAMETERS] = [
+            x
+            for objective, rval in zip(self._objectives, rvals, strict=True)
+            if isinstance(
+                calculator := getattr(objective, "calculator", None),
+                InnerCalculatorCollector,
+            )
+            for x in (
+                rval[INNER_PARAMETERS]
+                if rval.get(INNER_PARAMETERS) is not None
+                else [np.nan]
+                * len(calculator.get_interpretable_inner_par_ids())
+            )
+        ]
         return result

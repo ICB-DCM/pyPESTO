@@ -959,6 +959,14 @@ def test_petab_v2_multi_model_hierarchical():
     assert np.isclose(ret["fval"], ref_fval)
     assert np.allclose(ret["grad"], ref_grad)
     assert np.allclose(ret[INNER_PARAMETERS], ref_inner_parameters)
+    # a model whose simulation failed gets NaNs for its inner parameters
+    assert np.array_equal(
+        problem.objective._aggregate_results(
+            [{"fval": 0.0, INNER_PARAMETERS: [1.0]}, {"fval": np.inf}, {}]
+        )[INNER_PARAMETERS],
+        [1.0, np.nan],
+        equal_nan=True,
+    )
 
     assert problem.objective.check_gradients_match_finite_differences(
         x=x, mode=MODE_FUN
