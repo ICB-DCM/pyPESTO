@@ -11,6 +11,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import (
     Any,
 )
@@ -34,7 +35,12 @@ from ..hierarchical.inner_calculator_collector import (
     InnerCalculatorCollector,
     InnerCalculatorCollectorPetabV2,
 )
-from ..objective import AmiciObjective, ObjectiveBase, PetabSimulatorObjective
+from ..objective import (
+    AggregatedObjective,
+    AmiciObjective,
+    ObjectiveBase,
+    PetabSimulatorObjective,
+)
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.roadrunner import (
     ExpData,
@@ -77,7 +83,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         hierarchical: bool = False,
         non_quantitative_data_types: Iterable[str] | None = None,
         inner_options: dict[str, Any] | None = None,
-        output_folder: str | None = None,
+        output_folder: str | Path | None = None,
         model_name: str | None = None,
         validate_petab: bool = True,
     ):
@@ -919,6 +925,94 @@ class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
         return self.prediction_to_petab_measurement_df(
             prediction, predictor
         ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+
+
+class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
+    """ObjectiveCreator for a PEtab v2 problem with multiple models.
+
+    The problem is split into one single-model problem per model (see
+    :meth:`petab.v2.Problem.split_by_model`), each of which is imported
+    separately. Since the models share the parameters but not the data, the
+    objective is the sum of the per-model objectives.
+
+    The per-model objectives are likelihoods only: the parameter priors are
+    defined on the shared parameter table, and
+    :meth:`pypesto.petab.PetabImporter.create_problem` adds them once to the
+    sum.
+    """
+
+    def __init__(
+        self,
+        petab_problem: v2.Problem,
+        output_folder: str | Path,
+        model_name: str,
+        validate_petab: bool = True,
+    ):
+        """
+        Initialize the creator.
+
+        Parameters
+        ----------
+        petab_problem:
+            The multi-model PEtab v2 problem.
+        output_folder:
+            Base folder for the compiled models. Each model is compiled into
+            a subfolder named after its model ID.
+        model_name:
+            Prefix of the names of the compiled model modules, which are
+            ``{model_name}_{model_id}``.
+        validate_petab:
+            Whether to validate the single-model problems on import.
+        """
+        self.petab_problem = petab_problem
+        self.sub_creators: dict[str, AmiciPetabV2ObjectiveCreator] = {
+            model_id: AmiciPetabV2ObjectiveCreator(
+                petab_problem=sub_problem,
+                output_folder=Path(output_folder, model_id),
+                model_name=f"{model_name}_{model_id}",
+                validate_petab=validate_petab,
+            )
+            for model_id, sub_problem in petab_problem.split_by_model().items()
+        }
+
+    def compile_model(self, **kwargs):
+        """Compile all models.
+
+        See :meth:`AmiciPetabV2ObjectiveCreator.compile_model`.
+        """
+        for sub_creator in self.sub_creators.values():
+            sub_creator.compile_model(**kwargs)
+
+    def create_objective(self, **kwargs) -> AggregatedObjective:
+        """Create the objective.
+
+        Parameters
+        ----------
+        kwargs:
+            Passed to :meth:`AmiciPetabV2ObjectiveCreator.create_objective`
+            for every model.
+
+        Returns
+        -------
+        An :class:`pypesto.objective.AggregatedObjective` of one
+        :class:`pypesto.objective.AmiciPetabV2Objective` per model, which
+        takes the parameter vector of the full problem and passes each model
+        the parameters of its single-model problem.
+        """
+        x_ids = self.petab_problem.x_ids
+        x_index = {x_id: ix for ix, x_id in enumerate(x_ids)}
+        objectives = [
+            sub_creator.create_objective(**kwargs)
+            for sub_creator in self.sub_creators.values()
+        ]
+        return AggregatedObjective(
+            objectives,
+            x_names=x_ids,
+            x_indices=[
+                [x_index[x_id] for x_id in objective.x_ids]
+                for objective in objectives
+            ],
+        )
 
 
 class PetabSimulatorObjectiveCreator(ObjectiveCreator):

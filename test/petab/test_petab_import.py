@@ -5,6 +5,7 @@ This is for testing the petab import.
 import logging
 import os
 import unittest
+from collections.abc import Sequence
 from itertools import chain
 
 import amici.sim.sundials as asd
@@ -749,3 +750,121 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(PetabImportTest())
     unittest.main()
+
+
+def _petab_v2_multi_model_problem(
+    model_ids: Sequence[str],
+    k_deg_prior: tuple[float, float] | None = None,
+) -> petab.v2.Problem:
+    """Two models that share the degradation rate and the noise level.
+
+    Optionally, with a normal prior (mean, standard deviation) on the
+    degradation rate.
+    """
+    from petab.v2.models.sbml_model import SbmlModel
+
+    production_rates = {"A": 1.0, "B": 2.0}
+    measurements = {"A": [0.5, 0.8, 1.9], "B": [1.5, 2.5, 3.8]}
+    problem = petab.v2.Problem(
+        models=[
+            SbmlModel.from_antimony(
+                f"x_{m}' = k_{m} - k_deg * x_{m}; x_{m} = 0; "
+                f"k_{m} = 1; k_deg = 0.5",
+                model_id=m,
+            )
+            for m in model_ids
+        ]
+    )
+    problem.add_parameter(
+        "k_deg",
+        lb=0.01,
+        ub=10,
+        nominal_value=0.4,
+        **(
+            {"prior_dist": "normal", "prior_pars": k_deg_prior}
+            if k_deg_prior
+            else {}
+        ),
+    )
+    problem.add_parameter("sigma", lb=0.01, ub=10, nominal_value=0.2)
+    for m in model_ids:
+        problem.add_parameter(
+            f"k_{m}", lb=0.01, ub=10, nominal_value=production_rates[m]
+        )
+        problem.add_observable(f"obs_{m}", f"x_{m}", noise_formula="sigma")
+        for t, y in zip([1, 2, 5], measurements[m], strict=True):
+            problem.add_measurement(
+                f"obs_{m}", time=t, measurement=y, model_id=m
+            )
+    return problem
+
+
+def test_petab_v2_multi_model():
+    """A multi-model PEtab v2 problem is the sum of its single-model parts."""
+    from pypesto.C import MODE_FUN
+
+    petab_problem = _petab_v2_multi_model_problem(["A", "B"])
+    importer = PetabImporter(petab_problem, model_name="petab_v2_multi_model")
+    problem = importer.create_problem()
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+    assert problem.x_names == petab_problem.x_ids
+
+    x = np.asarray(petab_problem.x_nominal_free)
+    fval, grad = problem.objective(x, sensi_orders=(0, 1))
+
+    # reference: the models imported as separate single-model problems,
+    #  reusing the compiled models
+    ref_fval, ref_grad = 0.0, np.zeros_like(grad)
+    for (
+        model_id,
+        sub_creator,
+    ) in importer.objective_constructor.sub_creators.items():
+        ref_petab_problem = _petab_v2_multi_model_problem([model_id])
+        ref_problem = PetabImporter(
+            ref_petab_problem,
+            output_folder=sub_creator.output_folder,
+            model_name=sub_creator.model_name,
+        ).create_problem()
+        ix = [
+            petab_problem.x_ids.index(x_id) for x_id in ref_petab_problem.x_ids
+        ]
+        ref_fval_model, ref_grad_model = ref_problem.objective(
+            x[ix], sensi_orders=(0, 1)
+        )
+        ref_fval += ref_fval_model
+        ref_grad[ix] += ref_grad_model
+    assert np.isclose(fval, ref_fval)
+    assert np.allclose(grad, ref_grad)
+    # every model contributes to the gradient of the shared parameters
+    assert np.all(np.isfinite(grad) & (grad != 0))
+
+    assert problem.objective.check_gradients_match_finite_differences(
+        x=x, mode=MODE_FUN
+    )
+
+    # a prior on a shared parameter is added once, not once per model
+    from scipy.stats import norm
+
+    prior_mean, prior_sd = 0.5, 0.1
+    prior_problem = PetabImporter(
+        _petab_v2_multi_model_problem(
+            ["A", "B"], k_deg_prior=(prior_mean, prior_sd)
+        ),
+        model_name="petab_v2_multi_model",
+    ).create_problem()
+    prior_fval, prior_grad = prior_problem.objective(x, sensi_orders=(0, 1))
+    ix_k_deg = petab_problem.x_ids.index("k_deg")
+    k_deg = x[ix_k_deg]
+    assert np.isclose(
+        prior_fval, fval - norm.logpdf(k_deg, prior_mean, prior_sd)
+    )
+    expected_grad = grad.copy()
+    expected_grad[ix_k_deg] += (k_deg - prior_mean) / prior_sd**2
+    assert np.allclose(prior_grad, expected_grad)
+
+    # optimization works
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=2, progress_bar=False
+    )
+    for local_result in result.optimize_result.list:
+        assert local_result.fval < local_result.fval0
