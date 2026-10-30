@@ -31,6 +31,7 @@ from petab.v1.parameter_mapping import ParMappingDictQuadruple
 from petab.v1.simulate import Simulator
 
 from ..C import CENSORED, CONDITION_SEP, LIN, ORDINAL, SEMIQUANTITATIVE
+from ..hierarchical.aggregated import AggregatedHierarchicalObjective
 from ..hierarchical.inner_calculator_collector import (
     InnerCalculatorCollector,
     InnerCalculatorCollectorPetabV2,
@@ -49,6 +50,7 @@ from ..objective.roadrunner import (
 )
 from ..predict import AmiciPredictor
 from ..result import PredictionResult
+from .util import get_petab_non_quantitative_data_types
 
 try:
     import amici
@@ -939,6 +941,9 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
     defined on the shared parameter table, and
     :meth:`pypesto.petab.PetabImporter.create_problem` adds them once to the
     sum.
+
+    With hierarchical optimization, each model's inner problems are solved
+    separately, which requires that the models do not share inner parameters.
     """
 
     def __init__(
@@ -946,6 +951,8 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
         petab_problem: v2.Problem,
         output_folder: str | Path,
         model_name: str,
+        hierarchical: bool = False,
+        inner_options: dict[str, Any] | None = None,
         validate_petab: bool = True,
     ):
         """
@@ -961,15 +968,24 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
         model_name:
             Prefix of the names of the compiled model modules, which are
             ``{model_name}_{model_id}``.
+        hierarchical, inner_options:
+            See :class:`AmiciPetabV2ObjectiveCreator`. The non-quantitative
+            data types are those of each single-model problem.
         validate_petab:
             Whether to validate the single-model problems on import.
         """
         self.petab_problem = petab_problem
+        self.hierarchical = hierarchical
         self.sub_creators: dict[str, AmiciPetabV2ObjectiveCreator] = {
             model_id: AmiciPetabV2ObjectiveCreator(
                 petab_problem=sub_problem,
                 output_folder=Path(output_folder, model_id),
                 model_name=f"{model_name}_{model_id}",
+                hierarchical=hierarchical,
+                inner_options=inner_options,
+                non_quantitative_data_types=(
+                    get_petab_non_quantitative_data_types(sub_problem)
+                ),
                 validate_petab=validate_petab,
             )
             for model_id, sub_problem in petab_problem.split_by_model().items()
@@ -997,15 +1013,33 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
         An :class:`pypesto.objective.AggregatedObjective` of one
         :class:`pypesto.objective.AmiciPetabV2Objective` per model, which
         takes the parameter vector of the full problem and passes each model
-        the parameters of its single-model problem.
+        the parameters of its single-model problem. With hierarchical
+        optimization, an
+        :class:`pypesto.hierarchical.aggregated.AggregatedHierarchicalObjective`
+        that takes the outer parameters only.
         """
-        x_ids = self.petab_problem.x_ids
-        x_index = {x_id: ix for ix, x_id in enumerate(x_ids)}
         objectives = [
             sub_creator.create_objective(**kwargs)
             for sub_creator in self.sub_creators.values()
         ]
-        return AggregatedObjective(
+        if not self.hierarchical:
+            objective_class = AggregatedObjective
+            inner_parameter_ids = set()
+        else:
+            objective_class = AggregatedHierarchicalObjective
+            inner_parameter_ids = {
+                x_id
+                for objective in objectives
+                if isinstance(objective.calculator, InnerCalculatorCollector)
+                for x_id in objective.calculator.get_inner_par_ids()
+            }
+        x_ids = [
+            x_id
+            for x_id in self.petab_problem.x_ids
+            if x_id not in inner_parameter_ids
+        ]
+        x_index = {x_id: ix for ix, x_id in enumerate(x_ids)}
+        return objective_class(
             objectives,
             x_names=x_ids,
             x_indices=[

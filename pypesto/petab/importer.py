@@ -33,6 +33,7 @@ from ..C import (
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
 )
+from ..hierarchical.aggregated import AggregatedInnerCalculators
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
 from ..objective import AggregatedObjective, AmiciObjective, ObjectiveBase
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -189,13 +190,11 @@ class PetabImporter:
                 raise ValueError("Invalid PEtab v2 problem.")
 
         if self._hierarchical and _is_multi_model(petab_problem):
-            # TODO: supportable if no model's inner parameters occur in
-            #  another model -- then each model's inner problems are
-            #  independent
-            raise NotImplementedError(
-                "Hierarchical optimization is not supported for PEtab v2 "
-                "problems with multiple models yet."
+            from ..hierarchical.petab import (
+                validate_multi_model_inner_parameters,
             )
+
+            validate_multi_model_inner_parameters(petab_problem)
 
         if self._hierarchical and validate_petab_hierarchical:
             from ..hierarchical.petab import (
@@ -424,6 +423,8 @@ class PetabImporter:
                     petab_problem=self.petab_problem,
                     output_folder=self.output_folder,
                     model_name=self.model_name,
+                    hierarchical=self._hierarchical,
+                    inner_options=self.inner_options,
                     validate_petab=self.validate_petab,
                 )
             return AmiciPetabV2ObjectiveCreator(
@@ -514,7 +515,10 @@ class PetabImporter:
 
         # Raise error if the correct calculator is not used.
         if self._hierarchical:
-            if not isinstance(objective.calculator, InnerCalculatorCollector):
+            if not isinstance(
+                objective.calculator,
+                InnerCalculatorCollector | AggregatedInnerCalculators,
+            ):
                 raise AssertionError(
                     f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )

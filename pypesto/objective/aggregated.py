@@ -75,7 +75,7 @@ class AggregatedObjective(ObjectiveBase):
 
     def __deepcopy__(self, memodict=None):
         """Create copy of objective."""
-        other = AggregatedObjective(
+        other = type(self)(
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
             x_indices=deepcopy(self._x_indices),
@@ -150,7 +150,7 @@ class AggregatedObjective(ObjectiveBase):
                     DeprecationWarning,
                     stacklevel=1,
                 )
-        return aggregate_results(
+        return self._aggregate_results(
             [
                 _expand_result(
                     objective.call_unprocessed(
@@ -171,6 +171,10 @@ class AggregatedObjective(ObjectiveBase):
                 )
             ]
         )
+
+    def _aggregate_results(self, rvals: Sequence[ResultDict]) -> ResultDict:
+        """Aggregate the objectives' results, see :func:`aggregate_results`."""
+        return aggregate_results(rvals)
 
     def initialize(self):
         """See `ObjectiveBase` documentation."""
