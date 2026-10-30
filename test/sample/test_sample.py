@@ -210,6 +210,8 @@ def test_regularize_covariance():
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
 
+# `pypesto.sample.geweke_test` is shadowed by the function of the same name,
+# so `import pypesto.sample.geweke_test as geweke` would give the function.
 geweke = importlib.import_module("pypesto.sample.geweke_test")
 
 
@@ -221,30 +223,6 @@ def _ar1(n: int, rho: float, rng: np.random.Generator, mean: float = 5.0):
     for t in range(1, n):
         x[t] = rho * x[t - 1] + noise[t]
     return (x + mean)[:, np.newaxis]
-
-
-def _reference_welch_at_zero(x: np.ndarray, nw: int) -> float:
-    """Frozen copy of the previous FFT-based `spectrum(x, len(x), nw)[0]`."""
-    n_overlap = nw // 2
-    w = 0.5 * (1 - np.cos(2 * np.pi * np.arange(1, nw + 1) / (nw + 1)))
-    k = (len(x) - n_overlap) // (nw - n_overlap)
-    index = np.arange(nw)
-    density = np.zeros(len(x))
-    for _ in range(k):
-        density += np.abs(np.fft.fft(w * x[index], n=len(x))) ** 2
-        index += nw - n_overlap
-    return density[0] / (k * np.linalg.norm(w) ** 2)
-
-
-@pytest.mark.parametrize("n", [8, 9, 50, 99, 100, 1000])
-def test_geweke_spectral_density_matches_welch(n):
-    """The direct frequency-zero estimate equals Welch's method at bin 0."""
-    x = np.random.default_rng(n).normal(3, 1, n)
-    nw = n // 4
-    assert np.isclose(
-        geweke._spectral_density_at_zero(x[:, np.newaxis], nw)[0],
-        _reference_welch_at_zero(x, nw),
-    )
 
 
 def test_geweke_spectrum0_estimates_long_run_variance():
@@ -266,19 +244,18 @@ def test_geweke_zscore_invariant_to_shift_and_scale():
     assert np.allclose(geweke.calculate_zscore(chain * 37)[0], z)
 
 
-def test_geweke_zscore_segments(monkeypatch):
-    """The first floor(a*n) and the last floor(b*n) samples are compared."""
-    seen = []
+def test_geweke_zscore_segments():
+    """The first floor(a*n) and the last floor(b*n) samples are compared.
 
-    def record(segment):
-        seen.append(segment[:, 0].copy())
-        return np.ones((1, segment.shape[1]))
-
-    monkeypatch.setattr(geweke, "spectrum0", record)
-    chain = np.arange(1000, dtype=float)[:, np.newaxis]
-    geweke.calculate_zscore(chain, a=0.1, b=0.5)
-    assert np.array_equal(seen[0], np.arange(100))
-    assert np.array_equal(seen[1], np.arange(500, 1000))
+    Both segments have mean 0.01 only if they are exactly [0, 100) and
+    [500, 1000): any off-by-one picks up a 7 or drops the 1 or the 5.
+    """
+    chain = np.zeros((1000, 1))
+    chain[100:500] = 7
+    chain[99] = 1
+    chain[500] = 5
+    z, _ = geweke.calculate_zscore(chain, a=0.1, b=0.5)
+    assert z.item() == 0
 
 
 @pytest.mark.parametrize(
@@ -326,7 +303,6 @@ def test_geweke_spectrum0_not_inflated_by_drift():
         ([3.04] + [0.0] * 19, 0),  # just below it
         ([5, 2.1, 2.2], 1),  # step-down stops at 2.2, so 2.1 is retained
         ([3, 1, 2], 1),  # case the previous rank mix-up got wrong
-        ([np.nan, 0.1], 1),  # NaN (too short to test) counts as rejected
     ],
 )
 def test_geweke_holm_step_down(max_abs_z, expected):
@@ -354,6 +330,27 @@ def test_geweke_burn_in_transient():
     chain[:300] += 6 * np.exp(-np.arange(300) / 50)[:, np.newaxis]
     burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain)
     assert 50 <= burn_in <= 250
+
+
+def test_geweke_burn_in_start_points():
+    """The burn-in is one of the 20 start points floor(i * n / 20).
+
+    With n = 1019, the old rule (multiples of n // 20 = 50) gives other
+    start points from i = 2 on.
+    """
+    n = 1019
+    rng = np.random.default_rng(5)
+    chain = 5 + rng.normal(size=(n, 1))
+    chain[:300] += 6 * np.exp(-np.arange(300) / 50)[:, np.newaxis]
+    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain)
+    assert burn_in in np.arange(20) * n // 20
+    assert 100 <= burn_in <= 254
+
+
+def test_geweke_spectrum_deprecated():
+    """`spectrum` warns that it will be removed."""
+    with pytest.warns(DeprecationWarning, match="next meso release"):
+        geweke.spectrum(np.random.default_rng(9).normal(size=100))
 
 
 def test_geweke_burn_in_drift():
