@@ -54,7 +54,7 @@ jobs:
         codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   mac:
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       matrix:
         python-version: ['3.14']
