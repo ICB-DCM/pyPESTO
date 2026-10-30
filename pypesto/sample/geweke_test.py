@@ -190,13 +190,36 @@ def calculate_zscore(
     return z_score, p
 
 
-def _first_not_rejected(max_abs_z: np.ndarray, zscore: float) -> int | None:
+def _combine_parameters(p: np.ndarray) -> np.ndarray:
+    """
+    Combine the parameters' p-values of each fragment (Bonferroni).
+
+    A fragment's null hypothesis is "this sub-chain is stationary in all
+    parameters". ``min(1, npar * min_j p_j)`` is a valid p-value for it for
+    any dependence between the parameters, unlike the single-test p-value of
+    the largest |z|, which rejects too often for many parameters.
+
+    Parameters
+    ----------
+    p:
+        Geweke p-values, shape (n_fragments, npar). NaN (too short to test)
+        counts as significant.
+
+    Returns
+    -------
+    One p-value per fragment.
+    """
+    p = np.nan_to_num(p, nan=0.0)
+    return np.minimum(1.0, p.shape[1] * np.min(p, axis=1))
+
+
+def _first_not_rejected(p_values: np.ndarray, zscore: float) -> int | None:
     """
     Holm's step-down procedure over the fragments of the sequential test.
 
     Each fragment's null hypothesis is "this sub-chain is stationary", with
-    p-value from the largest |z| over all parameters. The family-wise level
-    is ``alpha = 2 * (1 - Phi(zscore))``.
+    p-value from :func:`_combine_parameters`. The family-wise level is
+    ``alpha = 2 * (1 - Phi(zscore))``.
 
     See:
     Sture Holm. A simple sequentially rejective multiple test procedure.
@@ -204,8 +227,8 @@ def _first_not_rejected(max_abs_z: np.ndarray, zscore: float) -> int | None:
 
     Parameters
     ----------
-    max_abs_z:
-        Largest absolute z-score per fragment. NaN counts as rejected.
+    p_values:
+        P-value per fragment. NaN counts as rejected.
     zscore:
         Single-test z threshold defining the family-wise level.
 
@@ -214,9 +237,9 @@ def _first_not_rejected(max_abs_z: np.ndarray, zscore: float) -> int | None:
     Index of the first fragment (in chain order) that is not rejected, or
     None if all are rejected.
     """
-    n_tests = len(max_abs_z)
+    n_tests = len(p_values)
     alpha = 2 * norm.sf(zscore)
-    p_values = 2 * norm.sf(np.nan_to_num(max_abs_z, nan=np.inf))
+    p_values = np.nan_to_num(p_values, nan=0.0)
 
     rejected = np.zeros(n_tests, dtype=bool)
     for rank, idx in enumerate(np.argsort(p_values, kind="stable")):
@@ -237,8 +260,8 @@ def burn_in_by_sequential_geweke(
     The Geweke test is applied to the chain without its first 0, 1/20,
     2/20, ... of samples, and the burn-in is the first of these starting
     points that is not rejected, with Holm's correction for testing all
-    starting points. Each parameter is tested separately and the largest
-    |z| counts.
+    starting points. Each parameter is tested separately, and their
+    p-values are combined per starting point with Bonferroni's correction.
 
     See:
     Benjamin Ballnus et al. Comprehensive benchmarking of Markov chain
@@ -267,11 +290,11 @@ def burn_in_by_sequential_geweke(
         step = nsamples // N_FRAGMENTS
         fragments = np.arange(0, nsamples - 1, step)
 
-        z = np.zeros((len(fragments), npar))
+        p = np.zeros((len(fragments), npar))
         for i, start in enumerate(fragments):
-            z[i, :], _ = calculate_zscore(chain[start:, :])
+            _, p[i, :] = calculate_zscore(chain[start:, :])
 
-        first = _first_not_rejected(np.max(np.absolute(z), axis=1), zscore)
+        first = _first_not_rejected(_combine_parameters(p), zscore)
 
     if first is None:
         logger.warning(

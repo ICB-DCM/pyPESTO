@@ -331,10 +331,14 @@ def test_geweke_spectrum0_not_inflated_by_drift():
 )
 def test_geweke_holm_step_down(max_abs_z, expected):
     """Holm's procedure on the per-fragment p-values."""
-    assert (
-        geweke._first_not_rejected(np.array(max_abs_z, dtype=float), 2.0)
-        == expected
-    )
+    p_values = 2 * norm.sf(np.array(max_abs_z, dtype=float))
+    assert geweke._first_not_rejected(p_values, 2.0) == expected
+
+
+def test_geweke_combine_parameters():
+    """Bonferroni over parameters: npar * smallest p, capped at 1."""
+    p = np.array([[0.01, 0.5, 0.2], [0.9, 0.8, 0.7], [np.nan, 0.5, 0.5]])
+    assert np.allclose(geweke._combine_parameters(p), [0.03, 1.0, 0.0])
 
 
 def test_geweke_burn_in_iid():
@@ -360,11 +364,18 @@ def test_geweke_burn_in_drift():
     assert sample.diagnostics.burn_in_by_sequential_geweke(chain) >= 500
 
 
-def test_geweke_burn_in_false_alarm_rate():
-    """Stationary chains rarely get a burn-in (family-wise level ~0.05)."""
-    rng = np.random.default_rng(7)
+@pytest.mark.parametrize("npar", [1, 10])
+def test_geweke_burn_in_false_alarm_rate(npar):
+    """Stationary chains rarely get a burn-in (family-wise level ~0.05).
+
+    With 10 parameters, this needs the p-values combined over parameters
+    (the largest |z| alone gives ~15% false alarms).
+    """
+    rng = np.random.default_rng(8)
     burn_ins = [
-        sample.diagnostics.burn_in_by_sequential_geweke(_ar1(500, 0.3, rng))
+        sample.diagnostics.burn_in_by_sequential_geweke(
+            np.hstack([_ar1(500, 0.3, rng) for _ in range(npar)])
+        )
         for _ in range(100)
     ]
     assert np.mean(np.array(burn_ins) > 0) <= 0.12
