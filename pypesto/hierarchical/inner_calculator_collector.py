@@ -821,52 +821,6 @@ class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
         return rdatas, None
 
 
-class AggregatedInnerCalculators:
-    """The inner calculators of several independent collectors.
-
-    For an :class:`pypesto.objective.AggregatedObjective` of hierarchical
-    objectives, such as for a multi-model PEtab v2 problem, the inner
-    parameter information of all objectives, in the order of the objectives
-    -- the order in which the aggregated objective returns the inner
-    parameters.
-
-    Parameters
-    ----------
-    collectors:
-        The calculators of the aggregated objectives that solve inner
-        problems.
-    """
-
-    def __init__(self, collectors: Sequence[InnerCalculatorCollector]):
-        self.inner_calculators = [
-            calculator
-            for collector in collectors
-            for calculator in collector.inner_calculators
-        ]
-        self.semiquant_observable_ids = [
-            observable_id
-            for collector in collectors
-            for observable_id in collector.semiquant_observable_ids or []
-        ] or None
-        self.relative_observable_ids = [
-            observable_id
-            for collector in collectors
-            for observable_id in collector.relative_observable_ids or []
-        ] or None
-
-    # these only use `inner_calculators`
-    get_inner_par_ids = InnerCalculatorCollector.get_inner_par_ids
-    get_interpretable_inner_par_ids = (
-        InnerCalculatorCollector.get_interpretable_inner_par_ids
-    )
-    get_interpretable_inner_par_bounds = (
-        InnerCalculatorCollector.get_interpretable_inner_par_bounds
-    )
-    get_interpretable_inner_par_scales = (
-        InnerCalculatorCollector.get_interpretable_inner_par_scales
-    )
-
-
 def calculate_quantitative_result(
     rdatas: list[asd.ReturnDataView],
     edatas: list[asd.ExpData],

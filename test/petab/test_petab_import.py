@@ -2,6 +2,7 @@
 This is for testing the petab import.
 """
 
+import copy
 import logging
 import os
 import unittest
@@ -908,6 +909,7 @@ def test_petab_v2_multi_model_hierarchical():
     """Hierarchical optimization of a multi-model PEtab v2 problem is the
     sum of the single-model hierarchical problems."""
     from pypesto.C import INNER_PARAMETERS, MODE_FUN
+    from pypesto.hierarchical.aggregated import AggregatedHierarchicalObjective
     from pypesto.problem import HierarchicalProblem
 
     scalings = {"A": "scaling_A", "B": "scaling_B"}
@@ -921,6 +923,9 @@ def test_petab_v2_multi_model_hierarchical():
     )
     problem = importer.create_problem()
     assert isinstance(problem, HierarchicalProblem)
+    assert isinstance(
+        copy.deepcopy(problem.objective), AggregatedHierarchicalObjective
+    )
     assert problem.inner_x_names == ["scaling_A", "scaling_B"]
     assert problem.relative_observable_ids == ["obs_A", "obs_B"]
     assert problem.x_names == ["k_deg", "sigma", "k_A", "k_B", "k_C"]

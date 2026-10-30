@@ -31,8 +31,8 @@ from petab.v1.parameter_mapping import ParMappingDictQuadruple
 from petab.v1.simulate import Simulator
 
 from ..C import CENSORED, CONDITION_SEP, LIN, ORDINAL, SEMIQUANTITATIVE
+from ..hierarchical.aggregated import AggregatedHierarchicalObjective
 from ..hierarchical.inner_calculator_collector import (
-    AggregatedInnerCalculators,
     InnerCalculatorCollector,
     InnerCalculatorCollectorPetabV2,
 )
@@ -975,6 +975,7 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
             Whether to validate the single-model problems on import.
         """
         self.petab_problem = petab_problem
+        self.hierarchical = hierarchical
         self.sub_creators: dict[str, AmiciPetabV2ObjectiveCreator] = {
             model_id: AmiciPetabV2ObjectiveCreator(
                 petab_problem=sub_problem,
@@ -1013,28 +1014,32 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
         :class:`pypesto.objective.AmiciPetabV2Objective` per model, which
         takes the parameter vector of the full problem and passes each model
         the parameters of its single-model problem. With hierarchical
-        optimization, these are the outer parameters only, and the
-        objective's ``calculator`` is an
-        :class:`pypesto.hierarchical.inner_calculator_collector.AggregatedInnerCalculators`.
+        optimization, an
+        :class:`pypesto.hierarchical.aggregated.AggregatedHierarchicalObjective`
+        that takes the outer parameters only.
         """
         objectives = [
             sub_creator.create_objective(**kwargs)
             for sub_creator in self.sub_creators.values()
         ]
-        collectors = [
-            objective.calculator
-            for objective in objectives
-            if isinstance(objective.calculator, InnerCalculatorCollector)
-        ]
-        calculator = AggregatedInnerCalculators(collectors)
-        inner_parameter_ids = set(calculator.get_inner_par_ids())
+        if not self.hierarchical:
+            objective_class = AggregatedObjective
+            inner_parameter_ids = set()
+        else:
+            objective_class = AggregatedHierarchicalObjective
+            inner_parameter_ids = {
+                x_id
+                for objective in objectives
+                if isinstance(objective.calculator, InnerCalculatorCollector)
+                for x_id in objective.calculator.get_inner_par_ids()
+            }
         x_ids = [
             x_id
             for x_id in self.petab_problem.x_ids
             if x_id not in inner_parameter_ids
         ]
         x_index = {x_id: ix for ix, x_id in enumerate(x_ids)}
-        aggregated = AggregatedObjective(
+        return objective_class(
             objectives,
             x_names=x_ids,
             x_indices=[
@@ -1042,9 +1047,6 @@ class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
                 for objective in objectives
             ],
         )
-        if collectors:
-            aggregated.calculator = calculator
-        return aggregated
 
 
 class PetabSimulatorObjectiveCreator(ObjectiveCreator):

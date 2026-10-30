@@ -33,10 +33,8 @@ from ..C import (
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
 )
-from ..hierarchical.inner_calculator_collector import (
-    AggregatedInnerCalculators,
-    InnerCalculatorCollector,
-)
+from ..hierarchical.aggregated import AggregatedInnerCalculators
+from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
 from ..objective import AggregatedObjective, AmiciObjective, ObjectiveBase
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
 from ..predict import AmiciPredictor
@@ -192,24 +190,11 @@ class PetabImporter:
                 raise ValueError("Invalid PEtab v2 problem.")
 
         if self._hierarchical and _is_multi_model(petab_problem):
-            # each model's inner problems are solved separately, which
-            #  requires that the models do not share inner parameters
-            from ..hierarchical.petab import _get_estimated_inner_parameters
+            from ..hierarchical.petab import (
+                validate_multi_model_inner_parameters,
+            )
 
-            inner_parameters = _get_estimated_inner_parameters(petab_problem)
-            sub_x_ids = [
-                set(sub_problem.x_ids)
-                for sub_problem in petab_problem.split_by_model().values()
-            ]
-            if shared := sorted(
-                x_id
-                for x_id in inner_parameters
-                if sum(x_id in x_ids for x_ids in sub_x_ids) > 1
-            ):
-                raise NotImplementedError(
-                    "Hierarchical optimization is not supported for inner "
-                    f"parameters shared between models: {shared}."
-                )
+            validate_multi_model_inner_parameters(petab_problem)
 
         if self._hierarchical and validate_petab_hierarchical:
             from ..hierarchical.petab import (

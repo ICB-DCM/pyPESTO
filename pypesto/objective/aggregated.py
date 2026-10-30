@@ -11,10 +11,8 @@ from ..C import (
     GRAD,
     HESS,
     HESSP,
-    INNER_PARAMETERS,
     RDATAS,
     RES,
-    SPLINE_KNOTS,
     SRES,
     ModeType,
 )
@@ -77,7 +75,7 @@ class AggregatedObjective(ObjectiveBase):
 
     def __deepcopy__(self, memodict=None):
         """Create copy of objective."""
-        other = AggregatedObjective(
+        other = type(self)(
             objectives=[deepcopy(objective) for objective in self._objectives],
             x_names=deepcopy(self.x_names),
             x_indices=deepcopy(self._x_indices),
@@ -152,7 +150,7 @@ class AggregatedObjective(ObjectiveBase):
                     DeprecationWarning,
                     stacklevel=1,
                 )
-        return aggregate_results(
+        return self._aggregate_results(
             [
                 _expand_result(
                     objective.call_unprocessed(
@@ -173,6 +171,10 @@ class AggregatedObjective(ObjectiveBase):
                 )
             ]
         )
+
+    def _aggregate_results(self, rvals: Sequence[ResultDict]) -> ResultDict:
+        """Aggregate the objectives' results, see :func:`aggregate_results`."""
+        return aggregate_results(rvals)
 
     def initialize(self):
         """See `ObjectiveBase` documentation."""
@@ -266,14 +268,6 @@ def aggregate_results(rvals: Sequence[ResultDict]) -> ResultDict:
     for rval in rvals:
         if RDATAS in rval:
             result[RDATAS].extend(rval[RDATAS])
-
-    # concatenate the inner parameters of hierarchical objectives, in the
-    #  order of the objectives
-    for key in [INNER_PARAMETERS, SPLINE_KNOTS]:
-        if values := [
-            value for rval in rvals if (value := rval.get(key)) is not None
-        ]:
-            result[key] = [x for value in values for x in value]
 
     # initialize res and sres
     if RES in rvals[0]:
