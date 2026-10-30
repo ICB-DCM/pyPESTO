@@ -476,7 +476,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
             preeq_dummy = [""] * edata_conditions.shape[0]
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
-        edata_conditions.drop_duplicates(inplace=True)
+        edata_conditions = edata_conditions.drop_duplicates()
 
         if condition_ids is None:
             condition_ids = [
