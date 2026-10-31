@@ -288,6 +288,35 @@ def test_waterfall_with_nan_inf():
 
 
 @close_fig
+def test_waterfall_order_by_id_with_nan_inf():
+    """Non-finite starts are gaps when ordering by start ID."""
+    result_1 = create_optimization_result()
+    result_2 = deepcopy(result_1)
+    # a failed start, which is not the last start by ID
+    result_2.optimize_result.list[1].fval = np.inf
+    result_2.optimize_result.sort()
+
+    ax = visualize.waterfall(
+        [result_1, result_2], order_by_id=True, scale_y="lin"
+    )
+    # one scatter per result, the failed start is not plotted
+    scatters = ax.collections
+    assert [len(c.get_offsets()) for c in scatters] == [7, 6]
+    # the failed start is a gap, the other starts keep their x position
+    assert list(scatters[1].get_offsets()[:, 0]) == [6, 5, 4, 3, 2, 0]
+
+    # each result shows its own best 3 finite starts, at shared x positions
+    ax = visualize.waterfall(
+        [result_1, result_2], order_by_id=True, start_indices=3, scale_y="lin"
+    )
+    scatters = ax.collections
+    assert [len(c.get_offsets()) for c in scatters] == [3, 3]
+    # the failed start is a gap in result_2 only, so it ends one later
+    assert sorted(scatters[0].get_offsets()[:, 0]) == [0, 1, 2]
+    assert sorted(scatters[1].get_offsets()[:, 0]) == [0, 2, 3]
+
+
+@close_fig
 def test_waterfall_with_options():
     # create the necessary results
     result_1 = create_optimization_result(n=8)
@@ -972,6 +1001,25 @@ def test_optimizer_history_lowlevel():
 
     # test with a list of arrays
     visualize.optimizer_history_lowlevel(vals)
+
+
+@close_fig
+def test_optimization_stats_with_nan_inf():
+    """Start indices refer to all starts, also if some are non-finite."""
+    result = create_optimization_result_nan_inf()
+    for k, optimizer_result in enumerate(result.optimize_result.list):
+        optimizer_result.n_fval = k
+
+    # the -inf start is sorted first and is dropped
+    axes = visualize.optimization_run_property_per_multistart(
+        result, "n_fval", start_indices=3
+    )
+    assert sorted(axes[0, 0].lines[0].get_ydata()) == [1, 2]
+
+    # all starts, including the non-finite ones at the end
+    visualize.optimization_run_property_per_multistart(
+        result, "n_fval", start_indices=len(result.optimize_result)
+    )
 
 
 @close_fig
