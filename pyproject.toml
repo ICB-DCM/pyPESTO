@@ -101,6 +101,10 @@ fides = [
   "fides>=0.6.1",
 ]
 
+pyscat = [
+  "pyscat>=0.1.0",
+]
+
 mpi = [
   "mpi4py>=3.0.3",
 ]
