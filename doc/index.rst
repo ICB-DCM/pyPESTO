@@ -25,6 +25,7 @@ pyPESTO - Parameter EStimation TOolbox for python
    install
    example
    storage_format.md
+   noisy_predictions
    api
 
 
