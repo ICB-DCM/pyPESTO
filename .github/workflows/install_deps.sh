@@ -32,10 +32,10 @@ for par in "$@"; do
     amici)
       # for amici
       if [ "$(uname)" = "Darwin" ]; then
-        brew install swig hdf5 libomp
+        brew install swig
       else
         sudo apt-get install \
-          clang libopenblas-dev libhdf5-serial-dev libomp-dev swig
+          clang libopenblas-dev swig
       fi
     ;;
 
