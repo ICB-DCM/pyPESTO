@@ -9,11 +9,7 @@ from scipy import stats
 
 from ..objective import FD
 from ..result import McmcPtResult
-from ..sample.pymc import (
-    PymcObjectiveOp,
-    PymcSampler,
-    _get_posterior_dataset,
-)
+from ..sample.pymc import PymcObjectiveOp, PymcSampler
 from ..sample.sampler import SamplerImportError
 
 logger = logging.getLogger(__name__)
@@ -137,7 +133,7 @@ class PymcVariational(PymcSampler):
         # get InferenceData object
         with self.model:
             pymc_data = self.data.sample(n_samples)
-        posterior = _get_posterior_dataset(pymc_data)
+        posterior = pymc_data.posterior.to_dataset()
 
         x_names_free = self.problem.get_reduced_vector(self.problem.x_names)
         post_samples = np.concatenate(
