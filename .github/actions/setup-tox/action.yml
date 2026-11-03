@@ -19,12 +19,15 @@ runs:
       shell: bash
       run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
 
-    # runner image (e.g. ubuntu24, ubuntu26): wheels built from source link
-    # against system libraries, so caches must not cross image versions
-    - name: Get runner image
-      id: image
+    # runner image (e.g. ubuntu24, ubuntu26) and the system packages
+    # install_deps.sh installs: wheels built from source link against system
+    # libraries, so caches must not cross either
+    - name: Get system libraries
+      id: system
       shell: bash
-      run: echo "image=${ImageOS:-unknown}" >> "$GITHUB_OUTPUT"
+      env:
+        DEPS_HASH: ${{ hashFiles('.github/workflows/install_deps.sh') }}
+      run: echo "system=${ImageOS:-unknown}-${DEPS_HASH:0:8}" >> "$GITHUB_OUTPUT"
 
     # download caches never decide which versions get installed,
     # so falling back to older entries is safe
@@ -34,10 +37,10 @@ runs:
         path: |
           ~/.cache/pip
           ~/.cache/uv
-        key: "${{ runner.os }}-${{ steps.image.outputs.image }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-${{ steps.week.outputs.week }}"
+        key: "${{ runner.os }}-${{ steps.system.outputs.system }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-${{ steps.week.outputs.week }}"
         restore-keys: |
-          ${{ runner.os }}-${{ steps.image.outputs.image }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-
-          ${{ runner.os }}-${{ steps.image.outputs.image }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-
+          ${{ runner.os }}-${{ steps.system.outputs.system }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-${{ github.job }}-
+          ${{ runner.os }}-${{ steps.system.outputs.system }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-dl-
 
     # no restore-keys: restoring an older env would bring back stale
     # dependencies
@@ -45,4 +48,4 @@ runs:
       uses: actions/cache@v6
       with:
         path: .tox/
-        key: "${{ runner.os }}-${{ steps.image.outputs.image }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-tox-${{ github.job }}-${{ hashFiles('tox.ini', 'pyproject.toml') }}-${{ steps.week.outputs.week }}"
+        key: "${{ runner.os }}-${{ steps.system.outputs.system }}-${{ runner.arch }}-py${{ steps.setup-python.outputs.python-version }}-tox-${{ github.job }}-${{ hashFiles('tox.ini', 'pyproject.toml') }}-${{ steps.week.outputs.week }}"
