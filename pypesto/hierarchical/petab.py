@@ -748,6 +748,32 @@ def validate_hierarchical_petab_problem_v2(petab_problem: v2.Problem) -> None:
     validate_inner_parameter_pairings(inner_parameter_df=inner_parameter_df)
 
 
+def validate_multi_model_inner_parameters(petab_problem: v2.Problem) -> None:
+    """Check that no inner parameter is shared between models.
+
+    Then each model's inner problems are independent, and are solved
+    separately.
+
+    Parameters
+    ----------
+    petab_problem:
+        The PEtab v2 problem with multiple models.
+    """
+    sub_x_ids = [
+        set(sub_problem.x_ids)
+        for sub_problem in petab_problem.split_by_model().values()
+    ]
+    if shared := sorted(
+        x_id
+        for x_id in _get_estimated_inner_parameters(petab_problem)
+        if sum(x_id in x_ids for x_ids in sub_x_ids) > 1
+    ):
+        raise NotImplementedError(
+            "Hierarchical optimization is not supported for inner "
+            f"parameters shared between models: {shared}."
+        )
+
+
 def get_inner_parameters_v2(
     petab_problem: v2.Problem,
 ) -> dict[str, InnerParameterType]:

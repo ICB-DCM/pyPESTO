@@ -2,6 +2,9 @@
 
 # Install CI dependencies, arguments specify what is required
 
+# Fail on the first error, e.g. an apt package that does not exist
+set -e
+
 # Base packages
 pip install --upgrade pip
 pip install wheel setuptools
@@ -32,7 +35,7 @@ for par in "$@"; do
         brew install swig hdf5 libomp
       else
         sudo apt-get install \
-          clang libatlas-base-dev libhdf5-serial-dev libomp-dev swig
+          clang libopenblas-dev libhdf5-serial-dev libomp-dev swig
       fi
     ;;
 
@@ -40,7 +43,7 @@ for par in "$@"; do
       # for ipopt
       sudo apt-get install \
 	build-essential \
-        coinor-libipopt1v5 coinor-libipopt-dev \
+        coinor-libipopt-dev \
         gfortran lcov pkg-config python3-dev zlib1g-dev
       if [ ! -f /usr/lib/x86_64-linux-gnu/liblapack.so ]; then
         sudo ln -s /usr/lib/x86_64-linux-gnu/liblapack.so.3 /usr/lib/x86_64-linux-gnu/liblapack.so

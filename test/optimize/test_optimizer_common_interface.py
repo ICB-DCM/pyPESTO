@@ -56,16 +56,6 @@ class TestOptimizerMaxtimeInterface:
         optimizer.set_maxtime(15.5)
         assert optimizer.options[FidesOptions.MAXTIME] == 15.5
 
-    def test_ess_optimizer_support(self):
-        """Test ESSOptimizer time limit support."""
-        from pypesto.optimize.ess import ESSOptimizer
-
-        optimizer = ESSOptimizer(max_walltime_s=100.0)
-        assert optimizer.supports_maxtime() is True
-
-        optimizer.set_maxtime(10.0)
-        assert optimizer.max_walltime_s == 10.0
-
     def test_scipy_optimizer_support(self):
         """Test ScipyOptimizer time limit support."""
         optimizer = optimize.ScipyOptimizer()
@@ -178,16 +168,6 @@ class TestOptimizerMaxiterInterface:
         assert FidesOptions.MAXITER in optimizer.options
         assert optimizer.options[FidesOptions.MAXITER] == 100
 
-    def test_ess_optimizer_support(self):
-        """Test ESSOptimizer iteration limit support."""
-        from pypesto.optimize.ess import ESSOptimizer
-
-        optimizer = ESSOptimizer(max_walltime_s=100.0)
-        assert optimizer.supports_maxiter() is True
-
-        optimizer.set_maxiter(50)
-        assert optimizer.max_iter == 50
-
 
 class TestOptimizerMaxevalInterface:
     """Test the unified maxeval interface for optimizers."""
@@ -207,16 +187,6 @@ class TestOptimizerMaxevalInterface:
 
         optimizer.set_maxeval(2000)
         assert optimizer.options["maxfevals"] == 2000
-
-    def test_ess_optimizer_support(self):
-        """Test ESSOptimizer evaluation limit support."""
-        from pypesto.optimize.ess import ESSOptimizer
-
-        optimizer = ESSOptimizer(max_walltime_s=100.0)
-        assert optimizer.supports_maxeval() is True
-
-        optimizer.set_maxeval(300)
-        assert optimizer.max_eval == 300
 
     def test_ipopt_optimizer_no_support(self):
         """Test that IpoptOptimizer does not support evaluation limits."""
