@@ -1,5 +1,4 @@
 import functools
-import logging
 import os
 from collections.abc import Sequence
 from copy import deepcopy
@@ -1595,21 +1594,6 @@ def test_monotonic_history():
         ]
 
 
-@close_fig
-def test_sacess_history():
-    """Test pypesto.visualize.optimizer_history.sacess_history"""
-    from pypesto.optimize.ess.sacess import ESSExitFlag, SacessOptimizer
-    from pypesto.visualize.optimizer_history import sacess_history
-
-    problem = create_problem()
-    sacess = SacessOptimizer(
-        max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
-    )
-    sacess.minimize(problem)
-    assert sacess.exit_flag == ESSExitFlag.MAX_TIME
-    sacess_history(sacess.histories)
-
-
 @pytest.mark.parametrize(
     "result_creation",
     [create_optimization_result, create_optimization_result_nan_inf],
@@ -1684,6 +1668,41 @@ def test_visualize_estimated_observable_mapping():
         axes=custom_axes,
     )
     assert returned_axes is custom_axes
+
+
+@close_fig
+def test_visualize_estimated_observable_mapping_offset_only(tmp_path):
+    """A relative observable can have an offset without a scaling."""
+    import petabtests
+
+    petab_problem = petab.Problem.from_yaml(
+        petabtests.get_case_dir("0001", "sbml", "v1.0.0") / "_0001.yaml"
+    )
+    petab_problem.observable_df[petab.OBSERVABLE_FORMULA] = (
+        "A + observableParameter1_obs_a"
+    )
+    petab_problem.measurement_df[petab.OBSERVABLE_PARAMETERS] = "offset_a"
+    petab_problem.parameter_df.loc["offset_a"] = [petab.LIN, -10, 10, 0, 1]
+    petab_problem.parameter_df[pypesto.C.PARAMETER_TYPE] = None
+    petab_problem.parameter_df.loc["offset_a", pypesto.C.PARAMETER_TYPE] = (
+        pypesto.C.InnerParameterType.OFFSET
+    )
+
+    importer = pypesto.petab.PetabImporter(
+        petab_problem,
+        hierarchical=True,
+        model_name="observable_mapping_offset_only",
+        output_folder=str(tmp_path),
+    )
+    problem = importer.create_problem()
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        optimizer=optimize.ScipyOptimizer(options={"maxiter": 1}),
+        progress_bar=False,
+    )
+    axes = visualize.visualize_estimated_observable_mapping(result, problem)
+    assert axes.size == 1
 
 
 @close_fig

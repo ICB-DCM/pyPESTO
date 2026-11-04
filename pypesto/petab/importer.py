@@ -8,6 +8,7 @@ import tempfile
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import version
+from pathlib import Path
 from typing import (
     Any,
 )
@@ -32,6 +33,7 @@ from ..C import (
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
 )
+from ..hierarchical.aggregated import AggregatedInnerCalculators
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
 from ..objective import AggregatedObjective, AmiciObjective, ObjectiveBase
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -41,6 +43,7 @@ from ..result import PredictionResult
 from ..startpoint import StartpointMethod
 from .objective_creator import (
     AmiciObjectiveCreator,
+    AmiciPetabV2MultiModelObjectiveCreator,
     AmiciPetabV2ObjectiveCreator,
     ObjectiveCreator,
     PetabSimulatorObjectiveCreator,
@@ -73,7 +76,7 @@ class PetabImporter:
     def __init__(
         self,
         petab_problem: petab.Problem | v2.Problem,
-        output_folder: str | None = None,
+        output_folder: str | Path | None = None,
         model_name: str | None = None,
         validate_petab: bool = True,
         validate_petab_hierarchical: bool = True,
@@ -128,6 +131,13 @@ class PetabImporter:
             For PEtab v1, scales are taken from the ``parameterScale`` column.
             Requires amici>1.1.0.
         """
+        if _is_multi_model(petab_problem) and not hasattr(
+            v2.Problem, "split_by_model"
+        ):
+            raise NotImplementedError(
+                "PEtab v2 problems with multiple models require a version of "
+                "the `petab` package with `Problem.split_by_model`."
+            )
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
         self.parameter_scales = _validate_parameter_scales(
@@ -179,6 +189,13 @@ class PetabImporter:
                 validation_result.log(logger=logger)
                 raise ValueError("Invalid PEtab v2 problem.")
 
+        if self._hierarchical and _is_multi_model(petab_problem):
+            from ..hierarchical.petab import (
+                validate_multi_model_inner_parameters,
+            )
+
+            validate_multi_model_inner_parameters(petab_problem)
+
         if self._hierarchical and validate_petab_hierarchical:
             from ..hierarchical.petab import (
                 validate_hierarchical_petab_problem,
@@ -209,7 +226,7 @@ class PetabImporter:
     @staticmethod
     def from_yaml(
         yaml_config: dict | str,
-        output_folder: str = None,
+        output_folder: str | Path | None = None,
         model_name: str = None,
         simulator_type: str = AMICI,
     ) -> PetabImporter:
@@ -401,6 +418,15 @@ class PetabImporter:
                     "Only 'amici' simulator type is supported for PEtab v2 "
                     "problems."
                 )
+            if _is_multi_model(self.petab_problem):
+                return AmiciPetabV2MultiModelObjectiveCreator(
+                    petab_problem=self.petab_problem,
+                    output_folder=self.output_folder,
+                    model_name=self.model_name,
+                    hierarchical=self._hierarchical,
+                    inner_options=self.inner_options,
+                    validate_petab=self.validate_petab,
+                )
             return AmiciPetabV2ObjectiveCreator(
                 petab_problem=self.petab_problem,
                 output_folder=self.output_folder,
@@ -489,7 +515,10 @@ class PetabImporter:
 
         # Raise error if the correct calculator is not used.
         if self._hierarchical:
-            if not isinstance(objective.calculator, InnerCalculatorCollector):
+            if not isinstance(
+                objective.calculator,
+                InnerCalculatorCollector | AggregatedInnerCalculators,
+            ):
                 raise AssertionError(
                     f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
@@ -763,7 +792,11 @@ def _find_output_folder_name(
         os.makedirs(PetabImporter.MODEL_BASE_DIR)
 
     # try model id
-    model_id = petab_problem.model.model_id
+    if _is_multi_model(petab_problem):
+        # the models are compiled into subfolders named after their IDs
+        model_id = petab_problem.id
+    else:
+        model_id = petab_problem.model.model_id
     if model_name is not None:
         model_id = model_name
 
@@ -779,6 +812,13 @@ def _find_output_folder_name(
     return output_folder
 
 
-def _find_model_name(output_folder: str) -> str:
+def _find_model_name(output_folder: str | Path) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
+
+
+def _is_multi_model(petab_problem: petab.Problem | v2.Problem) -> bool:
+    """Check whether the problem is a PEtab v2 problem with multiple models."""
+    return (
+        isinstance(petab_problem, v2.Problem) and len(petab_problem.models) > 1
+    )

@@ -2,9 +2,11 @@
 This is for testing the petab import.
 """
 
+import copy
 import logging
 import os
 import unittest
+from collections.abc import Sequence
 from itertools import chain
 
 import amici.sim.sundials as asd
@@ -749,3 +751,239 @@ if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(PetabImportTest())
     unittest.main()
+
+
+def _petab_v2_multi_model_problem(
+    model_ids: Sequence[str],
+    k_deg_prior: tuple[float, float] | None = None,
+    scalings: dict[str, str] | None = None,
+) -> petab.v2.Problem:
+    """Models that share the degradation rate and the noise level.
+
+    Optionally, with a normal prior (mean, standard deviation) on the
+    degradation rate, and with relative data: ``scalings`` maps model IDs to
+    the IDs of the scaling factors, inner parameters for hierarchical
+    optimization, of their observables.
+    """
+    from petab.v2.models.sbml_model import SbmlModel
+
+    from pypesto.C import PARAMETER_TYPE, InnerParameterType
+
+    scalings = scalings or {}
+    production_rates = {"A": 1.0, "B": 2.0, "C": 0.5}
+    measurements = {
+        "A": [0.5, 0.8, 1.9],
+        "B": [1.5, 2.5, 3.8],
+        "C": [0.3, 0.4, 0.9],
+    }
+    problem = petab.v2.Problem(
+        models=[
+            SbmlModel.from_antimony(
+                f"x_{m}' = k_{m} - k_deg * x_{m}; x_{m} = 0; "
+                f"k_{m} = 1; k_deg = 0.5",
+                model_id=m,
+            )
+            for m in model_ids
+        ]
+    )
+    problem.add_parameter(
+        "k_deg",
+        lb=0.01,
+        ub=10,
+        nominal_value=0.4,
+        **(
+            {"prior_dist": "normal", "prior_pars": k_deg_prior}
+            if k_deg_prior
+            else {}
+        ),
+    )
+    problem.add_parameter("sigma", lb=0.01, ub=10, nominal_value=0.2)
+    for m in model_ids:
+        problem.add_parameter(
+            f"k_{m}", lb=0.01, ub=10, nominal_value=production_rates[m]
+        )
+        if m in scalings:
+            # inner parameters are measurement-specific overrides
+            placeholder = f"observableParameter1_obs_{m}"
+            problem.add_observable(
+                f"obs_{m}",
+                f"{placeholder} * x_{m}",
+                noise_formula="sigma",
+                observable_placeholders=[placeholder],
+            )
+            if scalings[m] not in problem.x_ids:
+                problem.add_parameter(
+                    scalings[m],
+                    lb=0.01,
+                    ub=10,
+                    nominal_value=1,
+                    **{PARAMETER_TYPE: InnerParameterType.SCALING},
+                )
+        else:
+            problem.add_observable(f"obs_{m}", f"x_{m}", noise_formula="sigma")
+        for t, y in zip([1, 2, 5], measurements[m], strict=True):
+            problem.add_measurement(
+                f"obs_{m}",
+                time=t,
+                measurement=y,
+                observable_parameters=(
+                    [scalings[m]] if m in scalings else None
+                ),
+                model_id=m,
+            )
+    return problem
+
+
+def test_petab_v2_multi_model():
+    """A multi-model PEtab v2 problem is the sum of its single-model parts."""
+    from pypesto.C import MODE_FUN
+
+    petab_problem = _petab_v2_multi_model_problem(["A", "B"])
+    importer = PetabImporter(petab_problem, model_name="petab_v2_multi_model")
+    problem = importer.create_problem()
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+    assert problem.x_names == petab_problem.x_ids
+
+    x = np.asarray(petab_problem.x_nominal_free)
+    fval, grad = problem.objective(x, sensi_orders=(0, 1))
+
+    # reference: the models imported as separate single-model problems,
+    #  reusing the compiled models
+    ref_fval, ref_grad = 0.0, np.zeros_like(grad)
+    for (
+        model_id,
+        sub_creator,
+    ) in importer.objective_constructor.sub_creators.items():
+        ref_petab_problem = _petab_v2_multi_model_problem([model_id])
+        ref_problem = PetabImporter(
+            ref_petab_problem,
+            output_folder=sub_creator.output_folder,
+            model_name=sub_creator.model_name,
+        ).create_problem()
+        ix = [
+            petab_problem.x_ids.index(x_id) for x_id in ref_petab_problem.x_ids
+        ]
+        ref_fval_model, ref_grad_model = ref_problem.objective(
+            x[ix], sensi_orders=(0, 1)
+        )
+        ref_fval += ref_fval_model
+        ref_grad[ix] += ref_grad_model
+    assert np.isclose(fval, ref_fval)
+    assert np.allclose(grad, ref_grad)
+    # every model contributes to the gradient of the shared parameters
+    assert np.all(np.isfinite(grad) & (grad != 0))
+
+    assert problem.objective.check_gradients_match_finite_differences(
+        x=x, mode=MODE_FUN
+    )
+
+    # a prior on a shared parameter is added once, not once per model
+    from scipy.stats import norm
+
+    prior_mean, prior_sd = 0.5, 0.1
+    prior_problem = PetabImporter(
+        _petab_v2_multi_model_problem(
+            ["A", "B"], k_deg_prior=(prior_mean, prior_sd)
+        ),
+        model_name="petab_v2_multi_model",
+    ).create_problem()
+    prior_fval, prior_grad = prior_problem.objective(x, sensi_orders=(0, 1))
+    ix_k_deg = petab_problem.x_ids.index("k_deg")
+    k_deg = x[ix_k_deg]
+    assert np.isclose(
+        prior_fval, fval - norm.logpdf(k_deg, prior_mean, prior_sd)
+    )
+    expected_grad = grad.copy()
+    expected_grad[ix_k_deg] += (k_deg - prior_mean) / prior_sd**2
+    assert np.allclose(prior_grad, expected_grad)
+
+    # optimization works
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=2, progress_bar=False
+    )
+    for local_result in result.optimize_result.list:
+        assert local_result.fval < local_result.fval0
+
+
+def test_petab_v2_multi_model_hierarchical():
+    """Hierarchical optimization of a multi-model PEtab v2 problem is the
+    sum of the single-model hierarchical problems."""
+    from pypesto.C import INNER_PARAMETERS, MODE_FUN
+    from pypesto.hierarchical.aggregated import AggregatedHierarchicalObjective
+    from pypesto.problem import HierarchicalProblem
+
+    scalings = {"A": "scaling_A", "B": "scaling_B"}
+    petab_problem = _petab_v2_multi_model_problem(
+        ["A", "B", "C"], scalings=scalings
+    )
+    importer = PetabImporter(
+        petab_problem,
+        hierarchical=True,
+        model_name="petab_v2_multi_model_hierarchical",
+    )
+    problem = importer.create_problem()
+    assert isinstance(problem, HierarchicalProblem)
+    assert isinstance(
+        copy.deepcopy(problem.objective), AggregatedHierarchicalObjective
+    )
+    assert problem.inner_x_names == ["scaling_A", "scaling_B"]
+    assert problem.relative_observable_ids == ["obs_A", "obs_B"]
+    assert problem.x_names == ["k_deg", "sigma", "k_A", "k_B", "k_C"]
+
+    x_nominal = petab_problem.get_x_nominal_dict()
+    x = np.asarray([x_nominal[x_id] for x_id in problem.x_names])
+    ret = problem.objective(
+        x, sensi_orders=(0, 1), mode=MODE_FUN, return_dict=True
+    )
+
+    # reference: the models imported as separate single-model problems,
+    #  reusing the compiled models
+    ref_fval, ref_grad, ref_inner_parameters = 0.0, np.zeros_like(x), []
+    for (
+        model_id,
+        sub_creator,
+    ) in importer.objective_constructor.sub_creators.items():
+        ref_problem = PetabImporter(
+            _petab_v2_multi_model_problem([model_id], scalings=scalings),
+            hierarchical=model_id in scalings,
+            output_folder=sub_creator.output_folder,
+            model_name=sub_creator.model_name,
+        ).create_problem()
+        ix = [problem.x_names.index(x_id) for x_id in ref_problem.x_names]
+        ref_ret = ref_problem.objective(
+            x[ix], sensi_orders=(0, 1), mode=MODE_FUN, return_dict=True
+        )
+        ref_fval += ref_ret["fval"]
+        ref_grad[ix] += ref_ret["grad"]
+        ref_inner_parameters.extend(ref_ret.get(INNER_PARAMETERS, []))
+    assert np.isclose(ret["fval"], ref_fval)
+    assert np.allclose(ret["grad"], ref_grad)
+    assert np.allclose(ret[INNER_PARAMETERS], ref_inner_parameters)
+    # a model whose simulation failed gets NaNs for its inner parameters
+    assert np.array_equal(
+        problem.objective._aggregate_results(
+            [{"fval": 0.0, INNER_PARAMETERS: [1.0]}, {"fval": np.inf}, {}]
+        )[INNER_PARAMETERS],
+        [1.0, np.nan],
+        equal_nan=True,
+    )
+
+    assert problem.objective.check_gradients_match_finite_differences(
+        x=x, mode=MODE_FUN
+    )
+
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=2, progress_bar=False
+    )
+    for start in result.optimize_result.list:
+        assert start.fval <= start.fval0
+        assert len(start[INNER_PARAMETERS]) == len(problem.inner_x_names)
+
+    # inner parameters shared between models are rejected
+    with pytest.raises(NotImplementedError, match="shared between models"):
+        PetabImporter(
+            _petab_v2_multi_model_problem(
+                ["A", "B"], scalings={"A": "scaling", "B": "scaling"}
+            ),
+            hierarchical=True,
+        )
