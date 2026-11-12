@@ -22,6 +22,7 @@ from .ensemble import (
     calculate_cutoff,
     get_percentile_label,
 )
+from .predictive import compute_noisy_summary, normal_mixture_quantiles
 from .util import (
     read_ensemble_prediction_from_h5,
     read_from_csv,
