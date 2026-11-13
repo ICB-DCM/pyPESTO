@@ -72,7 +72,10 @@ def waterfall(
         Function values corresponding to the same start ID will be located at
         the same x-axis position. Only applicable when a list of result
         objects are provided. Default behavior is to sort the function values
-        of each result independently of other results.
+        of each result independently of other results. With ``start_indices``,
+        each result shows its own selected starts. A start that is not
+        selected, or not finite, in a result is left as a gap. Start IDs
+        that no result selected are omitted from the x-axis.
     style_kwargs:
         Style overrides. Keys used by this function:
 
