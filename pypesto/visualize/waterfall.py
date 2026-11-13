@@ -72,7 +72,10 @@ def waterfall(
         Function values corresponding to the same start ID will be located at
         the same x-axis position. Only applicable when a list of result
         objects are provided. Default behavior is to sort the function values
-        of each result independently of other results.
+        of each result independently of other results. With ``start_indices``,
+        each result shows its own selected starts. A start that is not
+        selected, or not finite, in a result is left as a gap. Start IDs
+        that no result selected are omitted from the x-axis.
     style_kwargs:
         Style overrides. Keys used by this function:
 
@@ -110,12 +113,23 @@ def waterfall(
     # handle `order_by_id`
     if order_by_id:
         start_id_ordering = get_ordering_by_start_id(results)
-        # Set start indices to all, and save actual start indices for later,
-        # so that all fvals are retrieved by `process_offset_for_list`.
-        # This enables use of `order_by_id` with `start_indices`.
-        ordered_start_indices = process_start_indices(
-            result=results[0], start_indices=start_indices
-        )
+        # each result shows its own selected starts (e.g. its best n
+        # finite starts), at the shared x position of their start IDs.
+        selected_ids = [
+            {
+                result.optimize_result[i].id
+                for i in process_start_indices(result, start_indices)
+            }
+            for result in results
+        ]
+        # drop x positions that no result selected
+        start_id_ordering = [
+            start_id
+            for start_id in start_id_ordering
+            if any(start_id in ids for ids in selected_ids)
+        ]
+        # Set start indices to all, so that `process_offset_for_list`
+        # considers all fvals for the offset.
         start_indices = ALL
 
     refs = create_references(references=reference)
@@ -145,19 +159,26 @@ def waterfall(
 
         # parse input
         if order_by_id:
-            start_ids = [s.id for s in results[j].optimize_result.list]
-            fvals_raw_is_finite = np.isfinite(fvals_raw) & (
-                np.absolute(fvals_raw) < WATERFALL_MAX_VALUE
-            )
+            # look up fvals by start ID, as `fvals_raw` lacks the
+            # non-finite starts. Unselected and non-finite starts are gaps.
+            fval_by_id = {
+                s.id: s.fval + offset_y
+                for s in results[j].optimize_result.list
+            }
 
             fvals = []
             for start_id in start_id_ordering:
-                start_index = start_ids.index(start_id)
-                if fvals_raw_is_finite[start_index]:
-                    fvals.append(fvals_raw[start_index])
+                fval = fval_by_id[start_id]
+                if (
+                    start_id in selected_ids[j]
+                    and np.isfinite(fval)
+                    and np.absolute(fval) < WATERFALL_MAX_VALUE
+                ):
+                    fvals.append(fval)
                 else:
                     fvals.append(None)
-            fvals = np.array(fvals)[ordered_start_indices]
+            fvals = np.array(fvals)
+            max_len_fvals = np.max([max_len_fvals, len(fvals)])
         else:
             # remove nan or inf values in fvals
             # also remove extremely large values. These values result in `inf`
@@ -407,9 +428,10 @@ def get_ordering_by_start_id(results: Sequence[Result]) -> list[int]:
         for start in result.optimize_result.list
     ]
 
+    # non-finite fvals are sorted last
     sorted_start_fval_pairs = sorted(
         start_fval_pairs,
-        key=lambda pair: pair[1],
+        key=lambda pair: pair[1] if np.isfinite(pair[1]) else np.inf,
     )
 
     ordering = []
