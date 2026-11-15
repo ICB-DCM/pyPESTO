@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import abc
 import copy
-import os
-import tempfile
 from collections import OrderedDict
 from collections.abc import Sequence
 from pathlib import Path
@@ -321,25 +319,9 @@ class AmiciObjective(ObjectiveBase):
         }:
             state[key] = self.__dict__[key]
 
-        _fd, _file = tempfile.mkstemp()
-        try:
-            # write amici solver settings to file
-            try:
-                asd.write_solver_settings_to_hdf5(self.amici_solver, _file)
-            except AttributeError as e:
-                e.args += (
-                    "Pickling the AmiciObjective requires an AMICI "
-                    "installation with HDF5 support.",
-                )
-                raise
-            # read in byte stream
-            with open(_fd, "rb", closefd=False) as f:
-                state["amici_solver_settings"] = f.read()
-        finally:
-            # close file descriptor and remove temporary file
-            os.close(_fd)
-            os.remove(_file)
-
+        state["amici_solver_settings"] = asd.get_solver_settings(
+            self.amici_solver
+        )
         state["AMICI_model_settings"] = asd.get_model_settings(
             self.amici_model
         )
@@ -358,27 +340,7 @@ class AmiciObjective(ObjectiveBase):
         model = self.amici_object_builder.create_model()
         solver = self.amici_object_builder.create_solver(model)
         edatas = self.amici_object_builder.create_edatas(model)
-
-        _fd, _file = tempfile.mkstemp()
-        try:
-            # write solver settings to temporary file
-            with open(_fd, "wb", closefd=False) as f:
-                f.write(state["amici_solver_settings"])
-            # read in solver settings
-            try:
-                asd.read_solver_settings_from_hdf5(_file, solver)
-            except AttributeError as err:
-                if not err.args:
-                    err.args = ("",)
-                err.args += (
-                    "Unpickling an AmiciObjective requires an AMICI "
-                    "installation with HDF5 support.",
-                )
-                raise
-        finally:
-            # close file descriptor and remove temporary file
-            os.close(_fd)
-            os.remove(_file)
+        asd.set_solver_settings(solver, state["amici_solver_settings"])
 
         self.amici_model = model
         self.amici_solver = solver
