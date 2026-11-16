@@ -319,7 +319,9 @@ def compute_optimal_sigma(
         sim_x = sim_i[mask_i]
         data_x = data_i[mask_i]
         # update statistics
-        num += np.nansum((data_x - sim_x) ** 2)
+        # Missing measurements have already been removed by the mask. An
+        # undefined simulation at a measured point must remain non-finite.
+        num += np.sum((data_x - sim_x) ** 2)
         den += sim_x.size
 
     if num == 0:
@@ -509,9 +511,10 @@ def compute_nllh(
         sigma_i = sigma_i[data_mask_i]
 
         # Compute the negative log-likelihood
-        nllh += 0.5 * np.nansum(
-            np.log(2 * np.pi * sigma_i**2)
-        ) + 0.5 * np.nansum((data_i - sim_i) ** 2 / sigma_i**2)
+        # The data mask excludes missing measurements, not model failures.
+        nllh += 0.5 * np.sum(np.log(2 * np.pi * sigma_i**2)) + 0.5 * np.sum(
+            (data_i - sim_i) ** 2 / sigma_i**2
+        )
 
     return nllh
 

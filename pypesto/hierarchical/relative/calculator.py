@@ -102,6 +102,20 @@ class RelativeAmiciCalculator(AmiciCalculator):
             return self.evaluator(**kwargs)
         return super().__call__(**kwargs)
 
+    def _simulations_valid(self, rdatas):
+        """Require valid model outputs only where measurements are present.
+
+        A successful integration can still have undefined observables. These
+        must not be mistaken for missing measurements by the inner solver.
+        """
+        return all(
+            rdata.status == asd.AMICI_SUCCESS
+            and np.isfinite(rdata[AMICI_Y][data_mask]).all()
+            for rdata, data_mask in zip(
+                rdatas, self.inner_problem.data_mask, strict=True
+            )
+        )
+
     def __call__(
         self,
         x_dct: dict,
@@ -276,7 +290,8 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+        if not self._simulations_valid(rdatas):
+            inner_result[FVAL] = np.inf
             # if the gradient was requested, we need to provide some value
             # for it
             if 1 in sensi_orders:
@@ -432,7 +447,7 @@ class RelativeAmiciCalculator(AmiciCalculator):
 
         # if any amici simulation failed, it's unlikely we can compute
         # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+        if not self._simulations_valid(rdatas):
             inner_result[FVAL] = np.inf
             if 1 in sensi_orders:
                 inner_result[GRAD] = np.full(
