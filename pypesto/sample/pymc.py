@@ -139,12 +139,13 @@ class PymcObjectiveWithGradientOp(PymcObjectiveOp):
         )
         outputs[0][0] = np.array(last_evaluation["fval"])
 
-    def grad(self, inputs, g):  # noqa
-        """Calculate the vector-Jacobian product."""
-        # the method that calculates the gradients - it actually returns the
-        # vector-Jacobian product - g[0] is a vector of parameter values
-        (theta,) = inputs  # our parameters
-        return [g[0] * self._log_prob_grad(theta)]
+    def pullback(self, inputs, outputs, cotangents):
+        """Calculate the vector-Jacobian product.
+
+        ``cotangents[0]`` is the gradient w.r.t. the scalar output.
+        """
+        (theta,) = inputs
+        return [cotangents[0] * self._log_prob_grad(theta)]
 
 
 class PymcGradientOp(_PT_OP_BASE):
