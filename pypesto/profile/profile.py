@@ -210,6 +210,58 @@ def parameter_profile(
             *paired_profiles[p_index]
         )
 
+    # Report if profiling found a lower function value than the supplied
+    # optimum so the user notices the profiling is no longer anchored at the
+    # true best known point.
+    better_optima = []
+    for i_par, profiler_result in enumerate(result.profile_result.list[-1]):
+        if profiler_result is None:
+            continue
+        best_fval = float(np.min(profiler_result.fval_path))
+        if best_fval > global_opt or np.isclose(
+            best_fval, global_opt, rtol=1e-10, atol=1e-8
+        ):
+            continue
+        better_optima.append((problem.x_names[i_par], best_fval))
+    if better_optima:
+        par_lines = "\n".join(
+            f"  {name}: best fval = {fval:.6g} "
+            f"(lower by {global_opt - fval:.3g})"
+            for name, fval in better_optima
+        )
+        logger.warning(
+            "Profiling found lower function values than the supplied "
+            f"optimization result (fval = {global_opt:.6g}) for:\n"
+            f"{par_lines}\n"
+            "This means profiling was started from a suboptimal point, so the "
+            "profile ratios and confidence thresholds are not anchored to the "
+            "true global optimum. Re-optimization of the model is suggested."
+        )
+
+    # Report parameters that hit a bound while another parameter was
+    # profiled, as the profiles are limited by these bounds there.
+    at_bound = set()
+    for i_par, profiler_result in enumerate(result.profile_result.list[-1]):
+        if profiler_result is None:
+            continue
+        for j_par in problem.x_free_indices:
+            x_j = profiler_result.x_path[j_par]
+            if j_par != i_par and (
+                np.any(np.abs(x_j - problem.lb_full[j_par]) <= 1e-8)
+                or np.any(np.abs(x_j - problem.ub_full[j_par]) <= 1e-8)
+            ):
+                at_bound.add(j_par)
+    if at_bound:
+        names = ", ".join(problem.x_names[j] for j in sorted(at_bound))
+        logger.warning(
+            "Parameters hit a bound while other parameters were profiled: "
+            f"{names}. The profiles are limited by these bounds there, not "
+            "only by the data. If the bounds are not informative, consider "
+            "widening them and re-optimizing. "
+            "`pypesto.visualize.visualize_2d_profile` shows where along "
+            "each profile this happens."
+        )
+
     autosave(
         filename=filename,
         result=result,

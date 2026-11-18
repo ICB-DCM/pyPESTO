@@ -20,6 +20,7 @@ from pypesto.profile.util import (
     resolve_profile_step_sizes,
     resolve_profile_step_sizes_for_parameters,
 )
+from pypesto.profile.walk_along_profile import profile_multistart_optimize
 
 from ..conftest import close_fig
 from ..util import rosen_for_sensi
@@ -477,6 +478,8 @@ def test_options_valid():
             "default_step_size_relative": 0.03,
             "max_step_size_relative": 0.02,
         },
+        {"profile_n_starts": 0},
+        {"profile_sampling_sigma": 0},
         {
             "default_step_size_absolute": 0.0,
             "default_step_size_relative": 0.0,
@@ -626,6 +629,55 @@ def test_profile_step_size_precheck_modes(mode, expect_warning, expect_raise):
         assert "minimum step size" in message
     else:
         assert not precheck_warnings
+
+
+def test_profile_multistart_optimize_uses_best_start():
+    """Multi-start profiling should skip non-finite starts and keep the best finite result."""
+
+    class DummyOptimizer:
+        def __init__(self):
+            self.calls = []
+            # one per start: non-finite, best, original startpoint
+            self.fvals = [np.inf, 0.01, 0.64]
+
+        def minimize(
+            self,
+            problem,
+            x0=None,
+            id=None,
+            history_options=None,
+            optimize_options=None,
+        ):
+            del problem, history_options
+            # exceptions must not be swallowed during profiling
+            assert not optimize_options.allow_failed_starts
+            self.calls.append(np.array(x0, copy=True))
+            return pypesto.OptimizerResult(
+                id=id,
+                x=np.array(x0, copy=True),
+                fval=self.fvals[len(self.calls) - 1],
+            )
+
+    problem = pypesto.Problem(
+        objective=pypesto.Objective(fun=lambda x: x[0] ** 2),
+        lb=np.array([-1.0]),
+        ub=np.array([1.0]),
+    )
+    startpoint = np.array([0.8])
+    options = profile.ProfileOptions(profile_n_starts=3)
+
+    optimizer = DummyOptimizer()
+    result = profile_multistart_optimize(
+        optimizer=optimizer,
+        problem=problem,
+        startpoint=startpoint,
+        options=options,
+    )
+
+    assert len(optimizer.calls) == options.profile_n_starts
+    assert np.allclose(optimizer.calls[-1], startpoint)
+    assert np.allclose(result.x, optimizer.calls[1])
+    assert result.fval == 0.01
 
 
 @pytest.mark.parametrize(
