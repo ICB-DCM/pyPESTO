@@ -110,7 +110,7 @@ class EmceeSampler(Sampler):
         )
 
         # Include `center` in initial positions
-        initial_state = np.row_stack(
+        initial_state = np.vstack(
             (
                 center,
                 initial_state_after_first,
@@ -187,7 +187,7 @@ class EmceeSampler(Sampler):
                 x_guesses_full0 = problem.x_guesses_full
                 #  add x0 to guesses
                 problem.set_x_guesses(
-                    np.row_stack(
+                    np.vstack(
                         (
                             x0,
                             problem.x_guesses_full,

@@ -5,7 +5,7 @@ Install and upgrade
 Requirements
 ------------
 
-This package requires Python 3.11 or later (see :ref:`Python support`).
+This package requires Python 3.12 or later (see :ref:`Python support`).
 It is continuously tested on Linux, and most parts should also work on other
 operating systems (MacOS, Windows).
 
@@ -42,7 +42,7 @@ Install from GitHub
 
 If you want the bleeding edge version, install directly from GitHub::
 
-    pip3 install git+https://github.com/icb-dcm/pypesto.git@develop
+    pip3 install git+https://github.com/icb-dcm/pypesto.git@main
 
 If you need to have access to the source code, you can download it via::
 

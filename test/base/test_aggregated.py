@@ -1,6 +1,7 @@
 """Test objective aggregation."""
 
 import itertools as itt
+from copy import deepcopy
 
 import numpy as np
 import pytest
@@ -153,3 +154,64 @@ def test_exceptions():
 
     with pytest.raises(ValueError):
         pypesto.objective.AggregatedObjective([])
+
+
+def _squared_linear_residual(a, x_names=None) -> pypesto.Objective:
+    """The objective (a @ x)^2, with its single residual a @ x."""
+    a = np.asarray(a, dtype=float)
+    return pypesto.Objective(
+        fun=lambda x: (a @ x) ** 2,
+        grad=lambda x: 2 * (a @ x) * a,
+        hess=lambda x: 2 * np.outer(a, a),
+        res=lambda x: np.array([a @ x]),
+        sres=lambda x: a[np.newaxis, :],
+        x_names=x_names,
+    )
+
+
+def test_x_indices():
+    """Objectives on parameter subsets are mapped to the full vector."""
+    # (x0 - x1)^2 + (x1 - 2 x2)^2 + x2^2, once from objectives on parameter
+    #  subsets and once from objectives on all parameters
+    x_names = ["x0", "x1", "x2"]
+    aggregated = pypesto.objective.AggregatedObjective(
+        [
+            _squared_linear_residual([1, -1], x_names=["x0", "x1"]),
+            _squared_linear_residual([1, -2]),
+            _squared_linear_residual([0, 0, 1]),
+        ],
+        x_names=x_names,
+        x_indices=[[0, 1], [1, 2], None],
+    )
+    full = pypesto.objective.AggregatedObjective(
+        [
+            _squared_linear_residual([1, -1, 0]),
+            _squared_linear_residual([0, 1, -2]),
+            _squared_linear_residual([0, 0, 1]),
+        ]
+    )
+
+    x = np.array([1.0, 2.0, 4.0])
+    for objective in (aggregated, deepcopy(aggregated)):
+        for mode, sensi_orders in (
+            (MODE_FUN, (0, 1, 2)),
+            (MODE_RES, (0, 1)),
+        ):
+            for actual, expected in zip(
+                objective(x, sensi_orders=sensi_orders, mode=mode),
+                full(x, sensi_orders=sensi_orders, mode=mode),
+                strict=True,
+            ):
+                assert np.allclose(actual, expected, rtol=RTOL, atol=ATOL)
+
+    # invalid `x_indices`
+    objectives = [_squared_linear_residual([1, -1], x_names=["x0", "x1"])]
+    for kwargs, match in (
+        ({"x_indices": [[0, 1]]}, "requires `x_names`"),
+        ({"x_names": x_names, "x_indices": [[0, 1], None]}, "number of"),
+        ({"x_names": x_names, "x_indices": [[0, 0]]}, "unique"),
+        ({"x_names": x_names, "x_indices": [[0, 3]]}, "in \\[0, 3\\)"),
+        ({"x_names": x_names, "x_indices": [[1, 0]]}, "the objective takes"),
+    ):
+        with pytest.raises(ValueError, match=match):
+            pypesto.objective.AggregatedObjective(objectives, **kwargs)

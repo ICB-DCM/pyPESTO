@@ -178,6 +178,44 @@ def test_finite_difference_checks():
     )
 
 
+def test_check_gradients_match_finite_differences_x_free():
+    """Test the FD gradient check with a subset of free parameter indices.
+
+    Regression test: ``x_free`` used to be applied to the parameter vector
+    itself before calling the objective, so objectives that require the
+    full-length parameter vector raised -- and the check reported a gradient
+    mismatch -- whenever ``x_free`` was a strict subset of the parameters.
+    """
+    n = 5
+    c = np.arange(1.0, n + 1.0)
+    x = np.linspace(0.5, 1.5, n)
+    x_free = [1, 3]
+
+    # `fun` and `grad` require the full-length parameter vector
+    #  (like, e.g., AmiciObjective)
+    objective = pypesto.Objective(
+        fun=lambda x: c @ x**2,
+        grad=lambda x: 2 * c * x,
+    )
+    assert objective.check_gradients_match_finite_differences(
+        x=x, x_free=x_free, mode=pypesto.C.MODE_FUN, verbosity=0
+    )
+
+    # gradient errors in components that are not checked are not detected ...
+    e_0 = np.eye(n)[0]
+    objective_wrong_grad = pypesto.Objective(
+        fun=lambda x: c @ x**2,
+        grad=lambda x: 2 * c * x + e_0,
+    )
+    assert objective_wrong_grad.check_gradients_match_finite_differences(
+        x=x, x_free=x_free, mode=pypesto.C.MODE_FUN, verbosity=0
+    )
+    # ... while errors in the checked components are
+    assert not objective_wrong_grad.check_gradients_match_finite_differences(
+        x=x, x_free=[0, 1], mode=pypesto.C.MODE_FUN, verbosity=0
+    )
+
+
 @pytest.mark.parametrize("enable_x64", [True, False])
 @pytest.mark.parametrize("fix_parameters", [True, False])
 @pytest.mark.flaky(reruns=2)

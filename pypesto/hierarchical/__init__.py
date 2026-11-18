@@ -24,4 +24,7 @@ finding optimal values more efficiently and reliably.
 from .base_parameter import InnerParameter
 from .base_problem import InnerProblem
 from .base_solver import InnerSolver
-from .inner_calculator_collector import InnerCalculatorCollector
+from .inner_calculator_collector import (
+    InnerCalculatorCollector,
+    InnerCalculatorCollectorPetabV2,
+)

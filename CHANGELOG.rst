@@ -27,6 +27,71 @@ This policy ensures users have at least one full Meso release cycle to adapt the
 before breaking changes take effect.
 
 
+0.8 series
+..........
+
+
+0.8.0 (2026-10-30)
+------------------
+
+- Breaking changes
+    - Remove deprecated ``PetabImporterRR``; use ``PetabImporter(..., simulator_type="roadrunner")`` (#1793)
+    - Remove deprecated ``pypesto.optimize.ess`` (ESS, SaCeSS); use ``pyscat`` instead (#1792)
+    - Raise minimum versions of numpy, scipy, pandas, matplotlib, amici (>=1.2) and other optional extras (#1797)
+    - Gradients of parameters without sensitivities are NaN instead of 0 (#1776)
+- PEtab v2 (experimental)
+    - Hierarchical optimization for PEtab v2 problems (#1740, #1744)
+    - ``parameter_scales`` argument for log-scale estimation (#1782)
+    - Support problems with multiple models, including hierarchical optimization (#1772, #1801)
+- Hierarchical optimization
+    - Fix wrong results for observables with constant offset terms (#1786)
+    - Respect noise models of data without inner parameters (#1778)
+    - Reject non-normal noise models for observables with inner parameters in PEtab v1 problems (previously silently accepted) (#1779)
+    - Fix ``NumericalInnerSolver`` stopping early for small sigmas (#1788)
+    - Plot observable mappings of offset-only relative observables (#1787)
+- Other smaller Bugfixes (#1798, #1804, #1759, #1768)
+
+
+0.7 series
+..........
+
+
+0.7.0 (2026-08-13)
+------------------
+
+- General
+    - This release requires Python>=3.12.
+    - Support for PEtab v2 import via AMICI (#1730) (experimental)
+    - Require pymc>=6 for ArviZ 1.x compatibility (#1746)
+- Optimization
+    - Clarify use of Hessian and FIM in Fides optimizer (#1706)
+    - Support pyswarm 1.0 return format (#1717)
+    - Add hierarchical optimization support for PEtab v2 (#1743, #1748, #1749)
+- Profiling
+    - Improve step-size defaults and step-size robustness (#1711)
+- Visualize
+    - Harmonize visualization API for axes and returns (#1709)
+    - Add 2D profile visualization functions (#1652)
+    - Unify cluster palette and add discrete palette (#1716)
+- Sampling
+    - Improve PyMC sampler with shared objective cache (#1724)
+    - Fix PyMC posterior extraction for newer ArviZ (#1714)
+- Documentation
+    - Update references (#1725, #1741)
+- Bugfixes
+    - Fix scipy OptimizeWarning for L-BFGS-B/disp (#1734)
+    - Remove deprecated matplotlib.cm.get_cmap (#1728)
+    - Fix remaining AMICI 1.0 calls and extend tests (#1708)
+    - Fix UMAP plotting import failure by adding holoviews lower bound to mltools extra (#1746)
+    - Fix `x_free` handling in `check_gradients_match_finite_differences` (#1739)
+    - Fix Hessian check in `check_gradients_match_finite_differences` (#1737)
+    - Fix silently empty residuals from hierarchical optimization (#1753)
+    - Fix quantitative data silently dropped when only some conditions have quantitative data in hierarchical optimization (#1742)
+- Deprecations
+    - Rename profile step-size options to be explicit (#1711)
+    - Rename visualization alpha parameter to confidence_levels (#1709)
+
+
 0.6 series
 ..........
 

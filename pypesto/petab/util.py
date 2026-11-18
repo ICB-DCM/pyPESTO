@@ -4,6 +4,7 @@ import numpy as np
 
 try:
     import petab.v1 as petab
+    from petab import v1, v2
     from petab.v1.C import (
         ESTIMATE,
         NOISE_PARAMETERS,
@@ -26,8 +27,19 @@ from ..problem import Problem
 from ..startpoint import CheckedStartpoints
 
 
+def get_petab_v2_extra_field(element, field: str):
+    """Get a pyPESTO-specific extra field from a PEtab v2 table element.
+
+    pyPESTO's hierarchical optimization annotations (e.g. ``parameterType``)
+    are preserved as extra fields of the PEtab v2 table elements. Returns
+    ``None`` if the field is absent or empty.
+    """
+    value = (element.model_extra or {}).get(field)
+    return None if value is None or petab.is_empty(value) else value
+
+
 def get_petab_non_quantitative_data_types(
-    petab_problem: petab.Problem,
+    petab_problem: v1.Problem | v2.Problem,
 ) -> set[str]:
     """
     Get the data types from the PEtab problem.
@@ -42,6 +54,9 @@ def get_petab_non_quantitative_data_types(
     data_types:
         A list of the data types.
     """
+    if isinstance(petab_problem, v2.Problem):
+        return _get_petab_v2_non_quantitative_data_types(petab_problem)
+
     non_quantitative_data_types = set()
     caught_observables = set()
     # For ordinal, censored and semiquantitative data, search
@@ -91,8 +106,45 @@ def get_petab_non_quantitative_data_types(
     # are also specified in the measurement table, but that would require
     # changing the PEtab format of a lot of benchmark models.
 
-    if len(non_quantitative_data_types) == 0:
-        return None
+    return non_quantitative_data_types
+
+
+def _get_petab_v2_non_quantitative_data_types(
+    petab_problem: "v2.Problem",
+) -> set[str]:
+    """Get the non-quantitative data types from a PEtab v2 problem.
+
+    See :func:`get_petab_non_quantitative_data_types`.
+    """
+    non_quantitative_data_types = set()
+
+    # Ordinal, censored and semiquantitative data are not supported for PEtab
+    # v2 yet, but they still have to be detected here so that they are
+    # rejected with a clear message rather than silently treated as
+    # quantitative data.
+    for measurement in petab_problem.measurements:
+        data_type = get_petab_v2_extra_field(measurement, MEASUREMENT_TYPE)
+        if data_type in CENSORING_TYPES:
+            non_quantitative_data_types.add(CENSORED)
+        elif data_type in (ORDINAL, SEMIQUANTITATIVE):
+            non_quantitative_data_types.add(data_type)
+
+    # For relative data, search for parameters to estimate with a
+    # scaling/offset/sigma parameter type. Unlike for PEtab v1, sigma
+    # parameters need no special case here: they can only belong to a relative
+    # observable, since semiquantitative data are not supported.
+    if any(
+        get_petab_v2_extra_field(parameter, PARAMETER_TYPE)
+        in (
+            InnerParameterType.SCALING,
+            InnerParameterType.OFFSET,
+            InnerParameterType.SIGMA,
+        )
+        for parameter in petab_problem.parameters
+        if parameter.estimate
+    ):
+        non_quantitative_data_types.add(RELATIVE)
+
     return non_quantitative_data_types
 
 
@@ -100,13 +152,14 @@ class PetabStartpoints(CheckedStartpoints):
     """Startpoint method for PEtab problems.
 
     Samples optimization startpoints from the distributions defined in the
-    provided PEtab problem. The PEtab-problem is copied.
+    provided PEtab problem.
     """
 
-    def __init__(self, petab_problem: petab.Problem, **kwargs):
+    def __init__(self, petab_problem: petab.Problem | v2.Problem, **kwargs):
         super().__init__(**kwargs)
-        self._parameter_df = petab_problem.parameter_df.copy()
+        self._petab_problem = petab_problem
         self._priors: list[tuple] | None = None
+        self._scales: list[str] | None = None
         self._free_ids: list[str] | None = None
 
     def _setup(
@@ -132,17 +185,32 @@ class PetabStartpoints(CheckedStartpoints):
 
         # update priors
         self._free_ids = current_free_ids
-        id_to_prior = dict(
-            zip(
-                self._parameter_df.index[self._parameter_df[ESTIMATE] == 1],
-                petab.parameters.get_priors_from_df(
-                    self._parameter_df, mode=petab.INITIALIZATION
-                ),
-                strict=True,
+        if isinstance(self._petab_problem, petab.Problem):
+            parameter_df = self._petab_problem.parameter_df
+            id_to_prior = dict(
+                zip(
+                    parameter_df.index[parameter_df[ESTIMATE] == 1],
+                    petab.parameters.get_priors_from_df(
+                        parameter_df, mode=petab.INITIALIZATION
+                    ),
+                    strict=True,
+                )
             )
-        )
-
+        else:
+            # PEtab v2: keep the prior distribution object (``None`` -> sample
+            #  uniformly over the current bounds); sampled directly in
+            #  `sample`, since the v1 `sample_from_prior` uses different
+            #  distribution names
+            id_to_prior = {
+                parameter.id: parameter.prior_dist
+                for parameter in self._petab_problem.parameters
+                if parameter.estimate
+            }
         self._priors = list(map(id_to_prior.__getitem__, current_free_ids))
+        self._scales = [
+            pypesto_problem.x_scales[ix]
+            for ix in pypesto_problem.x_free_indices
+        ]
 
     def __call__(
         self,
@@ -167,7 +235,23 @@ class PetabStartpoints(CheckedStartpoints):
         Must only be called through `self.__call__` to ensure that the list of priors
         matches the currently free parameters in the :class:`pypesto.Problem`.
         """
-        sampler = partial(petab.sample_from_prior, n_starts=n_starts)
-        startpoints = list(map(sampler, self._priors))
+        if isinstance(self._petab_problem, petab.Problem):
+            # PEtab v1
+            sampler = partial(petab.sample_from_prior, n_starts=n_starts)
+            startpoints = list(map(sampler, self._priors))
+        else:
+            # PEtab v2 -- sample from the parameter prior distributions,
+            #  falling back to a uniform distribution over the bounds of the
+            #  `pypesto.Problem`, which may be tighter than the PEtab bounds
+            #  (e.g. during profiling). The bounds are on parameter scale, the
+            #  prior distributions on linear scale.
+            startpoints = [
+                petab.scale(prior_dist.sample(n_starts), scale)
+                if prior_dist is not None
+                else np.random.uniform(cur_lb, cur_ub, n_starts)
+                for prior_dist, scale, cur_lb, cur_ub in zip(
+                    self._priors, self._scales, lb, ub, strict=True
+                )
+            ]
 
         return np.array(startpoints).T

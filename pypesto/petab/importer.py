@@ -8,6 +8,7 @@ import tempfile
 import warnings
 from collections.abc import Callable, Iterable, Sequence
 from importlib.metadata import version
+from pathlib import Path
 from typing import (
     Any,
 )
@@ -20,6 +21,8 @@ try:
 except ImportError:
     roadrunner = None
 
+from petab import v2
+
 from ..C import (
     AMICI,
     CENSORED,
@@ -30,6 +33,7 @@ from ..C import (
     SEMIQUANTITATIVE,
     SPLINE_APPROXIMATION_OPTIONS,
 )
+from ..hierarchical.aggregated import AggregatedInnerCalculators
 from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
 from ..objective import AggregatedObjective, AmiciObjective, ObjectiveBase
 from ..objective.priors import NegLogParameterPriors, get_parameter_prior_dict
@@ -39,6 +43,8 @@ from ..result import PredictionResult
 from ..startpoint import StartpointMethod
 from .objective_creator import (
     AmiciObjectiveCreator,
+    AmiciPetabV2MultiModelObjectiveCreator,
+    AmiciPetabV2ObjectiveCreator,
     ObjectiveCreator,
     PetabSimulatorObjectiveCreator,
     RoadRunnerObjectiveCreator,
@@ -46,9 +52,9 @@ from .objective_creator import (
 from .util import PetabStartpoints, get_petab_non_quantitative_data_types
 
 try:
-    import amici
+    import amici.sim.sundials as asd
 except ImportError:
-    amici = None
+    asd = None
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +63,7 @@ class PetabImporter:
     """
     Importer for PEtab files.
 
-    Create an :class:`amici.amici.Model`, an :class:`pypesto.objective.AmiciObjective` or a
+    Create an :class:`amici.sim.sundials.Model`, an :class:`pypesto.objective.AmiciObjective` or a
     :class:`pypesto.problem.Problem` from PEtab files. The created objective function is a
     negative log-likelihood function and can thus be negative. The actual
     form of the likelihood depends on the noise model specified in the provided PEtab problem.
@@ -65,12 +71,12 @@ class PetabImporter:
     `PEtab documentation <https://petab.readthedocs.io/en/latest/documentation_data_format.html#noise-distributions>`_.
     """  # noqa
 
-    MODEL_BASE_DIR = f"amici_models/{version('amici') if amici else ''}"
+    MODEL_BASE_DIR = f"amici_models/{version('amici') if asd else ''}"
 
     def __init__(
         self,
-        petab_problem: petab.Problem,
-        output_folder: str | None = None,
+        petab_problem: petab.Problem | v2.Problem,
+        output_folder: str | Path | None = None,
         model_name: str | None = None,
         validate_petab: bool = True,
         validate_petab_hierarchical: bool = True,
@@ -79,6 +85,7 @@ class PetabImporter:
         simulator_type: str = AMICI,
         simulator: petab.Simulator | None = None,
         rr: roadrunner.RoadRunner | None = None,
+        parameter_scales: dict[str, str] | None = None,
     ):
         """Initialize importer.
 
@@ -102,6 +109,8 @@ class PetabImporter:
             underlying PEtab problem has parameters marked for hierarchical
             optimization (non-empty `parameterType` column in the PEtab
             parameter table). Required for ordinal, censored and semiquantitative data.
+            For PEtab v2 problems, only relative data (scaling/offset/sigma
+            parameters) are supported so far.
         inner_options:
             Options for the inner problems and solvers.
             If not provided, default options will be used.
@@ -112,15 +121,34 @@ class PetabImporter:
         simulator:
             In case of a ``simulator_type == 'petab'``, the simulator object
             has to be provided. Otherwise, the argument is not used.
+        parameter_scales:
+            PEtab v2 only: the scale (``'lin'``, ``'log'`` or ``'log10'``) on
+            which to estimate each parameter, by parameter ID. Parameters
+            not listed are estimated on linear scale. Bounds, fixed values,
+            start points and priors of the pyPESTO problem are on these
+            scales, and so are the objective's input and its derivatives.
+            Inner parameters of hierarchical optimization are always linear.
+            For PEtab v1, scales are taken from the ``parameterScale`` column.
+            Requires amici>1.1.0.
         """
+        if _is_multi_model(petab_problem) and not hasattr(
+            v2.Problem, "split_by_model"
+        ):
+            raise NotImplementedError(
+                "PEtab v2 problems with multiple models require a version of "
+                "the `petab` package with `Problem.split_by_model`."
+            )
         self.petab_problem = petab_problem
         self._hierarchical = hierarchical
+        self.parameter_scales = _validate_parameter_scales(
+            petab_problem, parameter_scales or {}
+        )
 
         self._non_quantitative_data_types = (
             get_petab_non_quantitative_data_types(petab_problem)
         )
 
-        if self._non_quantitative_data_types is None and hierarchical:
+        if not self._non_quantitative_data_types and hierarchical:
             raise ValueError(
                 "Hierarchical optimization enabled, but no non-quantitative "
                 "data types specified. Specify non-quantitative data types "
@@ -148,8 +176,26 @@ class PetabImporter:
 
         self.validate_petab = validate_petab
         if self.validate_petab:
-            if petab.lint_problem(petab_problem):
+            if isinstance(petab_problem, petab.Problem) and petab.lint_problem(
+                petab_problem
+            ):
                 raise ValueError("Invalid PEtab problem.")
+            if (
+                isinstance(petab_problem, v2.Problem)
+                and (
+                    validation_result := petab_problem.validate()
+                ).has_errors()
+            ):
+                validation_result.log(logger=logger)
+                raise ValueError("Invalid PEtab v2 problem.")
+
+        if self._hierarchical and _is_multi_model(petab_problem):
+            from ..hierarchical.petab import (
+                validate_multi_model_inner_parameters,
+            )
+
+            validate_multi_model_inner_parameters(petab_problem)
+
         if self._hierarchical and validate_petab_hierarchical:
             from ..hierarchical.petab import (
                 validate_hierarchical_petab_problem,
@@ -180,12 +226,20 @@ class PetabImporter:
     @staticmethod
     def from_yaml(
         yaml_config: dict | str,
-        output_folder: str = None,
+        output_folder: str | Path | None = None,
         model_name: str = None,
         simulator_type: str = AMICI,
     ) -> PetabImporter:
         """Simplified constructor using a petab yaml file."""
-        petab_problem = petab.Problem.from_yaml(yaml_config)
+        from petab.versions import get_major_version
+
+        match get_major_version(yaml_config):
+            case 1:
+                petab_problem = petab.Problem.from_yaml(yaml_config)
+            case 2:
+                petab_problem = v2.Problem.from_yaml(yaml_config)
+            case _:
+                raise ValueError("Only PEtab v1 and v2 are supported.")
 
         return PetabImporter(
             petab_problem=petab_problem,
@@ -277,6 +331,58 @@ class PetabImporter:
         else:
             return None
 
+    def _create_prior_v2(self) -> NegLogParameterPriors | None:
+        """Create prior for PEtab v2 problem."""
+        import petab.v2.C as petab_c
+
+        import pypesto.C as pypesto_c
+
+        petab_to_pypesto = {
+            petab_c.LAPLACE: pypesto_c.LAPLACE,
+            petab_c.LOG_LAPLACE: pypesto_c.LOG_LAPLACE,
+            petab_c.LOG_NORMAL: pypesto_c.LOG_NORMAL,
+            petab_c.LOG_UNIFORM: pypesto_c.LOG_UNIFORM,
+            petab_c.NORMAL: pypesto_c.NORMAL,
+            petab_c.UNIFORM: pypesto_c.UNIFORM,
+        }
+
+        # the prior index refers to the position of the parameter in the full
+        #  parameter vector (see get_parameter_prior_dict)
+        id_to_index = {
+            x_id: index for index, x_id in enumerate(self.petab_problem.x_ids)
+        }
+
+        prior_list = []
+        for parameter in self.petab_problem.parameters:
+            if not parameter.estimate or parameter.prior_distribution is None:
+                continue
+
+            prior_list.append(
+                get_parameter_prior_dict(
+                    index=id_to_index[parameter.id],
+                    prior_type=petab_to_pypesto.get(
+                        str(parameter.prior_distribution),
+                        str(parameter.prior_distribution),
+                    ),
+                    prior_parameters=parameter.prior_parameters,
+                    parameter_scale=self.parameter_scales.get(
+                        parameter.id, petab.LIN
+                    ),
+                )
+            )
+        if prior_list:
+            return NegLogParameterPriors(prior_list)
+        return None
+
+    def _scale(
+        self, x_ids: Sequence[str], values: Sequence[float]
+    ) -> list[float]:
+        """Scale PEtab v2 parameter values according to `parameter_scales`."""
+        return [
+            petab.scale(value, self.parameter_scales.get(x_id, petab.LIN))
+            for x_id, value in zip(x_ids, values, strict=True)
+        ]
+
     def create_startpoint_method(self, **kwargs) -> StartpointMethod:
         """Create a startpoint method.
 
@@ -306,6 +412,32 @@ class PetabImporter:
             has to be provided. Otherwise the argument is not used.
 
         """
+        if isinstance(self.petab_problem, v2.Problem):
+            if simulator_type != AMICI:
+                raise ValueError(
+                    "Only 'amici' simulator type is supported for PEtab v2 "
+                    "problems."
+                )
+            if _is_multi_model(self.petab_problem):
+                return AmiciPetabV2MultiModelObjectiveCreator(
+                    petab_problem=self.petab_problem,
+                    output_folder=self.output_folder,
+                    model_name=self.model_name,
+                    hierarchical=self._hierarchical,
+                    inner_options=self.inner_options,
+                    validate_petab=self.validate_petab,
+                )
+            return AmiciPetabV2ObjectiveCreator(
+                petab_problem=self.petab_problem,
+                output_folder=self.output_folder,
+                model_name=self.model_name,
+                hierarchical=self._hierarchical,
+                inner_options=self.inner_options,
+                non_quantitative_data_types=self._non_quantitative_data_types,
+                validate_petab=self.validate_petab,
+                parameter_scales=self.parameter_scales,
+            )
+
         if simulator_type == AMICI:
             return AmiciObjectiveCreator(
                 petab_problem=self.petab_problem,
@@ -364,14 +496,29 @@ class PetabImporter:
             objective = self.objective_constructor.create_objective(**kwargs)
 
         x_fixed_indices = self.petab_problem.x_fixed_indices
-        x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
         x_ids = self.petab_problem.x_ids
-        lb = self.petab_problem.lb_scaled
-        ub = self.petab_problem.ub_scaled
+
+        if isinstance(self.petab_problem, petab.Problem):
+            # PEtab v1
+            x_fixed_vals = self.petab_problem.x_nominal_fixed_scaled
+            lb = self.petab_problem.lb_scaled
+            ub = self.petab_problem.ub_scaled
+            prior = self.create_prior()
+        else:
+            x_fixed_vals = self._scale(
+                self.petab_problem.x_fixed_ids,
+                self.petab_problem.x_nominal_fixed,
+            )
+            lb = self._scale(x_ids, self.petab_problem.lb)
+            ub = self._scale(x_ids, self.petab_problem.ub)
+            prior = self._create_prior_v2()
 
         # Raise error if the correct calculator is not used.
         if self._hierarchical:
-            if not isinstance(objective.calculator, InnerCalculatorCollector):
+            if not isinstance(
+                objective.calculator,
+                InnerCalculatorCollector | AggregatedInnerCalculators,
+            ):
                 raise AssertionError(
                     f"If hierarchical optimization is enabled, the `calculator` attribute of the `objective` has to be {InnerCalculatorCollector} and not {objective.calculator}."
                 )
@@ -395,18 +542,25 @@ class PetabImporter:
                 map(x_ids.index, self.petab_problem.x_fixed_ids)
             )
 
-        x_scales = [
-            self.petab_problem.parameter_df.loc[x_id, petab.PARAMETER_SCALE]
-            for x_id in x_ids
-        ]
+        # parameter scales -- only for outer parameters
+        if isinstance(self.petab_problem, petab.Problem):
+            # PEtab v1
+            x_scales = [
+                self.petab_problem.parameter_df.loc[
+                    x_id, petab.PARAMETER_SCALE
+                ]
+                for x_id in x_ids
+            ]
+        else:
+            x_scales = [
+                self.parameter_scales.get(x_id, petab.LIN) for x_id in x_ids
+            ]
 
         if problem_kwargs is None:
             problem_kwargs = {}
 
         if startpoint_kwargs is None:
             startpoint_kwargs = {}
-
-        prior = self.create_prior()
 
         if prior is not None:
             if self._hierarchical:
@@ -445,7 +599,7 @@ class PetabImporter:
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
-    ) -> amici.Model:
+    ) -> asd.Model:
         """See :meth:`AmiciObjectiveCreator.create_model`."""
         warnings.warn(
             "This function has been moved to `AmiciObjectiveCreator`.",
@@ -464,9 +618,9 @@ class PetabImporter:
 
     def create_objective(
         self,
-        model: amici.Model = None,
-        solver: amici.Solver = None,
-        edatas: Sequence[amici.ExpData] = None,
+        model: asd.Model = None,
+        solver: asd.Solver = None,
+        edatas: Sequence[asd.ExpData] = None,
         force_compile: bool = False,
         verbose: bool = True,
         **kwargs,
@@ -526,8 +680,8 @@ class PetabImporter:
 
     def rdatas_to_measurement_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
         verbose: bool = True,
     ) -> pd.DataFrame:
         """See :meth:`AmiciObjectiveCreator.rdatas_to_measurement_df`."""
@@ -537,8 +691,8 @@ class PetabImporter:
 
     def rdatas_to_simulation_df(
         self,
-        rdatas: Sequence[amici.ReturnData],
-        model: amici.Model = None,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
     ) -> pd.DataFrame:
         """
         See :meth:`rdatas_to_measurement_df`.
@@ -593,6 +747,25 @@ class PetabImporter:
         )
 
 
+def _validate_parameter_scales(
+    petab_problem: petab.Problem | v2.Problem,
+    parameter_scales: dict[str, str],
+) -> dict[str, str]:
+    """Check the ``parameter_scales`` argument of :class:`PetabImporter`.
+
+    Unknown parameter IDs and invalid scales are rejected by AMICI's
+    :meth:`amici.importers.petab.PetabImporter.create_simulator`.
+    """
+    if not parameter_scales:
+        return {}
+    if not isinstance(petab_problem, v2.Problem):
+        raise ValueError(
+            "`parameter_scales` is only supported for PEtab v2 problems. For "
+            "PEtab v1, use the `parameterScale` column of the parameter table."
+        )
+    return dict(parameter_scales)
+
+
 def _find_output_folder_name(
     petab_problem: petab.Problem,
     model_name: str,
@@ -619,7 +792,11 @@ def _find_output_folder_name(
         os.makedirs(PetabImporter.MODEL_BASE_DIR)
 
     # try model id
-    model_id = petab_problem.model.model_id
+    if _is_multi_model(petab_problem):
+        # the models are compiled into subfolders named after their IDs
+        model_id = petab_problem.id
+    else:
+        model_id = petab_problem.model.model_id
     if model_name is not None:
         model_id = model_name
 
@@ -635,6 +812,13 @@ def _find_output_folder_name(
     return output_folder
 
 
-def _find_model_name(output_folder: str) -> str:
+def _find_model_name(output_folder: str | Path) -> str:
     """Just re-use the last part of the output folder."""
     return os.path.split(os.path.normpath(output_folder))[-1]
+
+
+def _is_multi_model(petab_problem: petab.Problem | v2.Problem) -> bool:
+    """Check whether the problem is a PEtab v2 problem with multiple models."""
+    return (
+        isinstance(petab_problem, v2.Problem) and len(petab_problem.models) > 1
+    )

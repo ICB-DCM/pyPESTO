@@ -10,12 +10,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
 import numpy as np
+import pandas as pd
 
 from ...C import (
     FVAL,
+    GRAD,
+    HESS,
     MODE_FUN,
     MODE_RES,
     RDATAS,
+    SRES,
     SUFFIXES_CSV,
     SUFFIXES_HDF5,
     ModeType,
@@ -36,6 +40,9 @@ from .amici_util import (
 )
 
 if TYPE_CHECKING:
+    import amici.importers.petab
+    import amici.sim.sundials.petab
+
     from ...hierarchical import InnerCalculatorCollector
 
 try:
@@ -193,17 +200,6 @@ class AmiciObjective(ObjectiveBase):
 
         # If supported, enable `guess_steadystate` by default. If not
         #  supported, disable by default. If requested but unsupported, raise.
-        if (
-            self.guess_steadystate is not False
-            and self.amici_model.nx_solver_reinit > 0
-        ):
-            if self.guess_steadystate:
-                raise ValueError(
-                    "Steadystate prediction is not supported "
-                    "for models with conservation laws!"
-                )
-            self.guess_steadystate = False
-
         if (
             self.guess_steadystate is not False
             and self.amici_model.get_steady_state_sensitivity_mode()
@@ -499,6 +495,17 @@ class AmiciObjective(ObjectiveBase):
             fim_for_hess=self.fim_for_hess,
         )
 
+        # no sensitivities were computed for these entries -- mark them as
+        #  unknown instead of leaving them at 0
+        if ix := self._x_ix_without_sensitivities(parameter_mapping):
+            if GRAD in ret:
+                ret[GRAD][ix] = np.nan
+            if HESS in ret:
+                ret[HESS][ix, :] = np.nan
+                ret[HESS][:, ix] = np.nan
+            if SRES in ret:
+                ret[SRES][:, ix] = np.nan
+
         nllh = ret[FVAL]
         rdatas = ret[RDATAS]
 
@@ -513,6 +520,29 @@ class AmiciObjective(ObjectiveBase):
                 self.store_steadystate_guess(data_ix, x_dct, rdata)
 
         return ret
+
+    def _x_ix_without_sensitivities(
+        self, parameter_mapping: ParameterMapping
+    ) -> list[int]:
+        """Get the indices of the parameters without sensitivities.
+
+        These are the parameters that are mapped to AMICI constants (fixed
+        parameters) in any condition, e.g. PEtab-non-estimated parameters for
+        a model imported with ``non_estimated_parameters_as_constants=True``.
+        """
+        to_constants = {
+            mapped_to
+            for condition_mapping in parameter_mapping
+            for mapping in (
+                condition_mapping.map_sim_fix,
+                condition_mapping.map_preeq_fix,
+            )
+            for mapped_to in mapping.values()
+            if isinstance(mapped_to, str)
+        }
+        return [
+            ix for ix, x_id in enumerate(self.x_ids) if x_id in to_constants
+        ]
 
     def par_arr_to_dct(self, x: Sequence[float]) -> dict[str, float]:
         """Create dict from parameter vector."""
@@ -663,9 +693,23 @@ class AmiciObjective(ObjectiveBase):
             Indicates whether gradients match (True) FDs or not (False)
         """
         if x is None and "petab_problem" in dir(self.amici_object_builder):
-            x = self.amici_object_builder.petab_problem.x_nominal_scaled
-            kwargs["x_free"] = (
-                self.amici_object_builder.petab_problem.x_free_indices
+            petab_problem = self.amici_object_builder.petab_problem
+            # parameters fixed in the `Problem` are not part of this
+            #  objective's parameter vector, so drop them from the nominal
+            #  values and map the free-parameter indices accordingly
+            x_full = np.asarray(petab_problem.x_nominal_scaled)
+            x = self.pre_post_processor.reduce(x_full)
+            input_to_full = self.pre_post_processor.reduce(
+                np.arange(len(x_full))
+            )
+            free = set(petab_problem.x_free_indices)
+            kwargs.setdefault(
+                "x_free",
+                [
+                    ix
+                    for ix, ix_full in enumerate(input_to_full)
+                    if ix_full in free
+                ],
             )
         return super().check_gradients_match_finite_differences(
             *args, x=x, **kwargs
@@ -718,3 +762,226 @@ class AmiciObjective(ObjectiveBase):
             ) in condition_mapping.map_preeq_fix.items():
                 if (val := id_to_val.get(mapped_to_par)) is not None:
                     condition_mapping.map_preeq_fix[model_par] = val
+
+
+class AmiciPetabV2Objective(AmiciObjective):
+    """An AMICI objective constructed from a PEtab v2 problem.
+
+    The objective value is the negative log-likelihood, or the unnormalized
+    negative log-posterior if the PEtab problem defines parameter priors (see
+    :meth:`PetabImporter.create_problem`, which adds the prior terms).
+
+    .. warning::
+
+        PEtab v2 support is still under development, and this interface may
+        change while the following limitations are addressed:
+
+        * Sensitivities are computed for every parameter that is estimated in
+          the PEtab problem, including those fixed in the
+          :class:`pypesto.Problem`. Unlike for PEtab v1, ``plist`` cannot be
+          narrowed down from pyPESTO, since it is set by
+          :meth:`amici.sim.sundials.petab.ExperimentManager.apply_parameters`.
+          This costs performance, in particular for profile likelihoods.
+        * Steady-state guessing (``guess_steadystate``) is not available: the
+          PEtab simulator creates its own :class:`amici.ExpData` objects for
+          every simulation, so guesses cannot be passed on to it.
+        * Of the non-quantitative data types, only relative data
+          (hierarchically optimized scaling/offset/sigma parameters) are
+          supported; ordinal, censored and semiquantitative data are not.
+        * Predictors (:class:`pypesto.predict.AmiciPredictor`) and the
+          conversion of predictions to PEtab dataframes are not supported.
+        * Custom timepoints (:meth:`AmiciObjective.set_custom_timepoints`)
+          have no effect, for the same reason as steady-state guessing.
+    """
+
+    def __init__(
+        self,
+        petab_importer: amici.importers.petab.PetabImporter,
+        force_compile: bool = False,
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator | None = None,
+        **kwargs,
+    ) -> None:
+        """Initialize the objective.
+
+        Parameters
+        ----------
+        petab_importer:
+            The AMICI PEtab importer for the (v2) PEtab problem.
+        force_compile:
+            If ``True``, force (re-)import/compilation of the AMICI model even
+            if a compiled model already exists. Only used to create the
+            simulator, if ``petab_simulator`` is not given.
+        petab_simulator:
+            The PEtab simulator that evaluates the objective. Created from
+            ``petab_importer`` if not given. Pass one to share it with a
+            calculator built for it, such as
+            :class:`pypesto.hierarchical.InnerCalculatorCollectorPetabV2`.
+            The objective takes parameters, and returns derivatives, on the
+            simulator's parameter scales.
+        kwargs:
+            Additional arguments passed on to :class:`AmiciObjective`. A
+            ``calculator`` given here replaces the default
+            :class:`AmiciCalculatorPetabV2`.
+        """
+        from .amici_calculator import AmiciCalculatorPetabV2
+
+        self._petab_simulator: amici.sim.sundials.petab.PetabSimulator = (
+            petab_simulator
+            if petab_simulator is not None
+            else petab_importer.create_simulator(force_import=force_compile)
+        )
+        self.petab_problem = petab_importer.petab_problem
+
+        # the simulator creates its own ExpData objects for every simulation,
+        #  so steady-state guesses cannot be passed on to it
+        kwargs.setdefault("guess_steadystate", False)
+        if kwargs.get("calculator") is None:
+            kwargs["calculator"] = AmiciCalculatorPetabV2(
+                self._petab_simulator
+            )
+
+        super().__init__(
+            amici_model=self._petab_simulator.model,
+            amici_solver=self._petab_simulator.solver,
+            edatas=self._petab_simulator.exp_man.create_edatas(),
+            **kwargs,
+        )
+        # `AmiciObjective` works on clones of the model and the solver, but the
+        #  simulation is run by the simulator. Discard the clones, so that
+        #  settings applied to `self.amici_model` / `self.amici_solver`
+        #  (sensitivity order, reporting mode, sigma residuals, ...) take
+        #  effect. The simulator is created here and not shared with any other
+        #  objective, so there is nothing to isolate ourselves from.
+        self.amici_model = self._petab_simulator.model
+        self.amici_solver = self._petab_simulator.solver
+        self._petab_simulator.num_threads = self.n_threads
+
+    def update_from_problem(
+        self,
+        dim_full: int,
+        x_free_indices: Sequence[int],
+        x_fixed_indices: Sequence[int],
+        x_fixed_vals: Sequence[float],
+    ) -> None:
+        """Handle fixed parameters.
+
+        The implementation of :class:`AmiciObjective` is deliberately bypassed:
+        there is no AMICI ``parameter_mapping`` to update -- the mapping of
+        PEtab problem parameters to model parameters is done by the PEtab
+        simulator. Parameters that are fixed in the pyPESTO problem are simply
+        simulated at their fixed values, which are part of the (full)
+        parameter vector passed to the objective.
+        """
+        ObjectiveBase.update_from_problem(
+            self,
+            dim_full=dim_full,
+            x_free_indices=x_free_indices,
+            x_fixed_indices=x_fixed_indices,
+            x_fixed_vals=x_fixed_vals,
+        )
+
+    def _x_ix_without_sensitivities(
+        self, parameter_mapping: ParameterMapping
+    ) -> list[int]:
+        """Get the indices of the parameters without sensitivities.
+
+        The PEtab simulator only computes sensitivities for the parameters
+        estimated in the PEtab problem.
+        """
+        estimated = set(self._petab_simulator.exp_man.petab_problem.x_free_ids)
+        return [
+            ix for ix, x_id in enumerate(self.x_ids) if x_id not in estimated
+        ]
+
+    def check_gradients_match_finite_differences(
+        self, *args, x: np.ndarray = None, **kwargs
+    ) -> bool:
+        """Check if gradients match finite differences (FDs).
+
+        Parameters
+        ----------
+        x: The parameters for which to evaluate the gradient. Defaults to the
+           nominal parameters of the PEtab problem.
+
+        Returns
+        -------
+        bool
+            Indicates whether gradients match (True) FDs or not (False)
+        """
+        if x is None:
+            exp_man = self._petab_simulator.exp_man
+            x_nominal = self.petab_problem.get_x_nominal_dict()
+            # parameter scales were added after amici 1.1.0
+            if hasattr(exp_man, "scale_parameters"):
+                x_nominal = exp_man.scale_parameters(x_nominal)
+            x_full = np.array([x_nominal[x_id] for x_id in self.x_ids])
+            x_free_ids = set(self.petab_problem.x_free_ids)
+            free = {
+                ix for ix, x_id in enumerate(self.x_ids) if x_id in x_free_ids
+            }
+            # see `AmiciObjective.check_gradients_match_finite_differences`
+            x = self.pre_post_processor.reduce(x_full)
+            input_to_full = self.pre_post_processor.reduce(
+                np.arange(len(x_full))
+            )
+            kwargs.setdefault(
+                "x_free",
+                [
+                    ix
+                    for ix, ix_full in enumerate(input_to_full)
+                    if ix_full in free
+                ],
+            )
+        return ObjectiveBase.check_gradients_match_finite_differences(
+            self, *args, x=x, **kwargs
+        )
+
+    def __deepcopy__(self, memo=None):
+        """Copy the objective.
+
+        :class:`AmiciObjective` re-creates the model, the solver and the
+        ``ExpData`` objects, which would leave the copied objective and its
+        PEtab simulator with different model and solver instances. AMICI
+        objects support ``deepcopy``, so a plain deep copy of the instance
+        dictionary is used instead -- ``memo`` keeps the objects that are
+        shared with the simulator shared in the copy.
+        """
+        if memo is None:
+            memo = {}
+        cls = self.__class__
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            setattr(result, k, copy.deepcopy(v, memo))
+        return result
+
+    def __getstate__(self) -> dict:
+        """Use Python's default pickling semantics.
+
+        See :meth:`__deepcopy__` -- rebuilding the AMICI objects from the
+        ``amici_object_builder``, as :class:`AmiciObjective` does, would
+        disconnect them from the PEtab simulator.
+        """
+        return dict(self.__dict__)
+
+    def __setstate__(self, state: dict) -> None:
+        """Restore state using the instance dict (default unpickling behaviour)."""
+        self.__dict__.update(state)
+
+    def rdatas_to_simulation_df(
+        self,
+        rdatas: Sequence[amici.ReturnData],
+    ) -> pd.DataFrame:
+        """
+        See :meth:`rdatas_to_measurement_df`.
+
+        Except a petab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        from amici.importers.petab import rdatas_to_simulation_df
+
+        return rdatas_to_simulation_df(
+            rdatas,
+            self.amici_model,
+            self._petab_simulator.exp_man.petab_problem,
+        )

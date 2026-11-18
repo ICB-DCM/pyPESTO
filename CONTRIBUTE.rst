@@ -6,13 +6,13 @@ Workflow
 
 If you start working on a new feature or a fix, please create an issue on
 GitHub briefly describing the issue and assign yourself.
-Your startpoint should always be the ``develop`` branch, which contains the
+Your startpoint should always be the ``main`` branch, which contains the
 latest updates.
 
 Create an own branch or fork, on which you can implement your changes. To
 get your work merged, please:
 
-1. create a pull request to the ``develop`` branch with a meaningful summary,
+1. create a pull request to the ``main`` branch with a meaningful summary,
 2. check that code changes are covered by tests, and all tests pass,
 3. check that the documentation is up-to-date,
 4. request a code review from the main developers.
@@ -49,6 +49,10 @@ Tox
 Secondly, this installs the virtual testing tool
 `tox <https://tox.readthedocs.io/en/latest/>`_, which we use for all tests,
 format and quality checks. Its configuration is specified in ``tox.ini``.
+Environments are created and dependencies installed via
+`uv <https://docs.astral.sh/uv/>`_ (through the
+`tox-uv <https://github.com/tox-dev/tox-uv>`_ plugin) instead of
+virtualenv/pip, which is installed automatically on the first ``tox`` run.
 To run it locally, simply execute::
 
     tox [-e flake8,doc]

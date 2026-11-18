@@ -158,7 +158,7 @@ def visualize_optimized_model_fit(
             petab_problem
         )
 
-        if non_quantitative_data_types is not None:
+        if non_quantitative_data_types:
             if (
                 ORDINAL in non_quantitative_data_types
                 or CENSORED in non_quantitative_data_types

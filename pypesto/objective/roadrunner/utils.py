@@ -320,8 +320,7 @@ def measurement_df_to_matrix(
         columns="observableId",
         values="measurement",
     ).fillna(np.nan)
-    pivot_df.reset_index(inplace=True)
-    pivot_df.drop(columns="count", inplace=True)
+    pivot_df = pivot_df.reset_index().drop(columns="count")
 
     observable_ids = pivot_df.columns[1:]
     measurement_matrix = pivot_df.to_numpy()

@@ -15,6 +15,7 @@ from ..C import (
 )
 from ..history import HistoryBase
 from ..result import Result
+from ._style import resolve_style
 from .clust_color import assign_colors
 from .misc import (
     get_ax,
@@ -44,6 +45,7 @@ def optimizer_history(
     | list[dict]
     | None = None,
     legends: str | list[str] | None = None,
+    style_kwargs: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot history of optimizer.
@@ -86,17 +88,32 @@ def optimizer_history(
         least a function value fval
     legends:
         Labels for line plots, one label per result object
+    style_kwargs:
+        Style overrides. Keys used by this function:
+
+        - ``cmap_discrete``, ``mle_color``, ``outlier_color`` — colours
+          of the per-start history traces when clustering is applied
+          (best cluster, secondary clusters, isolated starts respectively).
+          Only consulted when ``colors`` is ``None``; an explicit
+          ``colors`` short-circuits clustering.
+
+        All valid keys and their defaults are listed in
+        :data:`pypesto.visualize._style._DEFAULTS`.
 
     Returns
     -------
     ax:
         The plot axes.
     """
+    style = resolve_style(style_kwargs)
+
     if isinstance(start_indices, int):
         start_indices = list(range(start_indices))
 
     # parse input
-    (results, colors, legends) = process_result_list(results, colors, legends)
+    (results, colors, legends) = process_result_list(
+        results, colors, legends, style=style
+    )
 
     for j, result in enumerate(results):
         # extract cost function values from result
@@ -119,6 +136,7 @@ def optimizer_history(
             x_label=x_label,
             y_label=y_label,
             legend_text=legends[j],
+            style=style,
         )
 
     # parse and apply plotting options
@@ -139,6 +157,7 @@ def optimizer_history_lowlevel(
     x_label: str = "Optimizer steps",
     y_label: str = "Objective value",
     legend_text: str | None = None,
+    style: dict | None = None,
 ) -> matplotlib.axes.Axes:
     """
     Plot optimizer history using list of numpy arrays.
@@ -162,6 +181,10 @@ def optimizer_history_lowlevel(
         label for y-axis
     legend_text:
         Label for line plots
+    style:
+        Pre-resolved visualization style dict, as returned by
+        :func:`pypesto.visualize._style.resolve_style`. When ``None``, defaults
+        are used.
 
     Returns
     -------
@@ -194,7 +217,7 @@ def optimizer_history_lowlevel(
     # assign colors
     # note: this has to happen before sorting
     # to get the same colors in different plots
-    colors = assign_colors(fvals, colors)
+    colors = assign_colors(fvals, colors, style=style)
 
     # sort
     indices = sorted(range(n_fvals), key=lambda j: fvals[j])
@@ -537,66 +560,3 @@ def monotonic_history(
         fx_mono = np.append(fx_mono, [fx_mono.min()])
 
     return t_mono, fx_mono
-
-
-def sacess_history(
-    histories: list[HistoryBase],
-    ax: matplotlib.axes.Axes | None = None,
-) -> matplotlib.axes.Axes:
-    """Plot `SacessOptimizer` history.
-
-    Plot the history of the best objective values for each
-    :class:`pypesto.optimize.ess.sacess.SacessOptimizer`
-    worker over computation time as step splot.
-
-    Parameters
-    ----------
-    histories:
-        List of histories from different workers as obtained from
-        :attr:`pypesto.optimize.ess.sacess.SacessOptimizer.histories`.
-    ax:
-        Axes object to use.
-
-    Returns
-    -------
-    The plot axes. `ax` or a new axes if `ax` was `None`.
-    """
-    ax = get_ax(ax)
-    if len(histories) == 0:
-        warnings.warn("No histories to plot.", stacklevel=2)
-
-    # plot overall minimum
-    t_overall, fx_overall = monotonic_history(histories)
-    ax.step(
-        t_overall,
-        fx_overall,
-        linestyle="dotted",
-        color="grey",
-        where="post",
-        label="overall",
-        alpha=0.8,
-    )
-
-    # plot steps of individual workers
-    for worker_idx, history in enumerate(histories):
-        x, y = history.get_time_trace(), history.get_fval_trace()
-        if len(x) == 0:
-            warnings.warn(f"No trace for worker #{worker_idx}.", stacklevel=2)
-            continue
-        # extend from last decrease to last timepoint
-        x = np.append(x, [np.max(t_overall)])
-        y = np.append(y, [np.min(y)])
-        lines = ax.step(
-            x, y, ".-", where="post", label=f"worker {worker_idx}", alpha=0.8
-        )
-        # Plot last point without marker, unless we actually had an improvement there.
-        # The time point of the overall last improvement is appended to all histories,
-        # even if redundant, so we can just skip the marker for the last point.
-        for line in lines:
-            line.set_markevery([True] * (len(x) - 1) + [False])
-
-    ax.legend()
-    ax.set_xlabel("time (s)")
-    ax.set_ylabel("fval")
-    ax.set_title("SacessOptimizer convergence")
-    return ax

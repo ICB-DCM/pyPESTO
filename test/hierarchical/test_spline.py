@@ -70,7 +70,7 @@ def test_optimization(inner_options: dict):
     np.random.seed(0)
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",
-        options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
+        options={"ftol": 2.220446049250313e-09, "gtol": 1e-5},
     )
     problem = _create_problem(petab_problem, inner_options)
     result = pypesto.optimize.minimize(
@@ -484,7 +484,7 @@ def test_save_and_load_spline_knots():
 
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",
-        options={"disp": None, "ftol": 2.220446049250313e-09, "gtol": 1e-5},
+        options={"ftol": 2.220446049250313e-09, "gtol": 1e-5},
     )
     # Set seed for reproducibility.
     np.random.seed(0)

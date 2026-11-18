@@ -1,0 +1,14 @@
+name: Upload coverage
+description: Upload coverage report to Codecov
+inputs:
+  codecov-token:
+    description: Codecov upload token
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Coverage
+      uses: codecov/codecov-action@v7
+      with:
+        token: ${{ inputs.codecov-token }}
+        files: ./coverage.xml

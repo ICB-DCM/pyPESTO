@@ -2,7 +2,6 @@
 
 import copy
 import logging
-import os
 
 import benchmark_models_petab as models
 import numpy as np
@@ -120,7 +119,7 @@ def test_deepcopy():
     """Test that deepcopy works as intended"""
     model_name = "Boehm_JProteomeRes2014"
     petab_problem = petab.Problem.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
     petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(
@@ -152,7 +151,7 @@ def test_multiprocessing():
     """Test that multiprocessing works as intended"""
     model_name = "Boehm_JProteomeRes2014"
     petab_problem = petab.Problem.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
     petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(

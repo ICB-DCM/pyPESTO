@@ -1,5 +1,4 @@
 import functools
-import logging
 import os
 from collections.abc import Sequence
 from copy import deepcopy
@@ -1175,6 +1174,23 @@ def test_reference_points():
     visualize.create_references(references=ref_list_2, x=ref2[0], fval=ref2[1])
 
 
+def test_reference_points_mixed_colors():
+    # mixing user-specified and automatic colors must not raise
+    user_color = [1.0, 0.0, 0.0, 1.0]
+    ref_list = visualize.create_references(
+        [
+            {"x": np.array([1.0, 1.5]), "fval": 0.2, "color": user_color},
+            {"x": np.array([1.8, 1.9]), "fval": 0.6},
+            {"x": np.array([1.4, 1.7]), "fval": 0.4},
+        ]
+    )
+
+    # the user-specified color is kept, the others are assigned automatically
+    assert ref_list[0]["color"] == user_color
+    assert all(ref["color"] is not None for ref in ref_list)
+    assert ref_list[1]["color"] != ref_list[2]["color"]
+
+
 def test_process_result_list():
     # create the necessary results
     result_1 = create_optimization_result()
@@ -1578,21 +1594,6 @@ def test_monotonic_history():
         ]
 
 
-@close_fig
-def test_sacess_history():
-    """Test pypesto.visualize.optimizer_history.sacess_history"""
-    from pypesto.optimize.ess.sacess import ESSExitFlag, SacessOptimizer
-    from pypesto.visualize.optimizer_history import sacess_history
-
-    problem = create_problem()
-    sacess = SacessOptimizer(
-        max_walltime_s=1, num_workers=2, sacess_loglevel=logging.WARNING
-    )
-    sacess.minimize(problem)
-    assert sacess.exit_flag == ESSExitFlag.MAX_TIME
-    sacess_history(sacess.histories)
-
-
 @pytest.mark.parametrize(
     "result_creation",
     [create_optimization_result, create_optimization_result_nan_inf],
@@ -1647,7 +1648,6 @@ def test_visualize_estimated_observable_mapping():
     optimizer = pypesto.optimize.ScipyOptimizer(
         method="L-BFGS-B",
         options={
-            "disp": None,
             "ftol": 2.220446049250313e-09,
             "gtol": 1e-5,
             "maxiter": 1,
@@ -1668,6 +1668,41 @@ def test_visualize_estimated_observable_mapping():
         axes=custom_axes,
     )
     assert returned_axes is custom_axes
+
+
+@close_fig
+def test_visualize_estimated_observable_mapping_offset_only(tmp_path):
+    """A relative observable can have an offset without a scaling."""
+    import petabtests
+
+    petab_problem = petab.Problem.from_yaml(
+        petabtests.get_case_dir("0001", "sbml", "v1.0.0") / "_0001.yaml"
+    )
+    petab_problem.observable_df[petab.OBSERVABLE_FORMULA] = (
+        "A + observableParameter1_obs_a"
+    )
+    petab_problem.measurement_df[petab.OBSERVABLE_PARAMETERS] = "offset_a"
+    petab_problem.parameter_df.loc["offset_a"] = [petab.LIN, -10, 10, 0, 1]
+    petab_problem.parameter_df[pypesto.C.PARAMETER_TYPE] = None
+    petab_problem.parameter_df.loc["offset_a", pypesto.C.PARAMETER_TYPE] = (
+        pypesto.C.InnerParameterType.OFFSET
+    )
+
+    importer = pypesto.petab.PetabImporter(
+        petab_problem,
+        hierarchical=True,
+        model_name="observable_mapping_offset_only",
+        output_folder=str(tmp_path),
+    )
+    problem = importer.create_problem()
+    result = optimize.minimize(
+        problem=problem,
+        n_starts=1,
+        optimizer=optimize.ScipyOptimizer(options={"maxiter": 1}),
+        progress_bar=False,
+    )
+    axes = visualize.visualize_estimated_observable_mapping(result, problem)
+    assert axes.size == 1
 
 
 @close_fig

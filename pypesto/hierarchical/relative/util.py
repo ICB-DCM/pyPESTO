@@ -10,6 +10,7 @@ from ...C import (
     InnerParameterType,
 )
 from ..base_parameter import InnerParameter
+from ..base_problem import InnerProblem
 
 
 def get_finite_quotient(
@@ -41,6 +42,35 @@ def get_finite_quotient(
         return quotient
     except Exception:
         return DUMMY_INNER_VALUE[inner_parameter_type]
+
+
+def subtract_unscaled_constants(
+    values: list[np.ndarray], problem: InnerProblem
+) -> list[np.ndarray]:
+    """Subtract the unscaled constants from data or simulations.
+
+    This keeps the constants out of the scaling, see
+    :attr:`pypesto.hierarchical.relative.RelativeInnerProblem.unscaled_constants`.
+
+    Parameters
+    ----------
+    values:
+        The data or simulations, one matrix per simulation condition.
+    problem:
+        The inner problem.
+
+    Returns
+    -------
+    A copy of ``values``, with the constants subtracted.
+    """
+    # other inner problems than `RelativeInnerProblem` have no such constants
+    constants = getattr(problem, "unscaled_constants", None)
+    if constants is None:
+        return copy.deepcopy(values)
+    return [
+        values_i - constants_i
+        for values_i, constants_i in zip(values, constants, strict=True)
+    ]
 
 
 def compute_optimal_scaling(

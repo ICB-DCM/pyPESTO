@@ -2,15 +2,17 @@
 This is for testing the petab import.
 """
 
+import copy
 import logging
 import os
 import unittest
+from collections.abc import Sequence
 from itertools import chain
 
 import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
-import petab.v1 as petab
+import petab
 import petabtests
 import pytest
 
@@ -156,7 +158,7 @@ def test_plist_mapping():
     """
     model_name = "Bruno_JExpBot2016"
     petab_importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
     objective_creator = petab_importer.create_objective_creator()
     problem = petab_importer.create_problem(
@@ -220,7 +222,7 @@ def test_max_sensi_order():
     correctly."""
     model_name = "Boehm_JProteomeRes2014"
     importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
 
     # define test parameter
@@ -266,6 +268,7 @@ def test_max_sensi_order():
 
 
 def test_petab_pysb_optimization():
+    """Test optimization for a PySB-based PEtab 2.0 problem."""
     test_case = "0001"
     test_case_dir = petabtests.get_case_dir(
         test_case, version="v2.0.0", format_="pysb"
@@ -276,7 +279,7 @@ def test_petab_pysb_optimization():
         test_case, format="pysb", version="v2.0.0"
     )
 
-    petab_problem = petab.Problem.from_yaml(petab_yaml)
+    petab_problem = petab.v2.Problem.from_yaml(petab_yaml)
     importer = PetabImporter(petab_problem)
     problem = importer.create_problem()
 
@@ -298,7 +301,689 @@ def test_petab_pysb_optimization():
     assert np.all(fvals <= -solution[petabtests.LLH])
 
 
+def test_petab_v2_boehm():
+    import copy
+    import pickle
+
+    from pypesto.optimize.optimizer import ScipyOptimizer
+
+    # load test problem
+    problem_id = "Boehm_JProteomeRes2014"
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    expected_fval_nominal = 138.22199693517703
+
+    # create model; explicit model name, because benchmark problems upgraded
+    #  to PEtab v2 all get the model id `model` (from the SBML file name)
+    importer = PetabImporter(petab_problem, model_name=f"{problem_id}_v2")
+    problem = importer.create_problem()
+    assert problem.x_names == petab_problem.x_ids
+    assert problem.dim == petab_problem.n_estimated == 9
+    assert problem.dim_full == len(petab_problem.parameters) == 11
+    # petab-non-estimated parameters are fixed in the pypesto problem
+    assert problem.x_fixed_indices == [
+        i for i, p in enumerate(petab_problem.parameters) if not p.estimate
+    ]
+    assert isinstance(
+        problem.objective, pypesto.objective.amici.amici.AmiciPetabV2Objective
+    )
+
+    # evaluate objective at nominal parameters
+    fval = problem.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # deepcopy works?
+    problem_deepcopy = copy.deepcopy(problem)
+    fval = problem_deepcopy.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # pickling works?
+    problem_pickled = pickle.loads(pickle.dumps(problem))  # noqa: S301
+    fval = problem_pickled.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isclose(fval, expected_fval_nominal)
+
+    # gradient works?
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+
+    # fixing parameters, ...
+    problem.unfix_parameters(petab_problem.x_fixed_indices)
+    assert problem.dim == len(petab_problem.parameters)
+    # no sensitivities for PEtab-non-estimated parameters
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert np.isnan(grad[petab_problem.x_fixed_indices]).all()
+    assert np.isfinite(grad[petab_problem.x_free_indices]).all()
+    # re-fixing parameters
+    problem.fix_parameters(
+        petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
+    )
+    assert problem.dim == petab_problem.n_estimated
+    fval, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+
+    # Hessian (FIM-based) works and has the correct sign and shape?
+    hess = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(2,)
+    )
+    assert hess.shape == (
+        petab_problem.n_estimated,
+        petab_problem.n_estimated,
+    )
+    # the FIM is a positive semi-definite approximation of the Hessian of the
+    #  negative log-likelihood
+    eigvals = np.linalg.eigvalsh(hess)
+    assert np.min(eigvals) >= -1e-6 * np.max(np.abs(eigvals))
+    # combined value/gradient/Hessian call
+    fval, grad, hess = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1, 2)
+    )
+    assert np.isclose(fval, expected_fval_nominal)
+    assert len(grad) == petab_problem.n_estimated
+    assert hess.shape == (
+        petab_problem.n_estimated,
+        petab_problem.n_estimated,
+    )
+
+    # a parameter fixed to a NON-nominal value must be simulated at that value
+    #  (regression: previously the PEtab nominal value was used instead), and
+    #  the Hessian must shrink accordingly
+    x_nominal_free = np.asarray(petab_problem.x_nominal_free)
+    perturbed = x_nominal_free.copy()
+    perturbed[0] += 0.5
+    ref_fval = problem.objective(perturbed)
+    assert not np.isclose(ref_fval, expected_fval_nominal)
+    full_idx = problem.x_free_indices[0]
+    problem.fix_parameters(full_idx, perturbed[0])
+    fval_fixed, _, hess_fixed = problem.objective(
+        x_nominal_free[1:], sensi_orders=(0, 1, 2)
+    )
+    assert np.isclose(fval_fixed, ref_fval)
+    assert hess_fixed.shape == (
+        petab_problem.n_estimated - 1,
+        petab_problem.n_estimated - 1,
+    )
+    problem.unfix_parameters(full_idx)
+    assert problem.dim == petab_problem.n_estimated
+
+    # single optimization works?
+    optimizer = ScipyOptimizer()
+    result = optimizer.minimize(
+        id="1",
+        problem=problem,
+        x0=np.asarray(petab_problem.x_nominal_free) + 0.1,
+    )
+    print(result)
+    assert result.fval0 is not None, result.message
+    assert result.fval < result.fval0
+
+    # multi-processing optimization works?
+    result = pypesto.optimize.minimize(
+        problem=problem,
+        optimizer=optimizer,
+        n_starts=4,
+        engine=pypesto.engine.MultiProcessEngine(),
+        progress_bar=False,
+    )
+    assert len(result.optimize_result.list) == 4
+    for local_result in result.optimize_result.list:
+        assert local_result.fval0 is not None, local_result.message
+        assert local_result.fval < local_result.fval0
+
+
+def test_petab_v2_priors_missing_sensitivities():
+    """Missing sensitivities must be NaN behind an AggregatedObjective.
+
+    Regression test: with priors, the AMICI objective is wrapped in an
+    ``AggregatedObjective``; the gradient for parameters not estimated in the
+    PEtab problem must not be silently 0 there either.
+    """
+    import copy
+    import pickle
+
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path("Boehm_JProteomeRes2014")
+    )
+    petab_problem.parameters[0].prior_distribution = "normal"
+    petab_problem.parameters[0].prior_parameters = [0.0, 1.0]
+    problem = PetabImporter(
+        petab_problem, model_name="Boehm_JProteomeRes2014_v2"
+    ).create_problem()
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+
+    problem.unfix_parameters(petab_problem.x_fixed_indices)
+    for problem_ in (
+        problem,
+        copy.deepcopy(problem),
+        pickle.loads(pickle.dumps(problem)),  # noqa: S301
+    ):
+        _, grad, hess = problem_.objective(
+            np.asarray(petab_problem.x_nominal), sensi_orders=(0, 1, 2)
+        )
+        assert np.isnan(grad[petab_problem.x_fixed_indices]).all()
+        assert np.isfinite(grad[petab_problem.x_free_indices]).all()
+        assert np.isnan(hess[petab_problem.x_fixed_indices]).all()
+        assert np.isnan(hess[:, petab_problem.x_fixed_indices]).all()
+
+    problem.fix_parameters(
+        petab_problem.x_fixed_indices, petab_problem.x_nominal_fixed
+    )
+    _, grad = problem.objective(
+        np.asarray(petab_problem.x_nominal_free), sensi_orders=(0, 1)
+    )
+    assert len(grad) == petab_problem.n_estimated
+    assert np.isfinite(grad).all()
+
+
+def test_petab_v1_non_estimated_gradient_nan():
+    """PEtab-non-estimated parameters of a PEtab v1 problem are AMICI
+    constants by default -- their gradient must be NaN, not 0, when they are
+    unfixed in the pyPESTO problem."""
+    petab_problem = models.get_problem("Boehm_JProteomeRes2014")
+    problem = PetabImporter(petab_problem).create_problem()
+    x = np.asarray(petab_problem.x_nominal_scaled)
+    _, grad_fixed = problem.objective(x[problem.x_free_indices], (0, 1))
+
+    non_estimated = list(problem.x_fixed_indices)
+    problem.unfix_parameters(non_estimated)
+    _, grad = problem.objective(x, sensi_orders=(0, 1))
+    estimated = [ix for ix in range(len(x)) if ix not in non_estimated]
+    assert np.isnan(grad[non_estimated]).all()
+    assert np.allclose(grad[estimated], grad_fixed)
+
+
+def test_petab_v2_residuals():
+    """Residual mode (MODE_RES) for a PEtab v2 problem: residuals and their
+    sensitivities, plus the least-squares-safe guard for parameter-dependent
+    sigma."""
+    from pypesto.C import MODE_RES
+
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path("Boehm_JProteomeRes2014")
+    )
+    problem = PetabImporter(
+        petab_problem, model_name="Boehm_JProteomeRes2014_v2"
+    ).create_problem()
+    objective = problem.objective
+    x = np.asarray(petab_problem.x_nominal_free)
+
+    # residual values
+    res = objective(x, sensi_orders=(0,), mode=MODE_RES, return_dict=True)[
+        "res"
+    ]
+    assert res.ndim == 1 and np.all(np.isfinite(res))
+
+    # Boehm has estimated (parameter-dependent) sigma, so residual
+    #  sensitivities are only valid once sigma residuals are added
+    with pytest.raises(RuntimeError, match="parameter-dependent sigma"):
+        objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
+
+    objective.amici_model.set_add_sigma_residuals(True)
+    ret = objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
+    res, sres = np.asarray(ret["res"]), np.asarray(ret["sres"])
+    assert sres.shape == (len(res), petab_problem.n_estimated)
+
+    # residual sensitivities match finite differences of the residuals
+    def res_of(x_):
+        return np.asarray(
+            objective(x_, sensi_orders=(0,), mode=MODE_RES, return_dict=True)[
+                "res"
+            ]
+        )
+
+    eps = 1e-6
+    fd = np.column_stack(
+        [
+            (res_of(x + d) - res_of(x - d)) / (2 * eps)
+            for d in np.eye(len(x)) * eps
+        ]
+    )
+    assert np.max(np.abs(fd - sres)) < 1e-3 * np.max(np.abs(sres)) + 1e-6
+
+
+@pytest.mark.filterwarnings(
+    "ignore:.*distribution.*is not supported in PEtab v2.*:UserWarning"
+)
+def test_petab_v2_schwen():
+    problem_id = "Schwen_PONE2014"
+    petab_problem = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    assert petab_problem.n_priors
+    importer = PetabImporter(petab_problem, model_name=f"{problem_id}_v2")
+    problem = importer.create_problem()
+    assert problem.x_names == petab_problem.x_ids
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+    fval = problem.objective(np.asarray(petab_problem.x_nominal_free))
+    assert np.isfinite(fval)
+
+    # startpoint sampling must work with the problem's priors (which include
+    #  log-normal distributions)
+    startpoints = problem.startpoint_method(n_starts=5, problem=problem)
+    assert startpoints.shape == (5, problem.dim)
+    assert np.all(np.isfinite(startpoints))
+
+
+def test_petab_v2_parameter_scales():
+    """A PEtab v2 problem estimated on the scales of the PEtab v1 problem it
+    was upgraded from matches the v1 problem."""
+    from pypesto.C import MODE_RES
+
+    problem_id = "Boehm_JProteomeRes2014"
+    petab_problem_v1 = models.get_problem(problem_id)
+    petab_problem_v2 = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    problem_v1 = PetabImporter(petab_problem_v1).create_problem()
+    problem_v2 = PetabImporter(
+        petab_problem_v2,
+        parameter_scales=petab_problem_v1.parameter_df[
+            petab.v1.C.PARAMETER_SCALE
+        ].to_dict(),
+    ).create_problem()
+
+    assert problem_v2.x_names == problem_v1.x_names
+    assert problem_v2.x_scales == problem_v1.x_scales
+    assert problem_v2.x_fixed_indices == problem_v1.x_fixed_indices
+    for attr in ("lb_full", "ub_full", "x_fixed_vals"):
+        assert np.allclose(
+            getattr(problem_v2, attr), getattr(problem_v1, attr)
+        )
+    startpoints = problem_v2.get_startpoints(100)
+    assert np.all(
+        (startpoints >= problem_v2.lb) & (startpoints <= problem_v2.ub)
+    )
+
+    # objective input and derivatives are on parameter scale
+    x = np.asarray(petab_problem_v1.x_nominal_free_scaled)
+    fval_v1, grad_v1, hess_v1 = problem_v1.objective(x, sensi_orders=(0, 1, 2))
+    fval_v2, grad_v2, hess_v2 = problem_v2.objective(x, sensi_orders=(0, 1, 2))
+    assert np.isclose(fval_v2, fval_v1)
+    assert np.allclose(grad_v2, grad_v1)
+    assert np.allclose(hess_v2, hess_v1)
+
+    for problem in (problem_v1, problem_v2):
+        problem.objective.amici_model.set_add_sigma_residuals(True)
+    sres_v1 = problem_v1.objective(x, sensi_orders=(1,), mode=MODE_RES)
+    sres_v2 = problem_v2.objective(x, sensi_orders=(1,), mode=MODE_RES)
+    assert np.allclose(sres_v2, sres_v1)
+
+
+def test_petab_v2_parameter_scales_invalid():
+    """Invalid parameter scales are rejected."""
+    problem_id = "Boehm_JProteomeRes2014"
+    petab_problem_v2 = petab.v2.Problem.from_yaml(
+        models.get_problem_yaml_path(problem_id)
+    )
+    # validated by AMICI when creating the simulator
+    importer = PetabImporter(
+        petab_problem_v2, parameter_scales={"no_such_parameter": "log10"}
+    )
+    with pytest.raises(ValueError, match="no_such_parameter"):
+        importer.create_problem()
+
+    with pytest.raises(ValueError, match="only supported for PEtab v2"):
+        PetabImporter(
+            models.get_problem(problem_id), parameter_scales={"k_phos": "lin"}
+        )
+
+
+def test_petab_v2_prior_indexing():
+    """Priors must be assigned to the correct parameter index in ``x_full``.
+
+    Regression test: a prior defined on a non-leading estimated parameter has
+    to use that parameter's position in ``x_ids`` as its index, not the running
+    count of priors created so far.
+    """
+    from types import SimpleNamespace
+
+    from pypesto.petab.importer import PetabImporter
+
+    # p0: estimated, no prior; p1: estimated with prior; p2: not estimated;
+    #  p3: estimated with prior
+    parameters = [
+        SimpleNamespace(
+            id="p0",
+            estimate=True,
+            prior_distribution=None,
+            prior_parameters=[],
+        ),
+        SimpleNamespace(
+            id="p1",
+            estimate=True,
+            prior_distribution="normal",
+            prior_parameters=[0.0, 1.0],
+        ),
+        SimpleNamespace(
+            id="p2",
+            estimate=False,
+            prior_distribution="normal",
+            prior_parameters=[0.0, 1.0],
+        ),
+        SimpleNamespace(
+            id="p3",
+            estimate=True,
+            prior_distribution="uniform",
+            prior_parameters=[0.0, 10.0],
+        ),
+    ]
+    fake_problem = SimpleNamespace(
+        parameters=parameters, x_ids=["p0", "p1", "p2", "p3"]
+    )
+    importer = PetabImporter.__new__(PetabImporter)
+    importer.petab_problem = fake_problem
+    importer.parameter_scales = {"p3": "log10"}
+
+    prior = importer._create_prior_v2()
+    # priors only for the estimated parameters p1 and p3, at their positions
+    #  in x_ids (1 and 3) -- not at the running prior count (0 and 1)
+    assert [entry["index"] for entry in prior.prior_list] == [1, 3]
+    assert [entry["scale"] for entry in prior.prior_list] == ["lin", "log10"]
+
+
+def test_petab_v2_startpoint_sampling():
+    """Startpoint sampling must handle v2 prior distributions, incl. log-*.
+
+    Regression: PEtab v2 uses distribution names (e.g. ``log-normal``) that the
+    v1 ``petab.sample_from_prior`` does not understand, so sampling has to go
+    through the parameter's own prior distribution object instead.
+    """
+    from types import SimpleNamespace
+
+    from petab.v2 import Parameter
+
+    from pypesto.petab.util import PetabStartpoints
+
+    parameters = [
+        Parameter(
+            id="p_lognormal",
+            lb=1e-3,
+            ub=1e3,
+            estimate=True,
+            nominal_value=1.0,
+            prior_distribution="log-normal",
+            prior_parameters=[0.0, 1.0],
+        ),
+        # no explicit prior -> uniform over the bounds
+        Parameter(
+            id="p_uniform",
+            lb=0.0,
+            ub=10.0,
+            estimate=True,
+            nominal_value=1.0,
+        ),
+    ]
+    petab_problem = SimpleNamespace(parameters=parameters)
+    startpoint_method = PetabStartpoints(petab_problem=petab_problem)
+    # the prior distribution is on linear scale, the startpoints are on
+    #  parameter scale
+    pypesto_problem = SimpleNamespace(
+        x_names=["p_lognormal", "p_uniform"],
+        x_free_indices=[0, 1],
+        x_scales=["log10", "lin"],
+    )
+    startpoint_method._setup(pypesto_problem)
+
+    startpoints = startpoint_method.sample(
+        n_starts=20,
+        lb=np.array([-3.0, 0.0]),
+        ub=np.array([3.0, 10.0]),
+    )
+    assert startpoints.shape == (20, 2)
+    assert np.all(np.isfinite(startpoints))
+    # sampled startpoints respect the parameter bounds
+    assert np.all(startpoints[:, 0] >= -3.0)
+    assert np.all(startpoints[:, 0] <= 3.0)
+    assert np.all(startpoints[:, 1] >= 0.0)
+    assert np.all(startpoints[:, 1] <= 10.0)
+
+
 if __name__ == "__main__":
     suite = unittest.TestSuite()
     suite.addTest(PetabImportTest())
     unittest.main()
+
+
+def _petab_v2_multi_model_problem(
+    model_ids: Sequence[str],
+    k_deg_prior: tuple[float, float] | None = None,
+    scalings: dict[str, str] | None = None,
+) -> petab.v2.Problem:
+    """Models that share the degradation rate and the noise level.
+
+    Optionally, with a normal prior (mean, standard deviation) on the
+    degradation rate, and with relative data: ``scalings`` maps model IDs to
+    the IDs of the scaling factors, inner parameters for hierarchical
+    optimization, of their observables.
+    """
+    from petab.v2.models.sbml_model import SbmlModel
+
+    from pypesto.C import PARAMETER_TYPE, InnerParameterType
+
+    scalings = scalings or {}
+    production_rates = {"A": 1.0, "B": 2.0, "C": 0.5}
+    measurements = {
+        "A": [0.5, 0.8, 1.9],
+        "B": [1.5, 2.5, 3.8],
+        "C": [0.3, 0.4, 0.9],
+    }
+    problem = petab.v2.Problem(
+        models=[
+            SbmlModel.from_antimony(
+                f"x_{m}' = k_{m} - k_deg * x_{m}; x_{m} = 0; "
+                f"k_{m} = 1; k_deg = 0.5",
+                model_id=m,
+            )
+            for m in model_ids
+        ]
+    )
+    problem.add_parameter(
+        "k_deg",
+        lb=0.01,
+        ub=10,
+        nominal_value=0.4,
+        **(
+            {"prior_dist": "normal", "prior_pars": k_deg_prior}
+            if k_deg_prior
+            else {}
+        ),
+    )
+    problem.add_parameter("sigma", lb=0.01, ub=10, nominal_value=0.2)
+    for m in model_ids:
+        problem.add_parameter(
+            f"k_{m}", lb=0.01, ub=10, nominal_value=production_rates[m]
+        )
+        if m in scalings:
+            # inner parameters are measurement-specific overrides
+            placeholder = f"observableParameter1_obs_{m}"
+            problem.add_observable(
+                f"obs_{m}",
+                f"{placeholder} * x_{m}",
+                noise_formula="sigma",
+                observable_placeholders=[placeholder],
+            )
+            if scalings[m] not in problem.x_ids:
+                problem.add_parameter(
+                    scalings[m],
+                    lb=0.01,
+                    ub=10,
+                    nominal_value=1,
+                    **{PARAMETER_TYPE: InnerParameterType.SCALING},
+                )
+        else:
+            problem.add_observable(f"obs_{m}", f"x_{m}", noise_formula="sigma")
+        for t, y in zip([1, 2, 5], measurements[m], strict=True):
+            problem.add_measurement(
+                f"obs_{m}",
+                time=t,
+                measurement=y,
+                observable_parameters=(
+                    [scalings[m]] if m in scalings else None
+                ),
+                model_id=m,
+            )
+    return problem
+
+
+def test_petab_v2_multi_model():
+    """A multi-model PEtab v2 problem is the sum of its single-model parts."""
+    from pypesto.C import MODE_FUN
+
+    petab_problem = _petab_v2_multi_model_problem(["A", "B"])
+    importer = PetabImporter(petab_problem, model_name="petab_v2_multi_model")
+    problem = importer.create_problem()
+    assert isinstance(problem.objective, pypesto.objective.AggregatedObjective)
+    assert problem.x_names == petab_problem.x_ids
+
+    x = np.asarray(petab_problem.x_nominal_free)
+    fval, grad = problem.objective(x, sensi_orders=(0, 1))
+
+    # reference: the models imported as separate single-model problems,
+    #  reusing the compiled models
+    ref_fval, ref_grad = 0.0, np.zeros_like(grad)
+    for (
+        model_id,
+        sub_creator,
+    ) in importer.objective_constructor.sub_creators.items():
+        ref_petab_problem = _petab_v2_multi_model_problem([model_id])
+        ref_problem = PetabImporter(
+            ref_petab_problem,
+            output_folder=sub_creator.output_folder,
+            model_name=sub_creator.model_name,
+        ).create_problem()
+        ix = [
+            petab_problem.x_ids.index(x_id) for x_id in ref_petab_problem.x_ids
+        ]
+        ref_fval_model, ref_grad_model = ref_problem.objective(
+            x[ix], sensi_orders=(0, 1)
+        )
+        ref_fval += ref_fval_model
+        ref_grad[ix] += ref_grad_model
+    assert np.isclose(fval, ref_fval)
+    assert np.allclose(grad, ref_grad)
+    # every model contributes to the gradient of the shared parameters
+    assert np.all(np.isfinite(grad) & (grad != 0))
+
+    assert problem.objective.check_gradients_match_finite_differences(
+        x=x, mode=MODE_FUN
+    )
+
+    # a prior on a shared parameter is added once, not once per model
+    from scipy.stats import norm
+
+    prior_mean, prior_sd = 0.5, 0.1
+    prior_problem = PetabImporter(
+        _petab_v2_multi_model_problem(
+            ["A", "B"], k_deg_prior=(prior_mean, prior_sd)
+        ),
+        model_name="petab_v2_multi_model",
+    ).create_problem()
+    prior_fval, prior_grad = prior_problem.objective(x, sensi_orders=(0, 1))
+    ix_k_deg = petab_problem.x_ids.index("k_deg")
+    k_deg = x[ix_k_deg]
+    assert np.isclose(
+        prior_fval, fval - norm.logpdf(k_deg, prior_mean, prior_sd)
+    )
+    expected_grad = grad.copy()
+    expected_grad[ix_k_deg] += (k_deg - prior_mean) / prior_sd**2
+    assert np.allclose(prior_grad, expected_grad)
+
+    # optimization works
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=2, progress_bar=False
+    )
+    for local_result in result.optimize_result.list:
+        assert local_result.fval < local_result.fval0
+
+
+def test_petab_v2_multi_model_hierarchical():
+    """Hierarchical optimization of a multi-model PEtab v2 problem is the
+    sum of the single-model hierarchical problems."""
+    from pypesto.C import INNER_PARAMETERS, MODE_FUN
+    from pypesto.hierarchical.aggregated import AggregatedHierarchicalObjective
+    from pypesto.problem import HierarchicalProblem
+
+    scalings = {"A": "scaling_A", "B": "scaling_B"}
+    petab_problem = _petab_v2_multi_model_problem(
+        ["A", "B", "C"], scalings=scalings
+    )
+    importer = PetabImporter(
+        petab_problem,
+        hierarchical=True,
+        model_name="petab_v2_multi_model_hierarchical",
+    )
+    problem = importer.create_problem()
+    assert isinstance(problem, HierarchicalProblem)
+    assert isinstance(
+        copy.deepcopy(problem.objective), AggregatedHierarchicalObjective
+    )
+    assert problem.inner_x_names == ["scaling_A", "scaling_B"]
+    assert problem.relative_observable_ids == ["obs_A", "obs_B"]
+    assert problem.x_names == ["k_deg", "sigma", "k_A", "k_B", "k_C"]
+
+    x_nominal = petab_problem.get_x_nominal_dict()
+    x = np.asarray([x_nominal[x_id] for x_id in problem.x_names])
+    ret = problem.objective(
+        x, sensi_orders=(0, 1), mode=MODE_FUN, return_dict=True
+    )
+
+    # reference: the models imported as separate single-model problems,
+    #  reusing the compiled models
+    ref_fval, ref_grad, ref_inner_parameters = 0.0, np.zeros_like(x), []
+    for (
+        model_id,
+        sub_creator,
+    ) in importer.objective_constructor.sub_creators.items():
+        ref_problem = PetabImporter(
+            _petab_v2_multi_model_problem([model_id], scalings=scalings),
+            hierarchical=model_id in scalings,
+            output_folder=sub_creator.output_folder,
+            model_name=sub_creator.model_name,
+        ).create_problem()
+        ix = [problem.x_names.index(x_id) for x_id in ref_problem.x_names]
+        ref_ret = ref_problem.objective(
+            x[ix], sensi_orders=(0, 1), mode=MODE_FUN, return_dict=True
+        )
+        ref_fval += ref_ret["fval"]
+        ref_grad[ix] += ref_ret["grad"]
+        ref_inner_parameters.extend(ref_ret.get(INNER_PARAMETERS, []))
+    assert np.isclose(ret["fval"], ref_fval)
+    assert np.allclose(ret["grad"], ref_grad)
+    assert np.allclose(ret[INNER_PARAMETERS], ref_inner_parameters)
+    # a model whose simulation failed gets NaNs for its inner parameters
+    assert np.array_equal(
+        problem.objective._aggregate_results(
+            [{"fval": 0.0, INNER_PARAMETERS: [1.0]}, {"fval": np.inf}, {}]
+        )[INNER_PARAMETERS],
+        [1.0, np.nan],
+        equal_nan=True,
+    )
+
+    assert problem.objective.check_gradients_match_finite_differences(
+        x=x, mode=MODE_FUN
+    )
+
+    result = pypesto.optimize.minimize(
+        problem=problem, n_starts=2, progress_bar=False
+    )
+    for start in result.optimize_result.list:
+        assert start.fval <= start.fval0
+        assert len(start[INNER_PARAMETERS]) == len(problem.inner_x_names)
+
+    # inner parameters shared between models are rejected
+    with pytest.raises(NotImplementedError, match="shared between models"):
+        PetabImporter(
+            _petab_v2_multi_model_problem(
+                ["A", "B"], scalings={"A": "scaling", "B": "scaling"}
+            ),
+            hierarchical=True,
+        )

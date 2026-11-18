@@ -28,8 +28,9 @@ if TYPE_CHECKING:
             ParameterMapping,
             ParameterMappingForCondition,
         )
+        from petab import v2
     except ImportError:
-        ParameterMapping = ParameterMappingForCondition = None
+        ParameterMapping = ParameterMappingForCondition = v2 = None
 
 AmiciModel = Union["amici.Model", "amici.ModelPtr"]
 AmiciSolver = Union["amici.Solver", "amici.SolverPtr"]
@@ -211,6 +212,127 @@ def par_index_slices(
     par_sim_slice = np.fromiter(next(zip_iterator), dtype=int)
     par_opt_slice = np.fromiter(next(zip_iterator), dtype=int)
     return par_sim_slice, par_opt_slice
+
+
+def petab_v2_placeholder_mapping(
+    petab_problem: v2.Problem,
+    experiment: v2.Experiment,
+) -> dict[str, str]:
+    """Map observable/noise placeholders to the parameters overriding them.
+
+    For PEtab v2, the observable and noise placeholders are model parameters,
+    overridden per measurement. Numeric overrides are omitted.
+
+    Expects the problem as preprocessed by the AMICI PEtab importer, whose
+    ``ExperimentsToSbmlConverter`` rejects overrides that differ between the
+    measurements of one experiment ("timepoint-specific mappings"). Within an
+    experiment a placeholder therefore has a single value, which is what makes
+    this mapping well defined.
+    """
+    observables = {
+        observable.id: observable for observable in petab_problem.observables
+    }
+    mapping = {}
+    for measurement in petab_problem.get_measurements_for_experiment(
+        experiment
+    ):
+        observable = observables[measurement.observable_id]
+        for placeholders, overrides in (
+            (
+                observable.observable_placeholders,
+                measurement.observable_parameters,
+            ),
+            (observable.noise_placeholders, measurement.noise_parameters),
+        ):
+            for placeholder, override in zip(
+                placeholders, overrides, strict=True
+            ):
+                # PEtab v2 parses every override into a sympy expression.
+                #  Anything that is not a plain symbol -- a numeric override
+                #  such as `1.0`, or a composite one such as `2 * p` -- does
+                #  not name a single problem parameter, so there is nothing
+                #  to map the placeholder onto.
+                if not override.is_Symbol:
+                    continue
+                mapping[str(placeholder)] = str(override)
+    return mapping
+
+
+def petab_v2_index_slices(
+    petab_problem: v2.Problem,
+    par_sim_ids: Sequence[str],
+    edatas: list[amici.ExpData],
+    par_opt_ids: Sequence[str],
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Generate index slices for a PEtab v2 problem, one entry per experiment.
+
+    PEtab v2 counterpart of :func:`par_index_slices`. There is no PEtab v1
+    style parameter mapping to derive the correspondence from; instead, model
+    parameters carry the IDs of the PEtab problem parameters, except for the
+    observable/noise placeholders, which are overridden per experiment.
+    Sensitivities are computed for, and returned in the order of, the model
+    parameters in ``ExpData.plist``.
+
+    Parameters
+    ----------
+    petab_problem:
+        The PEtab v2 problem, as preprocessed by the AMICI PEtab importer.
+    par_sim_ids:
+        The simulation (model) parameter ids. Needed for order.
+    edatas:
+        The experimental data, one per PEtab experiment, in the order of
+        ``petab_problem.experiments``. Checked against the experiment ids.
+    par_opt_ids:
+        The optimization parameter ids. Needed for order. Sensitivities of
+        parameters that are not among them -- e.g. the parameters solved for
+        in an inner problem -- are omitted from the slices.
+
+    Returns
+    -------
+    One ``(par_sim_slice, par_opt_slice)`` pair per experiment, as consumed by
+    :func:`add_sim_grad_to_opt_grad`'s accumulation step.
+    """
+    par_opt_ix = {par_id: ix for ix, par_id in enumerate(par_opt_ids)}
+
+    index_slices = []
+    for ix, (edata, experiment) in enumerate(
+        zip(edatas, petab_problem.experiments, strict=True)
+    ):
+        # the slices are paired with the conditions by position, so the
+        #  `edatas` must be in experiment order. That is how
+        #  `ExperimentManager.create_edatas` builds them, but it is an
+        #  implementation detail and a mismatch would misattribute gradients
+        #  silently, so check rather than assume.
+        if edata.id != experiment.id:
+            raise ValueError(
+                f"`edatas[{ix}]` is for experiment {edata.id!r}, but "
+                f"experiment {ix} of the problem is {experiment.id!r}. The "
+                "`edatas` must be given in the order of "
+                "`petab_problem.experiments`."
+            )
+        placeholder_mapping = petab_v2_placeholder_mapping(
+            petab_problem, experiment
+        )
+        # the PEtab problem parameter behind each computed sensitivity
+        problem_ids = [
+            placeholder_mapping.get(par_sim_ids[ix], par_sim_ids[ix])
+            for ix in edata.plist
+        ]
+        par_sim_slice = [
+            sens_ix
+            for sens_ix, par_id in enumerate(problem_ids)
+            if par_id in par_opt_ix
+        ]
+        index_slices.append(
+            (
+                np.asarray(par_sim_slice, dtype=int),
+                np.asarray(
+                    [par_opt_ix[problem_ids[ix]] for ix in par_sim_slice],
+                    dtype=int,
+                ),
+            )
+        )
+    return index_slices
 
 
 def add_sim_grad_to_opt_grad(

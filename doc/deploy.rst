@@ -18,17 +18,18 @@ as suggested by the `Python packaging guide <https://packaging.python.org>`_.
 Create a new release
 --------------------
 
-After new commits have been added via pull requests to the ``develop`` branch,
-changes can be merged to ``main`` and a new version of pyPESTO can be released.
+Contributions are merged directly into ``main`` via pull requests (see
+:doc:`contribute`). Once enough changes have accumulated, a new version of
+pyPESTO can be released from ``main``.
 
-Merge into main
-~~~~~~~~~~~~~~~
+Prepare the release
+~~~~~~~~~~~~~~~~~~~~
 
-1. create a pull request from ``develop`` to ``main``,
-2. check that all code changes are covered by tests and all tests pass,
-3. check that the documentation is up-to-date,
-4. adapt the version number in ``pypesto/version.py`` (see above),
-5. update the release notes in ``CHANGELOG.rst``,
+1. adapt the version number in ``pypesto/version.py`` (see above),
+2. update the release notes in ``CHANGELOG.rst``,
+3. create a pull request with these changes to ``main``,
+4. check that all code changes are covered by tests and all tests pass,
+5. check that the documentation is up-to-date,
 6. request a code review,
 7. merge into the origin ``main`` branch.
 

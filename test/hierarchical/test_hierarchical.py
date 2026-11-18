@@ -6,14 +6,24 @@ import time
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
+import pytest
 from amici.sim.sundials import SensitivityMethod
 
 import pypesto
 from pypesto.C import (
+    FVAL,
+    GRAD,
     INNER_PARAMETER_BOUNDS,
+    INNER_PARAMETERS,
     LIN,
+    LOG,
+    LOG10,
     LOWER_BOUND,
     MODE_FUN,
+    MODE_RES,
+    PARAMETER_TYPE,
+    RES,
+    SRES,
     UPPER_BOUND,
     InnerParameterType,
 )
@@ -236,6 +246,132 @@ def test_hierarchical_calculator_and_objective():
     assert np.isclose(fval_true, fval_false, atol=1e-12, rtol=1e-14)
 
 
+def _boehm_hierarchical_scaling_offset_only():
+    """Boehm with the scalings and offsets inner, and the sigmas fixed.
+
+    Residual mode is only meaningful when the sigmas are not solved
+    analytically, see `test_hierarchical_residuals_with_inner_sigma`.
+    """
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    sd_ids = [
+        par_id
+        for par_id in petab_problem.parameter_df.index
+        if par_id.startswith("sd_")
+    ]
+    petab_problem.parameter_df.loc[sd_ids, PARAMETER_TYPE] = np.nan
+    petab_problem.parameter_df.loc[sd_ids, petab.ESTIMATE] = 0
+    return petab_problem
+
+
+def test_hierarchical_residuals():
+    """Test residual mode with hierarchical scalings and offsets.
+
+    `calculate_directly` fills in only `FVAL` and `GRAD`, so routing residual
+    mode there returned an empty residual array without raising. Residual
+    mode goes through the two-call scheme instead, where AMICI computes the
+    residuals itself, with the inner parameters fixed at their optimum.
+    """
+    petab_problem = _boehm_hierarchical_scaling_offset_only()
+    importer = PetabImporter(petab_problem, hierarchical=True)
+    objective = importer.create_problem(importer.create_objective()).objective
+    objective.amici_solver.set_absolute_tolerance(1e-12)
+    objective.amici_solver.set_relative_tolerance(1e-12)
+
+    x_nominal = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
+    x = np.asarray([x_nominal[x_id] for x_id in objective.x_names])
+
+    n_measurements = len(petab_problem.measurement_df)
+    ret = objective(x, sensi_orders=(0, 1), mode=MODE_RES, return_dict=True)
+    res, sres = ret[RES], ret[SRES]
+
+    assert res.shape == (n_measurements,)
+    assert sres.shape == (n_measurements, len(x))
+    assert np.isfinite(res).all()
+    assert np.isfinite(sres).all()
+
+    # the Gauss-Newton gradient of these residuals is the gradient of the
+    # objective, which is what a least-squares optimizer needs of them
+    _, grad = objective(x, sensi_orders=(0, 1), mode=MODE_FUN)
+    assert np.allclose(
+        sres.T @ res, grad, rtol=1e-6, atol=1e-6 * np.max(np.abs(grad))
+    )
+
+    # ... and the least-squares objective they define has to track the
+    # negative log-likelihood, differing from it only by the sigma term,
+    # which is constant here because the sigmas are
+    offsets = []
+    for delta in [0.0, 0.05, -0.1]:
+        x_perturbed = x.copy()
+        x_perturbed[0] += delta
+        fval = objective(x_perturbed, sensi_orders=(0,), mode=MODE_FUN)
+        res_perturbed = objective(
+            x_perturbed, sensi_orders=(0,), mode=MODE_RES, return_dict=True
+        )[RES]
+        offsets.append(fval - 0.5 * res_perturbed @ res_perturbed)
+    assert np.allclose(offsets, offsets[0], rtol=1e-8)
+
+    # routing residual mode to `calculate_directly` is what produced the
+    # empty residuals in the first place; it now refuses instead
+    relative_calculator = objective.calculator.inner_calculators[0]
+    with pytest.raises(ValueError, match="no residuals"):
+        relative_calculator.calculate_directly(
+            x_dct=dict(zip(objective.x_names, x, strict=True)),
+            sensi_orders=(0,),
+            mode=MODE_RES,
+            amici_model=objective.amici_model,
+            amici_solver=objective.amici_solver,
+            edatas=objective.edatas,
+            n_threads=1,
+            x_ids=objective.x_names,
+            parameter_mapping=objective.parameter_mapping,
+            fim_for_hess=False,
+        )
+
+
+def test_hierarchical_residuals_with_inner_sigma():
+    """Test residual mode when the sigmas are solved analytically.
+
+    The residuals themselves are well defined, but at the optimal sigma
+    their sum of squares equals the number of measurements whatever the
+    outer parameters are, so the least-squares objective they define is
+    constant. The residual sensitivities are refused for that reason, as
+    they are for a parameter-dependent sigma in `AmiciCalculator.__call__`.
+    """
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    importer = PetabImporter(petab_problem, hierarchical=True)
+    objective = importer.create_problem(importer.create_objective()).objective
+    objective.amici_solver.set_absolute_tolerance(1e-12)
+    objective.amici_solver.set_relative_tolerance(1e-12)
+
+    x_nominal = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
+    x = np.asarray([x_nominal[x_id] for x_id in objective.x_names])
+    n_measurements = len(petab_problem.measurement_df)
+
+    # the residuals are available, and are the standardized residuals at the
+    # optimal sigma, so their sum of squares is the measurement count
+    for delta in [0.0, 0.05, -0.1]:
+        x_perturbed = x.copy()
+        x_perturbed[0] += delta
+        res = objective(
+            x_perturbed, sensi_orders=(0,), mode=MODE_RES, return_dict=True
+        )[RES]
+        assert res.shape == (n_measurements,)
+        assert np.isfinite(res).all()
+        assert np.isclose(res @ res, n_measurements, rtol=1e-8)
+
+    # which is why they must not be handed to a least-squares solver
+    with pytest.raises(RuntimeError, match="hierarchically estimated sigma"):
+        objective(x, sensi_orders=(1,), mode=MODE_RES)
+
+
 def test_analytical_computations():
     """Test analytically-solved hierarchical inner parameters."""
     function = np.exp
@@ -321,14 +457,16 @@ def test_analytical_computations():
     assert np.isclose(sigma_value, expected_sigma_value, rtol=rtol)
 
 
-def inner_problem_exp(add_scaling: bool = True, add_offset: bool = True):
+def inner_problem_exp(
+    add_scaling: bool = True, add_offset: bool = True, sigma: float = 3
+):
     function = np.exp
     timepoints = np.linspace(0, 3, 101)
 
     expected_values = {
         "scaling_": 5,
         "offset_": 2,
-        "sigma_": 3,
+        "sigma_": sigma,
     }
 
     simulation = function(timepoints)
@@ -403,9 +541,11 @@ def test_analytical_inner_solver():
     assert np.isclose(result["sigma_"], expected_values["sigma_"], rtol=rtol)
 
 
-def test_numerical_inner_solver():
+# small sigma: the line search must not step onto the sigma bound 0
+@pytest.mark.parametrize("sigma", [3, 0.01])
+def test_numerical_inner_solver(sigma):
     """Test numerically-solved hierarchical inner parameters."""
-    inner_problem, expected_values, simulation = inner_problem_exp()
+    inner_problem, expected_values, simulation = inner_problem_exp(sigma=sigma)
 
     dummy_sigma = np.ones(simulation.shape)
 
@@ -665,3 +805,283 @@ def test_validate():
         measurement_df=measurement_df,
     )
     validate_hierarchical_petab_problem(petab_problem)
+
+
+def test_validate_non_normal_noise():
+    """Inner parameters on a non-Gaussian observable are rejected."""
+    observable_df = petab.get_observable_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1"],
+                petab.OBSERVABLE_FORMULA: ["observableParameter1_obs1 * x1"],
+                petab.NOISE_FORMULA: ["0.1"],
+                petab.NOISE_DISTRIBUTION: [petab.LAPLACE],
+            }
+        )
+    )
+    measurement_df = petab.get_measurement_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1"],
+                petab.TIME: [0],
+                petab.MEASUREMENT: [1],
+                petab.OBSERVABLE_PARAMETERS: ["s"],
+            }
+        )
+    )
+    parameter_df = petab.get_parameter_df(
+        pd.DataFrame(
+            {
+                petab.PARAMETER_ID: ["s"],
+                "parameterType": ["scaling"],
+                "estimate": [1],
+            }
+        )
+    )
+    petab_problem = petab.Problem(
+        observable_df=observable_df,
+        parameter_df=parameter_df,
+        measurement_df=measurement_df,
+    )
+    with pytest.raises(NotImplementedError, match="Noise distribution"):
+        validate_hierarchical_petab_problem(petab_problem)
+
+
+def test_validate_with_some_sigmas_not_hierarchical():
+    """Test validation when only some observables have a hierarchical sigma.
+
+    The inner parameter table then mixes ids and `None` in its sigma column.
+    pandas 3 used to store such a column as strings with `NaN` for the
+    missing values, and the pairing check took that `NaN` for a sigma paired
+    with the other observable's scaling (#1765).
+    """
+    observable_df = petab.get_observable_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1", "obs2"],
+                petab.OBSERVABLE_FORMULA: [
+                    "observableParameter1_obs1 * x1",
+                    "observableParameter1_obs2 * x2",
+                ],
+                petab.NOISE_FORMULA: [
+                    "noiseParameter1_obs1",
+                    "noiseParameter1_obs2",
+                ],
+            }
+        )
+    )
+    # obs1 has a hierarchical sigma and obs2 a numeric one. obs2 is measured
+    #  twice, so that its scaling is paired with the missing sigma twice.
+    measurement_df = petab.get_measurement_df(
+        pd.DataFrame(
+            {
+                petab.OBSERVABLE_ID: ["obs1", "obs2", "obs2"],
+                petab.TIME: [0, 0, 1],
+                petab.MEASUREMENT: [1, 2, 3],
+                petab.OBSERVABLE_PARAMETERS: ["s1", "s2", "s2"],
+                petab.NOISE_PARAMETERS: ["sd1", 0.1, 0.1],
+            }
+        )
+    )
+    parameter_df = petab.get_parameter_df(
+        pd.DataFrame(
+            {
+                petab.PARAMETER_ID: ["s1", "s2", "sd1"],
+                PARAMETER_TYPE: ["scaling", "scaling", "sigma"],
+                petab.ESTIMATE: [1, 1, 1],
+            }
+        )
+    )
+    validate_hierarchical_petab_problem(
+        petab.Problem(
+            observable_df=observable_df,
+            parameter_df=parameter_df,
+            measurement_df=measurement_df,
+        )
+    )
+
+
+def test_hierarchical_adjoint_value_only_with_quantitative_data():
+    """Test adjoint value-only calls on a problem with quantitative data.
+
+    With adjoint sensitivities, value-only calls used to be handed to the
+    relative calculator alone, which never adds the contribution of the
+    quantitative observables, so the objective depended on whether a
+    gradient was requested (#1767).
+    """
+    petab_problem = (
+        get_Boehm_JProteomeRes2014_hierarchical_petab_corrected_bounds()
+    )
+    # make rSTAT5A an ordinary quantitative observable
+    for par_id in (
+        "scaling_rSTAT5A_rel",
+        "offset_rSTAT5A_rel",
+        "sd_rSTAT5A_rel",
+    ):
+        petab_problem.parameter_df.loc[par_id, PARAMETER_TYPE] = np.nan
+    importer = PetabImporter(petab_problem, hierarchical=True)
+    objective = importer.create_problem(importer.create_objective()).objective
+    assert objective.calculator.quantitative_data_mask is not None
+
+    x_nominal = dict(
+        zip(petab_problem.x_ids, petab_problem.x_nominal_scaled, strict=True)
+    )
+    x = np.asarray([x_nominal[x_id] for x_id in objective.x_names])
+
+    fvals = {}
+    for method in (SensitivityMethod.forward, SensitivityMethod.adjoint):
+        objective.amici_solver.set_sensitivity_method(method)
+        for sensi_orders in ((0,), (0, 1)):
+            fvals[method.name, sensi_orders] = objective(
+                x, sensi_orders=sensi_orders, return_dict=True
+            )[FVAL]
+    reference = fvals["forward", (0,)]
+    assert np.allclose(list(fvals.values()), reference, rtol=1e-6), fvals
+
+
+def _noise_models_petab_problem(
+    transformations: list[str],
+) -> petab.Problem:
+    """A PEtab problem with quantitative data under several noise models.
+
+    One observable for each combination of ``transformations`` and noise
+    distribution, all without inner parameters, next to an observable whose
+    sigma is estimated hierarchically.
+    """
+    from petab.v1.models.sbml_model import SbmlModel
+
+    model = SbmlModel.from_antimony(
+        """
+        model conversion
+            A = 1; B = 0; k1 = 0.5; k2 = 0.1
+            r1: A => B; k1 * A
+            r2: B => A; k2 * B
+        end
+        """
+    )
+
+    noise_models = [
+        (transformation, distribution)
+        for transformation in transformations
+        for distribution in (petab.NORMAL, petab.LAPLACE)
+    ]
+    observable_df = pd.DataFrame(
+        {
+            petab.OBSERVABLE_ID: [
+                f"obs_{transformation}_{distribution}"
+                for transformation, distribution in noise_models
+            ]
+            + ["obs_hierarchical"],
+            petab.OBSERVABLE_FORMULA: "A",
+            petab.OBSERVABLE_TRANSFORMATION: [
+                transformation for transformation, _ in noise_models
+            ]
+            + [LIN],
+            petab.NOISE_DISTRIBUTION: [
+                distribution for _, distribution in noise_models
+            ]
+            + [petab.NORMAL],
+            petab.NOISE_FORMULA: ["0.2"] * len(noise_models)
+            + ["noiseParameter1_obs_hierarchical"],
+        }
+    )
+
+    time = np.array([0.0, 1, 2, 4, 6, 10])
+    simulation = 1 / 6 + 5 / 6 * np.exp(-0.6 * time)
+    measurement_df = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    petab.OBSERVABLE_ID: observable_id,
+                    petab.SIMULATION_CONDITION_ID: "c0",
+                    petab.TIME: time,
+                    petab.MEASUREMENT: simulation
+                    * np.exp(0.1 * np.sin(time + observable_ix)),
+                    petab.OBSERVABLE_PARAMETERS: "",
+                    petab.NOISE_PARAMETERS: "sigma"
+                    if observable_id == "obs_hierarchical"
+                    else "",
+                }
+            )
+            for observable_ix, observable_id in enumerate(
+                observable_df[petab.OBSERVABLE_ID]
+            )
+        ],
+        ignore_index=True,
+    )
+
+    parameter_df = pd.DataFrame(
+        {
+            petab.PARAMETER_ID: ["k1", "k2", "sigma"],
+            petab.PARAMETER_SCALE: LIN,
+            petab.LOWER_BOUND: [1e-3, 1e-3, 0],
+            petab.UPPER_BOUND: [1e1, 1e1, np.inf],
+            petab.NOMINAL_VALUE: [0.4, 0.15, 1],
+            petab.ESTIMATE: 1,
+            PARAMETER_TYPE: [None, None, InnerParameterType.SIGMA],
+        }
+    )
+
+    return petab.Problem(
+        model=model,
+        condition_df=petab.get_condition_df(
+            pd.DataFrame({petab.CONDITION_ID: ["c0"]})
+        ),
+        observable_df=petab.get_observable_df(observable_df),
+        measurement_df=petab.get_measurement_df(measurement_df),
+        parameter_df=petab.get_parameter_df(parameter_df),
+    )
+
+
+@pytest.mark.parametrize("petab_version", ["v1", "v2"])
+def test_hierarchical_quantitative_noise_models(petab_version, tmp_path):
+    """Test quantitative data under noise models other than lin-normal.
+
+    The hierarchical objective has to match the non-hierarchical one at the
+    optimal inner parameters. The data without inner parameters used to be
+    scored as normally distributed on the linear scale, whatever their
+    transformation and noise distribution (#1777).
+    """
+    if petab_version == "v1":
+        petab_problem = _noise_models_petab_problem([LIN, LOG, LOG10])
+    else:
+        from petab import v2
+
+        # PEtab v2 has no log10 transformation
+        _noise_models_petab_problem([LIN, LOG]).to_files_generic(
+            prefix_path=tmp_path / "v1"
+        )
+        petab_problem = v2.Problem.from_yaml(tmp_path / "v1" / "problem.yaml")
+
+    importer_kwargs = {
+        "model_name": f"hierarchical_noise_models_{petab_version}",
+        "output_folder": str(tmp_path / "amici"),
+    }
+    objective, objective_full = (
+        PetabImporter(
+            petab_problem, hierarchical=hierarchical, **importer_kwargs
+        )
+        .create_objective_creator()
+        .create_objective()
+        for hierarchical in (True, False)
+    )
+
+    x = {"k1": 0.4, "k2": 0.15}
+    ret = objective(
+        np.array([x[x_id] for x_id in objective.x_ids]),
+        sensi_orders=(0, 1),
+        return_dict=True,
+    )
+    x["sigma"] = ret[INNER_PARAMETERS][0]
+    fval_full, grad_full = objective_full(
+        np.array([x[x_id] for x_id in objective_full.x_ids]),
+        sensi_orders=(0, 1),
+    )
+
+    assert np.isclose(ret[FVAL], fval_full, rtol=1e-6)
+    grad_full = dict(zip(objective_full.x_ids, grad_full, strict=True))
+    assert np.allclose(
+        ret[GRAD],
+        [grad_full[x_id] for x_id in objective.x_ids],
+        rtol=1e-6,
+    )

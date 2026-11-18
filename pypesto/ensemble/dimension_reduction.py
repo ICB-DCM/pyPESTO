@@ -228,7 +228,6 @@ def _get_umap_representation_lowlevel(
         returned fitted umap object from umap.UMAP()
     """
     import umap
-    import umap.plot
     from sklearn.preprocessing import StandardScaler
 
     # create a umap object

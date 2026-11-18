@@ -2,8 +2,6 @@
 This is for testing the pypesto.Objective.
 """
 
-import os
-
 import amici.sim.sundials as asd
 import benchmark_models_petab as models
 import numpy as np
@@ -53,7 +51,7 @@ def test_add_sim_grad_to_opt_grad():
 def test_error_leastsquares_with_ssigma():
     model_name = "Zheng_PNAS2012"
     petab_problem = petab.Problem.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
     petab_problem.model_name = model_name
     importer = pypesto.petab.PetabImporter(petab_problem)
@@ -84,7 +82,7 @@ def test_preeq_guesses():
     """
     model_name = "Brannmark_JBC2010"
     importer = pypesto.petab.PetabImporter.from_yaml(
-        os.path.join(models.MODELS_DIR, model_name, model_name + ".yaml")
+        models.get_problem_yaml_path(model_name)
     )
     obj_creator = importer.create_objective_creator()
     amici_model = obj_creator.create_model()

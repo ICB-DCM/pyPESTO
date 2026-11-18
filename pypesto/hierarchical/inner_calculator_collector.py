@@ -9,14 +9,17 @@ from __future__ import annotations
 import copy
 import warnings
 from collections.abc import Sequence
-from typing import Union
+from typing import TYPE_CHECKING, Union
 
 import numpy as np
+
+if TYPE_CHECKING:
+    import amici.sim.sundials.petab
+    from petab import v2
 
 from ..C import (
     AMICI_SIGMAY,
     AMICI_SSIGMAY,
-    AMICI_SSIGMAZ,
     AMICI_SY,
     AMICI_Y,
     CENSORED,
@@ -24,8 +27,13 @@ from ..C import (
     GRAD,
     HESS,
     INNER_PARAMETERS,
+    LAPLACE,
+    LIN,
+    LOG,
+    LOG10,
     METHOD,
     MODE_RES,
+    NORMAL,
     ORDINAL,
     ORDINAL_OPTIONS,
     RDATAS,
@@ -40,9 +48,10 @@ from ..C import (
 )
 from ..objective.amici.amici_calculator import AmiciCalculator
 from ..objective.amici.amici_util import (
-    add_sim_grad_to_opt_grad,
     filter_return_dict,
     init_return_values,
+    par_index_slices,
+    petab_v2_index_slices,
 )
 
 try:
@@ -111,8 +120,15 @@ class InnerCalculatorCollector(AmiciCalculator):
         )
 
         self.quantitative_data_mask = self._get_quantitative_data_mask(edatas)
+        #: per model observable, its AMICI noise distribution
+        self.noise_distributions = self._get_noise_distributions(
+            petab_problem, model
+        )
 
-        self._known_least_squares_safe = False
+        #: per condition, the ``(par_sim_slice, par_opt_slice)`` pairs
+        #: mapping the sensitivities onto the optimization parameters.
+        #: ``None`` means they are derived from the parameter mapping.
+        self._index_slices = None
 
     def initialize(self):
         """Initialize."""
@@ -222,7 +238,12 @@ class InnerCalculatorCollector(AmiciCalculator):
     def _get_quantitative_data_mask(
         self,
         edatas: list[asd.ExpData],
-    ) -> list[np.ndarray]:
+    ) -> list[np.ndarray] | None:
+        """Get the mask of quantitative measurements, one entry per condition.
+
+        Returns ``None`` if the problem has no quantitative data at all, which
+        the callers take to mean "no quantitative contribution to add".
+        """
         # transform experimental data
         edatas = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
@@ -246,11 +267,35 @@ class InnerCalculatorCollector(AmiciCalculator):
         ):
             condition_mask[np.isnan(edata)] = False
 
-        # If there is no quantitative data, return None
-        if not all(mask.any() for mask in quantitative_data_mask):
+        # If there is no quantitative data at all, return None. Individual
+        #  conditions without quantitative data are fine -- their (all-False)
+        #  mask simply contributes nothing.
+        if not any(mask.any() for mask in quantitative_data_mask):
             return None
 
         return quantitative_data_mask
+
+    @staticmethod
+    def _get_noise_distributions(
+        petab_problem: petab.Problem,
+        model: AmiciModel,
+    ) -> list[str]:
+        """Get the noise distribution of each model observable.
+
+        Returns AMICI's noise distribution identifier (e.g. ``log10-normal``)
+        of each observable, in the order of the model observables, for
+        :func:`calculate_quantitative_result`.
+        """
+        from amici.importers.petab.v1._import_helpers import (
+            petab_noise_distribution_to_amici,
+        )
+
+        return [
+            petab_noise_distribution_to_amici(
+                petab_problem.observable_df.loc[observable_id]
+            )
+            for observable_id in model.get_observable_ids()
+        ]
 
     def get_inner_par_ids(self) -> list[str]:
         """Return the ids of inner parameters of all inner problems."""
@@ -294,6 +339,226 @@ class InnerCalculatorCollector(AmiciCalculator):
             for scale in inner_calculator.inner_problem.get_interpretable_x_scales()
         ]
 
+    def _combine_inner_results(
+        self,
+        rdatas: list[asd.ReturnDataView],
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+        index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
+    ) -> dict:
+        """Run the inner calculators on ``rdatas`` and assemble the result.
+
+        Shared by the PEtab v1 and v2 collectors: how the simulations are
+        produced differs between the versions, what is done with them does
+        not.
+
+        Parameters
+        ----------
+        rdatas:
+            The simulation results. The remaining arguments are those of
+            :meth:`__call__`, and are forwarded to the inner calculators
+            alongside them.
+        index_slices:
+            Passed on to :func:`calculate_quantitative_result`. ``None``
+            derives them from the PEtab v1 parameter mapping.
+        """
+        dim = len(x_ids)
+
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        interpretable_inner_pars = []
+        spline_knots = None
+
+        for calculator in self.inner_calculators:
+            inner_result = calculator(
+                rdatas=rdatas,
+                x_dct=x_dct,
+                sensi_orders=sensi_orders,
+                mode=mode,
+                amici_model=amici_model,
+                amici_solver=amici_solver,
+                edatas=edatas,
+                n_threads=n_threads,
+                x_ids=x_ids,
+                parameter_mapping=parameter_mapping,
+                fim_for_hess=fim_for_hess,
+            )
+            nllh += inner_result[FVAL]
+            if 1 in sensi_orders:
+                snllh += inner_result[GRAD]
+            if (inner_pars := inner_result.get(INNER_PARAMETERS)) is not None:
+                interpretable_inner_pars.extend(inner_pars)
+            if SPLINE_KNOTS in inner_result:
+                spline_knots = inner_result[SPLINE_KNOTS]
+
+        # add the quantitative data contribution
+        if self.quantitative_data_mask is not None:
+            quantitative_result = calculate_quantitative_result(
+                rdatas=rdatas,
+                sensi_orders=sensi_orders,
+                edatas=edatas,
+                mode=mode,
+                quantitative_data_mask=self.quantitative_data_mask,
+                noise_distributions=self.noise_distributions,
+                dim=dim,
+                parameter_mapping=parameter_mapping,
+                par_opt_ids=x_ids,
+                par_sim_ids=amici_model.get_free_parameter_ids(),
+                index_slices=index_slices,
+            )
+            nllh += quantitative_result[FVAL]
+            if 1 in sensi_orders:
+                snllh += quantitative_result[GRAD]
+
+        return filter_return_dict(
+            {
+                FVAL: nllh,
+                GRAD: snllh,
+                HESS: s2nllh,
+                RES: res,
+                SRES: sres,
+                RDATAS: rdatas,
+                INNER_PARAMETERS: interpretable_inner_pars or None,
+                SPLINE_KNOTS: spline_knots,
+            }
+        )
+
+    def _direct_to_relative_calculator(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ) -> dict | None:
+        """Delegate to the relative calculator, where it can handle the call.
+
+        For adjoint gradients, for second-order sensitivities, or in
+        residual mode, the relative calculator computes the objective and
+        its derivatives itself, with the inner parameters fixed at their
+        optimal values, so the collector does not simulate at all. Returns
+        ``None`` when it has to.
+
+        Value-only calls with adjoint sensitivities are simulated like any
+        other: the relative calculator alone would evaluate only the
+        observables of its inner problem, leaving out the quantitative ones.
+        """
+        if not (
+            (
+                1 in sensi_orders
+                and amici_solver.get_sensitivity_method()
+                == asd.SensitivityMethod.adjoint
+            )
+            or 2 in sensi_orders
+            or mode == MODE_RES
+        ):
+            return None
+        return self.inner_calculators[0](
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
+
+    def _simulate(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ) -> tuple[list[asd.ReturnDataView], dict | None]:
+        """Simulate with the inner parameters at their dummy values.
+
+        Returns the simulation results, together with a result dict to
+        return unchanged when the simulations failed.
+        """
+        from amici.sim.sundials.petab.v1 import fill_in_parameters
+
+        # get dimension of outer problem
+        dim = len(x_ids)
+
+        # initialize return values
+        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
+            sensi_orders, mode, dim
+        )
+        # set order in solver
+        sensi_order = 0
+        if sensi_orders:
+            sensi_order = max(sensi_orders)
+
+        amici_solver.set_sensitivity_order(sensi_order)
+
+        # fill in parameters, we expect here a RunTimeWarning to occur
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The following problem parameters were not used:.*",
+                category=RuntimeWarning,
+            )
+            fill_in_parameters(
+                edatas=edatas,
+                problem_parameters=x_dct,
+                scaled_parameters=True,
+                parameter_mapping=parameter_mapping,
+                amici_model=amici_model,
+            )
+
+        # run amici simulation
+        rdatas = asd.run_simulations(
+            amici_model,
+            amici_solver,
+            edatas,
+            num_threads=min(n_threads, len(edatas)),
+        )
+
+        # if any amici simulation failed, it's unlikely we can compute
+        # meaningful inner parameters, so we better just fail early.
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+            ret = {
+                FVAL: nllh,
+                GRAD: snllh,
+                HESS: s2nllh,
+                RES: res,
+                SRES: sres,
+                RDATAS: rdatas,
+                SPLINE_KNOTS: None,
+                INNER_PARAMETERS: None,
+            }
+            ret[FVAL] = np.inf
+            # if the gradient was requested,
+            # we need to provide some value for it
+            if 1 in sensi_orders:
+                ret[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
+            return rdatas, ret
+
+        return rdatas, None
+
     def __call__(
         self,
         x_dct: dict,
@@ -336,7 +601,6 @@ class InnerCalculatorCollector(AmiciCalculator):
             Whether to use the FIM (if available) instead of the Hessian (if
             requested).
         """
-        from amici.sim.sundials.petab.v1 import fill_in_parameters
 
         if mode == MODE_RES and any(
             data_type in self.data_types
@@ -369,18 +633,8 @@ class InnerCalculatorCollector(AmiciCalculator):
                 "However, it can be used if the only non-quantitative data type is relative data."
             )
 
-        # if we're using adjoint sensitivity analysis or need second order
-        # sensitivities or are in residual mode, we can do so if the only
-        # non-quantitative data type is relative data. In this case, we
-        # use the relative calculator directly.
         if (
-            amici_solver.get_sensitivity_method()
-            == asd.SensitivityMethod.adjoint
-            or 2 in sensi_orders
-            or mode == MODE_RES
-        ):
-            relative_calculator = self.inner_calculators[0]
-            ret = relative_calculator(
+            ret := self._direct_to_relative_calculator(
                 x_dct=x_dct,
                 sensi_orders=sensi_orders,
                 mode=mode,
@@ -392,152 +646,179 @@ class InnerCalculatorCollector(AmiciCalculator):
                 parameter_mapping=parameter_mapping,
                 fim_for_hess=fim_for_hess,
             )
+        ) is not None:
             return filter_return_dict(ret)
 
-        # get dimension of outer problem
-        dim = len(x_ids)
-
-        # initialize return values
-        nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
-            sensi_orders, mode, dim
-        )
-        spline_knots = None
-        interpretable_inner_pars = []
-
-        # set order in solver
-        sensi_order = 0
-        if sensi_orders:
-            sensi_order = max(sensi_orders)
-
-        amici_solver.set_sensitivity_order(sensi_order)
-
+        # the inner parameters are not known yet, so simulate with dummies
         x_dct = copy.deepcopy(x_dct)
         x_dct.update(self.necessary_par_dummy_values)
-        # fill in parameters, we expect here a RunTimeWarning to occur
-        with warnings.catch_warnings():
-            warnings.filterwarnings(
-                "ignore",
-                message="The following problem parameters were not used:.*",
-                category=RuntimeWarning,
-            )
-            fill_in_parameters(
-                edatas=edatas,
-                problem_parameters=x_dct,
-                scaled_parameters=True,
-                parameter_mapping=parameter_mapping,
-                amici_model=amici_model,
-            )
 
-        # run amici simulation
-        rdatas = asd.run_simulations(
-            amici_model,
-            amici_solver,
-            edatas,
-            num_threads=min(n_threads, len(edatas)),
+        rdatas, failure = self._simulate(
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+        )
+        if failure is not None:
+            return filter_return_dict(failure)
+
+        return self._combine_inner_results(
+            rdatas=rdatas,
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
+            index_slices=self._index_slices,
         )
 
-        # if any amici simulation failed, it's unlikely we can compute
-        # meaningful inner parameters, so we better just fail early.
-        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
-            ret = {
-                FVAL: nllh,
-                GRAD: snllh,
-                HESS: s2nllh,
-                RES: res,
-                SRES: sres,
-                RDATAS: rdatas,
-                SPLINE_KNOTS: None,
-                INNER_PARAMETERS: None,
-            }
-            ret[FVAL] = np.inf
-            # if the gradient was requested,
-            # we need to provide some value for it
-            if 1 in sensi_orders:
-                ret[GRAD] = np.full(shape=len(x_ids), fill_value=np.nan)
-            return filter_return_dict(ret)
 
-        if (
-            not self._known_least_squares_safe
-            and mode == MODE_RES
-            and 1 in sensi_orders
-        ):
-            if not amici_model.get_add_sigma_residuals() and any(
-                (
-                    (r[AMICI_SSIGMAY] is not None and np.any(r[AMICI_SSIGMAY]))
-                    or (
-                        r[AMICI_SSIGMAZ] is not None
-                        and np.any(r[AMICI_SSIGMAZ])
-                    )
-                )
-                for r in rdatas
-            ):
-                raise RuntimeError(
-                    "Cannot use least squares solver with"
-                    "parameter dependent sigma! Support can be "
-                    "enabled via "
-                    "amici_model.set_add_sigma_residuals()."
-                )
-            self._known_least_squares_safe = True  # don't check this again
+class InnerCalculatorCollectorPetabV2(InnerCalculatorCollector):
+    """Class to collect inner calculators for PEtab v2 problems.
 
-        # call inner calculators and collect results
-        for calculator in self.inner_calculators:
-            inner_result = calculator(
-                x_dct=x_dct,
-                sensi_orders=sensi_orders,
-                mode=mode,
-                amici_model=amici_model,
-                amici_solver=amici_solver,
-                edatas=edatas,
-                n_threads=n_threads,
-                x_ids=x_ids,
-                parameter_mapping=parameter_mapping,
-                fim_for_hess=fim_for_hess,
-                rdatas=rdatas,
+    PEtab v2 counterpart of :class:`InnerCalculatorCollector`, for use with
+    :class:`pypesto.objective.amici.amici.AmiciPetabV2Objective`. Simulations
+    are delegated to the :class:`amici.sim.sundials.petab.PetabSimulator`,
+    which maps the PEtab problem parameters to the model parameters. Only
+    relative (and quantitative) data are supported.
+
+    Parameters
+    ----------
+    data_types:
+        List of non-quantitative data types in the problem.
+    petab_simulator:
+        The PEtab simulator of the :class:`AmiciPetabV2Objective` this
+        calculator belongs to.
+    inner_options:
+        Options for the inner problems and solvers.
+    """
+
+    def __init__(
+        self,
+        data_types: set[str],
+        petab_simulator: amici.sim.sundials.petab.PetabSimulator,
+        inner_options: dict,
+    ):
+        from ..objective.amici.amici_calculator import AmiciCalculatorPetabV2
+
+        self.petab_simulator = petab_simulator
+        #: plain (non-hierarchical) evaluation of the PEtab v2 problem
+        self._evaluator = AmiciCalculatorPetabV2(petab_simulator)
+
+        edatas = petab_simulator.exp_man.create_edatas()
+        super().__init__(
+            data_types=data_types,
+            petab_problem=petab_simulator.exp_man.petab_problem,
+            model=petab_simulator.model,
+            edatas=edatas,
+            inner_options=inner_options,
+        )
+        #: the ``ExpData`` objects the index slices are built against
+        self._edatas = edatas
+
+    @staticmethod
+    def _get_noise_distributions(
+        petab_problem: v2.Problem,
+        model: AmiciModel,
+    ) -> list[str]:
+        """See :meth:`InnerCalculatorCollector._get_noise_distributions`."""
+        # the PEtab v2 noise distributions are AMICI noise distributions
+        return [
+            petab_problem[observable_id].noise_distribution
+            for observable_id in model.get_observable_ids()
+        ]
+
+    def construct_inner_calculators(
+        self,
+        petab_problem: v2.Problem,
+        model: AmiciModel,
+        edatas: list[asd.ExpData],
+        inner_options: dict,
+    ):
+        """Construct inner calculators for each data type."""
+        self.necessary_par_dummy_values = {}
+
+        if unsupported_data_types := self.data_types - {RELATIVE}:
+            raise NotImplementedError(
+                f"Data types {unsupported_data_types} are not yet supported "
+                "for PEtab v2 problems."
             )
-            nllh += inner_result[FVAL]
-            if 1 in sensi_orders:
-                snllh += inner_result[GRAD]
 
-            inner_pars = inner_result.get(INNER_PARAMETERS)
-            if inner_pars is not None:
-                interpretable_inner_pars.extend(inner_pars)
-            if SPLINE_KNOTS in inner_result:
-                spline_knots = inner_result[SPLINE_KNOTS]
+        if RELATIVE in self.data_types:
+            relative_inner_problem = RelativeInnerProblem.from_petab_v2_amici(
+                petab_problem, model, edatas
+            )
+            self.necessary_par_dummy_values.update(
+                relative_inner_problem.get_dummy_values(scaled=True)
+            )
+            self.inner_calculators.append(
+                RelativeAmiciCalculator(
+                    inner_problem=relative_inner_problem,
+                    # PEtab v2 is simulated through the PEtab simulator, not
+                    #  the v1 parameter-mapping machinery of the base class
+                    evaluator=self._evaluator,
+                )
+            )
+            self.relative_observable_ids = (
+                relative_inner_problem.get_relative_observable_ids()
+            )
 
-        # add the quantitative data contribution
-        if self.quantitative_data_mask is not None:
-            quantitative_result = calculate_quantitative_result(
-                rdatas=rdatas,
-                sensi_orders=sensi_orders,
-                edatas=edatas,
-                mode=mode,
-                quantitative_data_mask=self.quantitative_data_mask,
-                dim=dim,
-                parameter_mapping=parameter_mapping,
+    def _simulate(
+        self,
+        x_dct: dict,
+        sensi_orders: tuple[int],
+        mode: ModeType,
+        amici_model: AmiciModel,
+        amici_solver: AmiciSolver,
+        edatas: list[asd.ExpData],
+        n_threads: int,
+        x_ids: Sequence[str],
+        parameter_mapping: ParameterMapping,
+        fim_for_hess: bool,
+    ) -> tuple[list[asd.ReturnDataView], dict | None]:
+        """See :meth:`InnerCalculatorCollector._simulate`.
+
+        The PEtab simulator handles the parameter mapping, so
+        ``parameter_mapping`` is unused.
+        """
+        if self._index_slices is None:
+            self._index_slices = petab_v2_index_slices(
+                petab_problem=self.petab_simulator.exp_man.petab_problem,
+                par_sim_ids=self.petab_simulator.model.get_free_parameter_ids(),
+                edatas=self._edatas,
                 par_opt_ids=x_ids,
-                par_sim_ids=amici_model.get_free_parameter_ids(),
             )
-            nllh += quantitative_result[FVAL]
-            if 1 in sensi_orders:
-                snllh += quantitative_result[GRAD]
+            for calculator in self.inner_calculators:
+                calculator.index_slices = self._index_slices
 
-        ret = {
-            FVAL: nllh,
-            GRAD: snllh,
-            HESS: s2nllh,
-            RES: res,
-            SRES: sres,
-            RDATAS: rdatas,
-        }
-
-        ret[INNER_PARAMETERS] = (
-            interpretable_inner_pars
-            if len(interpretable_inner_pars) > 0
-            else None
+        ret = self._evaluator(
+            x_dct=x_dct,
+            sensi_orders=sensi_orders,
+            mode=mode,
+            amici_model=amici_model,
+            amici_solver=amici_solver,
+            edatas=edatas,
+            n_threads=n_threads,
+            x_ids=x_ids,
+            parameter_mapping=parameter_mapping,
+            fim_for_hess=fim_for_hess,
         )
-        ret[SPLINE_KNOTS] = spline_knots
-
-        return filter_return_dict(ret)
+        rdatas = ret[RDATAS]
+        # if any simulation failed, meaningful inner parameters are unlikely
+        if any(rdata.status != asd.AMICI_SUCCESS for rdata in rdatas):
+            return rdatas, ret
+        return rdatas, None
 
 
 def calculate_quantitative_result(
@@ -546,12 +827,20 @@ def calculate_quantitative_result(
     sensi_orders: tuple[int],
     mode: ModeType,
     quantitative_data_mask: list[np.ndarray],
+    noise_distributions: Sequence[str],
     dim: int,
     parameter_mapping: ParameterMapping,
     par_opt_ids: list[str],
     par_sim_ids: list[str],
+    index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
 ):
-    """Calculate the function values from rdatas and return as dict."""
+    """Calculate the function values from rdatas and return as dict.
+
+    ``noise_distributions`` is AMICI's noise distribution of each model
+    observable. ``index_slices`` maps the simulation sensitivities onto the
+    optimization parameters per condition; derived from ``parameter_mapping``
+    if not given.
+    """
     nllh, snllh, s2nllh, chi2, res, sres = init_return_values(
         sensi_orders, mode, dim
     )
@@ -559,79 +848,48 @@ def calculate_quantitative_result(
     # transform experimental data
     edatas = [asd.ExpDataView(edata)["measurements"] for edata in edatas]
 
-    # calculate the function value
-    for rdata, edata, mask in zip(
-        rdatas, edatas, quantitative_data_mask, strict=True
-    ):
-        data_i = edata[mask]
-        sim_i = rdata[AMICI_Y][mask]
-        sigma_i = rdata[AMICI_SIGMAY][mask]
-
-        nllh += 0.5 * np.nansum(
-            np.log(2 * np.pi * sigma_i**2) + (data_i - sim_i) ** 2 / sigma_i**2
-        )
-
-    # calculate the gradient if requested
-    if 1 in sensi_orders:
-        parameter_map_sim_var = [
-            cond_par_map.map_sim_var for cond_par_map in parameter_mapping
+    if 1 in sensi_orders and index_slices is None:
+        index_slices = [
+            par_index_slices(par_opt_ids, par_sim_ids, m.map_sim_var)
+            for m in parameter_mapping
         ]
-        # iterate over simulation conditions
-        for (
-            rdata,
-            edata,
-            mask,
-            condition_map_sim_var,
-        ) in zip(
-            rdatas,
-            edatas,
-            quantitative_data_mask,
-            parameter_map_sim_var,
-            strict=True,
-        ):
-            data_i = edata[mask]
-            sim_i = rdata[AMICI_Y][mask]
-            sigma_i = rdata[AMICI_SIGMAY][mask]
 
-            n_parameters = rdata[AMICI_SY].shape[1]
+    # the model observables of each noise distribution
+    observable_masks = {
+        noise_distribution: np.array(
+            [nd == noise_distribution for nd in noise_distributions]
+        )
+        for noise_distribution in set(noise_distributions)
+    }
 
-            # Get sensitivities of observables and sigmas
-            sensitivities_i = np.asarray(
-                [
-                    rdata[AMICI_SY][:, parameter_index, :][mask]
-                    for parameter_index in range(n_parameters)
+    # iterate over simulation conditions
+    for condition_ix, (rdata, edata, mask) in enumerate(
+        zip(rdatas, edatas, quantitative_data_mask, strict=True)
+    ):
+        for noise_distribution, observable_mask in observable_masks.items():
+            # `observable_mask` broadcasts over the time points
+            data_mask = mask & observable_mask
+            nllh_i, dsim_i, dsigma_i = _noise_model_terms(
+                data=edata[data_mask],
+                sim=rdata[AMICI_Y][data_mask],
+                sigma=rdata[AMICI_SIGMAY][data_mask],
+                noise_distribution=noise_distribution,
+            )
+            nllh += np.sum(nllh_i)
+
+            # calculate the gradient if requested
+            if 1 in sensi_orders:
+                # sensitivities of observables and sigmas,
+                #  shape (n_simulation_parameters, n_data)
+                sy_i = np.moveaxis(rdata[AMICI_SY], 1, 0)[:, data_mask]
+                ssigma_i = np.moveaxis(rdata[AMICI_SSIGMAY], 1, 0)[
+                    :, data_mask
                 ]
-            )
-            ssigma_i = np.asarray(
-                [
-                    rdata[AMICI_SSIGMAY][:, parameter_index, :][mask]
-                    for parameter_index in range(n_parameters)
-                ]
-            )
-            # calculate the gradient for the condition
-            gradient_for_condition = np.nansum(
-                np.multiply(
-                    ssigma_i,
-                    (
-                        (
-                            np.full(len(data_i), 1)
-                            - (data_i - sim_i) ** 2 / sigma_i**2
-                        )
-                        / sigma_i
-                    ),
-                ),
-                axis=1,
-            ) + np.nansum(
-                np.multiply(sensitivities_i, ((sim_i - data_i) / sigma_i**2)),
-                axis=1,
-            )
-            add_sim_grad_to_opt_grad(
-                par_opt_ids=par_opt_ids,
-                par_sim_ids=par_sim_ids,
-                condition_map_sim_var=condition_map_sim_var,
-                sim_grad=gradient_for_condition,
-                opt_grad=snllh,
-            )
+                gradient_i = np.sum(
+                    sy_i * dsim_i + ssigma_i * dsigma_i, axis=1
+                )
+                par_sim_slice, par_opt_slice = index_slices[condition_ix]
+                np.add.at(snllh, par_opt_slice, gradient_i[par_sim_slice])
 
     ret = {
         FVAL: nllh,
@@ -642,3 +900,62 @@ def calculate_quantitative_result(
         RDATAS: rdatas,
     }
     return filter_return_dict(ret)
+
+
+def _noise_model_terms(
+    data: np.ndarray,
+    sim: np.ndarray,
+    sigma: np.ndarray,
+    noise_distribution: str,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute the negative log-likelihood of each data point.
+
+    The same as AMICI's cost function for ``noise_distribution``, see
+    :func:`amici.importers.utils.noise_distribution_to_cost_function`.
+
+    Returns
+    -------
+    The negative log-likelihood of each data point, and its derivatives
+    w.r.t. ``sim`` and ``sigma``.
+    """
+    # e.g. `log10-normal`, `laplace`
+    transformation, _, distribution = noise_distribution.rpartition("-")
+    if transformation not in ("", LIN, LOG, LOG10) or distribution not in (
+        NORMAL,
+        LAPLACE,
+    ):
+        raise NotImplementedError(
+            f"Noise distribution `{noise_distribution}` is not supported."
+        )
+
+    # residual on the transformed scale, its derivative w.r.t. `sim`, and the
+    #  Jacobian of the transformation of the data
+    if transformation in ("", LIN):
+        residual = sim - data
+        dresidual_dsim = 1.0
+        jacobian_term = 0.0
+    elif transformation == LOG:
+        residual = np.log(sim) - np.log(data)
+        dresidual_dsim = 1 / sim
+        jacobian_term = np.log(data)
+    else:
+        residual = np.log10(sim) - np.log10(data)
+        dresidual_dsim = 1 / (sim * np.log(10))
+        jacobian_term = np.log(data * np.log(10))
+
+    if distribution == NORMAL:
+        nllh = (
+            0.5 * np.log(2 * np.pi * sigma**2) + 0.5 * (residual / sigma) ** 2
+        )
+        dnllh_dresidual = residual / sigma**2
+        dnllh_dsigma = (1 - (residual / sigma) ** 2) / sigma
+    else:
+        nllh = np.log(2 * sigma) + np.abs(residual) / sigma
+        dnllh_dresidual = np.sign(residual) / sigma
+        dnllh_dsigma = (1 - np.abs(residual) / sigma) / sigma
+
+    return (
+        nllh + jacobian_term,
+        dnllh_dresidual * dresidual_dsim,
+        dnllh_dsigma,
+    )

@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
-import petab
-from petab.C import *
+import petab.v1 as petab
+from petab.v1.C import *
 
 a0 = 1
 b0 = 0

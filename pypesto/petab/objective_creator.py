@@ -11,6 +11,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import (
     Any,
 )
@@ -18,6 +19,7 @@ from typing import (
 import numpy as np
 import pandas as pd
 import petab.v1 as petab
+from petab import v2
 from petab.v1.C import (
     OBSERVABLE_FORMULA,
     PREEQUILIBRATION_CONDITION_ID,
@@ -29,8 +31,17 @@ from petab.v1.parameter_mapping import ParMappingDictQuadruple
 from petab.v1.simulate import Simulator
 
 from ..C import CENSORED, CONDITION_SEP, LIN, ORDINAL, SEMIQUANTITATIVE
-from ..hierarchical.inner_calculator_collector import InnerCalculatorCollector
-from ..objective import AmiciObjective, ObjectiveBase, PetabSimulatorObjective
+from ..hierarchical.aggregated import AggregatedHierarchicalObjective
+from ..hierarchical.inner_calculator_collector import (
+    InnerCalculatorCollector,
+    InnerCalculatorCollectorPetabV2,
+)
+from ..objective import (
+    AggregatedObjective,
+    AmiciObjective,
+    ObjectiveBase,
+    PetabSimulatorObjective,
+)
 from ..objective.amici import AmiciObjectBuilder
 from ..objective.roadrunner import (
     ExpData,
@@ -39,6 +50,7 @@ from ..objective.roadrunner import (
 )
 from ..predict import AmiciPredictor
 from ..result import PredictionResult
+from .util import get_petab_non_quantitative_data_types
 
 try:
     import amici
@@ -73,7 +85,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         hierarchical: bool = False,
         non_quantitative_data_types: Iterable[str] | None = None,
         inner_options: dict[str, Any] | None = None,
-        output_folder: str | None = None,
+        output_folder: str | Path | None = None,
         model_name: str | None = None,
         validate_petab: bool = True,
     ):
@@ -472,7 +484,7 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         if PREEQUILIBRATION_CONDITION_ID not in list(edata_conditions.columns):
             preeq_dummy = [""] * edata_conditions.shape[0]
             edata_conditions[PREEQUILIBRATION_CONDITION_ID] = preeq_dummy
-        edata_conditions.drop_duplicates(inplace=True)
+        edata_conditions = edata_conditions.drop_duplicates()
 
         if condition_ids is None:
             condition_ids = [
@@ -604,6 +616,437 @@ class AmiciObjectiveCreator(ObjectiveCreator, AmiciObjectBuilder):
         return self.prediction_to_petab_measurement_df(
             prediction, predictor
         ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+
+
+class AmiciPetabV2ObjectiveCreator(AmiciObjectiveCreator):
+    """ObjectiveCreator for creating an amici objective from a PEtab v2 problem.
+
+    Model import and compilation are the same as for PEtab v1, except that they
+    go through :class:`amici.importers.petab.PetabImporter`. Everything that
+    depends on the PEtab version -- creating the ``ExpData`` objects, the
+    objective, and the conversion of AMICI results to PEtab dataframes -- is
+    overridden here.
+    """
+
+    def __init__(
+        self,
+        petab_problem: v2.Problem,
+        hierarchical: bool = False,
+        non_quantitative_data_types: Iterable[str] | None = None,
+        inner_options: dict[str, Any] | None = None,
+        parameter_scales: dict[str, str] | None = None,
+        **kwargs,
+    ):
+        """
+        Initialize the creator.
+
+        See :class:`AmiciObjectiveCreator`. Of the non-quantitative data
+        types, only relative data are supported for PEtab v2 so far.
+        ``parameter_scales`` is passed on to
+        :meth:`amici.importers.petab.PetabImporter.create_simulator`, which
+        requires amici>1.1.0.
+        """
+        super().__init__(
+            petab_problem=petab_problem,
+            hierarchical=hierarchical,
+            non_quantitative_data_types=non_quantitative_data_types,
+            inner_options=inner_options,
+            **kwargs,
+        )
+        self.parameter_scales = parameter_scales
+
+    def _parameter_scales_kwargs(self) -> dict[str, dict[str, str]]:
+        """Get the ``parameter_scales`` keyword argument for AMICI.
+
+        Only passed if set: parameter scales were added after amici 1.1.0.
+        """
+        if not self.parameter_scales:
+            return {}
+        return {"parameter_scales": self.parameter_scales}
+
+    def compile_model(self, **kwargs):
+        """
+        Compile the model.
+
+        If the output folder exists already, it is first deleted.
+
+        Parameters
+        ----------
+        kwargs:
+            Extra arguments passed to
+            :class:`amici.importers.petab.PetabImporter`, e.g. ``verbose`` or
+            ``non_estimated_parameters_as_constants``. Unlike for PEtab v1,
+            arguments for the underlying model importer (e.g.
+            ``generate_sensitivity_code``) are not supported; a warning is
+            issued for any argument that is not accepted.
+        """
+        # delete output directory
+        if os.path.exists(self.output_folder):
+            shutil.rmtree(self.output_folder)
+
+        petab_importer = self._create_amici_importer(**kwargs)
+        petab_importer.import_module(force_import=True)
+
+    def _create_amici_importer(
+        self, **kwargs
+    ) -> amici.importers.petab.PetabImporter:
+        """Create an AMICI PEtab importer.
+
+        Parameters
+        ----------
+        kwargs:
+            Extra arguments passed to
+            :class:`amici.importers.petab.PetabImporter`. Arguments that it
+            does not accept are dropped with a warning.
+        """
+        import inspect
+
+        from amici.importers.petab import PetabImporter
+
+        kwargs.setdefault("validate", self.validate_petab)
+        # `PetabImporter` does not forward arguments to the model importer, so
+        #  anything it does not accept cannot be honoured -- say so instead of
+        #  dropping it silently
+        supported = inspect.signature(PetabImporter.__init__).parameters
+        if unsupported := {
+            k: kwargs.pop(k) for k in set(kwargs) - set(supported)
+        }:
+            warnings.warn(
+                f"Ignoring unsupported model import options for the PEtab v2 "
+                f"path: {sorted(unsupported)}.",
+                stacklevel=2,
+            )
+
+        petab_importer = PetabImporter(
+            self.petab_problem,
+            output_dir=self.output_folder,
+            module_name=self.model_name,
+            **kwargs,
+        )
+        return petab_importer
+
+    def create_edatas(
+        self,
+        model: asd.Model = None,
+        simulation_conditions=None,
+        verbose: bool = True,
+    ) -> list[asd.ExpData]:
+        """Create list of :class:`amici.amici.ExpData` objects."""
+        from amici.sim.sundials.petab import ExperimentManager
+
+        # create model
+        if model is None:
+            model = self.create_model(verbose=verbose)
+
+        return ExperimentManager(
+            model=model,
+            # the AMICI importer preprocesses the PEtab problem (e.g., the
+            #  experiment table is converted to the model), and only that
+            #  version matches the compiled model
+            petab_problem=self._create_amici_importer().petab_problem,
+            **self._parameter_scales_kwargs(),
+        ).create_edatas()
+
+    def create_objective(
+        self,
+        model: asd.Model = None,
+        solver: asd.Solver = None,
+        edatas: Sequence[asd.ExpData] = None,
+        force_compile: bool = False,
+        verbose: bool = True,
+        **kwargs,
+    ) -> AmiciObjective:
+        """Create a :class:`pypesto.objective.AmiciObjective`.
+
+        Parameters
+        ----------
+        model:
+            The AMICI model.
+        solver:
+            The AMICI solver.
+        edatas:
+            The experimental data in AMICI format.
+        force_compile:
+            Whether to force-compile the model if not passed.
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
+        **kwargs:
+            Additional arguments passed on to the objective. In case of
+            relative measurements, ``inner_options`` can optionally
+            be passed here. If none are given, ``inner_options`` given to the
+            importer constructor (or inner defaults) will be chosen.
+
+        Returns
+        -------
+        A :class:`pypesto.objective.AmiciObjective` for the model and the data.
+        """
+        from ..objective.amici.amici import AmiciPetabV2Objective
+
+        # the simulator owns the model, the solver and the ExpData objects
+        if model is not None or solver is not None or edatas is not None:
+            warnings.warn(
+                "`model`, `solver` and `edatas` are not supported for PEtab "
+                "v2 problems and will be ignored.",
+                stacklevel=2,
+            )
+        petab_importer = self._create_amici_importer()
+        petab_simulator = petab_importer.create_simulator(
+            force_import=force_compile, **self._parameter_scales_kwargs()
+        )
+
+        x_ids = self.petab_problem.x_ids
+        if self._hierarchical and self._non_quantitative_data_types:
+            inner_options = kwargs.pop("inner_options", None)
+            if inner_options is None:
+                inner_options = self.inner_options or {}
+            calculator = InnerCalculatorCollectorPetabV2(
+                data_types=self._non_quantitative_data_types,
+                petab_simulator=petab_simulator,
+                inner_options=inner_options,
+            )
+            kwargs["calculator"] = calculator
+            # The inner solvers need the observables, the sigmas and their
+            #  sensitivities, which `likelihood` does not report.
+            #  `observables_likelihood` suffices for function values and
+            #  gradients but not for residual mode, and the reporting mode is
+            #  fixed here for every call; the PEtab v1 path uses `full` too.
+            kwargs["amici_reporting"] = asd.RDataReporting.full
+            # parameters estimated in the inner subproblems are removed from
+            #  the objective parameters
+            inner_parameter_ids = set(calculator.get_inner_par_ids())
+            if scaled_inner := {
+                x_id
+                for x_id in inner_parameter_ids
+                if (self.parameter_scales or {}).get(x_id, LIN) != LIN
+            }:
+                raise ValueError(
+                    "Inner parameters are estimated on linear scale, but "
+                    f"`parameter_scales` sets another scale for {scaled_inner}."
+                )
+            x_ids = [x_id for x_id in x_ids if x_id not in inner_parameter_ids]
+
+        return AmiciPetabV2Objective(
+            petab_importer=petab_importer,
+            petab_simulator=petab_simulator,
+            amici_object_builder=self,
+            x_ids=x_ids,
+            **kwargs,
+        )
+
+    def create_predictor(
+        self,
+        objective: AmiciObjective = None,
+        amici_output_fields: Sequence[str] = None,
+        post_processor: Callable | None = None,
+        post_processor_sensi: Callable | None = None,
+        post_processor_time: Callable | None = None,
+        max_chunk_size: int | None = None,
+        output_ids: Sequence[str] = None,
+        condition_ids: Sequence[str] = None,
+    ) -> AmiciPredictor:
+        """Create a :class:`pypesto.predict.AmiciPredictor`."""
+        raise NotImplementedError(
+            "Creating a predictor is not yet supported for PEtab v2 problems."
+        )
+
+    def rdatas_to_measurement_df(
+        self,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
+        verbose: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Create a measurement dataframe in the petab format.
+
+        Parameters
+        ----------
+        rdatas:
+            A list of rdatas as produced by
+            ``pypesto.AmiciObjective.__call__(x, return_dict=True)['rdatas']``.
+        model:
+            The amici model.
+        verbose:
+            Passed to AMICI's model compilation. If True, the compilation
+            progress is printed.
+
+        Returns
+        -------
+        A dataframe built from the rdatas in the format as in
+        ``self.petab_problem.measurement_df``.
+        """
+        from amici.importers.petab import rdatas_to_measurement_df
+
+        # create model
+        if model is None:
+            model = self.create_model(verbose=verbose)
+
+        return rdatas_to_measurement_df(rdatas, model, self.petab_problem)
+
+    def rdatas_to_simulation_df(
+        self,
+        rdatas: Sequence[asd.ReturnData],
+        model: asd.Model = None,
+    ) -> pd.DataFrame:
+        """
+        See :meth:`rdatas_to_measurement_df`.
+
+        Except a petab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        from amici.importers.petab import rdatas_to_simulation_df
+
+        # create model
+        if model is None:
+            model = self.create_model()
+
+        return rdatas_to_simulation_df(rdatas, model, self.petab_problem)
+
+    def prediction_to_petab_measurement_df(
+        self,
+        prediction: PredictionResult,
+        predictor: AmiciPredictor = None,
+    ) -> pd.DataFrame:
+        """Not implemented yet."""
+        raise NotImplementedError(
+            "Converting predictions to PEtab dataframes is not yet supported "
+            "for PEtab v2 problems."
+        )
+
+    def prediction_to_petab_simulation_df(
+        self,
+        prediction: PredictionResult,
+        predictor: AmiciPredictor = None,
+    ) -> pd.DataFrame:
+        """
+        See :meth:`prediction_to_petab_measurement_df`.
+
+        Except a PEtab simulation dataframe is created, i.e. the measurement
+        column label is adjusted.
+        """
+        return self.prediction_to_petab_measurement_df(
+            prediction, predictor
+        ).rename(columns={petab.MEASUREMENT: petab.SIMULATION})
+
+
+class AmiciPetabV2MultiModelObjectiveCreator(ObjectiveCreator):
+    """ObjectiveCreator for a PEtab v2 problem with multiple models.
+
+    The problem is split into one single-model problem per model (see
+    :meth:`petab.v2.Problem.split_by_model`), each of which is imported
+    separately. Since the models share the parameters but not the data, the
+    objective is the sum of the per-model objectives.
+
+    The per-model objectives are likelihoods only: the parameter priors are
+    defined on the shared parameter table, and
+    :meth:`pypesto.petab.PetabImporter.create_problem` adds them once to the
+    sum.
+
+    With hierarchical optimization, each model's inner problems are solved
+    separately, which requires that the models do not share inner parameters.
+    """
+
+    def __init__(
+        self,
+        petab_problem: v2.Problem,
+        output_folder: str | Path,
+        model_name: str,
+        hierarchical: bool = False,
+        inner_options: dict[str, Any] | None = None,
+        validate_petab: bool = True,
+    ):
+        """
+        Initialize the creator.
+
+        Parameters
+        ----------
+        petab_problem:
+            The multi-model PEtab v2 problem.
+        output_folder:
+            Base folder for the compiled models. Each model is compiled into
+            a subfolder named after its model ID.
+        model_name:
+            Prefix of the names of the compiled model modules, which are
+            ``{model_name}_{model_id}``.
+        hierarchical, inner_options:
+            See :class:`AmiciPetabV2ObjectiveCreator`. The non-quantitative
+            data types are those of each single-model problem.
+        validate_petab:
+            Whether to validate the single-model problems on import.
+        """
+        self.petab_problem = petab_problem
+        self.hierarchical = hierarchical
+        self.sub_creators: dict[str, AmiciPetabV2ObjectiveCreator] = {
+            model_id: AmiciPetabV2ObjectiveCreator(
+                petab_problem=sub_problem,
+                output_folder=Path(output_folder, model_id),
+                model_name=f"{model_name}_{model_id}",
+                hierarchical=hierarchical,
+                inner_options=inner_options,
+                non_quantitative_data_types=(
+                    get_petab_non_quantitative_data_types(sub_problem)
+                ),
+                validate_petab=validate_petab,
+            )
+            for model_id, sub_problem in petab_problem.split_by_model().items()
+        }
+
+    def compile_model(self, **kwargs):
+        """Compile all models.
+
+        See :meth:`AmiciPetabV2ObjectiveCreator.compile_model`.
+        """
+        for sub_creator in self.sub_creators.values():
+            sub_creator.compile_model(**kwargs)
+
+    def create_objective(self, **kwargs) -> AggregatedObjective:
+        """Create the objective.
+
+        Parameters
+        ----------
+        kwargs:
+            Passed to :meth:`AmiciPetabV2ObjectiveCreator.create_objective`
+            for every model.
+
+        Returns
+        -------
+        An :class:`pypesto.objective.AggregatedObjective` of one
+        :class:`pypesto.objective.AmiciPetabV2Objective` per model, which
+        takes the parameter vector of the full problem and passes each model
+        the parameters of its single-model problem. With hierarchical
+        optimization, an
+        :class:`pypesto.hierarchical.aggregated.AggregatedHierarchicalObjective`
+        that takes the outer parameters only.
+        """
+        objectives = [
+            sub_creator.create_objective(**kwargs)
+            for sub_creator in self.sub_creators.values()
+        ]
+        if not self.hierarchical:
+            objective_class = AggregatedObjective
+            inner_parameter_ids = set()
+        else:
+            objective_class = AggregatedHierarchicalObjective
+            inner_parameter_ids = {
+                x_id
+                for objective in objectives
+                if isinstance(objective.calculator, InnerCalculatorCollector)
+                for x_id in objective.calculator.get_inner_par_ids()
+            }
+        x_ids = [
+            x_id
+            for x_id in self.petab_problem.x_ids
+            if x_id not in inner_parameter_ids
+        ]
+        x_index = {x_id: ix for ix, x_id in enumerate(x_ids)}
+        return objective_class(
+            objectives,
+            x_names=x_ids,
+            x_indices=[
+                [x_index[x_id] for x_id in objective.x_ids]
+                for objective in objectives
+            ],
+        )
 
 
 class PetabSimulatorObjectiveCreator(ObjectiveCreator):

@@ -1,5 +1,9 @@
 """Tests for `pypesto.sample` methods."""
 
+import importlib
+import logging
+import warnings
+
 import numpy as np
 import pytest
 from scipy.integrate import quad
@@ -206,20 +210,181 @@ def test_regularize_covariance():
     assert np.all(np.linalg.eigvals(reg) >= 0)
 
 
+# `pypesto.sample.geweke_test` is shadowed by the function of the same name,
+# so `import pypesto.sample.geweke_test as geweke` would give the function.
+geweke = importlib.import_module("pypesto.sample.geweke_test")
+
+
+def _ar1(n: int, rho: float, rng: np.random.Generator, mean: float = 5.0):
+    """Stationary AR(1) chain with unit marginal variance, shape (n, 1)."""
+    noise = rng.normal(size=n) * np.sqrt(1 - rho**2)
+    x = np.empty(n)
+    x[0] = rng.normal()
+    for t in range(1, n):
+        x[t] = rho * x[t - 1] + noise[t]
+    return (x + mean)[:, np.newaxis]
+
+
+def test_geweke_spectrum0_estimates_long_run_variance():
+    """Centered, sqrt(n)-batch estimate of S(0) converges (S(0) = 1)."""
+    rng = np.random.default_rng(0)
+    estimates = [
+        geweke.spectrum0(rng.normal(5, 1, (10_000, 1))).item()
+        for _ in range(200)
+    ]
+    assert abs(np.mean(estimates) - 1) < 0.05
+    assert np.std(estimates) < 0.15
+
+
+def test_geweke_zscore_invariant_to_shift_and_scale():
+    """z must not depend on where the parameter sits or on its units."""
+    chain = _ar1(1000, 0.5, np.random.default_rng(1))
+    z, _ = geweke.calculate_zscore(chain)
+    assert np.allclose(geweke.calculate_zscore(chain + 1000)[0], z)
+    assert np.allclose(geweke.calculate_zscore(chain * 37)[0], z)
+
+
+def test_geweke_zscore_segments():
+    """The first floor(a*n) and the last floor(b*n) samples are compared.
+
+    Both segments have mean 0.01 only if they are exactly [0, 100) and
+    [500, 1000): any off-by-one picks up a 7 or drops the 1 or the 5.
+    """
+    chain = np.zeros((1000, 1))
+    chain[100:500] = 7
+    chain[99] = 1
+    chain[500] = 5
+    z, _ = geweke.calculate_zscore(chain, a=0.1, b=0.5)
+    assert z.item() == 0
+
+
 @pytest.mark.parametrize(
-    "non_converged_size, converged_size",
+    "a, b, valid",
+    [(0.5, 0.5, True), (0.4, 0.6, True), (0.6, 0.5, False), (0, 0.5, False)]
+    + [(0.1, 1.2, False)],
+)
+def test_geweke_zscore_fraction_validation(a, b, valid):
+    """Fractions must lie in (0, 1) and must not overlap."""
+    chain = np.random.default_rng(2).normal(size=(100, 1))
+    if valid:
+        geweke.calculate_zscore(chain, a=a, b=b)
+    else:
+        with pytest.raises(ValueError):
+            geweke.calculate_zscore(chain, a=a, b=b)
+
+
+def test_geweke_zscore_degenerate_segments():
+    """Constant segments give z = 0 (equal) or +-inf (different)."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        equal, _ = geweke.calculate_zscore(np.ones((100, 1)))
+        different, _ = geweke.calculate_zscore(
+            np.r_[np.zeros(50), np.ones(50)][:, np.newaxis]
+        )
+    assert equal.item() == 0
+    assert different.item() == -np.inf
+
+
+def test_geweke_spectrum0_not_inflated_by_drift():
+    """Centering each Geweke window, not the whole chain, keeps S(0) small."""
+    rng = np.random.default_rng(3)
+    chain = 5 + 0.003 * np.arange(1000)[:, np.newaxis]
+    chain += rng.normal(size=(1000, 1))
+    assert geweke.spectrum0(chain[:100]).item() < 2
+
+
+@pytest.mark.parametrize(
+    "max_abs_z, expected",
     [
-        (100, 901),  # "Larger" sample numbers
-        (25, 75),  # Small sample numbers
+        ([0.1] * 20, 0),  # nothing significant
+        ([10, 10] + [0.1] * 18, 2),  # first two starting points rejected
+        ([10] * 20, None),  # everything rejected
+        ([3.06] + [0.0] * 19, 1),  # just above Holm's 1st threshold (3.05)
+        ([3.04] + [0.0] * 19, 0),  # just below it
+        ([5, 2.1, 2.2], 1),  # step-down stops at 2.2, so 2.1 is retained
+        ([3, 1, 2], 1),  # case the previous rank mix-up got wrong
     ],
 )
-def test_geweke_test_switch(non_converged_size, converged_size):
-    """Check geweke test returns expected burn in index for different chain sizes."""
-    warm_up = np.zeros((non_converged_size, 2))
-    converged = np.ones((converged_size, 2))
-    chain = np.concatenate((warm_up, converged), axis=0)
-    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain=chain)
-    assert burn_in == non_converged_size
+def test_geweke_holm_step_down(max_abs_z, expected):
+    """Holm's procedure on the per-fragment p-values."""
+    p_values = 2 * norm.sf(np.array(max_abs_z, dtype=float))
+    assert geweke._first_not_rejected(p_values, 2.0) == expected
+
+
+def test_geweke_combine_parameters():
+    """Bonferroni over parameters: npar * smallest p, capped at 1."""
+    p = np.array([[0.01, 0.5, 0.2], [0.9, 0.8, 0.7], [np.nan, 0.5, 0.5]])
+    assert np.allclose(geweke._combine_parameters(p), [0.03, 1.0, 0.0])
+
+
+def test_geweke_burn_in_iid():
+    """A stationary chain has no burn-in."""
+    chain = np.random.default_rng(4).normal(5, 1, (1000, 2))
+    assert sample.diagnostics.burn_in_by_sequential_geweke(chain) == 0
+
+
+def test_geweke_burn_in_transient():
+    """A decaying initial transient (gone by ~250) is detected."""
+    rng = np.random.default_rng(5)
+    chain = 5 + rng.normal(size=(1000, 1))
+    chain[:300] += 6 * np.exp(-np.arange(300) / 50)[:, np.newaxis]
+    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain)
+    assert 50 <= burn_in <= 250
+
+
+def test_geweke_burn_in_start_points():
+    """The burn-in is one of the 20 start points floor(i * n / 20).
+
+    With n = 1019, the old rule (multiples of n // 20 = 50) gives other
+    start points from i = 2 on.
+    """
+    n = 1019
+    rng = np.random.default_rng(5)
+    chain = 5 + rng.normal(size=(n, 1))
+    chain[:300] += 6 * np.exp(-np.arange(300) / 50)[:, np.newaxis]
+    burn_in = sample.diagnostics.burn_in_by_sequential_geweke(chain)
+    assert burn_in in np.arange(20) * n // 20
+    assert 100 <= burn_in <= 254
+
+
+def test_geweke_spectrum_deprecated():
+    """`spectrum` warns that it will be removed."""
+    with pytest.warns(DeprecationWarning, match="next meso release"):
+        geweke.spectrum(np.random.default_rng(9).normal(size=100))
+
+
+def test_geweke_burn_in_drift():
+    """A drifting chain gets a large burn-in."""
+    rng = np.random.default_rng(6)
+    chain = 5 + 0.003 * np.arange(1000)[:, np.newaxis]
+    chain += rng.normal(size=(1000, 1))
+    assert sample.diagnostics.burn_in_by_sequential_geweke(chain) >= 500
+
+
+@pytest.mark.parametrize("npar", [1, 10])
+def test_geweke_burn_in_false_alarm_rate(npar):
+    """Stationary chains rarely get a burn-in (family-wise level ~0.05).
+
+    With 10 parameters, this needs the p-values combined over parameters
+    (the largest |z| alone gives ~15% false alarms).
+    """
+    rng = np.random.default_rng(8)
+    burn_ins = [
+        sample.diagnostics.burn_in_by_sequential_geweke(
+            np.hstack([_ar1(500, 0.3, rng) for _ in range(npar)])
+        )
+        for _ in range(100)
+    ]
+    assert np.mean(np.array(burn_ins) > 0) <= 0.12
+
+
+@pytest.mark.parametrize("n", [1, 10, 19])
+def test_geweke_burn_in_short_chain(n, caplog):
+    """Chains shorter than the number of fragments are 'not converged'."""
+    chain = np.random.default_rng(n).normal(size=(n, 2))
+    with caplog.at_level(logging.WARNING):
+        assert sample.diagnostics.burn_in_by_sequential_geweke(chain) == n
+    assert "not have converged" in caplog.text
 
 
 def test_geweke_test_unconverged():

@@ -7,7 +7,7 @@ import numpy as np
 
 from ...C import InnerParameterType
 from ...objective import Objective
-from ...objective.amici.amici_util import add_sim_grad_to_opt_grad
+from ...objective.amici.amici_util import par_index_slices
 from ...optimize import minimize
 from ...problem import Problem
 from ..base_parameter import InnerParameter
@@ -29,6 +29,7 @@ from .util import (
     compute_optimal_offset_coupled,
     compute_optimal_scaling,
     compute_optimal_sigma,
+    subtract_unscaled_constants,
 )
 
 try:
@@ -63,8 +64,8 @@ class RelativeInnerSolver(InnerSolver):
             ``ReturnData.sigmay``. Same order as simulations in the
             PEtab problem.
         """
-        relevant_data = copy.deepcopy(problem.data)
-        sim = copy.deepcopy(sim)
+        relevant_data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
         sigma = copy.deepcopy(sigma)
         inner_parameters = copy.deepcopy(inner_parameters)
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
@@ -104,6 +105,7 @@ class RelativeInnerSolver(InnerSolver):
         par_opt_ids: list[str],
         par_sim_ids: list[str],
         snllh: np.ndarray,
+        index_slices: list[tuple[np.ndarray, np.ndarray]] | None = None,
     ) -> np.ndarray:
         """Calculate the gradients with respect to the outer parameters.
 
@@ -138,13 +140,17 @@ class RelativeInnerSolver(InnerSolver):
         snllh:
             A zero-initialized vector of the same length as ``par_opt_ids`` to store the
             gradients in. Will be modified in-place.
+        index_slices:
+            ``(par_sim_slice, par_opt_slice)`` index pairs per condition, mapping
+            simulation sensitivities onto optimization parameters. Derived from
+            ``parameter_mapping`` if not given (PEtab v2 passes them directly).
 
         Returns
         -------
         The gradients with respect to the outer parameters.
         """
-        relevant_data = copy.deepcopy(problem.data)
-        sim = copy.deepcopy(sim)
+        relevant_data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
         sigma = copy.deepcopy(sigma)
         inner_parameters = copy.deepcopy(inner_parameters)
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
@@ -196,22 +202,29 @@ class RelativeInnerSolver(InnerSolver):
                 mask=x.ixs,
             )
 
+        if index_slices is None:
+            index_slices = [
+                par_index_slices(par_opt_ids, par_sim_ids, m.map_sim_var)
+                for m in parameter_mapping
+            ]
+
         # compute gradients
-        for cond_idx, cond_par_map in enumerate(parameter_mapping):
+        for data_i, sim_i, ssim_i, sigma_i, ssigma_i, (
+            par_sim_slice,
+            par_opt_slice,
+        ) in zip(
+            relevant_data, sim, ssim, sigma, ssigma, index_slices, strict=True
+        ):
             gradient_for_cond = compute_nllh_gradient_for_condition(
-                data=relevant_data[cond_idx],
-                sim=sim[cond_idx],
-                ssim=ssim[cond_idx],
-                sigma=sigma[cond_idx],
-                ssigma=ssigma[cond_idx],
+                data=data_i,
+                sim=sim_i,
+                ssim=ssim_i,
+                sigma=sigma_i,
+                ssigma=ssigma_i,
             )
-            add_sim_grad_to_opt_grad(
-                par_opt_ids=par_opt_ids,
-                par_sim_ids=par_sim_ids,
-                condition_map_sim_var=cond_par_map.map_sim_var,
-                sim_grad=gradient_for_cond,
-                opt_grad=snllh,
-            )
+            # `np.add.at` accumulates over simulation parameters that map to
+            #  the same optimization parameter
+            np.add.at(snllh, par_opt_slice, gradient_for_cond[par_sim_slice])
 
         return snllh
 
@@ -241,13 +254,21 @@ class RelativeInnerSolver(InnerSolver):
         inner_parameters = copy.deepcopy(inner_parameters)
         inner_parameters = scale_back_value_dict(inner_parameters, problem)
 
-        # apply offsets, scalings and sigmas
+        # apply offsets, scalings and sigmas. The unscaled constants must not
+        #  be scaled, so the scaling is applied without them, and the change
+        #  it makes is added to the simulation.
+        unscaled_sim = subtract_unscaled_constants(sim, problem)
+        scaled_sim = copy.deepcopy(unscaled_sim)
         for x in problem.get_xs_for_type(InnerParameterType.SCALING):
             apply_scaling(
                 scaling_value=inner_parameters[x.inner_parameter_id],
-                sim=sim,
+                sim=scaled_sim,
                 mask=x.ixs,
             )
+        for sim_i, unscaled_sim_i, scaled_sim_i in zip(
+            sim, unscaled_sim, scaled_sim, strict=True
+        ):
+            sim_i += scaled_sim_i - unscaled_sim_i
 
         for x in problem.get_xs_for_type(InnerParameterType.OFFSET):
             apply_offset(
@@ -299,8 +320,8 @@ class AnalyticalInnerSolver(RelativeInnerSolver):
             ``problem``.
         """
         x_opt = {}
-        data = copy.deepcopy(problem.data)
-        sim = copy.deepcopy(sim)
+        data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
         sigma = copy.deepcopy(sigma)
 
         # compute optimal offsets
@@ -487,16 +508,35 @@ class NumericalInnerSolver(RelativeInnerSolver):
                 i for i in range(len(pars)) if pars[i].ub != np.inf
             ]
 
-        lb = [x.lb for x in pars]
-        ub = [x.ub for x in pars]
+        # Optimize sigmas on log scale: the likelihood is undefined at their
+        #  lower bound 0, onto which the line search may otherwise project.
+        is_sigma = np.array(
+            [x.inner_parameter_type == InnerParameterType.SIGMA for x in pars]
+        )
 
-        x_guesses = self.sample_startpoints(problem, pars)
+        def to_opt(x):
+            x = np.array(x, dtype=float)
+            with np.errstate(divide="ignore"):
+                x[..., is_sigma] = np.log(x[..., is_sigma])
+            return x
+
+        def from_opt(x):
+            x = np.array(x, dtype=float)
+            x[..., is_sigma] = np.exp(x[..., is_sigma])
+            return x
+
+        lb = to_opt([x.lb for x in pars])
+        ub = to_opt([x.ub for x in pars])
+
+        x_guesses = to_opt(self.sample_startpoints(problem, pars))
 
         x_names = [x.inner_parameter_id for x in pars]
-        data = problem.data
+        data = subtract_unscaled_constants(problem.data, problem)
+        sim = subtract_unscaled_constants(sim, problem)
 
         # objective function
         def fun(x):
+            x = from_opt(x)
             _sim = copy.deepcopy(sim)
             _sigma = copy.deepcopy(sigma)
             _data = copy.deepcopy(data)
@@ -529,7 +569,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
 
         # perform the actual optimization
         result = minimize(pypesto_problem, **self.minimize_kwargs)
-        best_par = result.optimize_result.list[0]["x"]
+        best_par = from_opt(result.optimize_result.list[0]["x"])
 
         # Check if the index of an optimized parameter on the dummy bound
         # is not in the list of specified bounds. If so, raise an error.
@@ -555,7 +595,7 @@ class NumericalInnerSolver(RelativeInnerSolver):
         x_opt = dict(zip(pypesto_problem.x_names, best_par, strict=True))
 
         # cache
-        self.x_guesses = np.array(
+        self.x_guesses = from_opt(
             [
                 entry["x"]
                 for entry in result.optimize_result.list[: self.n_cached]
