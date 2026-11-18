@@ -61,13 +61,15 @@ class ProfileOptions(dict):
         Whether to profile the whole bounds or only till we get below the
         ratio.
     profile_n_starts:
-        Number of optimization starts attempted at each profile point.
+        Number of optimization starts attempted at each profile point. The
+        cost of profiling scales about linearly with it. With `1`, only the
+        point suggested by `profile_next_guess` is used as startpoint.
     profile_sampling_sigma:
         Standard deviation used for each free coordinate when sampling
         additional optimization startpoints from a Gaussian centered at the
         point suggested by `profile_next_guess`, in the reduced parameter
         space. The profiled parameter itself is already fixed and is therefore
-        not perturbed.
+        not perturbed. Only relevant if `profile_n_starts > 1`.
     step_size_precheck_mode:
         Controls the step-size precheck, which estimates how many profile
         steps the resolved step sizes imply and reports suspiciously small
@@ -91,7 +93,7 @@ class ProfileOptions(dict):
         reg_order: int = 4,
         adaptive_target_scaling_factor: float = 1.5,
         whole_path: bool = False,
-        profile_n_starts: int = 6,
+        profile_n_starts: int = 4,
         profile_sampling_sigma: float = 0.01,
         step_size_precheck_mode: str = "warn",
         default_step_size: float | None = None,

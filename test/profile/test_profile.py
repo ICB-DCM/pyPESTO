@@ -631,12 +631,14 @@ def test_profile_step_size_precheck_modes(mode, expect_warning, expect_raise):
         assert not precheck_warnings
 
 
-def test_profile_multistart_optimize_uses_best_start(monkeypatch):
-    """Multi-start profiling should tolerate failed starts and keep the best finite result."""
+def test_profile_multistart_optimize_uses_best_start():
+    """Multi-start profiling should skip non-finite starts and keep the best finite result."""
 
     class DummyOptimizer:
         def __init__(self):
             self.calls = []
+            # one per start: non-finite, best, original startpoint
+            self.fvals = [np.inf, 0.01, 0.64]
 
         def minimize(
             self,
@@ -647,24 +649,13 @@ def test_profile_multistart_optimize_uses_best_start(monkeypatch):
             optimize_options=None,
         ):
             del problem, history_options
+            # exceptions must not be swallowed during profiling
+            assert not optimize_options.allow_failed_starts
             self.calls.append(np.array(x0, copy=True))
-            if np.isclose(x0[0], 0.5):
-                if optimize_options.allow_failed_starts:
-                    # Real pyPESTO optimizers back-fill failed tolerated
-                    # starts from history, which leaves them non-finite if no
-                    # useful point was recorded before the exception.
-                    return pypesto.OptimizerResult(
-                        id=id,
-                        x0=np.array(x0, copy=True),
-                        fval=np.inf,
-                        exitflag=-1,
-                        message="sampled start failed",
-                    )
-                raise RuntimeError("sampled start failed")
             return pypesto.OptimizerResult(
                 id=id,
                 x=np.array(x0, copy=True),
-                fval=float(np.sum(x0**2)),
+                fval=self.fvals[len(self.calls) - 1],
             )
 
     problem = pypesto.Problem(
@@ -674,12 +665,6 @@ def test_profile_multistart_optimize_uses_best_start(monkeypatch):
     )
     startpoint = np.array([0.8])
     options = profile.ProfileOptions(profile_n_starts=3)
-
-    monkeypatch.setattr(
-        np.random,
-        "normal",
-        lambda loc, scale, size: np.array([[0.5], [0.1]]),
-    )
 
     optimizer = DummyOptimizer()
     result = profile_multistart_optimize(
@@ -691,8 +676,8 @@ def test_profile_multistart_optimize_uses_best_start(monkeypatch):
 
     assert len(optimizer.calls) == options.profile_n_starts
     assert np.allclose(optimizer.calls[-1], startpoint)
-    assert np.allclose(result.x, np.array([0.1]))
-    assert np.isclose(result.fval, 0.01)
+    assert np.allclose(result.x, optimizer.calls[1])
+    assert result.fval == 0.01
 
 
 @pytest.mark.parametrize(

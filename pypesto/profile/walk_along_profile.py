@@ -27,8 +27,9 @@ def profile_multistart_optimize(
     Gaussian centered at the point suggested by `profile_next_guess`, using
     `options.profile_sampling_sigma` as the standard deviation for each free
     coordinate. The original suggested startpoint is always included unchanged
-    as the final start so the helper falls back to the previous single-start
-    behavior if all sampled alternatives fail, raise, or are worse.
+    as the final start, so its result is returned if all sampled alternatives
+    end with a non-finite function value or are worse. Exceptions raised
+    during optimization are not caught.
 
     Parameters
     ----------
@@ -46,14 +47,15 @@ def profile_multistart_optimize(
     Returns
     -------
     The best finite optimization result across all attempted starts, or the
-    result from the original startpoint if all sampled starts fail.
+    result from the original startpoint if no start ends with a finite
+    function value.
     """
     if options.profile_n_starts == 1:
         return optimizer.minimize(
             problem=problem,
             x0=startpoint,
             id=str(0),
-            optimize_options=OptimizeOptions(allow_failed_starts=True),
+            optimize_options=OptimizeOptions(allow_failed_starts=False),
         )
 
     sampled_startpoints = np.random.normal(
@@ -73,7 +75,7 @@ def profile_multistart_optimize(
             problem=problem,
             x0=candidate_startpoint,
             id=str(i_start),
-            optimize_options=OptimizeOptions(allow_failed_starts=True),
+            optimize_options=OptimizeOptions(allow_failed_starts=False),
         )
 
         if i_start == len(startpoints) - 1:
@@ -141,8 +143,6 @@ def walk_along_profile(
     if par_direction not in (-1, 1):
         raise AssertionError("par_direction must be -1 or 1")
 
-    # Warn at most once per non-profiled parameter in each profile half.
-    warned_at_bound: set[int] = set()
     resolved_steps = resolved_steps_by_par[i_par]
 
     # while loop for profiling (will be exited by break command)
@@ -348,24 +348,6 @@ def walk_along_profile(
             f"Optimization successful for {problem.x_names[i_par]}={x_next[i_par]:.4f}. "
             f"Start fval {problem.objective(x_next[problem.x_free_indices]):.6f}, end fval {optimizer_result.fval:.6f}."
         )
-
-        for k, j_par in enumerate(problem.x_free_indices):
-            x_j = optimizer_result.x[j_par]
-            lb_j = problem.lb[k]
-            ub_j = problem.ub[k]
-            at_lb = abs(x_j - lb_j) <= 1e-8
-            at_ub = abs(x_j - ub_j) <= 1e-8
-            if (at_lb or at_ub) and j_par not in warned_at_bound:
-                warned_at_bound.add(j_par)
-                bound_val = lb_j if at_lb else ub_j
-                logger.warning(
-                    f"Parameter '{problem.x_names[j_par]}' hit its "
-                    f"{'lower' if at_lb else 'upper'} bound "
-                    f"({bound_val:.4g}) while profiling "
-                    f"'{problem.x_names[i_par]}'. "
-                    "The profile may be constrained near this region."
-                )
-
         if optimizer_result[GRAD] is not None:
             gradnorm = np.linalg.norm(
                 optimizer_result[GRAD][problem.x_free_indices]
